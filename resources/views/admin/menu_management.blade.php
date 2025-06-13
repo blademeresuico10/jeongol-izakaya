@@ -16,7 +16,7 @@
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
-            <div class="card mt-2" style="max-width: 50%;">
+            <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Menu</h5>
                     <!-- Button to trigger Add Modal -->
@@ -48,7 +48,7 @@
                 </div>
             </div>
 
-            <!-- Add Menu Modal -->
+            
             <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel" aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <form action="" method="POST">
@@ -76,7 +76,7 @@
                 </div>
             </div>
 
-            <!-- Edit Menu Modals -->
+            
             @foreach ($menu as $item)
                 <div class="modal fade" id="editMenuModal{{ $item->id }}" tabindex="-1" role="dialog" aria-labelledby="editMenuModalLabel{{ $item->id }}" aria-hidden="true">
                     <div class="modal-dialog" role="document">

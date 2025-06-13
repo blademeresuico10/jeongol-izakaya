@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class tableseeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    
     public function run(): void
     {
         DB::table('tables')->insert([

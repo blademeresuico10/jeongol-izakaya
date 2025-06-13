@@ -3,18 +3,16 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ReceptionistController;
 
-// Login routes
+// Login 
 Route::get('/', [LoginController::class, 'index']);
 Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 
 
-// Admin dashboard route
+// Admin 
 Route::get('/home', [AdminController::class, 'index'])->name('admin.home');
-
-
-// Admin features (optionally wrap in middleware later)
 Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
 Route::get('/adduser', [AdminController::class, 'adduser'])->name('admin.adduser');
 Route::post('/users/storeUser', [AdminController::class, 'storeUser'])->name('storeUser');
@@ -36,3 +34,14 @@ Route::put('/updatetable/{id}', [AdminController::class, 'updateTable'])->name('
 Route::get('/reports', function () {
     return view('admin.reports');
 });
+
+
+// Receptionist 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/receptionist/home', [ReceptionistController::class, 'home'])->name('receptionist.home');
+    Route::post('/reservations/store', [ReceptionistController::class, 'storeReservation'])->name('receptionist.storeReservation');
+    Route::get('/view_reservations', [ReceptionistController::class, 'reservations'])->name('receptionist.reservations');
+   
+});
+
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

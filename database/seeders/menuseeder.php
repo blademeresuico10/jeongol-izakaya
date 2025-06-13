@@ -8,9 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class menuseeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
+    
     public function run(): void
     {
         DB::table('menu')->insert([

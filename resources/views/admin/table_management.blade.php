@@ -16,7 +16,7 @@
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
-            <div class="card mt-2" style="max-width: 50%;">
+            <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Table Management</h5>
                     <!-- Button to trigger Add Modal -->

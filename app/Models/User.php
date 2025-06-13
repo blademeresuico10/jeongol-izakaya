@@ -24,7 +24,7 @@ class User extends Authenticatable
         'contact_number',
         'username',
         'password',
-        'status', // ✅ Add this line
+        'status', 
     ];
 
 

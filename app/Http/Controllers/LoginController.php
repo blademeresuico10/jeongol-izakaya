@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User; 
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
@@ -25,19 +26,24 @@ class LoginController extends Controller
         $user = User::where('username', $request->username)->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
-            session([
-                'user_id' => $user->id,
-                'username' => $user->username,
-                'role' => $user->role,
-            ]);
+            
+        Auth::login($user); // Laravel will now manage the session
+        $request->session()->regenerate(); // Security best practice
 
             // Check role and redirect accordingly
             if ($user->role === 'admin') {
                 return redirect()->route('admin.home');
-            } else {
+            } 
+
+            else if ($user->role === 'receptionist') {
                 
-                return redirect()->route('dashboard'); // fallback
+                return redirect()->route('receptionist.home'); 
             }
+            else{
+                return redirect()->route('/');
+            }
+
+
         } else {
             return back()->withErrors(['login' => 'Invalid credentials.'])->withInput();
         }
@@ -45,7 +51,9 @@ class LoginController extends Controller
 
     public function logout()
     {
-        session()->flush();
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
         return redirect()->route('login');
     }
 }

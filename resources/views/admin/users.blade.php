@@ -16,7 +16,7 @@
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
 
-            <div class="card mt-2" style="max-width: 50%;">
+            <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">Users</h6>
                     <a href="{{ url('adduser') }}" class="btn btn-sm btn-success">Add User</a>
