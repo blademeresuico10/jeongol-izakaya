@@ -41,7 +41,7 @@
             </li>
 
             <li @class(['nav-item', 'active' => request()->is('stock*')])>
-                <a class="nav-link" href="stock.html">
+                <a class="nav-link" href="{{url('stock_management')}}">
                     <i class="fas fa-boxes"></i>
                     <span>Stock</span>
                 </a>

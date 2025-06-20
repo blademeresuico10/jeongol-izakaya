@@ -44,12 +44,12 @@
 
                                 <div class="mb-2">
                                     <label for="table_number">Table Number</label>
-                                    <input type="number" id="table_number" name="table_number" class="form-control form-control-sm" required>
+                                    <input type="number" id="table_number" name="table_number" class="form-control form-control-sm" min="0" required>
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="capacity">Capacity</label>
-                                    <input type="number" id="capacity" name="capacity" class="form-control form-control-sm" required>
+                                    <input type="number" id="capacity" name="capacity" class="form-control form-control-sm" min="0" required>
                                 </div>
 
                                 <div class="d-flex justify-content-between">

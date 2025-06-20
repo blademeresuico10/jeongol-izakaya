@@ -8,17 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('reservations', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedInteger('pax');
-            $table->decimal('advance_payment', 8, 2)->nullable(); 
-            $table->dateTime('reservation_time');
-            $table->unsignedInteger('table_number');
-            $table->text('notes')->nullable();
-            $table->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('cascade');
-            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+        Schema::create('reservations', function (Blueprint $reservations) {
+            $reservations->id();
+            $reservations->unsignedInteger('pax');
+            $reservations->dateTime('reservation_time');
+            $reservations->decimal('advance_payment', 8, 2)->nullable()->default(0.00);
+            $reservations->unsignedInteger('table_number');
+            $reservations->text('notes')->nullable();
+            $reservations->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('cascade');
+            $reservations->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
 
-            $table->timestamps(); 
+            $reservations->timestamps(); 
         });
     }
 

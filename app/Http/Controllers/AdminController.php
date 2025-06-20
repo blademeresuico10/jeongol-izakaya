@@ -137,7 +137,7 @@ class AdminController extends Controller
     }
 
     public function addtable()
-    {
+    {  
         return view('admin.addtable');
     }
 
@@ -182,11 +182,17 @@ class AdminController extends Controller
         return redirect()->route('admin.table_management')->with('success', 'Table updated successfully!');
     }
 
+    public function stock_management(){
+        $stocks = DB::table('stock')->get();
+        return view('admin.stock_management', compact('stocks'));
+    }
+
 
 
 
     public function reports()
     {
+        
         return view('admin.reports');
     }
 }

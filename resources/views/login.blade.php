@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" type="x-icon" href="logo/jeongol_logo.jpg">
     <title>Login Page</title>
+
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             background-color: #f8fafc;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -14,25 +19,25 @@
         }
 
         .login-container {
-            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 1rem;
+            min-height: 100vh;
+            padding: 2rem 1rem;
         }
 
         .login-box {
-            background-color: white;
+            background-color: #fff;
             padding: 2rem;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 0.5rem;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
             width: 100%;
             max-width: 400px;
             text-align: center;
         }
 
         .login-box img {
-            width: 100px;
+            max-width: 100px;
             height: auto;
             margin-bottom: 1rem;
         }
@@ -44,15 +49,15 @@
 
         label {
             display: block;
-            margin-bottom: 0.5rem;
-            color: #000;
-            font-weight: bold;
+            margin-bottom: 0.4rem;
+            color: #111;
+            font-weight: 600;
         }
 
         input[type="text"],
         input[type="password"] {
             width: 100%;
-            padding: 0.5rem;
+            padding: 0.6rem;
             border: 1px solid #cbd5e0;
             border-radius: 4px;
             font-size: 1rem;
@@ -74,23 +79,40 @@
 
         button {
             width: 100%;
-            padding: 0.6rem;
-            background-color: red;
+            padding: 0.75rem;
+            background-color: #e3342f;
             color: white;
             border: none;
             border-radius: 5px;
             font-size: 1rem;
             cursor: pointer;
-            margin-top: 1rem;
+            transition: background-color 0.2s ease-in-out;
         }
 
         button:hover {
-            background-color: darkred;
+            background-color: #cc1f1a;
         }
 
         @media (max-width: 500px) {
             .login-box {
-                padding: 1.5rem;
+                padding: 1.5rem 1rem;
+            }
+
+            .login-box img {
+                max-width: 80px;
+                margin-bottom: 0.8rem;
+            }
+
+            label {
+                font-size: 0.9rem;
+            }
+
+            input {
+                font-size: 0.95rem;
+            }
+
+            button {
+                font-size: 0.95rem;
             }
         }
     </style>

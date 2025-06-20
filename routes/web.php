@@ -31,6 +31,8 @@ Route::put('/table_management/storeTable', [AdminController::class, 'storeTable'
 Route::get('/edittable/{id}', [AdminController::class, 'editTable'])->name('admin.edittable');
 Route::put('/updatetable/{id}', [AdminController::class, 'updateTable'])->name('admin.updatetable');
 
+Route::get('/stock_management', [AdminController::class, 'stock_management'])->name('admin.stock_management');
+
 Route::get('/reports', function () {
     return view('admin.reports');
 });
@@ -39,7 +41,7 @@ Route::get('/reports', function () {
 // Receptionist 
 Route::middleware(['auth'])->group(function () {
     Route::get('/receptionist/home', [ReceptionistController::class, 'home'])->name('receptionist.home');
-    Route::post('/reservations/store', [ReceptionistController::class, 'storeReservation'])->name('receptionist.storeReservation');
+    Route::post('/receptionist/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('receptionist.storeReservation');
     Route::get('/view_reservations', [ReceptionistController::class, 'reservations'])->name('receptionist.reservations');
    
 });

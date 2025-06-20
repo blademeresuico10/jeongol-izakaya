@@ -9,12 +9,12 @@ return new class extends Migration
     
     public function up(): void
     {
-        Schema::create('customers', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->string('contact_number')->nullable(); 
-            $table->integer('id_type')->nullable();        
-            $table->timestamps(); 
+        Schema::create('customers', function (Blueprint $customers) {
+            $customers->id();
+            $customers->string('name');
+            $customers->string('contact_number')->nullable(); 
+            $customers->integer('id_type')->nullable();        
+            $customers->timestamps(); 
         });
     }
 
