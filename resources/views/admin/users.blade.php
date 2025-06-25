@@ -76,7 +76,7 @@
 
                                                             <label>Role</label>
                                                             <select name="role" class="form-control">
-                                                                <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>Admin</option>
+                                                                <option value="manager" {{ $user->role == 'manager' ? 'selected' : '' }}>Manager</option>
                                                                 <option value="receptionist" {{ $user->role == 'receptionist' ? 'selected' : '' }}>Receptionist</option>
                                                                 <option value="cashier" {{ $user->role == 'cashier' ? 'selected' : '' }}>Cashier</option>
                                                                 \<option value="kitchen-staff" {{ $user->role == 'kitchen-staff' ? 'selected' : '' }}>Kitchen Staff</option>

@@ -14,7 +14,6 @@ class reservation extends Model
     'table_number',
     'customer_id',
     'user_id',
-    'menu_id',
     'notes',
 ];
 

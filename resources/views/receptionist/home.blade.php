@@ -27,7 +27,7 @@
 
   <div class="bottom-buttons">
     <a class="logout-button" href="{{ url('/view_reservations') }}">View Reservation</a>
-    <a class="logout-button" href="">View Kitchen</a>
+    <a class="logout-button" href="{{ route('kitchen.home') }}">View Kitchen</a>
   </div>
 
   {{-- Reservation Modal --}}
@@ -50,6 +50,7 @@
           <label><strong>Reserved Now</strong></label>
           <input type="date" id="reserved_date">
           <input type="time" id="arrivalTimeInput" required>
+          <p><strong>Reserved time</strong> <span id="timeFrameDisplay"></span></p>
           <p><strong>Reservation Time Frame:</strong> <span id="timeFrameDisplay"></span></p>
 
 
@@ -63,15 +64,18 @@
 
       <hr>
 
-      <div class="modal-section modal-flex">
+     <div class="modal-section modal-flex">
         <div class="modal-column">
           <p><strong>Place Order</strong></p>
           @foreach($menuItems as $item)
             <label>
               <input type="checkbox" class="menu-item" value="{{ $item->menu_item }}">
               {{ $item->menu_item }}
-            </label><br>
+            </label><br>       
           @endforeach
+          <br>
+            <div><strong>Total: ₱<span id="total">0.00</span></strong></div>
+
         </div>
 
         <div class="modal-column">
@@ -79,6 +83,7 @@
           <div id="specifyOrders" class="order-input"></div>
         </div>
       </div>
+
 
       <div class="modal-section">
         <textarea id="customerNotes" placeholder="Add notes" rows="2"></textarea>

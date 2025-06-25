@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->integer('table_number')->unique();
             $table->integer('capacity');
+            $table->timestamps();
             
         });  
         

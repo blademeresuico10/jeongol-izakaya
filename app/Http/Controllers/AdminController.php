@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
+
 class AdminController extends Controller
 {
     public function index()
@@ -95,12 +96,12 @@ class AdminController extends Controller
             'menu_item' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
         ]);
+        
 
         DB::table('menu')->insert([
             'menu_item' => $request->menu_item,
             'price' => $request->price,
-            'created_at' => now(),
-            'updated_at' => now(),
+            
         ]);
 
         return redirect()->route('admin.menu_management')->with('success', 'Menu item added successfully!');
@@ -132,7 +133,7 @@ class AdminController extends Controller
 
     public function table_management()
     {
-        $tables = DB::table('tables')->get(); // Fetch all tables from the database
+        $tables = DB::table('tables')->get(); 
         return view('admin.table_management', compact('tables'));
     }
 
@@ -151,8 +152,7 @@ class AdminController extends Controller
         DB::table('tables')->insert([
             'table_number' => $request->table_number,
             'capacity' => $request->capacity,
-            'created_at' => now(),
-            'updated_at' => now(),
+           
         ]);
 
         return redirect()->route('admin.table_management')->with('success', 'Table added successfully!');
@@ -185,6 +185,50 @@ class AdminController extends Controller
     public function stock_management(){
         $stocks = DB::table('stock')->get();
         return view('admin.stock_management', compact('stocks'));
+    }
+
+    public function storeStock(Request $request)
+    {
+        $request->validate([
+            'stock_name' => 'required|string|max:255',
+            'stock_quantity' => 'required|integer|min:1',
+            
+        ]);
+
+        DB::table('stock')->insert([
+            
+            'stock_name' => $request->stock_name,
+            'stock_quantity' => $request->stock_quantity,
+        ]);
+
+
+        return redirect()->route('admin.stock_management')->with('success', 'Stock item added successfully!');
+    }
+
+
+    public function updateStock(Request $request, $id)
+    {
+        $request->validate([
+            'stock_name' => 'required|string|max:255',
+            'stock_quantity' => 'required|numeric|min:0',
+        ]);
+
+        DB::table('stock')->where('id', $id)->update([
+            'stock_name' => $request->stock_name,
+            'stock_quantity' => $request->stock_quantity,
+            'updated_at' => now()
+        ]);
+
+        return redirect()->route('admin.stock_management')->with('success', 'Stock item updated successfully!');
+    }
+
+    public function editStock($id)
+    {
+        $stockItem = DB::table('stock')->where('id', $id)->first();
+        if (!$stockItem) {
+            return redirect()->route('admin.stock_management')->with('error', 'Stock item not found!');
+        }
+        return view('admin.editstock', compact('stockItem'));
     }
 
 

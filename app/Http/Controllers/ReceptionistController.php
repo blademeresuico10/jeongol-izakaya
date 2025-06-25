@@ -25,101 +25,102 @@ class ReceptionistController extends Controller
     }
 
    public function storeReservation(Request $request)
-{
-    try {
-        $data = $request->validate([
-            'table_id'      => 'required|exists:tables,id',
-            'customer_name' => 'required|string',
-            'pax'           => 'required|integer|min:1',
-            'arrival_time'  => 'required|date_format:H:i',
-            'notes'         => 'nullable|string',
-            'orders'        => 'nullable|array',
-            'orders.*.item' => 'string',
-            'advance_payment' => 'nullable|numeric|min:0',
-            'orders.*.qty'  => 'integer|min:1',
-        ]);
-
-        $userId = Auth::id(); 
-
-        // 1. Handle customer record (create or fetch)
-        $customer = DB::table('customers')->where('name', $data['customer_name'])->first();
-        if (!$customer) {
-            $customerId = DB::table('customers')->insertGetId([
-                'name'       => $data['customer_name'],
-                'created_at' => now(),
-                'updated_at' => now(),
+    {
+        try {
+            $data = $request->validate([
+                'table_id'      => 'required|exists:tables,id',
+                'customer_name' => 'required|string',
+                'pax'           => 'required|integer|min:1',
+                'arrival_time'  => 'required|date_format:H:i',
+                'notes'         => 'nullable|string',
+                'orders'        => 'nullable|array',
+                'orders.*.item' => 'string',
+                'advance_payment' => 'nullable|numeric|min:0',
+                'orders.*.qty'  => 'integer|min:1',
             ]);
-        } else {
-            $customerId = $customer->id;
-        }
 
-        // 2. Fetch table number from table_id
-        $table = DB::table('tables')->where('id', $data['table_id'])->first();
-        if (!$table) {
-            return response()->json(['success' => false, 'message' => 'Table not found.']);
-        }
+            $userId = Auth::id(); 
 
-        // ✅ Check for overlapping reservation for the same table
-        $reservedDateTime = now()->setTimeFromTimeString($data['arrival_time']);
-        $conflict = DB::table('reservations')
-            ->where('table_number', $table->table_number)
-            ->whereDate('reservation_time', $reservedDateTime->toDateString())
-            ->get()
-            ->filter(function ($existing) use ($reservedDateTime) {
-                $existingStart = \Carbon\Carbon::parse($existing->reservation_time);
-                $existingEnd = $existingStart->copy()->addHours(2);
-                $newEnd = $reservedDateTime->copy()->addHours(2);
-                return $reservedDateTime < $existingEnd && $newEnd > $existingStart;
-            })
-            ->isNotEmpty();
+            
+            $customer = DB::table('customers')->where('name', $data['customer_name'])->first();
+            if (!$customer) {
+                $customerId = DB::table('customers')->insertGetId([
+                    'name'       => $data['customer_name'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                $customerId = $customer->id;
+            }
 
-        if ($conflict) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This table is already reserved during the selected time slot.'
+            // 2. Fetch table number from table_id
+            $table = DB::table('tables')->where('id', $data['table_id'])->first();
+            if (!$table) {
+                return response()->json(['success' => false, 'message' => 'Table not found.']);
+            }
+
+            // ✅ Check for overlapping reservation for the same table
+            $reservedDateTime = now()->setTimeFromTimeString($data['arrival_time']);
+            $conflict = DB::table('reservations')
+                ->where('table_number', $table->table_number)
+                ->whereDate('reservation_time', $reservedDateTime->toDateString())
+                ->get()
+                ->filter(function ($existing) use ($reservedDateTime) {
+                    $existingStart = \Carbon\Carbon::parse($existing->reservation_time);
+                    $existingEnd = $existingStart->copy()->addHours(2);
+                    $newEnd = $reservedDateTime->copy()->addHours(2);
+                    return $reservedDateTime < $existingEnd && $newEnd > $existingStart;
+                })
+                ->isNotEmpty();
+
+            if ($conflict) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This table is already reserved during the selected time slot.'
+                ]);
+            }
+
+            // 3. Create reservation
+            $reservation = Reservation::create([
+                'pax'              => $data['pax'],
+                'advance_payment'  => $data['advance_payment'] ?? 0.00,
+                'reservation_time' => $reservedDateTime,
+                'table_number'     => $table->table_number,
+                'notes'            => $data['notes'] ?? null,
+                'customer_id'      => $customerId,
+                'user_id'          => $userId,
+                'total_price'      => 'required|numeric|min:0',
             ]);
-        }
 
-        // 3. Create reservation
-        $reservation = Reservation::create([
-            'pax'              => $data['pax'],
-            'advance_payment'  => $data['advance_payment'] ?? 0.00,
-            'reservation_time' => $reservedDateTime,
-            'table_number'     => $table->table_number,
-            'notes'            => $data['notes'] ?? null,
-            'customer_id'      => $customerId,
-            'user_id'          => $userId,
-        ]);
-
-        // 4. Save order details
-        if (!empty($data['orders'])) {
-            foreach ($data['orders'] as $order) {
-                $menu = DB::table('menu')->where('menu_item', $order['item'])->first();
-                if ($menu) {
-                    DB::table('order_details')->insert([
-                        'reservation_id' => $reservation->id,
-                        'menu_id'        => $menu->id,
-                        'quantity'       => $order['qty'],
-                        'customer_id'    => $customerId,
-                        'user_id'        => $userId,
-                        'date'           => now(),
-                        'created_at'     => now(),
-                        'updated_at'     => now(),
-                    ]);
+            // 4. Save order details
+            if (!empty($data['orders'])) {
+                foreach ($data['orders'] as $order) {
+                    $menu = DB::table('menu')->where('menu_item', $order['item'])->first();
+                    if ($menu) {
+                        DB::table('order_details')->insert([
+                            'order_price' => $menu->price * $order['qty'],
+                            'reservation_id' => $reservation->id,
+                            'menu_id'        => $menu->id,
+                            'quantity'       => $order['qty'],
+                            'customer_id'    => $customerId,
+                            'user_id'        => $userId,
+                            'created_at'     => now(),
+                            'updated_at'     => now(),
+                        ]);
+                    }
                 }
             }
+
+            return response()->json(['success' => true,]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Reservation failed.',
+                'error' => $e->getMessage()
+            ]);
         }
-
-        return response()->json(['success' => true]);
-
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Reservation failed.',
-            'error' => $e->getMessage()
-        ]);
     }
-}
 
 
     public function reservations()
@@ -142,6 +143,34 @@ class ReceptionistController extends Controller
 
         return view('receptionist.view_reservation', compact('reservations'));
     }
+
+    public function getAvailableTimeSlots(Request $request)
+{
+    $tableNumber = $request->query('table_number');
+    $date = $request->query('date');
+
+    if (!$tableNumber || !$date) {
+        return response()->json([]);
+    }
+
+    $allSlots = collect([
+        '10:00', '11:00', '12:00', '13:00', '14:00',
+        '15:00', '16:00', '17:00', '18:00'
+    ]);
+
+    $reserved = DB::table('reservations')
+        ->where('table_number', $tableNumber)
+        ->whereDate('reservation_time', $date)
+        ->pluck('reservation_time')
+        ->map(fn($r) => \Carbon\Carbon::parse($r)->format('H:i'));
+
+    $available = $allSlots->reject(fn($time) => $reserved->contains($time))->values();
+
+    return response()->json($available);
+}
+
+
+    
 
 
 }

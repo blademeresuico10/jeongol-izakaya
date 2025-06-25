@@ -17,7 +17,6 @@ return new class extends Migration
             $reservations->text('notes')->nullable();
             $reservations->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('cascade');
             $reservations->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-
             $reservations->timestamps(); 
         });
     }

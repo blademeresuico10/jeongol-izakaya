@@ -1,12 +1,18 @@
 <ul class="navbar-nav bg-gradient-danger sidebar sidebar-dark accordion" id="accordionSidebar">
 
             <!-- Sidebar - Brand -->
-            <a class="sidebar-brand d-flex align-items-center justify-content-center" href="index.html">
-                <div class="sidebar-brand-icon rotate-n-15">
-                    <i class="fas fa-laugh-wink"></i>
-                </div>
+            <a class="sidebar-brand d-flex align-items-center justify-content-start px-3">
+                <div style="width: 42px; height: 42px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Profile" style="width: 35px; height: 35px;">
+        </div>
+                <div class="ml-2">
+    <p class="mb-0" style="font-size: 10px;">
+        {{ Auth::user()->firstname }} {{ Auth::user()->lastname }}
+    </p>
+</div>
 
             </a>
+
 
             <!-- Divider -->
             <hr class="sidebar-divider my-0">

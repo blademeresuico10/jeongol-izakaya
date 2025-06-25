@@ -13,6 +13,7 @@ return new class extends Migration
             $menu->id();
             $menu->string('menu_item');
             $menu->decimal('price', 10, 2);
+            $menu->timestamps();
             
         });
     }

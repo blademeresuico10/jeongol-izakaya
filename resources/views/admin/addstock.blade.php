@@ -13,7 +13,7 @@
         <!-- Topbar -->
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <div class="d-sm-flex align-items-center justify-content-between">
-                <h1 class="h3 mb-0 text-gray-800">Add Menu</h1>
+                <h1 class="h3 mb-0 text-gray-800">Add Stock</h1>
             </div>
         </nav>
         <!-- End of Topbar -->
@@ -24,7 +24,7 @@
                 <div class="col-lg-4">
                     <div class="card shadow rounded" style="padding: 0.5rem 0;">
                         <div class="card-body py-1 px-4 ">
-                            <h5 class="mb-4 text-center fw-bold" style="font-size: 1.7rem; color: black">Add Menu Item</h5>
+                            <h5 class="mb-4 text-center fw-bold" style="font-size: 1.7rem; color: black">Add Stock Item</h5>
 
                             @if (session('success'))
                                 <div class="alert alert-success">{{ session('success') }}</div>
@@ -39,22 +39,22 @@
                                 </div>
                             @endif
 
-                            <form action="{{ route('storeMenu') }}" method="POST">
+                            <form action="{{ route('storeStock') }}" method="POST">
                                 @csrf
 
                                 <div class="mb-2">
-                                    <label for="menu_item">Menu Item</label>
-                                    <input type="text" id="menu_item" name="menu_item" class="form-control form-control-sm" required>
+                                    <label for="stock_name">Stock Name</label>
+                                    <input type="text" id="stock_name" name="stock_name" class="form-control form-control-sm" required>
                                 </div>
 
                                 <div class="mb-2">
-                                    <label for="price">Price</label>
-                                    <input type="number" id="price" name="price" class="form-control form-control-sm" step="0.01" min="0" required>
+                                    <label for="stock_quantity">Quantity</label>
+                                    <input type="number" id="stock_quantity" name="stock_quantity" class="form-control form-control-sm" step="0.01" min="0" required>
                                 </div>
 
                                 <div class="d-flex justify-content-between">
                                     <button type="submit" class="btn btn-sm btn-primary">Add</button>
-                                    <a href="{{ route('admin.menu_management') }}" class="btn btn-sm btn-secondary">Back</a>
+                                    <a href="{{ route('admin.stock_management') }}" class="btn btn-sm btn-secondary">Back</a>
                                 </div>
                             </form>
                         </div>

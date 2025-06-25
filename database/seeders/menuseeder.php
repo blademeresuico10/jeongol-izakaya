@@ -12,11 +12,11 @@ class menuseeder extends Seeder
     public function run(): void
     {
         DB::table('menu')->insert([
-            ['menu_item' => 'SL', 'price' => 548.00],
-            ['menu_item' => 'SD', 'price' => 598.00],
-            ['menu_item' => 'HPL', 'price' => 548.00],
-            ['menu_item' => 'HPD', 'price' => 598.00],
-            ['menu_item' => 'FLD', 'price' => 798.00],
+            ['menu_item' => 'Samgyup Lunch', 'price' => 548.00],
+            ['menu_item' => 'Samgyup Dinner', 'price' => 598.00],
+            ['menu_item' => 'HotPot Lunch', 'price' => 548.00],
+            ['menu_item' => 'HotPot Dinner', 'price' => 598.00],
+            ['menu_item' => 'Fusion', 'price' => 798.00],
             
         ]);
     }

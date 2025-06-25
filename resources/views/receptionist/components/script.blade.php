@@ -17,6 +17,12 @@
     const timeFrameDisplay = document.getElementById('timeFrameDisplay');
     let selectedTableId = null;
 
+    const menuPrices = {
+        @foreach($menuItems as $item)
+            "{{ $item->menu_item }}": {{ $item->price }},
+        @endforeach
+    };
+
     const reservations = @json($reservations);
 
     function getReservationTimeFrame(startTimeStr) {
@@ -72,17 +78,53 @@
         specifyOrdersDiv.querySelectorAll('input[type="number"]').forEach(input => {
             previousValues[input.name] = input.value;
         });
+
         specifyOrdersDiv.innerHTML = '';
         menuCheckboxes.forEach(checkbox => {
             if (checkbox.checked) {
                 const savedValue = previousValues[checkbox.value] || 1;
+                const price = menuPrices[checkbox.value];
+
                 specifyOrdersDiv.innerHTML += `
                     <label>${checkbox.value}
-                        <input type="number" name="${checkbox.value}" min="1" value="${savedValue}" style="width:50px;">
+                        <input type="number" name="${checkbox.value}" min="1" value="${savedValue}" style="width:50px;"
+                            onchange="calculateTotal()" oninput="calculateTotal()">
                     </label><br>`;
             }
         });
+
+        calculateTotal();
     }
+
+
+
+    function updateTotal(itemName, price) {
+    const qty = parseInt(document.querySelector(`input[name="${itemName}"]`).value) || 0;
+    const total = qty * price;
+    
+    calculateTotal();
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        let orders = [];
+
+        menuCheckboxes.forEach(cb => {
+            if (cb.checked) {
+                const qty = parseInt(document.querySelector(`input[name="${cb.value}"]`).value || "0");
+                const price = parseFloat(menuPrices[cb.value]) || 0;
+                const itemTotal = qty * price;
+
+                if (qty > 0) {
+                    orders.push({ item: cb.value, qty });
+                    total += itemTotal;
+                }
+            }
+        });
+        document.getElementById('total').textContent = total.toFixed(2);
+
+        }
+
 
     menuCheckboxes.forEach(cb => cb.addEventListener('change', updateSpecifyOrders));
 
@@ -176,7 +218,7 @@
                 compileModal.style.display = 'none';
                 location.reload();
             } else {
-                alert("Time resravtion not available! " );
+                alert("Time reservtion not available! " );
             }
         })
         .catch(error => {
@@ -200,5 +242,34 @@
     setInterval(updateManilaTime, 1000);
     updateManilaTime();
     
+    function fetchAvailableTimes() {
+    const date = document.getElementById('reserved_date').value;
+    const tableNumber = selectedTableId;
+
+    if (!date || !tableNumber) return;
+
+    fetch(`/receptionist/available-times?date=${date}&table_number=${tableNumber}`)
+        .then(res => res.json())
+        .then(times => {
+            const container = document.getElementById('timeFrameDisplay');
+
+            if (times.length === 0) {
+                container.innerHTML = '<span>No available times</span>';
+                return;
+            }
+
+            let selectHtml = `<select id="arrivalTimeSelect" class="form-select form-select-sm" onchange="document.getElementById('arrivalTimeInput').value = this.value">`;
+            selectHtml += '<option value="">Select time</option>';
+
+            times.forEach(time => {
+                selectHtml += `<option value="${time}">${time}</option>`;
+            });
+
+            selectHtml += `</select>`;
+            container.innerHTML = selectHtml;
+        });
+}
+    document.getElementById('reserved_date').addEventListener('change', fetchAvailableTimes);
     
     </script>
+

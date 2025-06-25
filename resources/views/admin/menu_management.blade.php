@@ -51,7 +51,7 @@
             
             <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel" aria-hidden="true">
                 <div class="modal-dialog" role="document">
-                    <form action="" method="POST">
+                    <form action="{{ route('storeMenu') }}" method="POST">
                         @csrf
                         <div class="modal-content">
                             <div class="modal-header">

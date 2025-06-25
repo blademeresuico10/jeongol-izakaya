@@ -73,17 +73,6 @@
   .available {
     background-color: #28a745; /* green */
   }
-  
-  .reserved-now {
-  background-color: red !important;
-  color: white;
-  outline: 3px solid #fff;
-}
-
-.reserved {
-  background-color: #dc3545 !important;
-  color: white;
-}
 
 
     .bottom-buttons {
