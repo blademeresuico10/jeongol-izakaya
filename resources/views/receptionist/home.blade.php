@@ -50,18 +50,14 @@
           <label><strong>Reserved Now</strong></label>
           <input type="date" id="reserved_date">
           <input type="time" id="arrivalTimeInput" required>
-          <p><strong>Reserved time</strong> <span id="timeFrameDisplay"></span></p>
           <p><strong>Reservation Time Frame:</strong> <span id="timeFrameDisplay"></span></p>
-
-
         </div>
       </div>
 
       <div class="modal-section">
         <label><strong>Advance Payment </strong></label>
-        <input type="text" id="advance_payment" placeholder="Enter Amount">
+        <input type="text" id="advance_payment" placeholder="Enter Amount" >
       </div>
-
       <hr>
 
      <div class="modal-section modal-flex">

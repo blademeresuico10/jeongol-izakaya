@@ -246,29 +246,25 @@
     const date = document.getElementById('reserved_date').value;
     const tableNumber = selectedTableId;
 
-    if (!date || !tableNumber) return;
+        if (!date || !tableNumber) return;
+            
+        fetch(`/receptionist/available-times?date=${date}&table_number=${tableNumber}`)
+            .then(res => res.json())
+            .then(times => {
+                const container = document.getElementById('timeFrameDisplay');
 
-    fetch(`/receptionist/available-times?date=${date}&table_number=${tableNumber}`)
-        .then(res => res.json())
-        .then(times => {
-            const container = document.getElementById('timeFrameDisplay');
+                if (times.length === 0) {
+                    container.textContent = 'No available times';
+                    return;
+                }
 
-            if (times.length === 0) {
-                container.innerHTML = '<span>No available times</span>';
-                return;
-            }
-
-            let selectHtml = `<select id="arrivalTimeSelect" class="form-select form-select-sm" onchange="document.getElementById('arrivalTimeInput').value = this.value">`;
-            selectHtml += '<option value="">Select time</option>';
-
-            times.forEach(time => {
-                selectHtml += `<option value="${time}">${time}</option>`;
+                container.textContent = 'Available: ' + times.join(', ');
+            })
+            .catch(() => {
+                document.getElementById('timeFrameDisplay').textContent = "Error fetching times";
             });
+    }
 
-            selectHtml += `</select>`;
-            container.innerHTML = selectHtml;
-        });
-}
     document.getElementById('reserved_date').addEventListener('change', fetchAvailableTimes);
     
     </script>
