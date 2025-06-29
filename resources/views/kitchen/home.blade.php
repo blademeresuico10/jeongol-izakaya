@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Kitchen</title>
+  <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <style>
@@ -31,16 +32,6 @@
       cursor: pointer;
     }
 
-    .stock-indicator {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background-color: gray;
-      margin-right: 6px;
-      vertical-align: middle;
-    }
-
     .logout-button {
       position: fixed;
       bottom: 20px;
@@ -57,30 +48,70 @@
     .logout-button:hover {
       background: #c82333;
     }
+
+   
+    .progress-vertical {
+      width: 20px;
+      height: 60px;
+      position: relative;
+      background-color: #e9ecef;
+      border-radius: 4px;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+    }
+
+    .progress-bar-vertical {
+      width: 100%;
+      transition: height 0.4s;
+    }
+
+   
+
   </style>
 </head>
 <body>
 
 <div class="meat-stock-header">
-  <h2>Meat Stock Levels</h2>
-  <table style="width: 50%; text-align: center;">
-    <tr class="text-center">
-      @foreach (['Beef', 'Pork', 'Chicken', 'Shrimp', 'Vegetables', 'Fish'] as $item)
-        @php $qty = $stock->firstWhere('stock_name', $item)->stock_quantity ?? null; @endphp
-        <td class="px-4 py-2">
-          <div class="d-flex align-items-center justify-content-center gap-2">
-            <span class="stock-indicator" data-quantity="{{ $qty }}"></span>
-            <span class="fw-medium">{{ $item }}</span>
-          </div>
-        </td>
-      @endforeach
-    </tr>
-  </table>
+  <h2 class="text-start text-nowrap">Meat Stock Levels</h2>
 
-  <button class="update-stock-btn" data-bs-toggle="modal" data-bs-target="#updateStockModal">
-    Update Meat Stock
+  <div class="d-flex ms-4">
+    @foreach ($stock as $item)
+      @php
+        $qty = $item->stock_quantity;
+        $statusColor = $qty >= 60 ? 'bg-success' :
+                      ($qty >= 30 ? 'bg-warning' : 'bg-danger');
+      @endphp
+      <div class="d-flex flex-column align-items-center mx-3">
+        <div class="progress-vertical mb-1">
+          <div class="progress-bar-vertical {{ $statusColor }}" style="height: {{ $qty }}%;"></div>
+        </div>
+        <div class="fw-medium">{{ $item->stock_name }}</div>
+      </div>
+    @endforeach
+  </div>
+
+  <div class="d-flex flex-column align-items-start ms-4">
+    <div class="d-flex align-items-center mb-1">
+      <div style="width: 20px; height: 10px; background-color: green;"></div>
+      <span class="ms-2 text-nowrap">60kg up</span>
+    </div>
+    <div class="d-flex align-items-center mb-1">
+      <div style="width: 20px; height: 10px; background-color: orange;"></div>
+      <span class="ms-2 text-nowrap">30kg - 59kg</span>
+    </div>
+    <div class="d-flex align-items-center">
+      <div style="width: 20px; height: 10px; background-color: red;"></div>
+      <span class="ms-2 text-nowrap">Below 29kg</span>
+    </div>
+  </div>
+
+  <button class="update-stock-btn ms-4" data-bs-toggle="modal" data-bs-target="#updateStockModal">
+    Update Stock
   </button>
 </div>
+
+
 
 @php
 $reservationGroups = $reservations->groupBy('reservation_id');
@@ -109,7 +140,9 @@ $reservationGroups = $reservations->groupBy('reservation_id');
             @php
               $first = $group->first();
               $orders = $group->map(function ($r) {
-                return $r->menu_item ? $r->quantity . 'x ' . $r->menu_item : null;
+                  if (!$r->menu_item) return null;
+                  $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
+                  return $r->quantity . 'x ' . $cleanName;
               })->filter()->implode(', ');
             @endphp
             <tr>
@@ -120,12 +153,11 @@ $reservationGroups = $reservations->groupBy('reservation_id');
               <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
               <td>{{ $first->notes ?? 'None' }}</td>
               <td>
-                <button class="btn btn-warning btn-sm">Preparing</button>
-                <button class="btn btn-success btn-sm">Ready</button>
-                <button class="btn btn-dark btn-sm">Completed</button>
+                <button class="btn bg-success btn-sm text-white">Completed</button>
               </td>
             </tr>
           @endforeach
+
         </tbody>
       </table>
     </div>
@@ -147,7 +179,7 @@ $reservationGroups = $reservations->groupBy('reservation_id');
             <thead class="table-light">
               <tr>
                 <th>Item</th>
-                <th>Stock Level</th>
+                <th>Stock Level (kg)</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
@@ -156,12 +188,8 @@ $reservationGroups = $reservations->groupBy('reservation_id');
               @foreach ($stock as $item)
               @php
                 $qty = $item->stock_quantity;
-                $statusColor = 'bg-secondary';
-                if ($qty >= 80) $statusColor = 'bg-success';
-                elseif ($qty >= 60) $statusColor = 'bg-success bg-opacity-50';
-                elseif ($qty >= 40) $statusColor = 'bg-warning bg-opacity-75';
-                elseif ($qty >= 20) $statusColor = 'bg-warning';
-                else $statusColor = 'bg-danger';
+                $statusColor = $qty >= 60 ? 'bg-success' :
+                              ($qty >= 30 ? 'bg-warning' : 'bg-danger');
               @endphp
               <tr>
                 <td>{{ $item->stock_name }}</td>
@@ -176,11 +204,11 @@ $reservationGroups = $reservations->groupBy('reservation_id');
                     style="width: 80px; margin: 0 auto;" 
                     readonly 
                     required>
-                  
                 </td>
                 <td>
-                  <span class="d-inline-block rounded-circle {{ $statusColor }}" 
-                        style="width: 16px; height: 16px;"></span>
+                  <div class="progress-vertical">
+                    <div class="progress-bar-vertical {{ $statusColor }}" style="height: {{ $qty }}%;"></div>
+                  </div>
                 </td>
                 <td>
                   <i class="bi bi-pencil-fill text-primary edit-stock" style="cursor: pointer;" data-id="{{ $item->id }}"></i>
@@ -199,24 +227,14 @@ $reservationGroups = $reservations->groupBy('reservation_id');
   </div>
 </div>
 
-<!-- Footer logout -->
 <a class="logout-button" href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
   Logout
 </a>
 <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">@csrf</form>
 
-<!-- Scripts -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   document.addEventListener("DOMContentLoaded", function () {
-    // Status dot color logic
-    document.querySelectorAll('.stock-indicator').forEach(indicator => {
-      const qty = parseInt(indicator.dataset.quantity);
-      if (isNaN(qty)) return indicator.style.backgroundColor = 'gray';
-      indicator.style.backgroundColor = qty <= 20 ? 'red' : qty <= 35 ? 'orange' : 'green';
-    });
-
-    // Enable editing on pencil click
     document.querySelectorAll('.edit-stock').forEach(icon => {
       icon.addEventListener('click', function () {
         const id = this.dataset.id;
@@ -228,6 +246,7 @@ $reservationGroups = $reservations->groupBy('reservation_id');
       });
     });
   });
+
 </script>
 
 </body>

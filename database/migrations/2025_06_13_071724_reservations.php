@@ -12,6 +12,7 @@ return new class extends Migration
             $reservations->id();
             $reservations->unsignedInteger('pax');
             $reservations->dateTime('reservation_time');
+            $reservations->dateTime('reservation_end_time');
             $reservations->decimal('advance_payment', 8, 2)->nullable()->default(0.00);
             $reservations->unsignedInteger('table_number');
             $reservations->text('notes')->nullable();

@@ -26,18 +26,18 @@
   </div>
 
   <div class="bottom-buttons">
-    <a class="logout-button" href="{{ url('/view_reservations') }}">View Reservation</a>
-    <a class="logout-button" href="{{ route('kitchen.home') }}">View Kitchen</a>
+    <a class="view-button" href="{{ url('/view_reservations') }}">View Reservation</a>
+    <a class="view-button" href="{{ route('kitchen.home') }}">View Kitchen</a>
   </div>
 
-  {{-- Reservation Modal --}}
+  
   <div id="tableModal" class="modal">
     <div class="modal-content">
       <span id="closeModal" class="close-modal">&times;</span>
       <h2>Customer Info and Menu</h2>
 
       <div class="modal-section">
-        <label><strong>Customer </strong></label>
+        <label><strong>Customer</strong></label>
         <input type="text" id="customerName" placeholder="Customer's name" required>
       </div>
 
@@ -50,7 +50,8 @@
           <label><strong>Reserved Now</strong></label>
           <input type="date" id="reserved_date">
           <input type="time" id="arrivalTimeInput" required>
-          <p><strong>Reservation Time Frame:</strong> <span id="timeFrameDisplay"></span></p>
+         <p><strong>Reservation Time Frame:</strong> <span id="timeFrameDisplay" style="font-size: 0.9rem;"></span></p>
+
         </div>
       </div>
 
@@ -61,17 +62,34 @@
       <hr>
 
      <div class="modal-section modal-flex">
+        @php
+            $uniqueMenuItems = [];
+            $menuPricesMap = [];
+            foreach($menuItems as $item) {
+                $cleanName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
+                if (!isset($menuPricesMap[$cleanName])) {
+                    $uniqueMenuItems[] = $cleanName;
+                    $menuPricesMap[$cleanName] = ['lunch' => null, 'dinner' => null];
+                }
+                if (str_contains($item->menu_item, 'Lunch')) {
+                    $menuPricesMap[$cleanName]['lunch'] = $item->price;
+                } else {
+                    $menuPricesMap[$cleanName]['dinner'] = $item->price;
+                }
+            }
+        @endphp
+
+
         <div class="modal-column">
           <p><strong>Place Order</strong></p>
-          @foreach($menuItems as $item)
+          @foreach($uniqueMenuItems as $cleanName)
             <label>
-              <input type="checkbox" class="menu-item" value="{{ $item->menu_item }}">
-              {{ $item->menu_item }}
-            </label><br>       
+              <input type="checkbox" class="menu-item" value="{{ $cleanName }}">
+              {{ $cleanName }}
+            </label><br>
           @endforeach
           <br>
-            <div><strong>Total: ₱<span id="total">0.00</span></strong></div>
-
+          <div><strong>Total: ₱<span id="total">0.00</span></strong></div>
         </div>
 
         <div class="modal-column">
@@ -86,36 +104,11 @@
       </div>
 
       <div class="modal-actions">
-        <button class="submit-btn" type="button">Show Reservation</button>
         <button class="pay-btn" id="submitToCashierBtn" type="button">Submit to cashier</button>
       </div>
     </div>
   </div>
 
-  {{-- Confirmation Modal --}}
-  <div id="submit_to_kitchen" class="modal">
-    <div class="modal-content">
-      <span id="closeCompileModal" class="close-modal">&times;</span>
-      <h2>Order Information</h2>
-      <p><strong>Customer Name:</strong> <span id="compiledCustomerName"></span></p>
-      <p><strong>Time Ordered:</strong> <span id="compiledArrivalTime"></span></p>
-
-      <div style="display: flex; flex-wrap: wrap; gap: 20px;">
-        <div style="flex: 1 1 45%;">
-          <h3>Orders</h3>
-          <div id="compiledOrders"></div>
-        </div>
-        <div style="flex: 1 1 45%;">
-          <h3>Notes</h3>
-          <div id="compiledNotes" style="white-space: pre-wrap;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  
-
-  {{-- JS --}}
   
 
   @include('receptionist.components.script')

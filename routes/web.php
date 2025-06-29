@@ -51,7 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/receptionist/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('receptionist.storeReservation');
     Route::get('/view_reservations', [ReceptionistController::class, 'reservations'])->name('receptionist.reservations');
     Route::get('/receptionist/available-times', [ReceptionistController::class, 'getAvailableTimeSlots']);
-
+    
 
 });
 
@@ -59,6 +59,8 @@ Route::middleware(['auth'])->group(function () {
 //Kitchen
 Route::get('/kitchen/home', [KitchenController::class, 'home'])->name('kitchen.home');
 Route::post('/kitchen/update-stock', [KitchenController::class, 'updateStock'])->name('kitchen.updateStock');
+Route::post('/kitchen/complete-order', [KitchenController::class, 'storeCompletedOrders'])->name('kitchen.completeOrder');
+
 
 
 //Customer

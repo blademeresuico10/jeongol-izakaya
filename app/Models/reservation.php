@@ -11,6 +11,7 @@ class reservation extends Model
     'pax',
     'advance_payment',
     'reservation_time',
+    'reservation_end_time',
     'table_number',
     'customer_id',
     'user_id',

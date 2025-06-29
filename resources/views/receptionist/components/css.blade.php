@@ -1,172 +1,185 @@
 <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-    }
-
-    .table-link.selected .table {
-    outline: 3px solid #ffc107;
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
   }
 
-    .logout-button {
-      text-decoration: none;
-      background-color: #dc3545;
-      color: white;
-      padding: 10px 15px;
-      border-radius: 5px;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
+  .logout-button {
+    text-decoration: none;
+    background-color: #dc3545;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
 
-    .logout-button i {
-      margin-right: 5px;
-    }
+  .view-button {
+    text-decoration: none;
+    background-color: #dc3545;
+    color: white;
+    padding: 13px 15px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
 
-    .top-logout {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-    }
+  .top-logout {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+  }
 
-    .time-display {
-      position: absolute;
-      top: 20px;
-      right: 150px;
-      background-color: #343a40;
-      color: white;
-      padding: 8px 12px;
-      border-radius: 5px;
-      font-size: 14px;
-      font-family: monospace;
-    }
+  .time-display {
+    position: absolute;
+    top: 20px;
+    right: 150px;
+    background-color: #343a40;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-family: monospace;
+  }
 
-    .table-layout {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-      margin-top: 50px;
-      padding: 20px;
-      flex-grow: 1;
-    }
+  .table-layout {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 50px;
+    padding: 20px;
+    flex-grow: 1;
+  }
 
-    .table-link {
-      text-decoration: none;
-    }
 
-    .table {
-    width: 200px;
-    height: 200px;
+  .table-link {
+    flex: 0 calc(15% - 10px); 
+    text-decoration: none;
+  }
+
+  .table {
+    width: 100%;
+    aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     font-weight: bold;
     border-radius: 20px;
+    background-color: #28a745;
   }
 
-  .available {
-    background-color: #28a745; /* green */
+  
+  @media (max-width: 1024px) {
+    .table-link {
+      flex: 0 1 calc(25% - 10px);
+    }
   }
 
 
-    .bottom-buttons {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      padding: 20px;
+  @media (max-width: 768px) {
+    .table-link {
+      flex: 0 1 calc(33.33% - 10px);
     }
+  }
 
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
+  .bottom-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+  }
 
-    .modal-content {
-      background: white;
-      padding: 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 700px;
-      max-height: 90vh;
-      overflow-y: auto;
-      position: relative;
-    }
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
 
-    .close-modal {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      cursor: pointer;
-      font-size: 20px;
-    }
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
 
-    input[type="text"],
-    input[type="number"],
-    input[type="time"],
-    textarea {
-      padding: 5px;
-      margin-top: 4px;
-      margin-bottom: 10px;
-      width: 100%;
-    }
+  .close-modal {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    cursor: pointer;
+    font-size: 20px;
+  }
 
-    label {
-      font-size: 14px;
-    }
+  input[type="text"],
+  input[type="number"],
+  input[type="time"],
+  textarea {
+    padding: 5px;
+    margin-top: 4px;
+    margin-bottom: 10px;
+    width: 100%;
+  }
 
-    .modal-section {
-      margin-bottom: 15px;
-    }
+  label {
+    font-size: 14px;
+  }
 
-    .modal-flex {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
-    }
+  .modal-section {
+    margin-bottom: 15px;
+  }
 
-    .modal-column {
-      flex: 1 1 200px;
-    }
+  .modal-flex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
 
-    .modal-actions {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 20px;
-    }
+  .modal-column {
+    flex: 1 1 200px;
+  }
 
-    .modal-actions button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      color: white;
-      cursor: pointer;
-    }
+  .modal-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
 
-    .submit-btn {
-      background-color: #007bff;
-    }
+  .modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+  }
 
-    .pay-btn {
-      background-color: #6c757d;
-    }
+  .submit-btn {
+    background-color: #007bff;
+  }
 
-    .order-input {
-      margin-top: 5px;
-    }
+  .pay-btn {
+    background-color: #6c757d;
+  }
 
-    
-  </style>
+  .order-input {
+    margin-top: 5px;
+  }
+</style>
