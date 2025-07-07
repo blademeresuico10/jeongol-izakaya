@@ -87,7 +87,6 @@ class CustomerController extends Controller
                 'reservation_time' => $reservationDateTime,
                 'advance_payment' => 0.00,
                 'table_number' => $data['table_number'] ?? 0,
-                'notes' => $data['notes'] ?? null,
                 'customer_id' => $customerId,
                 'user_id' => $userId,
                 'created_at' => now(),
@@ -119,6 +118,7 @@ class CustomerController extends Controller
             DB::table('order_details')->insert([
                 'order_price'   => $orderPrice,
                 'quantity'      => $quantity,
+                'notes'         => $item['notes'] ?? null,
                 'customer_id'   => $customerId,
                 'user_id'       => $userId,
                 'menu_id'       => $menu->id,

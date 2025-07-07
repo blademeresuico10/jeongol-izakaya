@@ -63,22 +63,25 @@
 
      <div class="modal-section modal-flex">
         @php
-            $uniqueMenuItems = [];
-            $menuPricesMap = [];
-            foreach($menuItems as $item) {
-                $cleanName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
-                if (!isset($menuPricesMap[$cleanName])) {
-                    $uniqueMenuItems[] = $cleanName;
-                    $menuPricesMap[$cleanName] = ['lunch' => null, 'dinner' => null];
-                }
-                if (str_contains($item->menu_item, 'Lunch')) {
-                    $menuPricesMap[$cleanName]['lunch'] = $item->price;
-                } else {
-                    $menuPricesMap[$cleanName]['dinner'] = $item->price;
-                }
+        $uniqueMenuItems = [];
+        $menuPricesMap = [];
+        foreach($menuItems as $item) {
+            $cleanName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
+            if (!isset($menuPricesMap[$cleanName])) {
+                $uniqueMenuItems[] = $cleanName;
+                $menuPricesMap[$cleanName] = ['lunch' => null, 'dinner' => null];
             }
-        @endphp
-
+            if (str_contains($item->menu_item, 'Lunch')) {
+                $menuPricesMap[$cleanName]['lunch'] = $item->price;
+            } elseif (str_contains($item->menu_item, 'Dinner')) {
+                $menuPricesMap[$cleanName]['dinner'] = $item->price;
+            } else {
+                // if no Lunch/Dinner, treat as both (for items like Fusion)
+                $menuPricesMap[$cleanName]['lunch'] = $item->price;
+                $menuPricesMap[$cleanName]['dinner'] = $item->price;
+            }
+        }
+    @endphp
 
         <div class="modal-column">
           <p><strong>Place Order</strong></p>

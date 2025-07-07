@@ -123,43 +123,46 @@ $reservationGroups = $reservations->groupBy('reservation_id');
     <div class="alert alert-warning">No reservations found for today.</div>
   @else
     <div class="table-responsive">
-      <table class="table table-bordered table-striped align-middle">
-        <thead class="table-light">
-          <tr>
-            <th>Customer Name</th>
-            <th>Table Number</th>
-            <th>No. of Pax</th>
-            <th>Orders/Quantity</th>
-            <th>Order Time</th>
-            <th>Notes</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach ($reservationGroups as $reservationId => $group)
-            @php
-              $first = $group->first();
-              $orders = $group->map(function ($r) {
-                  if (!$r->menu_item) return null;
-                  $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
-                  return $r->quantity . 'x ' . $cleanName;
-              })->filter()->implode(', ');
-            @endphp
-            <tr>
-              <td>{{ $first->customer_name }}</td>
-              <td>{{ $first->table_number }}</td>
-              <td>{{ $first->pax }}</td>
-              <td>{{ $orders ?: 'No orders' }}</td>
-              <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
-              <td>{{ $first->notes ?? 'None' }}</td>
-              <td>
-                <button class="btn bg-success btn-sm text-white">Completed</button>
-              </td>
-            </tr>
-          @endforeach
+      <table class="table table-bordered align-middle">
+    <thead class="table-light">
+      <tr>
+        <th>Table Number</th>
+        <th>No. of Pax</th>
+        <th>Orders/Quantity</th>
+        <th>Note</th>
+        <th>Order Time</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+  @foreach ($reservationGroups as $reservationId => $group)
+    @php
+      $first = $group->first();
 
-        </tbody>
-      </table>
+      // Orders display
+      $orders = $group->map(function ($r) {
+          if (!$r->menu_item) return null;
+          $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
+          return $r->quantity . 'x ' . $cleanName;
+      })->filter()->implode(', ');
+
+      $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
+    @endphp
+    <tr>
+      <td>{{ $first->table_number }}</td>
+      <td>{{ $first->pax }}</td>
+      <td>{{ $orders ?: 'No orders' }}</td>
+      <td>{{ $notes ?: 'None' }}</td>
+      <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
+      <td>
+        <button class="btn bg-success btn-sm text-white">Completed</button>
+      </td>
+    </tr>
+  @endforeach
+</tbody>
+
+</table>
+
     </div>
   @endif
 </div>

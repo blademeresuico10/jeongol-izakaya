@@ -62,7 +62,7 @@
 
       <div id="table-{{ $i }}" class="reservation-section">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h4>Today Reservations for Table {{ $i }}</h4>
+        <h4>Table {{ $i }} Reservations.</h4>
         <div>
           <a href="{{ url()->current() }}?date=today" class="btn btn-success table-btn me-2">Today's Reservations</a>
           <a href="{{ url()->current() }}?date=tomorrow" class="btn btn-success table-btn me-2">Tomorrow's Reservations</a>

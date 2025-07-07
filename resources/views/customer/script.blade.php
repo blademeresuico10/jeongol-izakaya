@@ -129,8 +129,9 @@ document.addEventListener('DOMContentLoaded', function () {
       const qtyInput = menu.closest('.menu-item-label').querySelector('.menu-qty');
       reservationData.menu.push({
         item: menu.value,
-        quantity: menu.checked ? parseInt(qtyInput.value) : 0
-      });
+        quantity: menu.checked ? parseInt(qtyInput.value) : 0,
+        notes: document.getElementById('customerNotes').value.trim()
+    });
     });
 
     localStorage.setItem('reservation_data', JSON.stringify(reservationData));
