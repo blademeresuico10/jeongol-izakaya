@@ -81,7 +81,7 @@
                 <th>Orders</th>
                 <th>Customer Name</th>
                 <th>Arrival Time</th>
-                <th>Actions</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody>
@@ -97,11 +97,7 @@
                   <td>{{ $orders ?: 'No orders' }}</td>
                   <td>{{ $first->customer_name }}</td>
                   <td>{{ Carbon::parse($first->reservation_time)->format('M d, Y h:i A') }}</td>
-                  <td>
-                    <a href="" class="btn btn-sm btn-outline-primary" title="Edit Orders">
-                      <i class="bi bi-pencil"></i>
-                    </a>
-                  </td>
+                  <td>{{ $first->notes ?: 'No notes' }}</td>
                 </tr>
 
               @endforeach

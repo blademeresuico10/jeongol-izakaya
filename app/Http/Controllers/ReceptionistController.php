@@ -170,6 +170,7 @@ class ReceptionistController extends Controller
             'menu.menu_item',
             'order_details.quantity',
             'order_details.notes'
+            
         )
         ->whereDate('reservations.reservation_time', $targetDate)
         ->orderBy('reservations.reservation_time')

@@ -18,16 +18,26 @@
   <div class="time-display" id="manilaTimeDisplay"></div>
 
   <div class="table-layout">
-    @foreach($tables as $table)
-      <a href="#" class="table-link" data-table-id="{{ $table->id }}" data-table-number="{{ $table->table_number }}">
-        <div class="table available">Table {{ $table->table_number }}</div>
-      </a>
-    @endforeach
+  @foreach($tables as $table)
+    <div class="table-link" data-table-id="{{ $table->id }}" data-table-number="{{ $table->table_number }}">
+  <div class="table available">
+    <div class="table-number">Table {{ $table->table_number }}</div>
+    <div class="inline-options" style="display:none; flex-direction: column; align-items: center; gap: 5px; margin-top: 10px;">
+      <button class="inline-btn" onclick="makeOrder({{ $table->id }})">Place Order</button><br>
+      <button class="inline-btn" onclick="makeReservation({{ $table->id }})">Make Reservation</button>
+    </div>
+
   </div>
+</div>
+
+  @endforeach
+</div>
+
 
   <div class="bottom-buttons">
     <a class="view-button" href="{{ url('/view_reservations') }}">View Reservation</a>
     <a class="view-button" href="{{ route('kitchen.home') }}">View Kitchen</a>
+    <a class="view-button" href="">Modify Orders</a>
   </div>
 
   
@@ -49,10 +59,10 @@
         <div class="modal-column">
           <label><strong>Reserved Now</strong></label>
           <input type="date" id="reserved_date">
-          <input type="time" id="arrivalTimeInput" required>
-         <p><strong>Reservation Time Frame:</strong> <span id="timeFrameDisplay" style="font-size: 0.9rem;"></span></p>
-
+          <input type="time" id="arrivalTimeInput" min="11:30" max="18:00" value="11:30" required>
+          <p><strong>Reservation Time Frame:</strong> <span id="timeFrameDisplay" style="font-size: 0.9rem;"></span></p>
         </div>
+
       </div>
 
       <div class="modal-section">

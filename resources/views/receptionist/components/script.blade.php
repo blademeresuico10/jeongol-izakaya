@@ -8,15 +8,16 @@ const submitToCashierBtn = document.getElementById('submitToCashierBtn');
 const arrivalTimeInput = document.getElementById('arrivalTimeInput');
 const reserved_date = document.getElementById('reserved_date');
 let selectedTableId = null;
+let isPlacingOrder = false;
 
 const fullMenuPrices = @json($menuPricesMap);
 let menuPrices = {};
 
 function updateMenuPrices() {
-    const [hours, minutes] = (arrivalTimeInput.value || "00:00").split(':').map(Number);
-    const time = hours * 60 + minutes;
-    const isLunch = time <= 900;
+    let [hours, minutes] = (arrivalTimeInput.value || "00:00").split(':').map(Number);
+    let time = hours * 60 + minutes;
 
+    const isLunch = time < 960; // before 4:00 PM
     menuPrices = {};
     for (const item in fullMenuPrices) {
         let lunch = fullMenuPrices[item].lunch;
@@ -67,14 +68,12 @@ function calculateTotal() {
 tableLinks.forEach(link => {
     link.addEventListener('click', e => {
         e.preventDefault();
-        tableLinks.forEach(l => l.classList.remove('selected'));
-        link.classList.add('selected');
+        document.querySelectorAll('.inline-options').forEach(opt => opt.style.display = 'none');
+        link.querySelector('.inline-options').style.display = 'flex';
         selectedTableId = link.getAttribute('data-table-id');
-        modal.style.display = 'flex';
-        menuCheckboxes.forEach(cb => cb.checked = false);
-        updateSpecifyOrders();
     });
 });
+
 closeModal.onclick = () => modal.style.display = 'none';
 window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
 
@@ -82,12 +81,26 @@ window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
 arrivalTimeInput.addEventListener('input', () => {
     updateMenuPrices();
     updateSpecifyOrders();
+    updateTimeFrameDisplay();
 });
+reserved_date.addEventListener('input', updateTimeFrameDisplay);
 menuCheckboxes.forEach(cb => cb.addEventListener('change', updateSpecifyOrders));
 
-// submit
+// submit with validation
 submitToCashierBtn.addEventListener('click', () => {
-    if (submitToCashierBtn.disabled) return; // already processing
+    if (submitToCashierBtn.disabled) return;
+
+    const [hours, minutes] = (arrivalTimeInput.value || "00:00").split(':').map(Number);
+    const timeInMinutes = hours * 60 + minutes;
+
+    let minTime = 690; // 11:30 AM
+    let maxTime = isPlacingOrder ? 1200 : 1080; // 8:00 PM vs 6:00 PM
+
+    if (timeInMinutes < minTime || timeInMinutes > maxTime) {
+        alert(`Invalid time chosen. Please select a time between 11:30 AM and ${isPlacingOrder ? "8:00 PM" : "6:00 PM"}.`);
+        return;
+    }
+
     submitToCashierBtn.disabled = true;
     submitToCashierBtn.textContent = "Submitting...";
 
@@ -111,7 +124,6 @@ submitToCashierBtn.addEventListener('click', () => {
                     notes: document.getElementById('customerNotes').value.trim()
                 });
             }
-
         }
     });
 
@@ -139,6 +151,25 @@ submitToCashierBtn.addEventListener('click', () => {
     });
 });
 
+function updateTimeFrameDisplay() {
+    const arrivalTime = arrivalTimeInput.value;
+    const dateVal = reserved_date.value;
+    const timeFrame = document.getElementById('timeFrameDisplay');
+
+    if (!arrivalTime || !dateVal) {
+        timeFrame.textContent = '';
+        return;
+    }
+
+    const [hours, minutes] = arrivalTime.split(':').map(Number);
+    const start = new Date(dateVal);
+    start.setHours(hours, minutes, 0, 0);
+
+    const end = new Date(start);
+    end.setHours(end.getHours() + 2);
+
+    timeFrame.textContent = `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
 
 // time clock
 setInterval(() => {
@@ -146,4 +177,53 @@ setInterval(() => {
     document.getElementById("manilaTimeDisplay").textContent = `Current Time: ${now}`;
 }, 1000);
 document.getElementById('reserved_date').value = new Date().toISOString().substring(0, 10);
+
+// inline options show on table click
+document.querySelectorAll('.table-link').forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        document.querySelectorAll('.inline-options').forEach(opt => opt.style.display = 'none');
+        const options = link.querySelector('.inline-options');
+        if (options) options.style.display = 'block';
+    });
+});
+
+function makeOrder(tableId) {
+    selectedTableId = tableId;
+    isPlacingOrder = true;
+    modal.style.display = 'flex';
+
+    const now = new Date();
+    document.getElementById('reserved_date').value = now.toISOString().substring(0, 10);
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    document.getElementById('arrivalTimeInput').value = `${hours}:${minutes}`;
+
+    document.getElementById('reserved_date').disabled = true;
+    document.getElementById('arrivalTimeInput').disabled = true;
+
+    menuCheckboxes.forEach(cb => cb.checked = false);
+    updateMenuPrices();
+    updateSpecifyOrders();
+    updateTimeFrameDisplay();
+}
+
+function makeReservation(tableId) {
+    selectedTableId = tableId;
+    isPlacingOrder = false;
+    modal.style.display = 'flex';
+
+    document.getElementById('reserved_date').disabled = false;
+    document.getElementById('arrivalTimeInput').disabled = false;
+
+    const now = new Date();
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    document.getElementById('arrivalTimeInput').value = `${hours}:${minutes}`;
+    document.getElementById('reserved_date').value = now.toISOString().substring(0, 10);
+
+    updateMenuPrices();
+    updateSpecifyOrders();
+    updateTimeFrameDisplay();
+}
 </script>

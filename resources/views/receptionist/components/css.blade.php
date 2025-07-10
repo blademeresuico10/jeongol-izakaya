@@ -8,7 +8,8 @@
     min-height: 100vh;
   }
 
-  .logout-button {
+  .logout-button,
+  .view-button {
     text-decoration: none;
     background-color: #dc3545;
     color: white;
@@ -20,14 +21,7 @@
   }
 
   .view-button {
-    text-decoration: none;
-    background-color: #dc3545;
-    color: white;
     padding: 13px 15px;
-    border-radius: 5px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
   }
 
   .top-logout {
@@ -58,9 +52,8 @@
     flex-grow: 1;
   }
 
-
   .table-link {
-    flex: 0 calc(15% - 10px); 
+    flex: 0 calc(15% - 10px);
     text-decoration: none;
   }
 
@@ -76,13 +69,11 @@
     background-color: #28a745;
   }
 
-  
   @media (max-width: 1024px) {
     .table-link {
       flex: 0 1 calc(25% - 10px);
     }
   }
-
 
   @media (max-width: 768px) {
     .table-link {
@@ -163,23 +154,44 @@
     margin-top: 20px;
   }
 
-  .modal-actions button {
+  .pay-btn {
     padding: 10px 20px;
     border: none;
     border-radius: 5px;
     color: white;
-    cursor: pointer;
-  }
-
-  .submit-btn {
-    background-color: #007bff;
-  }
-
-  .pay-btn {
     background-color: #6c757d;
+    cursor: pointer;
   }
 
   .order-input {
     margin-top: 5px;
   }
+
+  .inline-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  margin: 3px 0;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 17px;
+}
+.inline-btn:hover {
+  background-color: #c82333;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.table-number {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+
 </style>
