@@ -1,4 +1,5 @@
 <script>
+    
 const modal = document.getElementById('tableModal');
 const closeModal = document.getElementById('closeModal');
 const tableLinks = document.querySelectorAll('.table-link');
@@ -201,6 +202,7 @@ function makeOrder(tableId) {
 
     document.getElementById('reserved_date').disabled = true;
     document.getElementById('arrivalTimeInput').disabled = true;
+    document.getElementById('advance_payment').parentElement.style.display = 'none';
 
     menuCheckboxes.forEach(cb => cb.checked = false);
     updateMenuPrices();
@@ -221,6 +223,7 @@ function makeReservation(tableId) {
     const minutes = now.getMinutes().toString().padStart(2, '0');
     document.getElementById('arrivalTimeInput').value = `${hours}:${minutes}`;
     document.getElementById('reserved_date').value = now.toISOString().substring(0, 10);
+    document.getElementById('advance_payment').parentElement.style.display = '';
 
     updateMenuPrices();
     updateSpecifyOrders();

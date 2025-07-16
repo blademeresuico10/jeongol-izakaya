@@ -25,6 +25,7 @@ class ReceptionistController extends Controller
         return view('receptionist.home', compact('tables', 'menuItems', 'reservations'));
     }
 
+
     public function storeReservation(Request $request)
 {
     $data = $request->json()->all();

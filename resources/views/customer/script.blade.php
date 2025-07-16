@@ -1,19 +1,17 @@
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
-document.addEventListener('DOMContentLoaded', function () {
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Elements
   const modal = document.getElementById('tableModal');
   const closeModal = document.getElementById('closeModal');
+  const paymentModal = document.getElementById('paymentModal');
   const tableLinks = document.querySelectorAll('.table-link');
-  const payment_modal = document.getElementById('paymentModal');
 
+  const nameInput = document.getElementById('customerName');
+  const contactInput = document.getElementById('contactNumber');
   const dateInput = document.getElementById('reserved_date');
-  // Auto-set date to tomorrow if current time is after 6:30 PM
-  const now = new Date();
-  if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
-    now.setDate(now.getDate() + 1); // move to tomorrow
-  }
-  dateInput.value = now.toISOString().split('T')[0];
-
   const timeInput = document.getElementById('arrivalTimeInput');
+  const notesInput = document.getElementById('customerNotes');
   const validUntilMessage = document.getElementById('validUntilMessage');
 
   const submitToCashierBtn = document.getElementById('submitToCashierBtn');
@@ -21,15 +19,50 @@ document.addEventListener('DOMContentLoaded', function () {
 
   let selectedTableNumber = 0;
 
-  // Set min/max reservation date
+  // ----------- Helpers -----------
+  const highlightInvalidField = field => {
+    field.style.border = '2px solid red';
+    setTimeout(() => (field.style.border = ''), 2000);
+  };
+
+  const resetForm = () => {
+    [nameInput, contactInput, dateInput, timeInput, notesInput].forEach(el => el.value = '');
+    validUntilMessage.textContent = '';
+    document.querySelectorAll('.menu-item').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.menu-qty').forEach(qty => {
+      qty.value = '';
+      qty.disabled = true;
+    });
+  };
+
+  const gatherReservationData = () => ({
+    customer_name: nameInput.value.trim(),
+    contact_number: contactInput.value.trim(),
+    reserved_date: dateInput.value,
+    arrival_time: timeInput.value,
+    notes: notesInput.value.trim(),
+    table_number: selectedTableNumber,
+    menu: Array.from(document.querySelectorAll('.menu-item')).map(menu => ({
+      item: menu.value,
+      quantity: menu.checked ? parseInt(menu.closest('.menu-item-label').querySelector('.menu-qty').value) : 0,
+      notes: notesInput.value.trim()
+    }))
+  });
+
+  // ----------- Date Setup -----------
+  const now = new Date();
+  if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
+    now.setDate(now.getDate() + 1);
+  }
+  dateInput.value = now.toISOString().split('T')[0];
+
   const today = new Date();
   const maxDate = new Date();
   maxDate.setDate(today.getDate() + 2);
-  const toYMD = d => d.toISOString().split('T')[0];
-  dateInput.min = toYMD(today);
-  dateInput.max = toYMD(maxDate);
+  dateInput.min = today.toISOString().split('T')[0];
+  dateInput.max = maxDate.toISOString().split('T')[0];
 
-  // Open modal when table is clicked
+  // ----------- Event Listeners -----------
   tableLinks.forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
@@ -38,69 +71,45 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // Close modal
-  closeModal.addEventListener('click', () => modal.style.display = 'none');
-  window.addEventListener('click', e => {
-    if (e.target === modal) modal.style.display = 'none';
-  });
+  closeModal.addEventListener('click', () => (modal.style.display = 'none'));
+  window.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
 
-  // Enable/disable quantity input
+  // Enable/disable qty inputs
   document.querySelectorAll('.menu-item').forEach(checkbox => {
-    checkbox.addEventListener('change', function () {
-      const qtyInput = this.closest('.menu-item-label').querySelector('.menu-qty');
-      qtyInput.disabled = !this.checked;
-      qtyInput.value = this.checked ? 1 : '';
+    checkbox.addEventListener('change', () => {
+      const qtyInput = checkbox.closest('.menu-item-label').querySelector('.menu-qty');
+      qtyInput.disabled = !checkbox.checked;
+      qtyInput.value = checkbox.checked ? 1 : '';
       qtyInput.style.border = '';
     });
   });
 
-  // Helper to highlight invalid inputs
-  function highlightInvalidField(field) {
-    field.style.border = '2px solid red';
-    setTimeout(() => field.style.border = '', 2000);
-  }
-
-  // Display "must arrive by" time
+  // Show must arrive by
   timeInput.addEventListener('input', () => {
-    const time = timeInput.value;
-    if (time) {
-      const [hour, minute] = time.split(':').map(Number);
-      const reservationTime = new Date();
-      reservationTime.setHours(hour);
-      reservationTime.setMinutes(minute + 30);
-      validUntilMessage.textContent = `You must arrive by ${reservationTime.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      })}`;
-    } else {
-      validUntilMessage.textContent = '';
-    }
+    if (!timeInput.value) return validUntilMessage.textContent = '';
+    const [hour, minute] = timeInput.value.split(':').map(Number);
+    const expireTime = new Date();
+    expireTime.setHours(hour);
+    expireTime.setMinutes(minute + 30);
+    validUntilMessage.textContent = `You must arrive by ${expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}`;
   });
 
-  // Show payment modal
+  // ----------- Proceed to Payment -----------
   submitToCashierBtn.addEventListener('click', () => {
-    const name = document.getElementById('customerName');
-    const contact = document.getElementById('contactNumber');
-    const date = document.getElementById('reserved_date');
-    const time = document.getElementById('arrivalTimeInput');
-    const notes = document.getElementById('customerNotes');
-
     let hasError = false;
-    [name, contact, date, time].forEach(field => field.style.border = '');
+    [nameInput, contactInput, dateInput, timeInput].forEach(f => f.style.border = '');
 
-    if (!name.value.trim()) { highlightInvalidField(name); hasError = true; }
-    if (!contact.value.trim()) { highlightInvalidField(contact); hasError = true; }
-    if (!date.value.trim()) { highlightInvalidField(date); hasError = true; }
-    if (!time.value.trim()) { highlightInvalidField(time); hasError = true; }
+    if (!nameInput.value.trim()) { highlightInvalidField(nameInput); hasError = true; }
+    if (!contactInput.value.trim()) { highlightInvalidField(contactInput); hasError = true; }
+    if (!dateInput.value.trim()) { highlightInvalidField(dateInput); hasError = true; }
+    if (!timeInput.value.trim()) { highlightInvalidField(timeInput); hasError = true; }
 
-    if (time.value && (time.value < '10:00' || time.value > '18:00')) {
+    if (timeInput.value && (timeInput.value < '10:00' || timeInput.value > '18:00')) {
       alert('Reservation time must be between 10:00 AM and 6:00 PM.');
-      highlightInvalidField(time);
+      highlightInvalidField(timeInput);
       hasError = true;
     }
 
-    // Validate quantities for checked items
     document.querySelectorAll('.menu-item:checked').forEach(menu => {
       const qtyInput = menu.closest('.menu-item-label').querySelector('.menu-qty');
       if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
@@ -114,37 +123,16 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    // Build reservation data (include all menu items, even unchecked)
-    const reservationData = {
-      customer_name: name.value.trim(),
-      contact_number: contact.value.trim(),
-      reserved_date: date.value,
-      arrival_time: time.value,
-      notes: notes.value.trim(),
-      table_number: selectedTableNumber,
-      menu: []
-    };
-
-    document.querySelectorAll('.menu-item').forEach(menu => {
-      const qtyInput = menu.closest('.menu-item-label').querySelector('.menu-qty');
-      reservationData.menu.push({
-        item: menu.value,
-        quantity: menu.checked ? parseInt(qtyInput.value) : 0,
-        notes: document.getElementById('customerNotes').value.trim()
-    });
-    });
-
-    localStorage.setItem('reservation_data', JSON.stringify(reservationData));
+    localStorage.setItem('reservation_data', JSON.stringify(gatherReservationData()));
     modal.style.display = 'none';
-    const bsModal = new bootstrap.Modal(payment_modal);
-    bsModal.show();
+    new bootstrap.Modal(paymentModal).show();
   });
 
-  // Final submit to backend
+  // ----------- Submit to backend -----------
   submitReservationBtn.addEventListener('click', () => {
     const reservationData = JSON.parse(localStorage.getItem('reservation_data'));
     if (!reservationData) {
-      alert('No reservation data found. Please fill the reservation form first.');
+      alert('No reservation data found. Please fill the reservation form.');
       return;
     }
 
@@ -155,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function () {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
       },
       body: JSON.stringify(reservationData)
     })
@@ -164,20 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
       if (data.success) {
         alert('Reservation submitted successfully!');
         localStorage.removeItem('reservation_data');
-
-        // Reset form
-        document.getElementById('customerName').value = '';
-        document.getElementById('contactNumber').value = '';
-        document.getElementById('reserved_date').value = '';
-        document.getElementById('arrivalTimeInput').value = '';
-        document.getElementById('customerNotes').value = '';
-        document.getElementById('validUntilMessage').textContent = '';
-        document.querySelectorAll('.menu-item').forEach(cb => cb.checked = false);
-        document.querySelectorAll('.menu-qty').forEach(qty => {
-          qty.value = '';
-          qty.disabled = true;
-        });
-
+        resetForm();
         location.href = "{{ route('customer.place_reservation') }}";
       } else {
         alert('Reservation failed. Please try again.');
@@ -191,6 +166,4 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 });
-
-
 </script>

@@ -202,7 +202,7 @@
         <a href="#"><i class="bi bi-twitter"></i></a>
         <a href="mailto:info@jeongolizakaya.com"><i class="bi bi-envelope-fill"></i></a>
       </div>
-      <p class="mb-0">© 2023 Jeongol Izakaya. All rights reserved.</p>
+      <p class="mb-0">Jeongol Izakaya.</p>
     </div>
   </footer>
 
