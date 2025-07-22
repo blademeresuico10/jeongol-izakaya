@@ -117,7 +117,7 @@
       </div>
 
       <div class="modal-actions">
-        <button class="pay-btn" id="submitToCashierBtn" type="button">Submit to cashier</button>
+        <button class="pay-btn" id="submitBtn" type="button">Submit to cashier</button>
       </div>
     </div>
   </div>

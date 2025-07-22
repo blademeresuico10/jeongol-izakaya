@@ -8,6 +8,7 @@
 
   <!-- Bootstrap + Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
 
   <style>
@@ -219,90 +220,71 @@
   </main>
 
   <!-- Reservation Modal -->
-  <div id="tableModal" class="modal">
-    <div class="modal-content">
-      <span id="closeModal" class="close-modal">&times;</span>
-      <h3><strong>Please Enter Reservation Details</strong></h3>
+<div id="tableModal" class="modal">
+  <div class="modal-content">
+    <span id="closeModal" class="close-modal">&times;</span>
+    <h3><strong>Please Enter Reservation Details</strong></h3>
 
+    <form id="reservationForm">
+      <!-- Customer Info -->
       <div class="modal-section">
         <label>Customer</label><br>
-        <input type="text" id="customerName" placeholder="Enter your name" required><br>
+        <input type="text" id="customerName" name="customer_name" placeholder="Enter your name" required><br>
+
         <label>Contact Number</label><br>
-        <input type="text" id="contactNumber" placeholder="Enter your contact number" required>
+        <input type="text" id="contactNumber" name="contact_number" placeholder="Enter your contact number" required>
       </div>
+
+      <!-- Reservation Schedule -->
       <div class="modal-section">
         <label>Reservation Date</label><br>
-        <input type="date" id="reserved_date" required><br>
+        <input type="date" id="reserved_date" name="reserved_date" required><br>
 
         <label>Reservation Time</label><br>
-        <input type="time" id="arrivalTimeInput" required>
-        
-        <!-- Message area -->
-        <small id="validUntilMessage" style="color: #888; font-style: italic; display: block; margin-top: 5px;"></small>
+        <input type="time" id="arrivalTimeInput" name="arrival_time" required>
+
+        <small id="validUntilMessage" style="color: #ff0000; font-style: italic; display: block; margin-top: 5px;"></small>
+      </div>
+
+      <!-- Menu Selection -->
+      <div><p><strong>Available food to reserve:</strong></p></div>
+      <div class="modal-section modal-flex">
+        @foreach(['Samgyupsal', 'Hotpot', 'Fusion'] as $item)
+        <div class="menu-item-label">
+          <label>
+            <input type="checkbox" class="menu-item" name="menu_items[]" value="{{ $item }}">
+            <span>{{ $item }}</span>
+          </label>
+          <input
+            type="number"
+            placeholder=""
+            min="1"
+            class="form-control ms-2 menu-qty"
+            name="quantity[{{ $item }}]"
+            style="width: 60px;"
+            disabled
+          >
         </div>
+        @endforeach
+      </div>
 
-
-<div><p> <strong> Available food to reserve:</strong></p></div>
-<div class="modal-section modal-flex">
-  @foreach(['Samgyupsal', 'Hotpot', 'Fusion'] as $item)
-    <div class="menu-item-label">
-      <label>
-        <input type="checkbox" class="menu-item" value="{{ $item }}">
-        <span>{{ $item }}</span>
-      </label>
-      <input
-        type="number"
-        placeholder=""
-        min="1"
-        class="form-control ms-2 menu-qty"
-        name="quantity[{{ $item }}]"
-        style="width: 60px;"
-        disabled
-      >
-    </div>
-  @endforeach
-</div>
-
+      <!-- Notes -->
       <div class="modal-section">
-        <textarea id="customerNotes" placeholder="Add notes" rows="3"></textarea>
+        <textarea id="customerNotes" name="notes" placeholder="Add notes" rows="3"></textarea>
       </div>
 
+      <!-- Selected Table -->
+      <input type="hidden" id="selectedTableNumber" name="table_number">
+
+      <!-- Submit Button -->
       <div class="modal-actions">
-        <button class="pay-btn" id="submitToCashierBtn" type="button">Proceed to Payment</button>
+        <button class="submit-btn" id="submitBtn" type="submit">Submit Reservation</button>
       </div>
-    </div>
-  </div>
-
-  <!-- Payment Modal -->
-
-    <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="paymentModalLabel">Process Payment</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center">
-        <p>Gcash</p>
-        <label for="gcashNumber">Phone Number:</label><br>
-        <span id="gcashNumber" style="font-weight: bold;">09123456789</span>
-        <i class="bi bi-clipboard" id="copyIcon" style="cursor: pointer; margin-left: 8px;" title="Copy number"></i><br>
-
-        <img src="/assets/gcash-qr.jpg" alt="Gcash QR" style="width: 50%; max-width: 100px; margin-bottom: 15px;"><br>
-
-
-        <p>Paymaya</p>
-        <img src="/assets/gcash.png" alt="Paymaya Logo" style="max-width: 100px; margin-bottom: 15px;"><br>
-
-
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-success" data-bs-dismiss="modal">Upload Receipt</button>
-        <button type="button" class="btn btn-success" id="submitReservationBtn">Submit Reservation</button>
-      </div>
-    </div>
+    </form>
   </div>
 </div>
+
+  
 
 
   <!-- Footer -->

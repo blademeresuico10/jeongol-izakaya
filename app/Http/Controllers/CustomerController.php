@@ -4,11 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\Reservation;
-use App\Models\customers;
-use Illuminate\Support\Facades\Auth;
-
 
 class CustomerController extends Controller
 {
@@ -22,7 +21,6 @@ class CustomerController extends Controller
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
 
-        // Get current time and today's reservations
         $now = Carbon::now();
         $reservations = DB::table('reservations')
             ->whereDate('reservation_time', $now->toDateString())
@@ -31,115 +29,153 @@ class CustomerController extends Controller
         return view('customer.place_reservation', compact('tables', 'menuItems'));
     }
 
-    public function store(Request $request)
-    {
-        try {
-            $data = $request->all();
-            $userId = Auth::id();
+    public function storeReservation(Request $request)
+{
+    $data = $request->json()->all();
+    Log::info('Customer Reservation Request:', $data);
 
-            // 1. Check if customer exists
-            $existing = DB::table('customers')->where('name', $data['customer_name'])->first();
-            if (!$existing) {
-                $customerId = DB::table('customers')->insertGetId([
-                    'name' => $data['customer_name'],
-                    'contact_number' => $data['contact_number'],
-                    'id_type' => null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-            } else {
-                $customerId = $existing->id;
-            }
+    try {
+        $validated = validator($data, [
+            'customer_name'   => 'required|string',
+            'contact_number'  => 'required|string',
+            'reserved_date'   => 'required|date',
+            'arrival_time'    => 'required|date_format:H:i',
+            'table_number'    => 'required|integer',
 
-            // 2. Count pax
-            $totalPax = collect($data['menu'])->sum('quantity');
+            'menu'            => 'nullable|array',
+            'menu.*.item'     => 'required|string',
+            'menu.*.quantity' => 'required|integer|min:1',
+            'menu.*.notes'    => 'nullable|string',
 
-            // 3. Combine date & time and determine if lunch or dinner
-            $reservationDateTime = Carbon::parse($data['reserved_date'] . ' ' . $data['arrival_time']);
-            $isLunch = $reservationDateTime->hour <= 12;
+            'notes'           => 'nullable|string',
+        ])->validate();
 
-            // 4. Create reservation
-            // 4. Check for reservation conflicts
-            $startTime = $reservationDateTime;
-            $endTime = $reservationDateTime->copy()->addHours(2);
+        $userId = Auth::id();
 
-            $conflict = DB::table('reservations')
-                ->where('table_number', $data['table_number'])
-                ->whereDate('reservation_time', $startTime->toDateString())
-                ->get()
-                ->filter(function ($existing) use ($startTime, $endTime) {
-                    $existingStart = Carbon::parse($existing->reservation_time);
-                    $existingEnd = $existingStart->copy()->addHours(2);
-                    return $startTime < $existingEnd && $endTime > $existingStart;
-                })
-                ->isNotEmpty();
+        // Create or retrieve customer
+        $customer = DB::table('customers')
+            ->where('name', $validated['customer_name'])
+            ->where('contact_number', $validated['contact_number'])
+            ->first();
 
-            if ($conflict) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'This table is already reserved during the selected time slot.',
-                ]);
-            }
-
-            // 5. Create reservation
-            $reservationId = DB::table('reservations')->insertGetId([
-                'pax' => $totalPax,
-                'reservation_time' => $reservationDateTime,
-                'advance_payment' => 0.00,
-                'table_number' => $data['table_number'] ?? 0,
-                'customer_id' => $customerId,
-                'user_id' => $userId,
-                'created_at' => now(),
-                'updated_at' => now(),
+        $customerId = $customer
+            ? $customer->id
+            : DB::table('customers')->insertGetId([
+                'name'           => $validated['customer_name'],
+                'contact_number' => $validated['contact_number'],
+                'created_at'     => now(),
+                'updated_at'     => now(),
             ]);
 
+        // Validate time window
+        $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
+        $endDateTime = $reservedDateTime->copy()->addMinutes(30);
 
-            
-            // 5. Store order_details with correct price
-        foreach ($data['menu'] as $item) {
-            $itemName = $item['item'];
-            $quantity = (int) $item['quantity'];
-
-            if ($quantity < 1) continue; // ✅ Skip invalid/zero quantity
-
-            // Determine menu variant
-            $menuKey = match ($itemName) {
-                'Samgyupsal' => $isLunch ? 'Samgyup Lunch' : 'Samgyup Dinner',
-                'Hotpot'     => $isLunch ? 'HotPot Lunch' : 'HotPot Dinner',
-                default      => $itemName,
-            };
-
-            $menu = DB::table('menu')->where('menu_item', $menuKey)->first();
-
-            if (!$menu) continue;
-
-            $orderPrice = $menu->price * $quantity;
-
-            DB::table('order_details')->insert([
-                'order_price'   => $orderPrice,
-                'quantity'      => $quantity,
-                'notes'         => $item['notes'] ?? null,
-                'customer_id'   => $customerId,
-                'user_id'       => $userId,
-                'menu_id'       => $menu->id,
-                'reservation_id'=> $reservationId,
-                'created_at'    => now(),
-                'updated_at'    => now(),
-            ]);
+        if ($reservedDateTime->isPast()) {
+            return response()->json(['success' => false, 'message' => 'Cannot reserve for a past time.'], 400);
         }
 
-        
-            return response()->json(['success' => true]);
+        $arrivalMinutes = $reservedDateTime->hour * 60 + $reservedDateTime->minute;
+        if ($arrivalMinutes < 690 || $arrivalMinutes > 1080) { // 11:30 AM = 690, 6:00 PM = 1080
+            return response()->json(['success' => false, 'message' => 'Reservation time must be between 11:30 AM and 6:00 PM.'], 400);
+        }
 
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Reservation failed.',
-                'error' => $e->getMessage()
-            ]);
+        // Check for table conflict
+        $conflict = DB::table('reservations')
+            ->where('table_number', $validated['table_number'])
+            ->where(function ($query) use ($reservedDateTime, $endDateTime) {
+                $query->where('reservation_time', '<', $endDateTime)
+                      ->where('reservation_end_time', '>', $reservedDateTime);
+            })
+            ->exists();
+
+        if ($conflict) {
+            return response()->json(['success' => false, 'message' => 'This table is already reserved for that time.'], 409);
+        }
+
+        // Determine if Lunch or Dinner
+        $isLunch = $arrivalMinutes < 960; // 4:00 PM = 960
+
+        $totalPrice = 0;
+        $pax = 0;
+
+        
+        $validOrders = [];
+
+        if (!empty($validated['menu'])) {
+        foreach ($validated['menu'] as $order) {
+            $menuQuery = DB::table('menu')->where('menu_item', 'LIKE', $order['item'] . '%');
+
+            if ($isLunch) {
+                $menuQuery->where('menu_item', 'LIKE', '%Lunch');
+            } else {
+                $menuQuery->where('menu_item', 'LIKE', '%Dinner');
+            }
+
+            $menu = $menuQuery->first();
+
+            if ($menu) {
+                $qty = $order['quantity'];
+                $linePrice = $menu->price * $qty;
+                $totalPrice += $linePrice;
+                $pax += $qty;
+
+                $validOrders[] = [
+                    'menu_id'       => $menu->id,
+                    'quantity'      => $qty,
+                    'order_price'   => $linePrice,
+                    'notes'         => $order['notes'] ?? '',
+                ];
+            }
         }
     }
 
 
+        // Create reservation
+        $reservation = Reservation::create([
+            'pax'                  => $pax,
+            'advance_payment'      => null,
+            'reservation_time'     => $reservedDateTime,
+            'reservation_end_time' => $endDateTime,
+            'table_number'         => $validated['table_number'],
+            'notes'                => $validated['notes'] ?? null,
+            'customer_id'          => $customerId,
+            'user_id'              => $userId,
+            'total_price'          => $totalPrice,
+        ]);
+
+        // Insert valid orders (only if notes exist and menu found)
+        foreach ($validOrders as $order) {
+            // Avoid duplicates: check by reservation_id + menu_id
+            $exists = DB::table('order_details')
+                ->where('reservation_id', $reservation->id)
+                ->where('menu_id', $order['menu_id'])
+                ->exists();
+
+            if (!$exists) {
+                DB::table('order_details')->insert([
+                    'order_price'    => $order['order_price'],
+                    'quantity'       => $order['quantity'],
+                    'notes'          => $order['notes'],
+                    'customer_id'    => $customerId,
+                    'user_id'        => $userId,
+                    'menu_id'        => $order['menu_id'],
+                    'reservation_id' => $reservation->id,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
+            }
+        }
+
+        return response()->json(['success' => true, 'message' => 'Reservation successful!']);
+    } catch (\Exception $e) {
+        Log::error('Customer Reservation Error:', ['error' => $e->getMessage()]);
+        return response()->json([
+            'success' => false,
+            'message' => 'Reservation failed.',
+            'error'   => $e->getMessage(),
+        ], 500);
+    }
+}
 
 }

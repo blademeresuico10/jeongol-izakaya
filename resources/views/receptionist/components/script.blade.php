@@ -5,7 +5,7 @@ const closeModal = document.getElementById('closeModal');
 const tableLinks = document.querySelectorAll('.table-link');
 const menuCheckboxes = document.querySelectorAll('.menu-item');
 const specifyOrdersDiv = document.getElementById('specifyOrders');
-const submitToCashierBtn = document.getElementById('submitToCashierBtn');
+const submitBtn = document.getElementById('submitBtn');
 const arrivalTimeInput = document.getElementById('arrivalTimeInput');
 const reserved_date = document.getElementById('reserved_date');
 let selectedTableId = null;
@@ -88,8 +88,8 @@ reserved_date.addEventListener('input', updateTimeFrameDisplay);
 menuCheckboxes.forEach(cb => cb.addEventListener('change', updateSpecifyOrders));
 
 // submit with validation
-submitToCashierBtn.addEventListener('click', () => {
-    if (submitToCashierBtn.disabled) return;
+submitBtn.addEventListener('click', () => {
+    if (submitBtn.disabled) return;
 
     const [hours, minutes] = (arrivalTimeInput.value || "00:00").split(':').map(Number);
     const timeInMinutes = hours * 60 + minutes;
@@ -102,8 +102,8 @@ submitToCashierBtn.addEventListener('click', () => {
         return;
     }
 
-    submitToCashierBtn.disabled = true;
-    submitToCashierBtn.textContent = "Submitting...";
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
 
     const data = {
         customer_name: document.getElementById('customerName').value.trim(),
@@ -141,14 +141,14 @@ submitToCashierBtn.addEventListener('click', () => {
             location.reload();
         } else {
             alert(response.message || "Failed to save reservation.");
-            submitToCashierBtn.disabled = false;
-            submitToCashierBtn.textContent = "Submit to cashier";
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Submit to cashier";
         }
     })
     .catch(() => {
         alert("An error occurred.");
-        submitToCashierBtn.disabled = false;
-        submitToCashierBtn.textContent = "Submit to cashier";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit to cashier";
     });
 });
 

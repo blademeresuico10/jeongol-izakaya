@@ -1,10 +1,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  // Elements
   const modal = document.getElementById('tableModal');
   const closeModal = document.getElementById('closeModal');
-  const paymentModal = document.getElementById('paymentModal');
   const tableLinks = document.querySelectorAll('.table-link');
 
   const nameInput = document.getElementById('customerName');
@@ -13,21 +11,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const timeInput = document.getElementById('arrivalTimeInput');
   const notesInput = document.getElementById('customerNotes');
   const validUntilMessage = document.getElementById('validUntilMessage');
-
-  const submitToCashierBtn = document.getElementById('submitToCashierBtn');
-  const submitReservationBtn = document.getElementById('submitReservationBtn');
+  const submitBtn = document.getElementById('submitBtn');
 
   let selectedTableNumber = 0;
 
-  // ----------- Helpers -----------
   const highlightInvalidField = field => {
     field.style.border = '2px solid red';
-    setTimeout(() => (field.style.border = ''), 2000);
+    setTimeout(() => field.style.border = '', 2000);
   };
 
   const resetForm = () => {
     [nameInput, contactInput, dateInput, timeInput, notesInput].forEach(el => el.value = '');
     validUntilMessage.textContent = '';
+    selectedTableNumber = 0;
+    document.getElementById('selectedTableNumber').value = '';
     document.querySelectorAll('.menu-item').forEach(cb => cb.checked = false);
     document.querySelectorAll('.menu-qty').forEach(qty => {
       qty.value = '';
@@ -35,135 +32,146 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   };
 
-  const gatherReservationData = () => ({
-    customer_name: nameInput.value.trim(),
-    contact_number: contactInput.value.trim(),
-    reserved_date: dateInput.value,
-    arrival_time: timeInput.value,
-    notes: notesInput.value.trim(),
-    table_number: selectedTableNumber,
-    menu: Array.from(document.querySelectorAll('.menu-item')).map(menu => ({
-      item: menu.value,
-      quantity: menu.checked ? parseInt(menu.closest('.menu-item-label').querySelector('.menu-qty').value) : 0,
-      notes: notesInput.value.trim()
-    }))
+  const gatherReservationData = () => {
+    const menuItems = Array.from(document.querySelectorAll('.menu-item'))
+      .filter(menu => menu.checked)
+      .map(menu => {
+        const wrapper = menu.closest('.menu-item-label');
+        const qtyInput = wrapper.querySelector('.menu-qty');
+        return {
+          item: menu.value,
+          quantity: parseInt(qtyInput.value) || 1, // default to 1 if not entered
+          notes: '' // optional per-item notes not used for now
+        };
+      });
+
+    return {
+      customer_name: nameInput.value.trim(),
+      contact_number: contactInput.value.trim(),
+      reserved_date: dateInput.value,
+      arrival_time: timeInput.value,
+      table_number: selectedTableNumber,
+      notes: notesInput.value.trim(),
+      menu: menuItems
+    };
+  };
+
+  const validateInputs = () => {
+    let valid = true;
+    if (!nameInput.value.trim()) {
+      highlightInvalidField(nameInput);
+      valid = false;
+    }
+    if (!contactInput.value.trim()) {
+      highlightInvalidField(contactInput);
+      valid = false;
+    }
+    if (!dateInput.value) {
+      highlightInvalidField(dateInput);
+      valid = false;
+    }
+    if (!timeInput.value) {
+      highlightInvalidField(timeInput);
+      valid = false;
+    }
+    if (!selectedTableNumber) {
+      alert('Please select a table.');
+      valid = false;
+    }
+    return valid;
+  };
+
+  // Enable/disable quantity field when checkbox is checked
+  document.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('change', () => {
+      const qtyInput = item.closest('.menu-item-label').querySelector('.menu-qty');
+      qtyInput.disabled = !item.checked;
+      if (item.checked && !qtyInput.value) qtyInput.value = 1;
+    });
   });
 
-  // ----------- Date Setup -----------
+  // Modal open on table click
+  tableLinks.forEach(link => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      selectedTableNumber = link.getAttribute('data-table-number');
+      document.getElementById('selectedTableNumber').value = selectedTableNumber;
+      modal.style.display = 'flex';
+    });
+  });
+
+  // Modal close
+  closeModal.addEventListener('click', () => {
+    modal.style.display = 'none';
+    resetForm();
+  });
+
+  // Auto date settings
   const now = new Date();
   if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
     now.setDate(now.getDate() + 1);
   }
   dateInput.value = now.toISOString().split('T')[0];
-
   const today = new Date();
   const maxDate = new Date();
   maxDate.setDate(today.getDate() + 2);
   dateInput.min = today.toISOString().split('T')[0];
   dateInput.max = maxDate.toISOString().split('T')[0];
 
-  // ----------- Event Listeners -----------
-  tableLinks.forEach(link => {
-    link.addEventListener('click', e => {
-      e.preventDefault();
-      selectedTableNumber = link.getAttribute('data-table-number') || 0;
-      modal.style.display = 'flex';
-    });
-  });
-
-  closeModal.addEventListener('click', () => (modal.style.display = 'none'));
-  window.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
-
-  // Enable/disable qty inputs
-  document.querySelectorAll('.menu-item').forEach(checkbox => {
-    checkbox.addEventListener('change', () => {
-      const qtyInput = checkbox.closest('.menu-item-label').querySelector('.menu-qty');
-      qtyInput.disabled = !checkbox.checked;
-      qtyInput.value = checkbox.checked ? 1 : '';
-      qtyInput.style.border = '';
-    });
-  });
-
-  // Show must arrive by
+  // Valid until display
   timeInput.addEventListener('input', () => {
     if (!timeInput.value) return validUntilMessage.textContent = '';
     const [hour, minute] = timeInput.value.split(':').map(Number);
     const expireTime = new Date();
     expireTime.setHours(hour);
     expireTime.setMinutes(minute + 30);
-    validUntilMessage.textContent = `You must arrive by ${expireTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+    validUntilMessage.textContent = `You must arrive by ${expireTime.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    })}`;
   });
 
-  // ----------- Proceed to Payment -----------
-  submitToCashierBtn.addEventListener('click', () => {
-    let hasError = false;
-    [nameInput, contactInput, dateInput, timeInput].forEach(f => f.style.border = '');
+  // Form submission
+  submitBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
 
-    if (!nameInput.value.trim()) { highlightInvalidField(nameInput); hasError = true; }
-    if (!contactInput.value.trim()) { highlightInvalidField(contactInput); hasError = true; }
-    if (!dateInput.value.trim()) { highlightInvalidField(dateInput); hasError = true; }
-    if (!timeInput.value.trim()) { highlightInvalidField(timeInput); hasError = true; }
-
-    if (timeInput.value && (timeInput.value < '10:00' || timeInput.value > '18:00')) {
-      alert('Reservation time must be between 10:00 AM and 6:00 PM.');
-      highlightInvalidField(timeInput);
-      hasError = true;
-    }
-
-    document.querySelectorAll('.menu-item:checked').forEach(menu => {
-      const qtyInput = menu.closest('.menu-item-label').querySelector('.menu-qty');
-      if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
-        highlightInvalidField(qtyInput);
-        hasError = true;
-      }
-    });
-
-    if (hasError) {
-      alert('Please complete all required fields correctly.');
+    if (!validateInputs()) {
+      alert('Please complete all required fields.');
       return;
     }
 
-    localStorage.setItem('reservation_data', JSON.stringify(gatherReservationData()));
-    modal.style.display = 'none';
-    new bootstrap.Modal(paymentModal).show();
-  });
+    const data = gatherReservationData();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Submitting...';
 
-  // ----------- Submit to backend -----------
-  submitReservationBtn.addEventListener('click', () => {
-    const reservationData = JSON.parse(localStorage.getItem('reservation_data'));
-    if (!reservationData) {
-      alert('No reservation data found. Please fill the reservation form.');
-      return;
-    }
+    try {
+      const res = await fetch('/customer/reserve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify(data)
+      });
 
-    if (submitReservationBtn.disabled) return;
-    submitReservationBtn.disabled = true;
+      const response = await res.json();
 
-    fetch('/customer/store', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-      },
-      body: JSON.stringify(reservationData)
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        alert('Reservation submitted successfully!');
-        localStorage.removeItem('reservation_data');
+      if (res.ok && response.success) {
+        alert('Reservation successful!');
         resetForm();
-        location.href = "{{ route('customer.place_reservation') }}";
+        modal.style.display = 'none';
       } else {
-        alert('Reservation failed. Please try again.');
-        submitReservationBtn.disabled = false;
+        alert(response.message || 'Reservation could not be completed.');
       }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('An error occurred. Please try again.');
-      submitReservationBtn.disabled = false;
-    });
+
+    } catch (err) {
+      console.error(err);
+      alert('Something went wrong while submitting the reservation.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Reservation';
+    }
   });
 });
 </script>

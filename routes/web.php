@@ -10,7 +10,10 @@ use App\Http\Controllers\CustomerController;
 // Customer landing page
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
-Route::post('/customer/store', [CustomerController::class, 'store'])->name('customer.store');
+Route::post('/customer/reserve', [CustomerController::class, 'storeReservation']);
+// Route to handle reservation form submission
+Route::post('/customer/reserve', [CustomerController::class, 'storeReservation']);
+
 
 // Login routes
 Route::get('/login', [LoginController::class, 'index'])->name('login');
