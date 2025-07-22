@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return {
           item: menu.value,
           quantity: parseInt(qtyInput.value) || 1, // default to 1 if not entered
-          notes: '' // optional per-item notes not used for now
+          notes: notesInput.value.trim() 
         };
       });
 
