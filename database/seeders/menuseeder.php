@@ -6,7 +6,7 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
-class Menuseeder extends Seeder
+class MenuSeeder extends Seeder
 {
     
     public function run(): void
