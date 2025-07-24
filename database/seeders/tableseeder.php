@@ -11,6 +11,7 @@ class tableseeder  extends Seeder
     
     public function run(): void
     {
+        DB::table('tables')->truncate();
         DB::table('tables')->insert([
             ['table_number' => 1, 'capacity' => 4],
             ['table_number' => 2, 'capacity' => 6],
