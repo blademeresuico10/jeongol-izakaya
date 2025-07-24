@@ -8,20 +8,17 @@ use Illuminate\Support\Facades\Hash;
 
 class users extends Seeder
 {
-    
     public function run(): void
     {
-        DB::table('users')->insert([
+        $users = [
             [
                 'firstname' => 'Admin',
                 'lastname' => 'User',
                 'role' => 'admin',
                 'contact_number' => '09171234567',
                 'username' => 'admin',
-                'password' => Hash::make('q12345'), 
+                'password' => Hash::make('q12345'),
                 'status' => 'Active',
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
                 'firstname' => 'Receptionist',
@@ -31,8 +28,6 @@ class users extends Seeder
                 'username' => 'receptionist',
                 'password' => Hash::make('q12345'),
                 'status' => 'Active',
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
                 'firstname' => 'Cashier',
@@ -42,8 +37,6 @@ class users extends Seeder
                 'username' => 'cashier',
                 'password' => Hash::make('q12345'),
                 'status' => 'Active',
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
             [
                 'firstname' => 'Kitchen',
@@ -53,9 +46,17 @@ class users extends Seeder
                 'username' => 'kitchen',
                 'password' => Hash::make('q12345'),
                 'status' => 'Active',
-                'created_at' => now(),
-                'updated_at' => now(),
             ],
-        ]);
+        ];
+
+        foreach ($users as $user) {
+            DB::table('users')->updateOrInsert(
+                ['username' => $user['username']], // Check by username
+                array_merge($user, [
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ])
+            );
+        }
     }
 }
