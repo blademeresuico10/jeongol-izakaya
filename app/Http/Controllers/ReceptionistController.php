@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Reservation;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
+
 
 class ReceptionistController extends Controller
 {
@@ -106,7 +106,7 @@ class ReceptionistController extends Controller
                 'total_price'          => $totalPrice,
             ]);
 
-            
+            // Insert order details if there are any orders
             if (!empty($validated['orders']) || !empty($validated['notes'])) {
                 if (!empty($validated['orders'])) {
                     foreach ($validated['orders'] as $order) {

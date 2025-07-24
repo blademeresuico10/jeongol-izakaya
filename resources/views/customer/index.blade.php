@@ -9,6 +9,9 @@
   <!-- Bootstrap + Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
+  <!-- Add this in the <head> section -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   
   <style>
@@ -194,18 +197,27 @@
     </div>
   </div>
 
-  <footer>
-    <div class="container">
-      <p class="mb-2">Contact us</p>
-      <div class="mb-3">
-        <a href="#"><i class="bi bi-facebook"></i></a>
-        <a href="#"><i class="bi bi-instagram"></i></a>
-        <a href="#"><i class="bi bi-twitter"></i></a>
-        <a href="mailto:info@jeongolizakaya.com"><i class="bi bi-envelope-fill"></i></a>
-      </div>
-      <p class="mb-0">Jeongol Izakaya.</p>
+ <footer class="bg-dark text-white py-4 mt-5">
+  <div class="container text-center">
+    <p class="mb-2 fs-5">Contact us</p>
+    <div class="mb-3 d-flex justify-content-center gap-3">
+      <a href="https://www.facebook.com/photo/?fbid=1001861978805643&set=a.106586524999864" target="_blank" title="Facebook" class="text-white fs-4">
+        <i class="bi bi-facebook"></i>
+      </a>
+      <a href="#" title="Instagram" class="text-white fs-4">
+        <i class="bi bi-instagram"></i>
+      </a>
+      <a href="#" title="Twitter" class="text-white fs-4">
+        <i class="bi bi-twitter"></i>
+      </a>
+      <a href="mailto:info@jeongolizakaya.com" title="Email us" class="text-white fs-4">
+        <i class="bi bi-envelope-fill"></i>
+      </a>
     </div>
-  </footer>
+    <p class="mb-0">&copy; {{ date('Y') }} Jeongol Izakaya. All rights reserved.</p>
+  </div>
+</footer>
+
 
   <!-- Bootstrap Bundle JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

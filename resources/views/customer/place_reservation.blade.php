@@ -68,6 +68,16 @@
       background-color: #218838;
       transform: scale(1.03);
     }
+ 
+    input[type=number]::-webkit-inner-spin-button {
+      -webkit-appearance: none; 
+      margin: 0;
+    }
+
+    .is-invalid { 
+      border: 1px solid red;
+    }
+
 
     /* Modal styles */
     .modal {
@@ -232,7 +242,10 @@
         <input type="text" id="customerName" name="customer_name" placeholder="Enter your name" required><br>
 
         <label>Contact Number</label><br>
-        <input type="text" id="contactNumber" name="contact_number" placeholder="Enter your contact number" required>
+        <input type="text" id="contactNumber" name="contact_number" placeholder="Enter your contact number" required><br>
+
+        <label for="pax">Pax</label><br>
+        <input type="number" id="pax" name="pax" min="1" placeholder="Enter number of guests" required>
       </div>
 
       <!-- Reservation Schedule -->
@@ -261,8 +274,9 @@
             min="1"
             class="form-control ms-2 menu-qty"
             name="quantity[{{ $item }}]"
-            style="width: 60px;"
+            style="width: 50px;"
             disabled
+            
           >
         </div>
         @endforeach
@@ -274,7 +288,7 @@
       </div>
 
       <!-- Selected Table -->
-      <input type="hidden" id="selectedTableNumber" name="table_number">
+      <input type="hidden" id="selectedTableNumber" name="tablie_id">
 
       <!-- Submit Button -->
       <div class="modal-actions">
@@ -292,10 +306,10 @@
     <div class="container">
       <p class="mb-2">Contact us</p>
       <div class="mb-3">
-        <a href="#"><i class="bi bi-facebook"></i></a>
+        <a href="https://www.facebook.com/photo/?fbid=1001861978805643&set=a.106586524999864" target="_blank"><i class="bi bi-facebook"></i></a>
         <a href="#"><i class="bi bi-instagram"></i></a>
         <a href="#"><i class="bi bi-twitter"></i></a>
-        <a href="mailto:info@jeongolizakaya.com"><i class="bi bi-envelope-fill"></i></a>
+        <a href=""><i class="bi bi-envelope-fill"></i></a>
       </div>
       <p class="mb-0">© 2023 Jeongol Izakaya. All rights reserved.</p>
     </div>

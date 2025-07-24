@@ -27,7 +27,7 @@
                         <thead class="thead-light">
                             <tr>
                                 <th>Stock Name</th>
-                                <th>Quantity</th>
+                                <th>Quantity (KG)</th>
                                 <th>Action</th>
                             </tr>
                         </thead>

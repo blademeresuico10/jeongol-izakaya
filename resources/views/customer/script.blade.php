@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let selectedTableNumber = 0;
 
   const highlightInvalidField = field => {
-    field.style.border = '2px solid red';
-    setTimeout(() => field.style.border = '', 2000);
+    field.classList.add('is-invalid');
+    setTimeout(() => field.classList.remove('is-invalid'), 2000);
   };
 
   const resetForm = () => {
@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.menu-qty').forEach(qty => {
       qty.value = '';
       qty.disabled = true;
+      qty.classList.remove('is-invalid');
     });
   };
 
@@ -36,28 +37,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuItems = Array.from(document.querySelectorAll('.menu-item'))
       .filter(menu => menu.checked)
       .map(menu => {
-        const wrapper = menu.closest('.menu-item-label');
-        const qtyInput = wrapper.querySelector('.menu-qty');
+        const qtyInput = menu.closest('.menu-item-label').querySelector('.menu-qty');
         return {
           item: menu.value,
-          quantity: parseInt(qtyInput.value) || 1, // default to 1 if not entered
-          notes: notesInput.value.trim() 
+          qty: parseInt(qtyInput.value),
+          notes: notesInput.value.trim()
         };
       });
 
     return {
+      pax: document.querySelectorAll('.menu-item:checked').length,
       customer_name: nameInput.value.trim(),
       contact_number: contactInput.value.trim(),
       reserved_date: dateInput.value,
       arrival_time: timeInput.value,
-      table_number: selectedTableNumber,
+      table_id: selectedTableNumber,
       notes: notesInput.value.trim(),
-      menu: menuItems
+      orders: menuItems
     };
   };
 
   const validateInputs = () => {
     let valid = true;
+
     if (!nameInput.value.trim()) {
       highlightInvalidField(nameInput);
       valid = false;
@@ -78,35 +80,54 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Please select a table.');
       valid = false;
     }
+
+    document.querySelectorAll('.menu-item').forEach(item => {
+      const qtyInput = item.closest('.menu-item-label').querySelector('.menu-qty');
+      if (item.checked) {
+        if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
+          highlightInvalidField(qtyInput);
+          valid = false;
+        }
+      }
+    });
+
     return valid;
   };
 
-  // Enable/disable quantity field when checkbox is checked
+  // Enable/disable quantity input on checkbox toggle
   document.querySelectorAll('.menu-item').forEach(item => {
     item.addEventListener('change', () => {
       const qtyInput = item.closest('.menu-item-label').querySelector('.menu-qty');
       qtyInput.disabled = !item.checked;
-      if (item.checked && !qtyInput.value) qtyInput.value = 1;
+      if (item.checked) {
+        qtyInput.focus();
+        qtyInput.setAttribute('required', 'required');
+        qtyInput.classList.remove('is-invalid');
+      } else {
+        qtyInput.value = '';
+        qtyInput.removeAttribute('required');
+        qtyInput.classList.remove('is-invalid');
+      }
     });
   });
 
-  // Modal open on table click
+  // Open modal on table click
   tableLinks.forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
-      selectedTableNumber = link.getAttribute('data-table-number');
+      selectedTableNumber = link.getAttribute('data-table-id');
       document.getElementById('selectedTableNumber').value = selectedTableNumber;
       modal.style.display = 'flex';
     });
   });
 
-  // Modal close
+  // Close modal
   closeModal.addEventListener('click', () => {
     modal.style.display = 'none';
     resetForm();
   });
 
-  // Auto date settings
+  // Auto-fill reservation date
   const now = new Date();
   if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
     now.setDate(now.getDate() + 1);
@@ -118,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
   dateInput.min = today.toISOString().split('T')[0];
   dateInput.max = maxDate.toISOString().split('T')[0];
 
-  // Valid until display
+  // Update valid until time
   timeInput.addEventListener('input', () => {
     if (!timeInput.value) return validUntilMessage.textContent = '';
     const [hour, minute] = timeInput.value.split(':').map(Number);
@@ -137,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
 
     if (!validateInputs()) {
-      alert('Please complete all required fields.');
+      alert('Please complete all required fields including selected menu quantities.');
       return;
     }
 
