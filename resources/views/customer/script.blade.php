@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const resetForm = () => {
     [nameInput, contactInput, dateInput, timeInput, notesInput].forEach(el => el.value = '');
     validUntilMessage.textContent = '';
+    document.getElementById('pax').value = '';
     selectedTableNumber = 0;
     document.getElementById('selectedTableNumber').value = '';
     document.querySelectorAll('.menu-item').forEach(cb => cb.checked = false);
