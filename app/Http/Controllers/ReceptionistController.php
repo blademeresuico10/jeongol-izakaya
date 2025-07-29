@@ -152,14 +152,9 @@ class ReceptionistController extends Controller
 {
     $date = $request->query('date', 'today');
 
+   
+    $targetDate = Carbon::today('Asia/Manila')->toDateString();
     
-    if ($date === 'tomorrow') {
-        $targetDate = Carbon::tomorrow('Asia/Manila')->toDateString();
-    } elseif ($date === 'next') {
-        $targetDate = Carbon::today('Asia/Manila')->addDays(2)->toDateString();
-    } else {
-        $targetDate = Carbon::today('Asia/Manila')->toDateString();
-    }
 
     $reservations = DB::table('reservations')
         ->join('customers', 'reservations.customer_id', '=', 'customers.id')
@@ -186,7 +181,29 @@ class ReceptionistController extends Controller
 
 public function modifyOrders(Request $request){
 
-    return view('receptionist.modify_orders');
+    $date = $request->query('date', 'today');
+    $targetDate = Carbon::today('Asia/Manila')->toDateString();
+
+    $order_details = DB::table('order_details')
+        ->join('customers', 'order_details.customer_id', '=', 'customers.id')
+        ->leftJoin('reservations', 'order_details.reservation_id', '=', 'reservations.id')
+        ->leftJoin('menu', 'order_details.menu_id', '=', 'menu.id')
+        ->select(
+            'order_details.id as order_id',
+            'order_details.quantity',
+            'order_details.notes as order_notes',
+            'customers.name as customer_name',
+            'reservations.id as reservation_id',
+            'reservations.table_number',
+            'reservations.pax', 
+            'reservations.reservation_time',
+            'menu.menu_item'
+        )
+        ->whereDate('reservations.reservation_time', $targetDate)
+        ->orderBy('reservations.reservation_time')
+        ->get();
+
+    return view('receptionist.modify_orders', compact('order_details'));
 
 
 }
