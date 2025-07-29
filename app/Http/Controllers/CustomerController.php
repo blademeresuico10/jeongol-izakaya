@@ -30,13 +30,14 @@ class CustomerController extends Controller
     }
 
     public function storeReservation(Request $request)
-{
-    $data = $request->json()->all();
+    {
+        $data = $request->json()->all();
 
         try {
             $validated = validator($data, [
                 'table_id'        => 'required|exists:tables,id',
                 'customer_name'   => 'required|string',
+                'contact_number' => 'nullable|string|max:12',
                 'pax'             => 'required|integer|min:1',
                 'reserved_date'   => 'required|date',
                 'arrival_time'    => 'required|date_format:H:i',
@@ -45,13 +46,15 @@ class CustomerController extends Controller
                 'orders.*.qty'    => 'integer|min:1',
                 'advance_payment' => 'nullable|numeric|min:0',
                 'orders.*.notes'  => 'nullable|string',
-                'contact_number'  => 'nullable|string|max:15',
             ])->validate();
 
             $userId = Auth::id();
 
-            // customer
-            $customer = DB::table('customers')->where('name', $validated['customer_name'])->first();
+            $customer = DB::table('customers')
+                ->where('name', $validated['customer_name'])
+                ->where('contact_number', $validated['contact_number'] ?? '')
+                ->first();
+
             if (!$customer) {
                 $customerId = DB::table('customers')->insertGetId([
                     'name'       => $validated['customer_name'],
@@ -63,10 +66,8 @@ class CustomerController extends Controller
                 $customerId = $customer->id;
             }
 
-            // table
             $table = DB::table('tables')->where('id', $validated['table_id'])->first();
 
-            // times
             $reservedDateTime = Carbon::parse($validated['reserved_date'].' '.$validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
 
@@ -74,7 +75,6 @@ class CustomerController extends Controller
                 return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
 
-            // conflict
             $conflict = DB::table('reservations')
                 ->where('table_number', $table->table_number)
                 ->where(function ($query) use ($reservedDateTime, $endDateTime) {
@@ -87,18 +87,19 @@ class CustomerController extends Controller
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
 
-            // total
+            $isLunch = $reservedDateTime->format('H') < 17;
+
             $totalPrice = 0;
             if (!empty($validated['orders'])) {
                 foreach ($validated['orders'] as $order) {
-                    $menu = DB::table('menu')->where('menu_item', $order['item'])->first();
+                    $search = $order['item'] . ($isLunch ? ' Lunch' : ' Dinner');
+                    $menu = DB::table('menu')->where('menu_item', $search)->first();
                     if ($menu) {
                         $totalPrice += $menu->price * $order['qty'];
                     }
                 }
             }
 
-            // reservation
             $reservation = Reservation::create([
                 'pax'                  => $validated['pax'],
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
@@ -111,31 +112,30 @@ class CustomerController extends Controller
                 'total_price'          => $totalPrice,
             ]);
 
-            // Insert order details if there are any orders
-            if (!empty($validated['orders']) || !empty($validated['notes'])) {
-                if (!empty($validated['orders'])) {
-                    foreach ($validated['orders'] as $order) {
-                        $menu = DB::table('menu')
-                            ->where('menu_item', 'LIKE', $order['item'].'%')
-                            ->first();
+            if (!empty($validated['orders'])) {
+                foreach ($validated['orders'] as $order) {
+                    if (empty($order['item']) || empty($order['qty']) || $order['qty'] < 1) {
+                        continue;
+                    }
 
-                        if ($menu) {
-                            DB::table('order_details')->insert([
-                                'order_price'    => $menu->price * $order['qty'],
-                                'reservation_id' => $reservation->id,
-                                'menu_id'        => $menu->id,
-                                'quantity'       => $order['qty'],
-                                'notes'          => $order['notes'] ?? null,
-                                'customer_id'    => $customerId,
-                                'user_id'        => $userId,
-                                'created_at'     => now(),
-                                'updated_at'     => now(),
-                            ]);
-                        }
+                    $search = $order['item'] . ($isLunch ? ' Lunch' : ' Dinner');
+                    $menu = DB::table('menu')->where('menu_item', $search)->first();
+
+                    if ($menu) {
+                        DB::table('order_details')->insert([
+                            'order_price'    => $menu->price * $order['qty'],
+                            'reservation_id' => $reservation->id,
+                            'menu_id'        => $menu->id,
+                            'quantity'       => $order['qty'],
+                            'notes'          => !empty($order['notes']) ? $order['notes'] : null,
+                            'customer_id'    => $customerId,
+                            'user_id'        => $userId,
+                            'created_at'     => now(),
+                            'updated_at'     => now(),
+                        ]);
                     }
                 }
             }
-
 
             return response()->json(['success' => true]);
 
@@ -146,7 +146,6 @@ class CustomerController extends Controller
                 'error'   => $e->getMessage()
             ]);
         }
-
-}
+    }
 }
 

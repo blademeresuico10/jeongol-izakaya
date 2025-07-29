@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let selectedTableNumber = 0;
 
+  const fullMenuPrices = @json($menuPricesMap);
+
   const highlightInvalidField = field => {
     field.classList.add('is-invalid');
     setTimeout(() => field.classList.remove('is-invalid'), 2000);
@@ -35,88 +37,89 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const gatherReservationData = () => {
+    const note = notesInput.value.trim();
+    const arrival = timeInput.value || '';
+    const [hourStr] = arrival.split(':');
+    const hour = parseInt(hourStr) || 0;
+    const isLunch = hour < 17;
+
+
     const menuItems = Array.from(document.querySelectorAll('.menu-item'))
       .filter(menu => menu.checked)
       .map(menu => {
         const qtyInput = menu.closest('.menu-item-label').querySelector('.menu-qty');
-        return {
-          item: menu.value,
+        const itemName = menu.value;
+        const price = isLunch ? fullMenuPrices[itemName]['lunch'] : fullMenuPrices[itemName]['dinner'];
+
+        const order = {
+          item: itemName,
           qty: parseInt(qtyInput.value),
-          notes: notesInput.value.trim()
+          order_price: parseFloat(price)
         };
+
+        order.notes = note || '';
+
+
+        return order;
       });
 
     return {
-      pax: document.querySelectorAll('.menu-item:checked').length,
+      pax: document.getElementById('pax').value,
       customer_name: nameInput.value.trim(),
       contact_number: contactInput.value.trim(),
       reserved_date: dateInput.value,
       arrival_time: timeInput.value,
       table_id: selectedTableNumber,
-      notes: notesInput.value.trim(),
+      notes: note,
       orders: menuItems
     };
   };
 
-  const validateInputs = () => {
+   const validateInputs = () => {
     let valid = true;
 
-    if (!nameInput.value.trim()) {
-      highlightInvalidField(nameInput);
-      valid = false;
-    }
-    if (!contactInput.value.trim()) {
-      highlightInvalidField(contactInput);
-      valid = false;
-    }
-    if (!dateInput.value) {
-      highlightInvalidField(dateInput);
-      valid = false;
-    }
-    if (!timeInput.value) {
-      highlightInvalidField(timeInput);
-      valid = false;
-    }
+    if (!nameInput.value.trim()) highlightInvalidField(nameInput), valid = false;
+    if (!contactInput.value.trim()) highlightInvalidField(contactInput), valid = false;
+    if (!dateInput.value) highlightInvalidField(dateInput), valid = false;
+    if (!timeInput.value) highlightInvalidField(timeInput), valid = false;
+    if (!document.getElementById('pax').value) highlightInvalidField(document.getElementById('pax')), valid = false;
     if (!selectedTableNumber) {
-      alert('Please select a table.');
+      alert('Please select a table first.');
       valid = false;
     }
 
     document.querySelectorAll('.menu-item').forEach(item => {
       const qtyInput = item.closest('.menu-item-label').querySelector('.menu-qty');
-      if (item.checked) {
-        if (!qtyInput.value || parseInt(qtyInput.value) < 1) {
-          highlightInvalidField(qtyInput);
-          valid = false;
-        }
+      if (item.checked && (!qtyInput.value || parseInt(qtyInput.value) < 1)) {
+        highlightInvalidField(qtyInput);
+        valid = false;
       }
     });
 
-    return valid;
+    return valid; 
   };
 
-  // Enable/disable quantity input on checkbox toggle
-  document.querySelectorAll('.menu-item').forEach(item => {
-    item.addEventListener('change', () => {
-      const qtyInput = item.closest('.menu-item-label').querySelector('.menu-qty');
-      qtyInput.disabled = !item.checked;
-      if (item.checked) {
-        qtyInput.focus();
-        qtyInput.setAttribute('required', 'required');
-        qtyInput.classList.remove('is-invalid');
-      } else {
-        qtyInput.value = '';
-        qtyInput.removeAttribute('required');
-        qtyInput.classList.remove('is-invalid');
-      }
-    });
-  });
 
-  // Open modal on table click
+  // Toggle quantity enable/disable
+  document.querySelectorAll('.menu-item').forEach(checkbox => {
+      checkbox.addEventListener('change', function () {
+        const targetId = this.dataset.target;
+        const qtyInput = document.getElementById(targetId);
+        if (this.checked) {
+          qtyInput.disabled = false;
+          qtyInput.value = 1;
+        } else {
+          qtyInput.disabled = true;
+          qtyInput.value = '';
+        }
+      });
+    });
+
+  // Open modal
   tableLinks.forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
-      selectedTableNumber = link.getAttribute('data-table-id');
+      selectedTableNumber = parseInt(link.getAttribute('data-table-id'));
       document.getElementById('selectedTableNumber').value = selectedTableNumber;
       modal.style.display = 'flex';
     });
@@ -128,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetForm();
   });
 
-  // Auto-fill reservation date
+  // Date range defaults
   const now = new Date();
   if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
     now.setDate(now.getDate() + 1);
@@ -140,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   dateInput.min = today.toISOString().split('T')[0];
   dateInput.max = maxDate.toISOString().split('T')[0];
 
-  // Update valid until time
+  // Display valid until time
   timeInput.addEventListener('input', () => {
     if (!timeInput.value) return validUntilMessage.textContent = '';
     const [hour, minute] = timeInput.value.split(':').map(Number);
@@ -154,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })}`;
   });
 
-  // Form submission
+  // Submit
   submitBtn.addEventListener('click', async (e) => {
     e.preventDefault();
 

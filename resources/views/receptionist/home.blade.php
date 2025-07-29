@@ -33,11 +33,10 @@
   @endforeach
 </div>
 
-
   <div class="bottom-buttons">
     <a class="view-button" href="{{ url('/view_reservations') }}">View Reservation</a>
-    <a class="view-button" href="{{ route('kitchen.home') }}">View Kitchen</a>
-    <a class="view-button" href="">Modify Orders</a>
+   <!-- <a class="view-button" href="{{ route('receptionist.view_kitchen') }}">View Kitchen</a> -->
+    <a class="view-button" href="{{ route('receptionist.modify_orders') }}">Modify Orders</a>
   </div>
 
   

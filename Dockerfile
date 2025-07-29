@@ -11,17 +11,23 @@ RUN apt-get update && apt-get install -y \
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Copy existing application directory
+# Copy app source
 COPY . .
 
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP and Node dependencies
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
+    && npm install && npm run build
 
-# Set permissions
+# Permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage /var/www/bootstrap/cache
 
-# Expose port for PHP-FPM
+# Copy and set entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Expose PHP-FPM port
 EXPOSE 9000
 
-CMD ["php-fpm"]
+# Start with custom entrypoint script
+CMD ["docker-entrypoint.sh"]

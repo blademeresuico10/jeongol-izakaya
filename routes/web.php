@@ -62,6 +62,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/receptionist/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('receptionist.storeReservation');
     Route::get('/view_reservations', [ReceptionistController::class, 'reservations'])->name('receptionist.reservations');
     Route::get('/receptionist/available-times', [ReceptionistController::class, 'getAvailableTimeSlots'])->name('receptionist.available_times');
+    Route::get('/receptionist/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('receptionist.modify_orders');
+    Route::get('/receptionist/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('receptionist.view_kitchen');
 
     // Kitchen Routes
     Route::get('/kitchen/home', [KitchenController::class, 'home'])->name('kitchen.home');
