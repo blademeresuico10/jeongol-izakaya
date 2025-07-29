@@ -31,7 +31,7 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose PHP-FPM port
-EXPOSE 8000
+EXPOSE 9000
 
 # Start with entrypoint script
 CMD ["docker-entrypoint.sh"]
