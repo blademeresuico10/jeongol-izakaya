@@ -17,8 +17,10 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 COPY . .
 
 # Install PHP and Node dependencies
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
-    && npm install && npm run build
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN npm install
+RUN npm run build
+
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
