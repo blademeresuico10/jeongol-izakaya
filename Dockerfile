@@ -3,9 +3,9 @@ FROM php:8.2-fpm
 # Set working directory
 WORKDIR /var/www
 
-# Install system dependencies and Node.js
+# Install system dependencies, Node.js, and PHP extensions
 RUN apt-get update && apt-get install -y \
-    git curl zip unzip libpng-dev libonig-dev libxml2-dev libzip-dev gnupg \
+    git curl zip unzip gnupg libpng-dev libonig-dev libxml2-dev libzip-dev \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-install pdo_mysql mbstring zip bcmath gd
@@ -20,16 +20,16 @@ COPY . .
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
     && npm install && npm run build
 
-# Permissions
+# Set permissions
 RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/storage /var/www/bootstrap/cache
 
-# Copy and set entrypoint
+# Copy and set entrypoint script
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose PHP-FPM port
 EXPOSE 9000
 
-# Start with custom entrypoint script
+# Start with entrypoint script
 CMD ["docker-entrypoint.sh"]
