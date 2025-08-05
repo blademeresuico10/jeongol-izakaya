@@ -98,13 +98,13 @@
 
         const now = new Date();
 
-       
+
         const today = now.getFullYear() + '-' +
             String(now.getMonth() + 1).padStart(2, '0') + '-' +
             String(now.getDate()).padStart(2, '0');
         document.getElementById('reserved_date').value = today;
 
-        
+
         const hours = now.getHours().toString().padStart(2, '0');
         const minutes = now.getMinutes().toString().padStart(2, '0');
         document.getElementById('arrivalTimeInput').value = `${hours}:${minutes}`;
@@ -217,7 +217,7 @@
             if (qtyInput) qtyInput.value = 1;
         });
 
-       
+
         document.getElementById('selectedOrdersContainer').innerHTML = '';
         document.getElementById('advance_payment').value = '';
 
@@ -256,19 +256,19 @@
         const defaultModal = document.getElementById('default-modal');
         const closeButtons = defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
 
-        
+
         viewOrdersBtn.addEventListener('click', () => {
             defaultModal.classList.remove('hidden');
         });
 
-       
+
         closeButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 defaultModal.classList.add('hidden');
             });
         });
 
-        
+
         defaultModal.addEventListener('click', (e) => {
             if (e.target === defaultModal) {
                 defaultModal.classList.add('hidden');
@@ -313,10 +313,19 @@
 
         fetch("{{ route('receptionist.storeReservation') }}", {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
             body: JSON.stringify(data)
         })
-            .then(res => res.json())
+            .then(async res => {
+                if (!res.ok) {
+                    const errorText = await res.text();
+                    throw new Error(`Server responded with ${res.status}: ${errorText}`);
+                }
+                return res.json();
+            })
             .then(response => {
                 if (response.success) {
                     alert("Reservation submitted!");
@@ -328,11 +337,13 @@
                     submitBtn.textContent = "Submit";
                 }
             })
-            .catch(() => {
-                alert("An error occurred.");
+            .catch(error => {
+                console.error("Reservation Error:", error);
+                alert("An error occurred while submitting the reservation.");
                 submitBtn.disabled = false;
                 submitBtn.textContent = "Submit";
             });
+
     });
 
     function animateFlyToCart(imageEl, targetSelector) {
