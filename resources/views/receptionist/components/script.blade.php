@@ -98,13 +98,13 @@
 
         const now = new Date();
 
-        // Format date as YYYY-MM-DD
+       
         const today = now.getFullYear() + '-' +
             String(now.getMonth() + 1).padStart(2, '0') + '-' +
             String(now.getDate()).padStart(2, '0');
         document.getElementById('reserved_date').value = today;
 
-        // Format time as HH:MM
+        
         const hours = now.getHours().toString().padStart(2, '0');
         const minutes = now.getMinutes().toString().padStart(2, '0');
         document.getElementById('arrivalTimeInput').value = `${hours}:${minutes}`;
@@ -217,7 +217,7 @@
             if (qtyInput) qtyInput.value = 1;
         });
 
-        // Clear order summary
+       
         document.getElementById('selectedOrdersContainer').innerHTML = '';
         document.getElementById('advance_payment').value = '';
 
@@ -256,27 +256,25 @@
         const defaultModal = document.getElementById('default-modal');
         const closeButtons = defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
 
-        // Show modal
+        
         viewOrdersBtn.addEventListener('click', () => {
             defaultModal.classList.remove('hidden');
         });
 
-        // Hide modal
+       
         closeButtons.forEach(btn => {
             btn.addEventListener('click', () => {
                 defaultModal.classList.add('hidden');
             });
         });
 
-        // Optional: hide modal if clicked outside content
+        
         defaultModal.addEventListener('click', (e) => {
             if (e.target === defaultModal) {
                 defaultModal.classList.add('hidden');
             }
         });
     });
-    
-
 
     submitBtn.addEventListener('click', () => {
         if (submitBtn.disabled) return;

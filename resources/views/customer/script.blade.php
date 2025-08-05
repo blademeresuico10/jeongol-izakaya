@@ -209,7 +209,7 @@
       submitBtn.textContent = 'Submitting...';
 
       try {
-        const res = await fetch('/customer/reserve', {
+        const res = await fetch(`${window.location.origin}/customer/reserve`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

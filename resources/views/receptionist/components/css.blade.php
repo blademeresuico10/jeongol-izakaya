@@ -81,74 +81,6 @@
     }
   }
 
-  @media (max-width: 480px) {
-    .main-menu-grid {
-      grid-template-columns: repeat(3, 1fr) !important;
-    }
-
-    .table-link {
-      flex: 0 1 calc(32% - 10px);
-    }
-
-    .inline-btn {
-      width: 100%;
-      height: auto;
-      padding: 12px 16px;
-      font-size: 14px;
-      text-align: center;
-    }
-
-    .menu-card img {
-      width: 100%;
-      height: 90px;
-      object-fit: cover;
-      border-radius: 6px;
-    }
-
-    .modal-content {
-      width: 100%;
-      height: 90vh;
-      max-height: 90vh;
-      padding: 16px;
-    }
-
-    #default-modal {
-      max-width: 95%;
-      height: 85vh;
-      padding: 0.5rem;
-    }
-
-    #default-modal .modal-section {
-      padding: 0.5rem;
-    }
-
-    #default-modal button {
-      font-size: 13px;
-      padding: 0.4rem 0.75rem;
-    }
-
-    #default-modal ul {
-      font-size: 13px;
-    }
-  }
-
-  /* iPad A16 Portrait (820px–1024px) */
-  @media (min-width: 820px) and (max-width: 1024px) {
-    .table-link {
-      flex: 0 1 calc(25% - 10px);
-    }
-
-    .main-menu-grid {
-      grid-template-columns: repeat(4, 1fr) !important;
-    }
-  }
-
-  /* Large tablets and small laptops */
-  @media (max-width: 1024px) {
-    .table-link {
-      flex: 0 1 calc(25% - 10px);
-    }
-  }
 
   /* Tablets (landscape and portrait) */
   @media (max-width: 768px) {
@@ -159,14 +91,12 @@
 
   /* Mobile devices */
   @media (max-width: 480px) {
-    .main-menu-grid {
-      grid-template-columns: repeat(3, 1fr) !important;
+    .table-link {
+      flex: 0 1 calc(33.33% - 10px);
     }
+
   }
 
-
-
-  /* Grid layout changes */
   .main-menu-grid,
   .other-menu-grid {
     display: grid !important;
@@ -176,7 +106,9 @@
   /* Image size */
   .menu-card img {
     height: 90px !important;
-    object-fit: cover;
+    width: 100% !important;
+    border-radius: 3px;
+
   }
 
   /* Reduce spacing if needed */
@@ -185,7 +117,7 @@
   }
 
   .menu-card .p-2 {
-    padding: 6px;
+    padding: 3px;
   }
 
   .bottom-buttons {
