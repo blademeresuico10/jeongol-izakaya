@@ -62,7 +62,7 @@
     aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
-    justify-content: center;
+
     color: white;
     font-weight: bold;
     border-radius: 20px;
@@ -79,6 +79,113 @@
     .table-link {
       flex: 0 1 calc(33.33% - 10px);
     }
+  }
+
+  @media (max-width: 480px) {
+    .main-menu-grid {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+
+    .table-link {
+      flex: 0 1 calc(32% - 10px);
+    }
+
+    .inline-btn {
+      width: 100%;
+      height: auto;
+      padding: 12px 16px;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .menu-card img {
+      width: 100%;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 6px;
+    }
+
+    .modal-content {
+      width: 100%;
+      height: 90vh;
+      max-height: 90vh;
+      padding: 16px;
+    }
+
+    #default-modal {
+      max-width: 95%;
+      height: 85vh;
+      padding: 0.5rem;
+    }
+
+    #default-modal .modal-section {
+      padding: 0.5rem;
+    }
+
+    #default-modal button {
+      font-size: 13px;
+      padding: 0.4rem 0.75rem;
+    }
+
+    #default-modal ul {
+      font-size: 13px;
+    }
+  }
+
+  /* iPad A16 Portrait (820px–1024px) */
+  @media (min-width: 820px) and (max-width: 1024px) {
+    .table-link {
+      flex: 0 1 calc(25% - 10px);
+    }
+
+    .main-menu-grid {
+      grid-template-columns: repeat(4, 1fr) !important;
+    }
+  }
+
+  /* Large tablets and small laptops */
+  @media (max-width: 1024px) {
+    .table-link {
+      flex: 0 1 calc(25% - 10px);
+    }
+  }
+
+  /* Tablets (landscape and portrait) */
+  @media (max-width: 768px) {
+    .table-link {
+      flex: 0 1 calc(33.33% - 10px);
+    }
+  }
+
+  /* Mobile devices */
+  @media (max-width: 480px) {
+    .main-menu-grid {
+      grid-template-columns: repeat(3, 1fr) !important;
+    }
+  }
+
+
+
+  /* Grid layout changes */
+  .main-menu-grid,
+  .other-menu-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  /* Image size */
+  .menu-card img {
+    height: 90px !important;
+    object-fit: cover;
+  }
+
+  /* Reduce spacing if needed */
+  .menu-card h5 {
+    font-size: 12px;
+  }
+
+  .menu-card .p-2 {
+    padding: 6px;
   }
 
   .bottom-buttons {
@@ -110,6 +217,7 @@
     max-height: 90vh;
     overflow-y: auto;
     position: relative;
+    box-sizing: border-box;
   }
 
   .close-modal {
@@ -120,6 +228,7 @@
     font-size: 20px;
   }
 
+
   input[type="text"],
   input[type="number"],
   input[type="time"],
@@ -129,6 +238,8 @@
     margin-bottom: 10px;
     width: 100%;
   }
+
+
 
   label {
     font-size: 14px;
@@ -168,30 +279,53 @@
   }
 
   .inline-btn {
-  background-color: #dc3545;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  margin: 3px 0;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 17px;
-}
-.inline-btn:hover {
-  background-color: #c82333;
-}
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    margin: 3px 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 17px;
+  }
 
-.table {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-}
+  .inline-btn:hover {
+    background-color: #c82333;
+  }
 
-.table-number {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
+  .table {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
 
+  .table-number {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
 
+  .menu-flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    margin-top: 10px;
+  }
+
+  .menu-block {
+    flex: 1 1 200px;
+    padding: 10px;
+    background-color: #f8f8f8;
+    border-radius: 6px;
+  }
+
+  .menu-block p {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+
+  .menu-block label {
+    display: block;
+    margin-bottom: 6px;
+  }
 </style>

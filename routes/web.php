@@ -64,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/receptionist/available-times', [ReceptionistController::class, 'getAvailableTimeSlots'])->name('receptionist.available_times');
     Route::get('/receptionist/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('receptionist.modify_orders');
     Route::get('/receptionist/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('receptionist.view_kitchen');
+    Route::post('/receptionist/update-order', [ReceptionistController::class, 'updateOrder'])->name('receptionist.updateOrder');
 
     // Kitchen Routes
     Route::get('/kitchen/home', [KitchenController::class, 'home'])->name('kitchen.home');

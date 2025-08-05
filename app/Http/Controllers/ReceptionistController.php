@@ -7,45 +7,74 @@ use Illuminate\Support\Facades\DB;
 use App\Models\Reservation;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\OrderDetail;
+use App\Models\Menu;
 
 
 class ReceptionistController extends Controller
 {
     public function home()
     {
-        $tables = DB::table('tables')->get(); 
+        $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
 
-        //today's reservations
+       
         $now = Carbon::now();
         $reservations = DB::table('reservations')
             ->whereDate('reservation_time', $now->toDateString())
             ->get();
 
-        return view('receptionist.home', compact('tables', 'menuItems', 'reservations'));
+        
+        $menuPricesMap = [];
+        foreach ($menuItems as $item) {
+            $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
+            if (!isset($menuPricesMap[$baseName])) {
+                $menuPricesMap[$baseName] = ['lunch' => null, 'dinner' => null];
+            }
+
+            if (str_contains($item->menu_item, 'Lunch')) {
+                $menuPricesMap[$baseName]['lunch'] = $item->price;
+            } elseif (str_contains($item->menu_item, 'Dinner')) {
+                $menuPricesMap[$baseName]['dinner'] = $item->price;
+            } else {
+                $menuPricesMap[$baseName]['lunch'] = $item->price;
+                $menuPricesMap[$baseName]['dinner'] = $item->price;
+            }
+        }
+
+        //  Group items by category
+        $groupedMenu = [];
+        foreach ($menuItems as $item) {
+            $groupedMenu[$item->category][] = $item;
+        }
+
+        return view('receptionist.home', compact('tables', 'menuItems', 'reservations', 'menuPricesMap', 'groupedMenu'));
     }
 
 
     public function storeReservation(Request $request)
     {
         $data = $request->json()->all();
+        $data['orders'] = $request->input('orders');
 
         try {
             $validated = validator($data, [
-                'table_id'        => 'required|exists:tables,id',
-                'customer_name'   => 'required|string',
-                'contact_number' => 'nullable|string|max:12',
-                'pax'             => 'required|integer|min:1',
-                'reserved_date'   => 'required|date',
-                'arrival_time'    => 'required|date_format:H:i',
-                'orders'          => 'nullable|array',
-                'orders.*.item'   => 'string',
-                'orders.*.qty'    => 'integer|min:1',
-                'advance_payment' => 'nullable|numeric|min:0',
-                'orders.*.notes'  => 'nullable|string',
+                'table_id'           => 'required|exists:tables,id',
+                'customer_name'      => 'required|string',
+                'contact_number'     => 'nullable|string|max:12',
+                'pax'                => 'required|integer|min:1',
+                'reserved_date'      => 'required|date',
+                'arrival_time'       => 'required|date_format:H:i',
+                'advance_payment'    => 'nullable|numeric|min:0',
+                'notes'              => 'nullable|string',
+                'orders'             => 'nullable|array',
+                'orders.*.menu_id'   => 'required|exists:menu,id',
+                'orders.*.quantity'  => 'required|integer|min:1',
+                'orders.*.notes'     => 'nullable|string',
             ])->validate();
 
             $userId = Auth::id();
+
 
             $customer = DB::table('customers')
                 ->where('name', $validated['customer_name'])
@@ -54,23 +83,25 @@ class ReceptionistController extends Controller
 
             if (!$customer) {
                 $customerId = DB::table('customers')->insertGetId([
-                    'name'       => $validated['customer_name'],
+                    'name'         => $validated['customer_name'],
                     'contact_number' => $validated['contact_number'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
                 ]);
             } else {
                 $customerId = $customer->id;
             }
+            
 
-            $table = DB::table('tables')->where('id', $validated['table_id'])->first();
-
-            $reservedDateTime = Carbon::parse($validated['reserved_date'].' '.$validated['arrival_time']);
+            // Reservation times
+            $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
 
             if ($reservedDateTime->toDateString() < now()->toDateString()) {
                 return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
+
+            $table = DB::table('tables')->where('id', $validated['table_id'])->first();
 
             $conflict = DB::table('reservations')
                 ->where('table_number', $table->table_number)
@@ -84,19 +115,21 @@ class ReceptionistController extends Controller
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
 
-            $isLunch = $reservedDateTime->format('H') < 17;
 
+            $isLunch = $reservedDateTime->format('H') < 17;
             $totalPrice = 0;
             if (!empty($validated['orders'])) {
                 foreach ($validated['orders'] as $order) {
-                    $search = $order['item'] . ($isLunch ? ' Lunch' : ' Dinner');
-                    $menu = DB::table('menu')->where('menu_item', $search)->first();
+                    $menu = DB::table('menu')->find($order['menu_id']);
+
                     if ($menu) {
-                        $totalPrice += $menu->price * $order['qty'];
+                        $totalPrice += $menu->price * $order['quantity'];
                     }
                 }
             }
 
+
+            // Store reservation
             $reservation = Reservation::create([
                 'pax'                  => $validated['pax'],
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
@@ -109,33 +142,25 @@ class ReceptionistController extends Controller
                 'total_price'          => $totalPrice,
             ]);
 
-            if (!empty($validated['orders'])) {
-                foreach ($validated['orders'] as $order) {
-                    if (empty($order['item']) || empty($order['qty']) || $order['qty'] < 1) {
-                        continue;
-                    }
+            // Insert order details
+            foreach ($validated['orders'] ?? [] as $order) {
+                $menu = DB::table('menu')->find($order['menu_id']);
+                if (!$menu) continue;
 
-                    $search = $order['item'] . ($isLunch ? ' Lunch' : ' Dinner');
-                    $menu = DB::table('menu')->where('menu_item', $search)->first();
-
-                    if ($menu) {
-                        DB::table('order_details')->insert([
-                            'order_price'    => $menu->price * $order['qty'],
-                            'reservation_id' => $reservation->id,
-                            'menu_id'        => $menu->id,
-                            'quantity'       => $order['qty'],
-                            'notes'          => !empty($order['notes']) ? $order['notes'] : null,
-                            'customer_id'    => $customerId,
-                            'user_id'        => $userId,
-                            'created_at'     => now(),
-                            'updated_at'     => now(),
-                        ]);
-                    }
-                }
+                DB::table('order_details')->insert([
+                    'order_price'    => $menu->price * $order['quantity'],
+                    'reservation_id' => $reservation->id,
+                    'menu_id'        => $menu->id,
+                    'quantity'       => $order['quantity'],
+                    'notes'          => $order['notes'] ?? null,
+                    'customer_id'    => $customerId,
+                    'user_id'        => $userId,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
             }
 
             return response()->json(['success' => true]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -145,95 +170,158 @@ class ReceptionistController extends Controller
         }
     }
 
-
-
-
     public function reservations(Request $request)
-{
-    $date = $request->query('date', 'today');
-
-   
-    $targetDate = Carbon::today('Asia/Manila')->toDateString();
-    
-
-    $reservations = DB::table('reservations')
-        ->join('customers', 'reservations.customer_id', '=', 'customers.id')
-        ->leftJoin('order_details', 'reservations.id', '=', 'order_details.reservation_id')
-        ->leftJoin('menu', 'order_details.menu_id', '=', 'menu.id')
-        ->select(
-            'reservations.id as reservation_id',
-            'reservations.table_number',
-            'reservations.pax',
-            'reservations.reservation_time',
-            'customers.name as customer_name',
-            'menu.menu_item',
-            'order_details.quantity',
-            'order_details.notes'
-            
-        )
-        ->whereDate('reservations.reservation_time', $targetDate)
-        ->orderBy('reservations.reservation_time')
-        ->get();
-
-    return view('receptionist.view_reservation', compact('reservations'));
-}
+    {
+        $date = $request->query('date', 'today');
 
 
-public function modifyOrders(Request $request){
-
-    $date = $request->query('date', 'today');
-    $targetDate = Carbon::today('Asia/Manila')->toDateString();
-
-    $order_details = DB::table('order_details')
-        ->join('customers', 'order_details.customer_id', '=', 'customers.id')
-        ->leftJoin('reservations', 'order_details.reservation_id', '=', 'reservations.id')
-        ->leftJoin('menu', 'order_details.menu_id', '=', 'menu.id')
-        ->select(
-            'order_details.id as order_id',
-            'order_details.quantity',
-            'order_details.notes as order_notes',
-            'customers.name as customer_name',
-            'reservations.id as reservation_id',
-            'reservations.table_number',
-            'reservations.pax', 
-            'reservations.reservation_time',
-            'menu.menu_item'
-        )
-        ->whereDate('reservations.reservation_time', $targetDate)
-        ->orderBy('reservations.reservation_time')
-        ->get();
-
-    return view('receptionist.modify_orders', compact('order_details'));
+        $targetDate = Carbon::today('Asia/Manila')->toDateString();
 
 
-}
+        $reservations = DB::table('reservations')
+            ->join('customers', 'reservations.customer_id', '=', 'customers.id')
+            ->leftJoin('order_details', 'reservations.id', '=', 'order_details.reservation_id')
+            ->leftJoin('menu', 'order_details.menu_id', '=', 'menu.id')
+            ->select(
+                'reservations.id as reservation_id',
+                'reservations.table_number',
+                'reservations.pax',
+                'reservations.reservation_time',
+                'customers.name as customer_name',
+                'menu.menu_item',
+                'order_details.quantity',
+                'order_details.notes'
 
-public function viewKitchen(Request $request){
-
-    $stock = DB::table('stock')->get();
-    $today = Carbon::today()->toDateString();
-
-    $reservations = DB::table('order_details')
-    ->join('customers', 'order_details.customer_id', '=', 'customers.id')
-    ->join('reservations', 'order_details.reservation_id', '=', 'reservations.id')
-    ->join('menu', 'order_details.menu_id', '=', 'menu.id')
-    ->select(
-        'order_details.id as order_id',
-        'order_details.quantity',
-        'order_details.notes as order_notes',
-        'customers.name as customer_name',
-        'reservations.id as reservation_id',
-        'reservations.table_number',
-        'reservations.pax', 
-        'reservations.reservation_time',
-        'menu.menu_item'
-    )
-    ->whereDate('reservations.reservation_time', $today) 
-    ->orderBy('reservations.reservation_time')
-    ->get();
+            )
+            ->whereDate('reservations.reservation_time', $targetDate)
+            ->orderBy('reservations.reservation_time')
+            ->get();
 
 
-    return view('receptionist.view_kitchen', compact('stock', 'reservations'));
-}
+        return view('receptionist.view_reservation', compact('reservations'));
+    }
 
+
+    public function modifyOrders(Request $request)
+    {
+        $date = $request->query('date', 'today');
+        $targetDate = Carbon::today('Asia/Manila')->toDateString();
+        $menuItems = DB::table('menu')->select('menu_item', 'price')->get();
+
+
+        $order_details = DB::table('order_details')
+            ->join('customers', 'order_details.customer_id', '=', 'customers.id')
+            ->leftJoin('reservations', 'order_details.reservation_id', '=', 'reservations.id')
+            ->leftJoin('menu', 'order_details.menu_id', '=', 'menu.id')
+            ->select(
+                'order_details.id as order_id',
+                'order_details.quantity',
+                'order_details.notes as order_notes',
+                'customers.name as customer_name',
+                'reservations.id as reservation_id',
+                'reservations.table_number',
+                'reservations.pax',
+                'reservations.reservation_time',
+                'menu.menu_item'
+            )
+            ->whereDate('reservations.reservation_time', $targetDate)
+            ->orderBy('reservations.reservation_time')
+            ->get();
+
+
+        $groupedOrders = $order_details->groupBy('reservation_id')->map(function ($orders) {
+            return (object)[
+                'customer_name' => $orders->first()->customer_name,
+                'table_number' => $orders->first()->table_number,
+                'pax' => $orders->first()->pax,
+                'orders' => $orders->pluck('menu_item')->implode(', '),
+                'qty' => $orders->pluck('quantity')->implode(', '),
+                'note' => $orders->pluck('order_notes')->filter()->unique()->implode(', '),
+            ];
+        });
+
+        return view('receptionist.modify_orders', compact('groupedOrders', 'menuItems'));
+    }
+
+    public function updateOrder(Request $request)
+    {
+        $request->validate([
+            'reservation_id' => 'required|exists:reservations,id',
+            'pax' => 'required|integer|min:1',
+            'note' => 'nullable|string',
+            'orders' => 'nullable|string',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+
+            $reservation = Reservation::find($request->reservation_id);
+            $reservation->pax = $request->pax;
+            $reservation->save();
+
+
+            OrderDetail::where('reservation_id', $reservation->id)->delete();
+
+
+            if ($request->filled('orders')) {
+                $orders = explode(',', $request->orders);
+                foreach ($orders as $item) {
+                    $parts = explode(' x ', trim($item));
+                    $menuName = trim($parts[0]);
+                    $qty = isset($parts[1]) ? (int) $parts[1] : 1;
+
+                    $menu = Menu::where('menu_item', $menuName)->first();
+                    if (!$menu) continue;
+
+                    OrderDetail::create([
+                        'reservation_id' => $reservation->id,
+                        'menu_id' => $menu->id,
+                        'quantity' => $qty,
+                        'order_price' => $menu->price * $qty,
+                        'notes' => $request->note,
+                    ]);
+                }
+            }
+
+            DB::commit();
+            return response()->json(['message' => 'Reservation updated successfully.']);
+        } catch (\Exception $e) {
+            DB::rollback();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+
+
+
+
+    public function viewKitchen(Request $request)
+    {
+
+        $stock = DB::table('stock')->get();
+        $today = Carbon::today()->toDateString();
+
+        $reservations = DB::table('order_details')
+            ->join('customers', 'order_details.customer_id', '=', 'customers.id')
+            ->join('reservations', 'order_details.reservation_id', '=', 'reservations.id')
+            ->join('menu', 'order_details.menu_id', '=', 'menu.id')
+            ->select(
+                'order_details.id as order_id',
+                'order_details.quantity',
+                'order_details.notes as order_notes',
+                'customers.name as customer_name',
+                'reservations.id as reservation_id',
+                'reservations.table_number',
+                'reservations.pax',
+                'reservations.reservation_time',
+                'menu.menu_item'
+            )
+            ->whereDate('reservations.reservation_time', $today)
+            ->orderBy('reservations.reservation_time')
+            ->get();
+
+
+        return view('receptionist.view_kitchen', compact('stock', 'reservations'));
+    }
 }

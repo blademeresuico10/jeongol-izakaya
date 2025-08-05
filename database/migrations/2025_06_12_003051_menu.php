@@ -13,6 +13,8 @@ return new class extends Migration
             $menu->id();
             $menu->string('menu_item');
             $menu->decimal('price', 10, 2);
+            $menu->string('image')->nullable();
+            $menu->string('category')->nullable();
             $menu->timestamps();
             
         });

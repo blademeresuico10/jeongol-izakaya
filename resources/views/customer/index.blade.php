@@ -201,7 +201,7 @@
   <div class="container text-center">
     <p class="mb-2 fs-5">Contact us</p>
     <div class="mb-3 d-flex justify-content-center gap-3">
-      <a href="https://www.facebook.com/photo/?fbid=1001861978805643&set=a.106586524999864" target="_blank" title="Facebook" class="text-white fs-4">
+      <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" title="Facebook" class="text-white fs-4">
         <i class="bi bi-facebook"></i>
       </a>
       <a href="#" title="Instagram" class="text-white fs-4">

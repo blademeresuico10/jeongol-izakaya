@@ -26,7 +26,29 @@ class CustomerController extends Controller
             ->whereDate('reservation_time', $now->toDateString())
             ->get();
 
-        return view('customer.place_reservation', compact('tables', 'menuItems'));
+        $menuPricesMap = [];
+        foreach ($menuItems as $item) {
+            $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
+            if (!isset($menuPricesMap[$baseName])) {
+                $menuPricesMap[$baseName] = ['lunch' => null, 'dinner' => null];
+            }
+
+            if (str_contains($item->menu_item, 'Lunch')) {
+                $menuPricesMap[$baseName]['lunch'] = $item->price;
+            } elseif (str_contains($item->menu_item, 'Dinner')) {
+                $menuPricesMap[$baseName]['dinner'] = $item->price;
+            } else {
+                $menuPricesMap[$baseName]['lunch'] = $item->price;
+                $menuPricesMap[$baseName]['dinner'] = $item->price;
+            }
+        }
+
+        $groupedMenu = [];
+        foreach ($menuItems as $item) {
+            $groupedMenu[$item->category][] = $item;
+        }
+
+        return view('customer.place_reservation', compact('tables', 'menuItems', 'reservations', 'menuPricesMap', 'groupedMenu'));
     }
 
     public function storeReservation(Request $request)
@@ -35,17 +57,18 @@ class CustomerController extends Controller
 
         try {
             $validated = validator($data, [
-                'table_id'        => 'required|exists:tables,id',
-                'customer_name'   => 'required|string',
-                'contact_number' => 'nullable|string|max:12',
-                'pax'             => 'required|integer|min:1',
-                'reserved_date'   => 'required|date',
-                'arrival_time'    => 'required|date_format:H:i',
-                'orders'          => 'nullable|array',
-                'orders.*.item'   => 'string',
-                'orders.*.qty'    => 'integer|min:1',
-                'advance_payment' => 'nullable|numeric|min:0',
-                'orders.*.notes'  => 'nullable|string',
+                'table_id'           => 'required|exists:tables,id',
+                'customer_name'      => 'required|string',
+                'contact_number'     => 'nullable|string|max:12',
+                'pax'                => 'required|integer|min:1',
+                'reserved_date'      => 'required|date',
+                'arrival_time'       => 'required|date_format:H:i',
+                'advance_payment'    => 'nullable|numeric|min:0',
+                'notes'              => 'nullable|string',
+                'orders'             => 'nullable|array',
+                'orders.*.menu_id'   => 'required|exists:menu,id',
+                'orders.*.quantity'  => 'required|integer|min:1',
+                'orders.*.notes'     => 'nullable|string',
             ])->validate();
 
             $userId = Auth::id();
@@ -68,12 +91,14 @@ class CustomerController extends Controller
 
             $table = DB::table('tables')->where('id', $validated['table_id'])->first();
 
-            $reservedDateTime = Carbon::parse($validated['reserved_date'].' '.$validated['arrival_time']);
+            $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
 
             if ($reservedDateTime->toDateString() < now()->toDateString()) {
                 return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
+
+            $table = DB::table('tables')->where('id', $validated['table_id'])->first();
 
             $conflict = DB::table('reservations')
                 ->where('table_number', $table->table_number)
@@ -87,19 +112,20 @@ class CustomerController extends Controller
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
 
-            $isLunch = $reservedDateTime->format('H') < 17;
 
+            $isLunch = $reservedDateTime->format('H') < 17;
             $totalPrice = 0;
             if (!empty($validated['orders'])) {
                 foreach ($validated['orders'] as $order) {
-                    $search = $order['item'] . ($isLunch ? ' Lunch' : ' Dinner');
-                    $menu = DB::table('menu')->where('menu_item', $search)->first();
+                    $menu = DB::table('menu')->find($order['menu_id']);
+
                     if ($menu) {
-                        $totalPrice += $menu->price * $order['qty'];
+                        $totalPrice += $menu->price * $order['quantity'];
                     }
                 }
             }
 
+            // Store reservation
             $reservation = Reservation::create([
                 'pax'                  => $validated['pax'],
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
@@ -112,33 +138,25 @@ class CustomerController extends Controller
                 'total_price'          => $totalPrice,
             ]);
 
-            if (!empty($validated['orders'])) {
-                foreach ($validated['orders'] as $order) {
-                    if (empty($order['item']) || empty($order['qty']) || $order['qty'] < 1) {
-                        continue;
-                    }
+            // Insert order details
+            foreach ($validated['orders'] ?? [] as $order) {
+                $menu = DB::table('menu')->find($order['menu_id']);
+                if (!$menu) continue;
 
-                    $search = $order['item'] . ($isLunch ? ' Lunch' : ' Dinner');
-                    $menu = DB::table('menu')->where('menu_item', $search)->first();
-
-                    if ($menu) {
-                        DB::table('order_details')->insert([
-                            'order_price'    => $menu->price * $order['qty'],
-                            'reservation_id' => $reservation->id,
-                            'menu_id'        => $menu->id,
-                            'quantity'       => $order['qty'],
-                            'notes'          => !empty($order['notes']) ? $order['notes'] : null,
-                            'customer_id'    => $customerId,
-                            'user_id'        => $userId,
-                            'created_at'     => now(),
-                            'updated_at'     => now(),
-                        ]);
-                    }
-                }
+                DB::table('order_details')->insert([
+                    'order_price'    => $menu->price * $order['quantity'],
+                    'reservation_id' => $reservation->id,
+                    'menu_id'        => $menu->id,
+                    'quantity'       => $order['quantity'],
+                    'notes'          => $order['notes'] ?? null,
+                    'customer_id'    => $customerId,
+                    'user_id'        => $userId,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
             }
 
             return response()->json(['success' => true]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -148,4 +166,3 @@ class CustomerController extends Controller
         }
     }
 }
-
