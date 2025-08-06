@@ -55,50 +55,60 @@ class CustomerController extends Controller
     {
         $data = $request->json()->all();
 
-        try {
-            $validated = validator($data, [
-                'table_id'           => 'required|exists:tables,id',
-                'customer_name'      => 'required|string',
-                'contact_number'     => 'nullable|string|max:12',
-                'pax'                => 'required|integer|min:1',
-                'reserved_date'      => 'required|date',
-                'arrival_time'       => 'required|date_format:H:i',
-                'advance_payment'    => 'nullable|numeric|min:0',
-                'notes'              => 'nullable|string',
-                'orders'             => 'nullable|array',
-                'orders.*.menu_id'   => 'required|exists:menu,id',
-                'orders.*.quantity'  => 'required|integer|min:1',
-                'orders.*.notes'     => 'nullable|string',
-            ])->validate();
+        $validator = validator($data, [
+            'table_id'           => 'required|exists:tables,id',
+            'customer_name'      => 'required|string',
+            'contact_number'     => 'nullable|string|max:12',
+            'pax'                => 'required|integer|min:1',
+            'reserved_date'      => 'required|date',
+            'arrival_time'       => 'required|date_format:H:i',
+            'advance_payment'    => 'nullable|numeric|min:0',
+            'notes'              => 'nullable|string',
+            'orders'             => 'nullable|array',
+            'orders.*.menu_id'   => 'required|exists:menu,id',
+            'orders.*.quantity'  => 'required|integer|min:1',
+            'orders.*.notes'     => 'nullable|string',
+        ]);
 
-            $userId = Auth::id();
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $validated = $validator->validated();
+
+        try {
+            $userId = Auth::id() ?? null;
 
             $customer = DB::table('customers')
                 ->where('name', $validated['customer_name'])
                 ->where('contact_number', $validated['contact_number'] ?? '')
                 ->first();
 
-            if (!$customer) {
-                $customerId = DB::table('customers')->insertGetId([
-                    'name'       => $validated['customer_name'],
+            $customerId = $customer
+                ? $customer->id
+                : DB::table('customers')->insertGetId([
+                    'name'           => $validated['customer_name'],
                     'contact_number' => $validated['contact_number'] ?? null,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
                 ]);
-            } else {
-                $customerId = $customer->id;
-            }
 
             $table = DB::table('tables')->where('id', $validated['table_id'])->first();
+
+            if (!$table) {
+                return response()->json(['success' => false, 'message' => 'Invalid table.'], 404);
+            }
 
             $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
 
-            if ($reservedDateTime->toDateString() < now()->toDateString()) {
-                return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
+            if ($reservedDateTime->lt(now())) {
+                return response()->json(['success' => false, 'message' => 'Cannot reserve in the past.']);
             }
-
-            $table = DB::table('tables')->where('id', $validated['table_id'])->first();
 
             $conflict = DB::table('reservations')
                 ->where('table_number', $table->table_number)
@@ -112,20 +122,16 @@ class CustomerController extends Controller
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
 
-
-            $isLunch = $reservedDateTime->format('H') < 17;
             $totalPrice = 0;
             if (!empty($validated['orders'])) {
                 foreach ($validated['orders'] as $order) {
                     $menu = DB::table('menu')->find($order['menu_id']);
-
                     if ($menu) {
                         $totalPrice += $menu->price * $order['quantity'];
                     }
                 }
             }
 
-            // Store reservation
             $reservation = Reservation::create([
                 'pax'                  => $validated['pax'],
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
@@ -138,7 +144,6 @@ class CustomerController extends Controller
                 'total_price'          => $totalPrice,
             ]);
 
-            // Insert order details
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if (!$menu) continue;
@@ -156,13 +161,18 @@ class CustomerController extends Controller
                 ]);
             }
 
-            return response()->json(['success' => true]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Reservation placed successfully',
+            ]);
         } catch (\Exception $e) {
+            Log::error('Reservation Error: ' . $e->getMessage());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Reservation failed.',
                 'error'   => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
 }
