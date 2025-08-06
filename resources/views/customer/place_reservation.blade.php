@@ -8,23 +8,21 @@
   <title>Jeongol Izakaya</title>
 
   <!-- Bootstrap + Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.3.0/flowbite.min.js"></script>
+
   @vite('resources/css/app.css')
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
     body {
-      font-family: Arial, sans-serif;
-      background-color: #fefefe;
       margin: 0;
-      overflow-x: hidden !important;
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
     header {
@@ -38,29 +36,30 @@
     }
 
     .table-layout {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
-      gap: 15px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 50px;
       padding: 20px;
-      max-width: 1000px;
-      margin: 0 auto;
+      flex-grow: 1;
     }
 
     .table-link {
+      flex: 0 calc(15% - 10px);
       text-decoration: none;
     }
 
     .table {
+      width: 100%;
       aspect-ratio: 1 / 1;
-      background-color: #28a745;
-      color: white;
-      border-radius: 20px;
       display: flex;
-      justify-content: center;
       align-items: center;
+
+      color: white;
       font-weight: bold;
-      font-size: 1.1rem;
-      transition: 0.3s ease-in-out;
+      border-radius: 20px;
+      background-color: #28a745;
     }
 
     .table:hover {
@@ -165,8 +164,6 @@
 
     }
 
-
-
     label {
       font-size: 14px;
       text-align: left;
@@ -264,23 +261,28 @@
 <body>
   <header>
     <a href="{{ route('customer.index') }}" class="me-2 text-dark" style="text-decoration: none;">
-      <i class="bi bi-arrow-left-circle-fill" style="font-size: 1.4rem;"></i>
+      <i class="bi bi-arrow-left-circle-fill"></i>
+
     </a>
     Welcome to <strong>Jeongol Izakaya</strong>
   </header>
 
-  <main class="table-layout">
+  <div class="table-layout grid grid-cols-2 gap-4">
     @foreach($tables as $table)
-    <a href="#" class="table-link" data-table-id="{{ $table->id }}">
-      <div class="table available">
-      <div class="position-absolute w-100 text-center" style="top: 8px; font-size: 10px;">
-        {{ $table->capacity }} Pax
+    <div class="table-link cursor-pointer" data-table-id="{{ $table->id }}"
+      data-table-number="{{ $table->table_number }}">
+
+      <div class="table available relative flex flex-col items-center justify-center h-50 border rounded bg-green-100">
+
+      <!-- Pax at top -->
+      <div class="absolute top-1 text-xs ">{{ $table->capacity }} Pax</div>
+
+      <!-- Table number centered -->
+      <div class="table-number text-lg font-semibold">Table {{ $table->table_number }}</div>
       </div>
-      Table {{ $table->table_number }}
-      </div>
-    </a>
+    </div>
   @endforeach
-  </main>
+  </div>
 
   <!-- Reservation Modal -->
   <div id="tableModal" class="modal">
@@ -379,7 +381,7 @@
         <div class="relative h-full bg-white rounded-lg shadow flex flex-col">
 
           <!-- Modal Header -->
-          <div class="modal-section ">
+          <div class="modal-section">
             <div class="flex items-center justify-between p-3 rounded-t bg-red-800">
               <h3 class="text-lg font-semibold text-white">
                 Orders Breakdown

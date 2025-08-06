@@ -283,4 +283,22 @@
     }
 
   });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const ordersButton = document.getElementById("ordersButton");
+    const defaultModal = document.getElementById("default-modal");
+    const closeButtons = defaultModal.querySelectorAll("[data-modal-hide='default-modal']");
+
+    // Show modal on Orders button click
+    ordersButton.addEventListener("click", () => {
+      defaultModal.classList.remove("hidden");
+    });
+
+    // Hide modal when any "data-modal-hide" button is clicked
+    closeButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        defaultModal.classList.add("hidden");
+      });
+    });
+  });
 </script>

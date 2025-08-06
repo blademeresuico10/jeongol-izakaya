@@ -237,27 +237,5 @@
     margin-bottom: 5px;
   }
 
-  .menu-flex-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    margin-top: 10px;
-  }
-
-  .menu-block {
-    flex: 1 1 200px;
-    padding: 10px;
-    background-color: #f8f8f8;
-    border-radius: 6px;
-  }
-
-  .menu-block p {
-    font-weight: bold;
-    margin-bottom: 8px;
-  }
-
-  .menu-block label {
-    display: block;
-    margin-bottom: 6px;
-  }
+  
 </style>
