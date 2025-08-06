@@ -311,11 +311,11 @@
 
         };
 
-        fetch("{{ route('receptionist.storeReservation') }}", {
+        fetch(window.jeongolConfig.storeReservationUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': window.jeongolConfig.csrfToken
             },
             body: JSON.stringify(data)
         })
@@ -345,6 +345,7 @@
             });
 
     });
+
 
     function animateFlyToCart(imageEl, targetSelector) {
         const imgRect = imageEl.getBoundingClientRect();

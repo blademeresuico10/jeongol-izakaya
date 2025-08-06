@@ -209,15 +209,14 @@
       submitBtn.textContent = 'Submitting...';
 
       try {
-        const res = await fetch('/customer/reserve', {
+        const res = await fetch(window.customer_jeongolConfig.storeReservationUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            'X-CSRF-TOKEN': window.customer_jeongolConfig.csrfToken
           },
           body: JSON.stringify(data)
         });
-
 
         const response = await res.json();
 

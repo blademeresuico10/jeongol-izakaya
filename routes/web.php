@@ -12,7 +12,8 @@ Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
 Route::post('/customer/reserve', [CustomerController::class, 'storeReservation']);
 // Route to handle reservation form submission
-Route::post('/customer/reserve', [CustomerController::class, 'storeReservation']);
+Route::post('/customer/reserve', [CustomerController::class, 'storeReservation'])->name('customer.reserve');
+
 
 
 // Login routes

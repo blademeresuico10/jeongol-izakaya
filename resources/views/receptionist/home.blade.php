@@ -116,50 +116,58 @@
 
     </div>
 
-    
-  <!-- Modal -->
-  <div id="default-modal" tabindex="-1" aria-hidden="true"
-    class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex justify-center items-center">
 
-    <div class="relative w-full max-w-lg h-[60vh]">
-      <div class="relative h-full bg-white rounded-lg shadow flex flex-col">
+    <!-- Modal -->
+    <div id="default-modal" tabindex="-1" aria-hidden="true"
+      class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex justify-center items-center">
 
-        <!-- Modal Header -->
-        <div class="modal-section ">
-          <div class="flex items-center justify-between p-3 rounded-t bg-red-800">
-            <h3 class="text-lg font-semibold text-white">
-              Orders Breakdown
-            </h3>
+      <div class="relative w-full max-w-lg h-[60vh]">
+        <div class="relative h-full bg-white rounded-lg shadow flex flex-col">
+
+          <!-- Modal Header -->
+          <div class="modal-section ">
+            <div class="flex items-center justify-between p-3 rounded-t bg-red-800">
+              <h3 class="text-lg font-semibold text-white">
+                Orders Breakdown
+              </h3>
+            </div>
           </div>
+
+          <!-- Modal Body -->
+          <div id="orderSummary"
+            class="p-4 bg-white  text-sm text-gray-800 dark:text-white border  overflow-y-auto flex-1">
+            <ul id="selectedOrdersContainer" class="text-sm list-disc pl-5 text-black-700 dark:text-black mt-2">
+            </ul>
+          </div>
+
+          <!-- Modal Footer -->
+          <div class="flex justify-end gap-4 p-2 border-t border-gray-200 dark:border-gray-600">
+            <!-- Close Button -->
+            <button data-modal-hide="default-modal" type="button"
+              class="bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
+              Close
+            </button>
+
+            <!-- Clear Button -->
+            <button id="clearOrdersBtn" type="button"
+              class="bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800">
+              Clear
+            </button>
+          </div>
+
         </div>
-
-        <!-- Modal Body -->
-        <div id="orderSummary"
-          class="p-4 bg-white  text-sm text-gray-800 dark:text-white border  overflow-y-auto flex-1">
-          <ul id="selectedOrdersContainer" class="text-sm list-disc pl-5 text-black-700 dark:text-black mt-2">
-          </ul>
-        </div>
-
-        <!-- Modal Footer -->
-        <div class="flex justify-end gap-4 p-2 border-t border-gray-200 dark:border-gray-600">
-          <!-- Close Button -->
-          <button data-modal-hide="default-modal" type="button"
-            class="bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
-            Close
-          </button>
-
-          <!-- Clear Button -->
-          <button id="clearOrdersBtn" type="button"
-            class="bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800">
-            Clear
-          </button>
-        </div>
-
       </div>
     </div>
-  </div>
 
   </div>
+
+  <script>
+    window.jeongolConfig = {
+      storeReservationUrl: "{{ route('receptionist.storeReservation') }}",
+      csrfToken: "{{ csrf_token() }}"
+    };
+  </script>
+
 
   @include('receptionist.components.script')
 
