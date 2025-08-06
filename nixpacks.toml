@@ -1,0 +1,8 @@
+[phases.setup]
+nixpkgs = ["php82", "php82Packages.redis"]
+
+[phases.install]
+cmds = ["composer install --no-dev --optimize-autoloader"]
+
+[phases.build]
+cmds = ["php artisan config:clear", "php artisan config:cache", "php artisan route:cache", "php artisan view:cache"]
