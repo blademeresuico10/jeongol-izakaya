@@ -439,7 +439,6 @@
   <script>
     window.customer_jeongolConfig = {
       storeReservationUrl: "{{ route('customer.reserve') }}", 
-
       csrfToken: "{{ csrf_token() }}"
     };
   </script>
