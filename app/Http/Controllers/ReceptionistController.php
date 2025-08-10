@@ -18,13 +18,13 @@ class ReceptionistController extends Controller
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
 
-       
+
         $now = Carbon::now();
         $reservations = DB::table('reservations')
             ->whereDate('reservation_time', $now->toDateString())
             ->get();
 
-        
+
         $menuPricesMap = [];
         foreach ($menuItems as $item) {
             $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
@@ -50,7 +50,6 @@ class ReceptionistController extends Controller
 
         return view('receptionist.home', compact('tables', 'menuItems', 'reservations', 'menuPricesMap', 'groupedMenu'));
     }
-
 
     public function storeReservation(Request $request)
     {
@@ -91,7 +90,7 @@ class ReceptionistController extends Controller
             } else {
                 $customerId = $customer->id;
             }
-            
+
 
             // Reservation times
             $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
@@ -229,8 +228,9 @@ class ReceptionistController extends Controller
             ->get();
 
 
-        $groupedOrders = $order_details->groupBy('reservation_id')->map(function ($orders) {
+        $groupedOrders = $order_details->groupBy('reservation_id')->map(function ($orders, $reservationId) {
             return (object)[
+                'reservation_id' => $reservationId,
                 'customer_name' => $orders->first()->customer_name,
                 'table_number' => $orders->first()->table_number,
                 'pax' => $orders->first()->pax,
@@ -248,53 +248,57 @@ class ReceptionistController extends Controller
         $request->validate([
             'reservation_id' => 'required|exists:reservations,id',
             'pax' => 'required|integer|min:1',
+            'orders' => 'nullable|json',
             'note' => 'nullable|string',
-            'orders' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
 
         try {
-
-            $reservation = Reservation::find($request->reservation_id);
+            $reservation = Reservation::findOrFail($request->reservation_id);
             $reservation->pax = $request->pax;
             $reservation->save();
 
+            $customerId = $reservation->customer_id;
+            $userId = Auth::id();
 
+            // Delete old order details
             OrderDetail::where('reservation_id', $reservation->id)->delete();
 
+            $orders = json_decode($request->orders, true);
 
-            if ($request->filled('orders')) {
-                $orders = explode(',', $request->orders);
-                foreach ($orders as $item) {
-                    $parts = explode(' x ', trim($item));
-                    $menuName = trim($parts[0]);
-                    $qty = isset($parts[1]) ? (int) $parts[1] : 1;
+            foreach ($orders as $order) {
+                $menu = Menu::where('menu_item', $order['menu_name'])->first();
+                if (!$menu) continue;
 
-                    $menu = Menu::where('menu_item', $menuName)->first();
-                    if (!$menu) continue;
-
-                    OrderDetail::create([
-                        'reservation_id' => $reservation->id,
-                        'menu_id' => $menu->id,
-                        'quantity' => $qty,
-                        'order_price' => $menu->price * $qty,
-                        'notes' => $request->note,
-                    ]);
-                }
+                OrderDetail::create([
+                    'reservation_id' => $reservation->id,
+                    'menu_id'        => $menu->id,
+                    'quantity'       => $order['quantity'],
+                    'order_price'    => $menu->price * $order['quantity'],
+                    'notes'          => $request->note,
+                    'customer_id'    => $customerId,
+                    'user_id'        => $userId,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ]);
             }
 
             DB::commit();
-            return response()->json(['message' => 'Reservation updated successfully.']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Reservation updated successfully.'
+            ]);
         } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json(['error' => $e->getMessage()], 500);
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Update failed.',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
-
-
-
-
 
     public function viewKitchen(Request $request)
     {

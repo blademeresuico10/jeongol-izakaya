@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Customer Orders</title>
   @vite('resources/css/app.css')
   <link rel="shortcut icon" type="image/x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
@@ -81,11 +82,9 @@
           <td class="w-3/6 px-2 py-2 border-r">{{ $order->orders }}</td>
           <td class="w-1/6 px-2 py-2 border-r">{{ $order->note }}</td>
           <td class="w-1/12 px-2 py-2 border-r">
-          <button type="button"
-            data-pax="{{ $order->pax }}" 
-            data-orders="{{ $order->orders }}"
-            data-note="{{ $order->note }}" onclick="openModal(this)"
-            class="text-blue-600 hover:text-blue-800 font-semibold">
+          <button type="button" data-reservation-id="{{ $order->reservation_id }}" data-pax="{{ $order->pax }}"
+            data-orders="{{ $order->orders }}" data-note="{{ $order->note }}" onclick="openModal(this)"
+            class="text-blue-600 hover:text-blue-800 font-semibold rounded-full bg-gray-200 p-1">
             <i class="fas fa-edit"></i>
           </button>
           </td>
@@ -106,10 +105,10 @@
           <button><i class="fas fa-times text-black" onclick="closeModal()"></i></button>
         </div>
 
-        <form method="POST" action="{{ route('receptionist.updateOrder') }}"
+        <form id="updateOrderForm" method="POST" action="{{ route('receptionist.updateOrder') }}"
           class="px-5 py-4 overflow-y-auto max-h-[70vh]">
           @csrf
-          <input type="hidden" name="reservation_id" id="reservation_id" >
+          <input type="hidden" name="reservation_id" id="reservation_id">
 
           <div class="grid gap-4 mb-4 grid-cols-2">
             <div class="col-span-2 sm:col-span-1">
@@ -202,17 +201,20 @@
       });
     });
 
-   
     function updateOrdersInput() {
-      const ordersInput = document.getElementById('ordersInput');
-      const tags = document.querySelectorAll('#ordersBox .order-tag');
-      const orders = Array.from(tags).map(tag => {
+    const ordersBox = document.getElementById('ordersBox');
+    const tags = document.querySelectorAll('#ordersBox .order-tag');
+    const orders = Array.from(tags).map(tag => {
         const item = tag.dataset.item;
-        const qty = tag.querySelector('input')?.value || 1;
-        return `${item} x ${qty}`;
-      });
-      ordersInput.value = orders.join(', ');
-    }
+        const qty = parseInt(tag.querySelector('input')?.value || 1);
+        return {
+            menu_name: item,
+            quantity: qty
+        };
+    });
+    document.getElementById('ordersInput').value = JSON.stringify(orders);
+}
+
 
     function addOrderTag(itemName, qty = 1) {
       const ordersBox = document.getElementById('ordersBox');
@@ -220,7 +222,7 @@
       if (exists) return;
 
       const tag = document.createElement('span');
-      tag.className = "order-tag bg-gray-200 text-black px-3 py-1 me-2 mb-2 rounded-full text-sm shadow-sm inline-flex items-center gap-2 cursor-pointer";
+      tag.className = "order-tag bg-gray-200 text-black px-3 py-1 me-2 mb-2 rounded-full text-sm shadow-sm inline-flex items-center gap-2";
       tag.dataset.item = itemName;
 
       const text = document.createElement('span');
@@ -235,12 +237,22 @@
       input.addEventListener('click', e => e.stopPropagation());
       input.addEventListener('change', updateOrdersInput);
 
+      const removeBtn = document.createElement('button');
+      removeBtn.innerHTML = '&times;';
+      removeBtn.className = "text-red-600 bg-gray-300 rounded-full w-8 h-6 flex items-center justify-center";
+
+      removeBtn.type = "button";
+      removeBtn.onclick = () => {
+        ordersBox.removeChild(tag);
+        updateOrdersInput();
+      };
+
       tag.appendChild(text);
       tag.appendChild(input);
+      tag.appendChild(removeBtn);
       ordersBox.appendChild(tag);
-
-     
     }
+
 
     document.addEventListener('DOMContentLoaded', function () {
       const select = document.getElementById('add_item');
@@ -255,7 +267,39 @@
         select.selectedIndex = 0;
       });
 
-    
+
+    });
+
+
+    document.getElementById('updateOrderForm').addEventListener('submit', function (e) {
+      e.preventDefault(); // prevent default form submission
+
+      const form = e.target;
+      const formData = new FormData(form);
+
+      // AJAX POST using fetch
+      fetch(form.action, {
+        method: 'POST',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+          'Accept': 'application/json',
+        },
+        body: formData
+      })
+        .then(async response => {
+          const data = await response.json();
+          if (data.success) {
+            alert(data.message);
+            closeModal();
+            location.reload(); // or update the UI dynamically instead of reload
+          } else {
+            alert(data.message + "\n" + (data.error ?? ''));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while updating the reservation.');
+        });
     });
   </script>
 

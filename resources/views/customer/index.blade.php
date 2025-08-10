@@ -154,10 +154,8 @@
       <img src="" alt="pic2">
       <img src="" alt="pic3">
     </div>
-
     <a href="#" class="feedback-btn" data-bs-toggle="modal" data-bs-target="#feedbackModal">Submit Feedback</a>
   </main>
-
   <!-- Location Modal -->
   <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -176,7 +174,6 @@
       </div>
     </div>
   </div>
-
   <!-- Feedback Modal -->
   <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -196,8 +193,7 @@
       </div>
     </div>
   </div>
-
- <footer class="bg-dark text-white py-4 mt-5">
+ <footer class="bg-dark text-white py-2">
   <div class="container text-center">
     <p class="mb-2 fs-5">Contact us</p>
     <div class="mb-3 d-flex justify-content-center gap-3">
@@ -217,9 +213,5 @@
     <p class="mb-0">&copy; {{ date('Y') }} Jeongol Izakaya. All rights reserved.</p>
   </div>
 </footer>
-
-
- 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

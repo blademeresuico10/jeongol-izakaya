@@ -59,6 +59,12 @@
           class="border border-gray-400 focus:border-black-500 p-2 rounded w-full" />
       </div>
 
+      <div class="modal-section" id="contactinput">
+        <label><strong>Contact Number</strong></label>
+        <input type="number" id="contactNumber" placeholder="09xxxxx" required
+          class="border border-gray-400 focus:border-black-500 p-2 rounded w-full" />
+      </div>
+
       <div class="modal-section modal-flex">
         <div class="modal-column">
           <label><strong>Number of Pax</strong></label>

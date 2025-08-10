@@ -15,24 +15,18 @@ class OrderDetail extends Model
         'menu_id',
         'reservation_id',
     ];
-
-    public function reservation()
-    {
-        return $this->belongsTo(reservation::class);
-    }
-
     public function menu()
     {
-        return $this->belongsTo(menu::class);
+        return $this->belongsTo(\App\Models\menu::class, 'menu_id');
     }
 
     public function customer()
     {
-        return $this->belongsTo(customers::class);
+        return $this->belongsTo(\App\Models\customers::class, 'customer_id');
     }
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
 }

@@ -13,7 +13,6 @@
     const selectedOrders = {};
     const orderContainer = document.getElementById("selectedOrdersContainer");
 
-
     @if(isset($menuPricesMap))
         const fullMenuPrices = @json($menuPricesMap);
     @else
@@ -35,7 +34,6 @@
             menuPrices[id] = isLunch ? lunch : dinner;
         }
     }
-
     // Modal open/close
     closeModal.onclick = () => modal.style.display = 'none';
     window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
@@ -66,6 +64,7 @@
         document.getElementById('arrivalTimeInput').disabled = true;
 
         document.getElementById('reservationInfoGroup').style.display = 'none';
+        document.getElementById('contactinput').style.display = 'none';
 
         document.getElementById('advance_payment').parentElement.style.display = 'none';
 
@@ -84,8 +83,6 @@
 
         updateMenuPrices();
     }
-
-
     function makeReservation(tableId) {
         selectedTableId = tableId;
         isPlacingOrder = false;
@@ -95,7 +92,7 @@
         document.getElementById('reserved_date').disabled = false;
         document.getElementById('arrivalTimeInput').disabled = false;
         document.getElementById('advance_payment').parentElement.style.display = '';
-
+        document.getElementById('contactinput').style.display = '';
         const now = new Date();
 
 
@@ -119,6 +116,7 @@
         document.getElementById('arrivalTimeInput').addEventListener('input', updateTimeFrameDisplay);
         document.getElementById('selectedOrdersContainer').innerHTML = '';
         document.getElementById('customerName').value = '';
+        documetn.getElementById('contactNumber').value = '';
         document.getElementById('numberOfPax').value = 1;
         document.getElementById('customerNotes').value = '';
         document.getElementById('advance_payment').value = '';
@@ -179,7 +177,6 @@
             orderContainer.appendChild(row);
         });
 
-
         const advancePaymentInput = document.getElementById('advance_payment');
         if (!isPlacingOrder && advancePaymentInput) {
             const halfTotal = (total / 2).toFixed(2);
@@ -191,7 +188,6 @@
         }
     }
 
-
     function updateQuantity(input) {
         const id = input.dataset.id;
         const newQuantity = parseInt(input.value);
@@ -202,7 +198,6 @@
 
         renderOrderSummary();
     }
-
 
     document.getElementById('clearOrdersBtn').addEventListener('click', () => {
 
@@ -295,6 +290,7 @@
 
         const data = {
             customer_name: document.getElementById('customerName').value.trim(),
+            contact_number : document.getElementById('contactNumber').value.trim(),
             pax: document.getElementById('numberOfPax').value.trim(),
             reserved_date: reserved_date.value,
             arrival_time: arrivalTimeInput.value,
