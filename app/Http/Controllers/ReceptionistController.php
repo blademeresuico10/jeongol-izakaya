@@ -4,11 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\Reservation;
+use App\Models\reservation;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\OrderDetail;
-use App\Models\Menu;
+use App\Models\menu;
 
 
 class ReceptionistController extends Controller

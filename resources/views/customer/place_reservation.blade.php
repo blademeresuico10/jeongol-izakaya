@@ -768,7 +768,8 @@
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-CSRF-TOKEN': window.customer_jeongolConfig.csrfToken
+              'X-CSRF-TOKEN': window.customer_jeongolConfig.csrfToken,
+              'Accept': 'application/json'
             },
             body: JSON.stringify(data)
           });
@@ -899,10 +900,6 @@
 
 
   </script>
-
-
-
-
 
 </body>
 
