@@ -13,17 +13,16 @@
 <body class="flex flex-col min-h-screen bg-gray-50 text-center font-sans">
 
   <!-- Header -->
-  <header class="p-4 text-lg font-bold flex flex-col items-center">
-    <div class="flex items-center gap-2">
-      <img src="logo/jeongol_logo.jpg" alt="Logo" class="h-10 sm:h-12 mr-4">
-      <span>Welcome to <strong>Jeongol Izakaya</strong></span>
+  <header class="p-4 font-bold flex flex-col items-center text-center">
+    <p class="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-7">
+      Welcome to Jeongol Izakaya
+    </p>
 
-    </div>
     <button id="openLocation" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
       Location
     </button>
-
   </header>
+
 
   <!-- Reserve Now -->
   <main class="flex-1">

@@ -426,8 +426,7 @@
       </button>
     </div>
   </div>
-
-
+  
   <!--Order Modal-->
   <div id="orderModal" class="modal-order">
     <div class="modal-content">
