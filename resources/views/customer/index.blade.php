@@ -1,217 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Jeongol Izakaya</title>
-
-  <!-- Bootstrap + Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  <!-- Add this in the <head> section -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-  
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #fefefe;
-    }
-
-    body {
-      display: flex;
-      flex-direction: column;
-      text-align: center;
-    }
-
-    main {
-      flex: 1;
-    }
-
-    header {
-      padding: 1rem;
-      font-size: 1.5rem;
-    }
-
-    header img {
-      height: 45px;
-    }
-
-    .location-btn {
-      margin-top: 10px;
-    }
-
-    .reserve-link {
-      display: inline-block;
-      margin: 1rem 0;
-      padding: 15px 30px;
-      background-color: #e32929;
-      color: #fff;
-      font-weight: bold;
-      border-radius: 5px;
-      font-size: 1rem;
-      text-decoration: none;
-      transition: background-color 0.3s;
-    }
-
-    .reserve-link:hover {
-      background-color: #ff0000;
-    }
-
-    .image-gallery {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      padding: 1rem 0;
-    }
-
-    .image-gallery img {
-      width: 100%;
-      max-width: 200px;
-      height: auto;
-      background-color: #ccc;
-      border-radius: 5px;
-      margin-bottom: 6%;
-    }
-
-    .feedback-btn {
-      display: inline-block;
-      margin: 2rem 0 1rem;
-      padding: 10px 20px;
-      background-color: #8f8f8f;
-      color: #fff;
-      font-weight: bold;
-      border-radius: 5px;
-      text-decoration: none;
-      font-size: 1rem;
-    }
-
-    footer {
-      background-color: #e60707;
-      color: white;
-      padding: .1rem 0;
-    }
-
-    footer a {
-      color: white;
-      margin: 0 10px;
-      font-size: .9rem;
-    }
-
-    footer a:hover {
-      color: #ddd;
-    }
-
-    @media (max-width: 768px) {
-      header {
-        font-size: 1.2rem;
-      }
-
-      .reserve-link,
-      .feedback-btn {
-        font-size: 0.95rem;
-        padding: 12px 20px;
-      }
-
-      footer a {
-        font-size: 1.1rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      header img {
-        height: 35px;
-      }
-
-      .reserve-link,
-      .feedback-btn {
-        width: 90%;
-        font-size: 0.9rem;
-      }
-    }
-  </style>
+  <link rel="shortcut icon" type="image/x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
+  @vite('resources/css/app.css')
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
-<body>
+<body class="flex flex-col min-h-screen bg-gray-50 text-center font-sans">
 
-  <main>
-    <header>
-      <div> <img src="/assets/spoon-and-fork.png" alt="Logo"> Welcome to <strong>Jeongol Izakaya</strong></div>
-      <button type="button" class="btn btn-danger location-btn" data-bs-toggle="modal" data-bs-target="#locationModal">
-        Location
-      </button>
-    </header>
+  <!-- Header -->
+  <header class="p-4 text-lg font-bold flex flex-col items-center">
+    <div class="flex items-center gap-2">
+      <img src="logo/jeongol_logo.jpg" alt="Logo" class="h-10 sm:h-12 mr-4">
+      <span>Welcome to <strong>Jeongol Izakaya</strong></span>
 
-    <a href="{{route('customer.place_reservation')}}" class="reserve-link">Reserve Now!</a>
-
-    <div class="image-gallery">
-      <img src="" alt="pic1">
-      <img src="" alt="pic2">
-      <img src="" alt="pic3">
     </div>
-    <a href="#" class="feedback-btn" data-bs-toggle="modal" data-bs-target="#feedbackModal">Submit Feedback</a>
+    <button id="openLocation" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
+      Location
+    </button>
+
+  </header>
+
+  <!-- Reserve Now -->
+  <main class="flex-1">
+    <a href="{{ route('customer.place_reservation') }}"
+      class="inline-block my-4 px-6 py-3 bg-orange-600 text-white font-bold rounded hover:bg-orange-600 transition">
+      Reserve Now!
+    </a>
+
+    <!-- Gallery -->
+    <div class="flex flex-wrap justify-center gap-4 px-4">
+      <img src="" alt="Samgyupsal" class="w-48 h-auto rounded bg-gray-200">
+      <img src="" alt="Hotpot" class="w-48 h-auto rounded bg-gray-200">
+      <img src="" alt="Fusion" class="w-48 h-auto rounded bg-gray-200">
+    </div>
+
+    <!-- Feedback Button -->
+    <button id="openFeedback"
+      class="mt-8 mb-4 px-5 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 transition">
+      Submit Feedback
+    </button>
   </main>
+
   <!-- Location Modal -->
-  <div class="modal fade" id="locationModal" tabindex="-1" aria-labelledby="locationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="locationModalLabel">Our Location</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-0">
-          <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3964.2720320936146!2d124.85643821044029!3d6.487195323557341!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x32f819e81bfe3b73%3A0x9301afee65466c72!2sJeongol%20Palace!5e0!3m2!1sen!2sph!4v1750692520597!5m2!1sen!2sph"
-            width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade">
-          </iframe>
-        </div>
+  <div id="locationModal" class="fixed inset-0 hidden bg-black/50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl overflow-hidden">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-lg font-bold">Our Location</h2>
+        <button class="text-gray-500 hover:text-gray-800" onclick="closeModal('locationModal')">&times;</button>
       </div>
+      <iframe
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d350.3902543246729!2d124.8495126753962!3d6.494669118615421!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x32f819f5ff30d38d%3A0xf462070ae3f3c5f2!2sJeongol%20Izakaya!5e0!3m2!1sen!2sph!4v1755001268091!5m2!1sen!2sph"
+        class="w-full h-[450px] border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade">
+      </iframe>
     </div>
   </div>
+
+
   <!-- Feedback Modal -->
-  <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="feedbackModalLabel">Submit Feedback</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <form>
-            <div class="mb-3">
-              <input type="text" class="form-control" placeholder="Your feedback...">
-            </div>
-            <button type="submit" class="btn btn-danger w-30">Submit</button>
-          </form>
-        </div>
+  <div id="feedbackModal" class="fixed inset-0 hidden bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
+      <div class="flex justify-between items-center p-4 border-b">
+        <h2 class="text-lg font-bold">Submit Feedback</h2>
+        <button class="text-gray-500 hover:text-gray-800" onclick="closeModal('feedbackModal')">&times;</button>
+      </div>
+      <div class="p-4">
+        <form>
+          <input type="text" placeholder="Your feedback..."
+            class="w-full p-2 border rounded mb-3 focus:ring focus:ring-red-300">
+          <button type="submit"
+            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Submit</button>
+        </form>
       </div>
     </div>
   </div>
- <footer class="bg-dark text-white py-2">
-  <div class="container text-center">
-    <p class="mb-2 fs-5">Contact us</p>
-    <div class="mb-3 d-flex justify-content-center gap-3">
-      <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" title="Facebook" class="text-white fs-4">
-        <i class="bi bi-facebook"></i>
-      </a>
-      <a href="#" title="Instagram" class="text-white fs-4">
-        <i class="bi bi-instagram"></i>
-      </a>
-      <a href="#" title="Twitter" class="text-white fs-4">
-        <i class="bi bi-twitter"></i>
-      </a>
-      <a href="mailto:info@jeongolizakaya.com" title="Email us" class="text-white fs-4">
-        <i class="bi bi-envelope-fill"></i>
-      </a>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-white py-4">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <p class="mb-2 text-lg font-semibold">Contact us</p>
+
+      <div class="flex justify-center gap-4 mb-3">
+        <!-- Facebook -->
+        <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" rel="noopener noreferrer"
+          aria-label="Facebook"
+          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
+          <i class="fab fa-facebook-f text-lg"></i>
+        </a>
+
+        <!-- Instagram -->
+        <a href="#" aria-label="Instagram"
+          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
+          <i class="fab fa-instagram text-lg"></i>
+        </a>
+
+        <!-- Twitter -->
+        <a href="#" aria-label="Twitter"
+          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
+          <i class="fab fa-twitter text-lg"></i>
+        </a>
+
+        <!-- Email -->
+        <a href="mailto:info@jeongolizakaya.com" aria-label="Email"
+          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
+          <i class="fas fa-envelope text-lg"></i>
+        </a>
+      </div>
+
+      <p class="text-sm">&copy; {{ date('Y') }} Jeongol Izakaya. All rights reserved.</p>
     </div>
-    <p class="mb-0">&copy; {{ date('Y') }} Jeongol Izakaya. All rights reserved.</p>
-  </div>
-</footer>
+  </footer>
+
+  <!-- Modal Script -->
+  <script>
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      document.getElementById(id).classList.add('flex');
+    }
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+      document.getElementById(id).classList.remove('flex');
+    }
+    document.getElementById('openLocation').addEventListener('click', () => openModal('locationModal'));
+    document.getElementById('openFeedback').addEventListener('click', () => openModal('feedbackModal'));
+  </script>
+
 </body>
+
 </html>

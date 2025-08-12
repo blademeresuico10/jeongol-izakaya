@@ -8,10 +8,21 @@
     min-height: 100vh;
   }
 
-  .logout-button,
-  .view-button {
+  .logout-button
+  {
     text-decoration: none;
     background-color: #dc3545;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .view-button {
+    text-decoration: none;
+    background-color: #0c6cc6;
     color: white;
     padding: 10px 15px;
     border-radius: 5px;
@@ -210,20 +221,7 @@
     margin-top: 5px;
   }
 
-  .inline-btn {
-    background-color: #dc3545;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    margin: 3px 0;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 17px;
-  }
-
-  .inline-btn:hover {
-    background-color: #c82333;
-  }
+  
 
   .table {
     display: flex;

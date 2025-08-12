@@ -42,7 +42,6 @@
       flex-wrap: wrap;
       gap: 10px;
       justify-content: center;
-      margin-top: 50px;
       padding: 20px;
       flex-grow: 1;
     }
@@ -57,7 +56,6 @@
       aspect-ratio: 1 / 1;
       display: flex;
       align-items: center;
-
       color: white;
       font-weight: bold;
       border-radius: 20px;
@@ -93,7 +91,7 @@
     }
 
     .modal-section {
-      margin-bottom: 15px;
+      margin-bottom: 8px;
     }
 
     .modal-order {
@@ -339,9 +337,9 @@
         </div>
 
         <label for="advance_payment">
-          Advance Payment: <span id="advance_payment_label" class="text-gray-500 text-sm">Default amount</span>
+          Advance Payment
         </label>
-        <input type="number" id="advance_payment" class="form-control" readonly />
+        <input type="number" id="advance_payment" class="form-control" value="600" readonly />
 
 
         <div class="modal-section">
@@ -362,12 +360,6 @@
             class="w-1/2 bg-blue-500 hover:bg-blue-600 text-white font-medium text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-700 dark:hover:bg-blue-800 dark:focus:ring-blue-600">
             Proceed to payment
           </button>
-          <!-- Submit Reservation Button 
-          <button id="submitBtn" type="button"
-            class="w-1/2 bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800">
-            Submit Reservation
-          </button>
-          -->
         </div>
 
       </form>
@@ -430,7 +422,7 @@
       <!-- Submit Button -->
       <button id="submitBtn" type="button"
         class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-        Sumbit Reservation
+        Submit Reservation
       </button>
     </div>
   </div>
@@ -442,11 +434,11 @@
       <span class="close-modal" id="closeOrderModal" style="float: right; cursor: pointer;">&times;</span>
       <h3 class="text-lg">
         <strong>
-          Select Menu Items
+          Place Order
           <span>
             <div class="flex justify-end">
               <button data-modal-target="default-modal" data-modal-toggle="default-modal" type="button"
-                id="ordersButton" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
+                id="ordersButton" class="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded">
                 Orders
               </button>
             </div>
@@ -455,7 +447,7 @@
         </strong>
       </h3>
       <div class="modal-section">
-        @foreach(['main' => 'Main Menu', 'add_ons' => 'Add-ons', 'drinks' => 'Drinks', 'rice' => 'Rice'] as $key => $label)
+        @foreach(['main' => 'Main Menu']  as $key => $label)
         @if(isset($groupedMenu[$key]))
         <x-menu-category-grid :key="$key" :label="$label" :items="$groupedMenu[$key]" />
       @endif
@@ -471,7 +463,7 @@
 
           <!-- Modal Header -->
           <div class="modal-section">
-            <div class="flex items-center justify-between p-2 rounded-t bg-red-800">
+            <div class="flex items-center justify-between p-2 rounded-t bg-green-800">
               <h3 class="text-lg font-semibold text-white mt-4 ml-5">
                 Orders Breakdown
               </h3>
@@ -504,8 +496,21 @@
       </div>
     </div>
   </div>
+  <div id="messageBox" style="
+  display: none;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  z-index: 9999;
+"></div>
 
-  <footer class="text-center p-3 bg-red-500 text-white mt-5">
+
+  <footer class="text-center p-3 bg-gray-900 text-white mt-5">
     <p>Contact us</p>
     <div>
       <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" class="text-white mx-2">
@@ -571,7 +576,11 @@
       const notesInput = document.getElementById('notesTextarea');
       const dateInput = document.getElementById('reserved_date');
       const timeInput = document.getElementById('arrivalTimeInput');
-      const advance_payment = document.getElementById('advancePayment');
+      const advancePaymentInput = document.getElementById('advance_payment');
+      const advancePaymentLabel = document.getElementById('advance_payment_label');
+
+      // Store default advance payment once
+      const defaultAdvancePayment = parseFloat(advancePaymentInput?.value) || 0;
 
       const submitBtn = document.getElementById('submitBtn');
       const orderBtn = document.getElementById('order');
@@ -674,18 +683,18 @@
           container.appendChild(row);
         });
 
-        // Advance payment calculation
-        const advancePaymentInput = document.getElementById('advance_payment');
-        const advancePaymentLabel = document.getElementById('advance_payment_label');
-
+        // Recalculate advance payment based on default
         if (advancePaymentInput) {
-          let advance = 600;
+          let advance = defaultAdvancePayment;
+
           if (orderCount > 0) {
             advance += (orderCount * 50);
           }
+
           advancePaymentInput.value = advance.toFixed(2);
+
           if (advancePaymentLabel) {
-            advancePaymentLabel.textContent = 'Default amount';
+            advancePaymentLabel.textContent = advance.toFixed(2);
           }
         }
 
@@ -732,7 +741,7 @@
           reserved_date: dateInput.value,
           arrival_time: timeInput.value,
           table_id: selectedTableNumber,
-          advance_payment: document.getElementById('advance_payment').value.trim(),
+          advance_payment: advancePaymentInput.value.trim(),
           notes: notesInput.value.trim(),
           orders: menuItems
         };
@@ -755,14 +764,49 @@
       submitBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         if (!validateInputs()) {
-          alert('Please complete all required fields.');
+          showMessageBox('Please complete all required fields.', 'error');
           return;
+        }
+        const selectedTime = timeInput.value;
+        if (selectedTime) {
+          const [hours, minutes] = selectedTime.split(':').map(Number);
+          if (hours < 11 || hours > 18 || (hours === 18 && minutes > 0)) {
+            showMessageBox('Reservations are only allowed between 11:00 AM and 6:00 PM.', 'error');
+            return;
+          }
+        } else {
+          showMessageBox('Please select a reservation time.', 'error');
+          return;
+        }
+
+        function showMessageBox(message, type = 'success') {
+          const box = document.getElementById('messageBox');
+          box.textContent = message;
+
+          // Style based on type
+          if (type === 'success') box.style.background = '#4CAF50';
+          if (type === 'error') box.style.background = '#f44336';
+          if (type === 'warning') box.style.background = '#ff9800';
+
+          box.style.display = 'block';
+
+          // Auto-hide after 3 seconds
+          setTimeout(() => {
+            box.style.display = 'none';
+          }, 3000);
         }
 
         const data = gatherReservationData();
         submitBtn.disabled = true;
         submitBtn.textContent = 'Submitting...';
 
+        async function safeJson(res) {
+          try {
+            return await res.json();
+          } catch {
+            return {};
+          }
+        }
         try {
           const res = await fetch(window.customer_jeongolConfig.storeReservationUrl, {
             method: 'POST',
@@ -774,37 +818,26 @@
             body: JSON.stringify(data)
           });
 
-          console.log('Response status:', res.status);
-          console.log('Response ok:', res.ok);
-
-          const responseText = await res.text();
-          console.log('Response text:', responseText);
-
-          let responseJson = {};
-          try {
-            responseJson = JSON.parse(responseText);
-          } catch (jsonErr) {
-            console.error('Invalid JSON:', jsonErr);
-          }
+          const responseJson = await safeJson(res);
 
           if (res.ok && responseJson.success) {
-            alert('Reservation successful!');
+            showMessageBox('Reservation successful!', 'success');
             resetReservationForm();
             modal.style.display = 'none';
           } else {
             if (responseJson.message === 'Time slot already taken.') {
-              alert('Sorry, this time slot for the selected table is already booked. Please choose another time or table.');
+              showMessageBox('Sorry, this time slot for the selected table is already booked. Please choose another time or table.', 'warning');
             } else {
-              alert(responseJson.message || 'Reservation could not be completed.');
+              showMessageBox(responseJson.message || 'Reservation could not be completed.', 'error');
             }
           }
-        } catch (err) {
-          console.error('Fetch error:', err);
-          alert('Something went wrong while submitting the reservation.');
+        } catch {
+          showMessageBox('Something went wrong while submitting the reservation.', 'error');
         } finally {
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit Reservation';
         }
+
       });
 
       function animateFlyToCart(imageEl, targetSelector) {
@@ -850,21 +883,7 @@
         });
       });
 
-      // Payment modal
-      const paymentModal = document.getElementById("paymentModal");
-      const closePaymentModal = document.getElementById("closePaymentModal");
-
-
-
-      function clearReservationForm() {
-        [nameInput, contactInput, dateInput, timeInput, notesInput].forEach(el => el.value = '');
-        paxInput.value = '';
-        selectedTableNumber = 0;
-        document.getElementById('selectedTableNumber').value = '';
-        Object.keys(selectedOrders).forEach(k => delete selectedOrders[k]);
-        updateOrderSummary();
-      }
-
+      // Payment modal clear
       function clearPaymentFields() {
         paymentModal.querySelectorAll("input").forEach(input => {
           input.value = "";
@@ -872,11 +891,6 @@
         });
       }
 
-
-      closePaymentModal.addEventListener("click", () => {
-        paymentModal.classList.add("hidden");
-        clearPaymentFields();
-      });
       document.getElementById("paymentBtn")?.addEventListener("click", () => {
         paymentModal.classList.remove("hidden");
       });
@@ -887,18 +901,21 @@
         selectedTableNumber = 0;
         document.getElementById('selectedTableNumber').value = '';
         Object.keys(selectedOrders).forEach(k => delete selectedOrders[k]);
+
+        // Restore default advance payment
+        advancePaymentInput.value = defaultAdvancePayment.toFixed(2);
+        if (advancePaymentLabel) {
+          advancePaymentLabel.textContent = defaultAdvancePayment.toFixed(2);
+        }
         updateOrderSummary();
 
         if (paymentModal) {
-          paymentModal.classList.add('hidden')
+          paymentModal.classList.add('hidden');
           clearPaymentFields();
         }
         clearPaymentFields();
-
       }
     });
-
-
   </script>
 
 </body>

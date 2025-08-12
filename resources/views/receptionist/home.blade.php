@@ -33,8 +33,12 @@
       <div class="table-number text-center">Table {{ $table->table_number }}</div>
       <div class="inline-options"
         style="display:none; flex-direction: column; align-items: center; gap: 5px; margin-top: 10px;">
-        <button class="inline-btn" onclick="event.stopPropagation(); makeOrder({{ $table->id }})">Place Order</button>
-        <button class="inline-btn" onclick="event.stopPropagation(); makeReservation({{ $table->id }})">Make
+        <button
+        class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
+        onclick="event.stopPropagation(); makeOrder({{ $table->id }})">Place Order</button>
+        <button
+        class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
+        onclick="event.stopPropagation(); makeReservation({{ $table->id }})">Make
         Reservation</button>
       </div>
       </div>
