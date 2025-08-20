@@ -61,7 +61,6 @@
         </div>
       </div>
 
-      <!-- Full image preview -->
       <div x-show="showImage" x-cloak
         class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]"
         @click="showImage = false">
@@ -118,7 +117,7 @@
 
             @php
         $notifications = auth()->user()?->notifications ?? collect();
-        @endphp
+      @endphp
 
             <ul class="space-y-2 max-h-60 overflow-y-auto">
               @forelse($notifications as $n)
@@ -340,6 +339,7 @@
         fetchPayment(reservationId);
       });
     });
+
     function fetchPayment(id) {
       fetch(`/payments/${id}`)
         .then(res => res.json())
@@ -347,11 +347,15 @@
           const root = document.querySelector('[x-data]');
           if (root && root.__x) {
             root.__x.$data.payment = data;
+            root.__x.$data.show = true;
           }
+        })
+        .catch(error => {
+          console.error('Payment fetch error:', error);
+          alert('Failed to load payment details.');
         });
     }
   </script>
-
 
   @include('receptionist.components.script')
 

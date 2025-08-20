@@ -33,6 +33,6 @@ class Reservation extends Model
 
     public function payment()
     {
-        return $this->hasOne(\App\Models\ReservationPayment::class);
+        return $this->hasOne(\App\Models\reservationPayment::class);
     }
 }

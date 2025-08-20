@@ -135,7 +135,9 @@ class ReceptionistController extends Controller
                 'customer_id'          => $customerId,
                 'user_id'              => $userId,
                 'total_price'          => $totalPrice,
+                'status'               => 'Pending',
             ]);
+
 
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
@@ -192,9 +194,8 @@ class ReceptionistController extends Controller
         return view('receptionist.view_reservation', compact('reservations'));
     }
 
-    public function modifyOrders(Request $request)
+    public function modifyOrders()
     {
-        $date = $request->query('date', 'today');
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
         $menuItems = DB::table('menu')->select('menu_item', 'price')->get();
 
@@ -214,8 +215,8 @@ class ReceptionistController extends Controller
                 'reservations.status',
                 'menu.menu_item'
             )
-            ->whereDate('reservations.reservation_time', $targetDate)
-            ->where('reservations.status', '!=', 'Pending')
+            ->whereDate('reservations.reservation_time', $targetDate)   
+            ->where('reservations.status', 'Accepted')                  
             ->orderBy('reservations.reservation_time')
             ->get();
 
@@ -233,7 +234,6 @@ class ReceptionistController extends Controller
 
         return view('receptionist.modify_orders', compact('groupedOrders', 'menuItems'));
     }
-
     public function updateOrder(Request $request)
     {
         $request->validate([
@@ -311,8 +311,10 @@ class ReceptionistController extends Controller
                 'menu.menu_item'
             )
             ->whereDate('reservations.reservation_time', $today)
+            ->where('reservations.status', 'Accepted')
             ->orderBy('reservations.reservation_time')
             ->get();
+
 
 
         return view('receptionist.view_kitchen', compact('stock', 'reservations'));
@@ -330,14 +332,23 @@ class ReceptionistController extends Controller
             $reservation->payment->save();
         }
 
-        $user = auth()->user();
-        $user->notifications()
-            ->where('data->reservation_id', $id)
-            ->first()?->delete();
-
-
         return redirect()->back()->with('success', 'Reservation accepted successfully.');
     }
 
-  
+    public function showPayment($id)
+    {
+        try {
+            $reservation = Reservation::with('payment')->findOrFail($id);
+
+            return response()->json([
+                'advance_payment' => $reservation->advance_payment,
+                'payment' => $reservation->payment,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 }

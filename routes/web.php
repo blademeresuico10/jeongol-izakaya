@@ -14,17 +14,6 @@ Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
 Route::post('/customer/reserve', [CustomerController::class, 'storeReservation'])->name('customer.reserve');
 
-Route::get('/payments/{reservation}', function (\App\Models\Reservation $reservation) {
-    $reservation->load('payment');
-
-    return response()->json([
-        'advance_payment' => $reservation->advance_payment,
-        'payment' => $reservation->payment,
-    ]);
-});
-
-
-
 
 // Login routes
 Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -79,6 +68,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/receptionist/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])
         ->name('receptionist.accept-reservation');
     Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment']);
+
 
     // Kitchen Routes
     Route::get('/kitchen/home', [KitchenController::class, 'home'])->name('kitchen.home');
