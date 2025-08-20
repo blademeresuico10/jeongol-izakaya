@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\OrderDetail;
 use App\Models\menu;
-
+use App\Models\User;
 
 class ReceptionistController extends Controller
 {
@@ -90,8 +90,6 @@ class ReceptionistController extends Controller
             } else {
                 $customerId = $customer->id;
             }
-
-
             // Reservation times
             $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
@@ -127,8 +125,6 @@ class ReceptionistController extends Controller
                 }
             }
 
-
-            // Store reservation
             $reservation = Reservation::create([
                 'pax'                  => $validated['pax'],
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
@@ -141,7 +137,6 @@ class ReceptionistController extends Controller
                 'total_price'          => $totalPrice,
             ]);
 
-            // Insert order details
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if (!$menu) continue;
@@ -173,9 +168,7 @@ class ReceptionistController extends Controller
     {
         $date = $request->query('date', 'today');
 
-
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
-
 
         $reservations = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
@@ -196,17 +189,14 @@ class ReceptionistController extends Controller
             ->orderBy('reservations.reservation_time')
             ->get();
 
-
         return view('receptionist.view_reservation', compact('reservations'));
     }
-
 
     public function modifyOrders(Request $request)
     {
         $date = $request->query('date', 'today');
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
         $menuItems = DB::table('menu')->select('menu_item', 'price')->get();
-
 
         $order_details = DB::table('order_details')
             ->join('customers', 'order_details.customer_id', '=', 'customers.id')
@@ -221,12 +211,13 @@ class ReceptionistController extends Controller
                 'reservations.table_number',
                 'reservations.pax',
                 'reservations.reservation_time',
+                'reservations.status',
                 'menu.menu_item'
             )
             ->whereDate('reservations.reservation_time', $targetDate)
+            ->where('reservations.status', '!=', 'Pending')
             ->orderBy('reservations.reservation_time')
             ->get();
-
 
         $groupedOrders = $order_details->groupBy('reservation_id')->map(function ($orders, $reservationId) {
             return (object)[
@@ -262,7 +253,6 @@ class ReceptionistController extends Controller
             $customerId = $reservation->customer_id;
             $userId = Auth::id();
 
-            // Delete old order details
             OrderDetail::where('reservation_id', $reservation->id)->delete();
 
             $orders = json_decode($request->orders, true);
@@ -299,7 +289,6 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
     public function viewKitchen(Request $request)
     {
 
@@ -328,4 +317,27 @@ class ReceptionistController extends Controller
 
         return view('receptionist.view_kitchen', compact('stock', 'reservations'));
     }
+
+    public function acceptReservation($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+        $reservation->status = 'Accepted';
+        $reservation->save();
+
+        if ($reservation->payment) {
+            $reservation->payment->status = 'approved';
+            $reservation->payment->save();
+        }
+
+        $user = auth()->user();
+        $user->notifications()
+            ->where('data->reservation_id', $id)
+            ->first()?->delete();
+
+
+        return redirect()->back()->with('success', 'Reservation accepted successfully.');
+    }
+
+  
 }

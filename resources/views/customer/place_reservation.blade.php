@@ -7,13 +7,9 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Jeongol Izakaya</title>
 
-  <!-- Bootstrap + Icons -->
-
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-
-
 
   @vite('resources/css/app.css')
 
@@ -124,7 +120,6 @@
 
     }
 
-
     .modal-order h3 {
       font-size: 1.2rem;
       margin-bottom: 20px;
@@ -161,7 +156,6 @@
       justify-content: center;
       max-width: 100%;
       overflow-x: hidden;
-
     }
 
     label {
@@ -217,15 +211,12 @@
       }
     }
 
-
-    /* Tablets (landscape and portrait) */
     @media (max-width: 768px) {
       .table-link {
         flex: 0 1 calc(33.33% - 10px);
       }
     }
 
-    /* Mobile devices */
     @media (max-width: 480px) {
       .table-link {
         flex: 0 1 calc(33.33% - 10px);
@@ -239,15 +230,12 @@
       grid-template-columns: repeat(3, 1fr) !important;
     }
 
-    /* Image size */
     .menu-card img {
       height: 90px !important;
       width: 100% !important;
       border-radius: 3px;
-
     }
 
-    /* Reduce spacing if needed */
     .menu-card h5 {
       font-size: 12px;
     }
@@ -258,7 +246,6 @@
 
     .input-error {
       border: 2px solid #ef4444;
-
     }
 
     @keyframes fade-in {
@@ -283,7 +270,6 @@
   <header>
     <a href="{{ route('customer.index') }}" class="me-2 text-dark" style="text-decoration: none;">
       <i class="bi bi-arrow-left-circle-fill"></i>
-
     </a>
     Welcome to <strong>Jeongol Izakaya</strong>
   </header>
@@ -295,17 +281,14 @@
 
       <div class="table available relative flex flex-col items-center justify-center h-50 border rounded bg-green-100">
 
-      <!-- Pax at top -->
       <div class="absolute top-1 text-xs ">{{ $table->capacity }} Pax</div>
 
-      <!-- Table number centered -->
       <div class="table-number text-lg font-semibold">Table {{ $table->table_number }}</div>
       </div>
     </div>
   @endforeach
   </div>
 
-  <!-- Reservation Modal -->
   <div id="tableModal" class="modal">
     <div class="modal-content">
       <span id="closeModal" class="close-modal text-end text-lg cursor-pointer">&times;</span>
@@ -340,8 +323,6 @@
           Advance Payment
         </label>
         <input type="number" id="advance_payment" class="form-control" value="600" readonly />
-
-
         <div class="modal-section">
           <label for="notesTextarea">Notes</label>
           <textarea id="notesTextarea" rows="2"></textarea>
@@ -350,7 +331,7 @@
         <input type="hidden" id="selectedTableNumber">
 
         <div class="flex gap-4 p-2 border-t border-gray-200 dark:border-gray-600">
-          <!-- Order Food Button -->
+
           <button data-modal-hide="default-modal" type="button" id="order"
             class="w-1/2 bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
             Order Food
@@ -361,73 +342,31 @@
             Proceed to payment
           </button>
         </div>
-
       </form>
     </div>
   </div>
 
   <div id="paymentModal" class="fixed inset-0 z-[1100] hidden items-center justify-center bg-black bg-opacity-50">
-
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
 
-      <!-- Close Button -->
-      <button id="closePaymentModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700">
-        ✕
-      </button>
-
-      <!-- Title -->
+      <button id="closePaymentModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700">✕</button>
       <h2 class="text-xl font-semibold text-center mb-4">Payment</h2>
 
-      <!-- Tabs -->
       <div class="flex border-b mb-4">
-        <button type="button" data-tab="gcash" class="flex-1 text-center py-2 border-b-2 border-blue-500 font-semibold">
-          Gcash
-        </button>
-        <button type="button" data-tab="maya"
-          class="flex-1 text-center py-2 border-b-2 border-transparent hover:border-gray-300">
-          Maya
-        </button>
+        <button type="button" data-tab="gcash" class="flex-1 text-center py-2 font-semibold">Gcash</button>
+        <button type="button" data-tab="maya" class="flex-1 text-center py-2 font-semibold">Maya</button>
       </div>
 
-      <!-- Gcash Content -->
-      <div id="tab-gcash" class="tab-content">
-        <label class="block mb-2 text-sm font-medium">Gcash Number</label>
-        <input type="number" class="w-full border rounded px-3 py-2 mb-3" placeholder="09XXXXXXXXX">
+      <x-payment-form method="gcash" />
+      <x-payment-form method="maya" />
 
-        <label class="block mb-2 text-sm font-medium">Gcash Registered Name</label>
-        <input type="text" class="w-full border rounded px-3 py-2 mb-3" placeholder="Full Name">
-
-        <label class="block mb-2 text-sm font-medium">Amount</label>
-        <input type="number" class="w-full border rounded px-3 py-2 mb-3" placeholder="Enter amount">
-
-        <label class="block mb-2 text-sm font-medium">Upload Proof of Payment</label>
-        <input type="file" class="w-full border rounded px-3 py-2">
-      </div>
-
-      <!-- Maya Content (hidden by default) -->
-      <div id="tab-maya" class="tab-content hidden">
-        <label class="block mb-2 text-sm font-medium">Maya Number</label>
-        <input type="number" class="w-full border rounded px-3 py-2 mb-3" placeholder="09XXXXXXXXX">
-
-        <label class="block mb-2 text-sm font-medium">Maya Registered Name</label>
-        <input type="text" class="w-full border rounded px-3 py-2 mb-3" placeholder="Full Name">
-
-        <label class="block mb-2 text-sm font-medium">Amount</label>
-        <input type="number" class="w-full border rounded px-3 py-2 mb-3" placeholder="Enter amount">
-
-        <label class="block mb-2 text-sm font-medium">Upload Proof of Payment</label>
-        <input type="file" class="w-full border rounded px-3 py-2">
-      </div>
-
-      <!-- Submit Button -->
       <button id="submitBtn" type="button"
         class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
         Submit Reservation
       </button>
     </div>
   </div>
-  
-  <!--Order Modal-->
+
   <div id="orderModal" class="modal-order">
     <div class="modal-content">
       <span class="close-modal" id="closeOrderModal" style="float: right; cursor: pointer;">&times;</span>
@@ -446,7 +385,7 @@
         </strong>
       </h3>
       <div class="modal-section">
-        @foreach(['main' => 'Main Menu']  as $key => $label)
+        @foreach(['main' => 'Main Menu'] as $key => $label)
         @if(isset($groupedMenu[$key]))
         <x-menu-category-grid :key="$key" :label="$label" :items="$groupedMenu[$key]" />
       @endif
@@ -460,7 +399,6 @@
       <div class="relative w-full max-w-lg h-[60vh]">
         <div class="relative h-full bg-white rounded-lg shadow flex flex-col">
 
-          <!-- Modal Header -->
           <div class="modal-section">
             <div class="flex items-center justify-between p-2 rounded-t bg-green-800">
               <h3 class="text-lg font-semibold text-white mt-4 ml-5">
@@ -469,28 +407,24 @@
             </div>
           </div>
 
-          <!-- Modal Body -->
           <div id="orderSummary"
             class="p-4 bg-white  text-sm text-gray-800 dark:text-white border  overflow-y-auto flex-1">
             <ul id="selectedOrdersContainer" class="text-sm list-disc pl-5 text-black-700 dark:text-black mt-2">
             </ul>
           </div>
 
-          <!-- Modal Footer -->
           <div class="flex justify-end gap-4 p-2 border-t border-gray-200 dark:border-gray-600">
-            <!-- Close Button -->
+
             <button data-modal-hide="default-modal" type="button"
               class="bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
               Close
             </button>
 
-            <!-- Clear Button -->
             <button id="clearOrdersBtn" type="button"
               class="bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800">
               Clear
             </button>
           </div>
-
         </div>
       </div>
     </div>
@@ -508,7 +442,6 @@
   z-index: 9999;
 "></div>
 
-
   <footer class="text-center p-3 bg-gray-900 text-white mt-5">
     <p>Contact us</p>
     <div>
@@ -525,46 +458,51 @@
   <div id="fly-animation-container"
     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></div>
 
-
-
   <script>
     window.customer_jeongolConfig = {
       storeReservationUrl: "{{ route('customer.reserve') }}",
       csrfToken: "{{ csrf_token() }}"
     };
 
-    // Elements
     const paymentBtn = document.getElementById('paymentBtn');
     const paymentModal = document.getElementById('paymentModal');
     const closePaymentModal = document.getElementById('closePaymentModal');
 
-    // Show modal
     paymentBtn.addEventListener('click', () => {
       paymentModal.classList.remove('hidden');
       paymentModal.classList.add('flex');
     });
 
-    // Hide modal
     closePaymentModal.addEventListener('click', () => {
       paymentModal.classList.add('hidden');
       paymentModal.classList.remove('flex');
     });
 
-    // Tab switching
     document.querySelectorAll('[data-tab]').forEach(tabBtn => {
       tabBtn.addEventListener('click', () => {
-        document.querySelectorAll('[data-tab]').forEach(btn => btn.classList.remove('border-blue-500'));
-        tabBtn.classList.add('border-blue-500');
+
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+          btn.classList.remove('bg-gray-200', 'font-bold',);
+          btn.classList.add('border-transparent');
+        });
+
+        tabBtn.classList.remove('border-transparent');
+        tabBtn.classList.add('bg-gray-200', 'font-bold', 'rounded');
 
         const tabName = tabBtn.getAttribute('data-tab');
+
         document.querySelectorAll('.tab-content').forEach(content => {
           content.classList.add('hidden');
         });
+
         document.getElementById(`tab-${tabName}`).classList.remove('hidden');
       });
     });
 
+
     document.addEventListener('DOMContentLoaded', () => {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+
       const modal = document.getElementById('tableModal');
       const closeModal = document.getElementById('closeModal');
       const tableLinks = document.querySelectorAll('.table-link');
@@ -578,18 +516,17 @@
       const advancePaymentInput = document.getElementById('advance_payment');
       const advancePaymentLabel = document.getElementById('advance_payment_label');
 
-      // Store default advance payment once
+
       const defaultAdvancePayment = parseFloat(advancePaymentInput?.value) || 0;
 
       const submitBtn = document.getElementById('submitBtn');
       const orderBtn = document.getElementById('order');
 
       const fullMenuPrices = @json($menuPricesMap);
-      const selectedOrders = {}; // Store selected orders
+      const selectedOrders = {};
 
       let selectedTableNumber = 0;
 
-      // Handle table click (open reservation modal)
       tableLinks.forEach(link => {
         link.addEventListener('click', e => {
           e.preventDefault();
@@ -604,7 +541,6 @@
         resetReservationForm();
       });
 
-      // Date input limits
       const now = new Date();
       if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
         now.setDate(now.getDate() + 1);
@@ -616,7 +552,6 @@
       dateInput.min = today.toISOString().split('T')[0];
       dateInput.max = maxDate.toISOString().split('T')[0];
 
-      // Animate menu item into cart
       window.selectMenuItem = function (card) {
         const img = card.querySelector('img');
         if (img) {
@@ -682,7 +617,6 @@
           container.appendChild(row);
         });
 
-        // Recalculate advance payment based on default
         if (advancePaymentInput) {
           let advance = defaultAdvancePayment;
 
@@ -727,23 +661,42 @@
       });
 
       function gatherReservationData() {
+        const formData = new FormData();
+
         const menuItems = Object.values(selectedOrders).map(item => ({
           menu_id: item.id,
           quantity: item.quantity,
-          price: parseFloat(item.price)
+          notes: item.notes || ''
         }));
 
-        return {
-          pax: paxInput.value,
-          customer_name: nameInput.value.trim(),
-          contact_number: contactInput.value.trim(),
-          reserved_date: dateInput.value,
-          arrival_time: timeInput.value,
-          table_id: selectedTableNumber,
-          advance_payment: advancePaymentInput.value.trim(),
-          notes: notesInput.value.trim(),
-          orders: menuItems
-        };
+        const activeTab = document.querySelector(".tab-content:not(.hidden)");
+        const method = activeTab.id.includes("gcash") ? "Gcash" : "Maya";
+
+        menuItems.forEach((item, index) => {
+          formData.append(`orders[${index}][menu_id]`, item.menu_id);
+          formData.append(`orders[${index}][quantity]`, item.quantity);
+          formData.append(`orders[${index}][notes]`, item.notes);
+        });
+
+        formData.append("pax", paxInput.value);
+        formData.append("customer_name", nameInput.value.trim());
+        formData.append("contact_number", contactInput.value.trim());
+        formData.append("reserved_date", dateInput.value);
+        formData.append("arrival_time", timeInput.value);
+        formData.append("table_id", selectedTableNumber);
+        formData.append("advance_payment", advancePaymentInput.value.trim());
+        formData.append("notes", notesInput.value.trim());
+
+        formData.append("payment_method", method);
+        formData.append("number", activeTab.querySelector(".gcash-number, .maya-number")?.value.trim() ?? "");
+        formData.append("registered_name", activeTab.querySelector(".registered-name")?.value.trim() ?? "");
+        formData.append("amount", activeTab.querySelector(".amount")?.value.trim() ?? "");
+        formData.append("ref_no", activeTab.querySelector(".ref-no")?.value.trim() ?? "");
+
+        const proofFile = activeTab.querySelector(".proof")?.files[0];
+        if (proofFile) formData.append('proof', proofFile);
+
+        return formData;
       }
 
       function validateInputs() {
@@ -769,7 +722,7 @@
         const selectedTime = timeInput.value;
         if (selectedTime) {
           const [hours, minutes] = selectedTime.split(':').map(Number);
-          if (hours < 11 || hours > 18 || (hours === 18 && minutes > 0)) {
+          if (hours < 8 || hours > 18 || (hours === 18 && minutes > 0)) {
             showMessageBox('Reservations are only allowed between 11:00 AM and 6:00 PM.', 'error');
             return;
           }
@@ -782,14 +735,12 @@
           const box = document.getElementById('messageBox');
           box.textContent = message;
 
-          // Style based on type
           if (type === 'success') box.style.background = '#4CAF50';
           if (type === 'error') box.style.background = '#f44336';
           if (type === 'warning') box.style.background = '#ff9800';
 
           box.style.display = 'block';
 
-          // Auto-hide after 3 seconds
           setTimeout(() => {
             box.style.display = 'none';
           }, 3000);
@@ -797,44 +748,35 @@
 
         const data = gatherReservationData();
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
+        submitBtn.textContent = "Submitting...";
 
-        async function safeJson(res) {
-          try {
-            return await res.json();
-          } catch {
-            return {};
-          }
-        }
         try {
-          const res = await fetch(window.customer_jeongolConfig.storeReservationUrl, {
-            method: 'POST',
+          const res = await fetch("/customer/reserve", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-CSRF-TOKEN': window.customer_jeongolConfig.csrfToken,
-              'Accept': 'application/json'
+              "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+              "Accept": "application/json"
             },
-            body: JSON.stringify(data)
+            body: data
           });
 
-          const responseJson = await safeJson(res);
+          const json = await res.json();
 
-          if (res.ok && responseJson.success) {
-            showMessageBox('Reservation successful!', 'success');
+          if (res.ok && json.success) {
+            showMessageBox("Reservation successful!", "success");
             resetReservationForm();
             modal.style.display = 'none';
           } else {
-            if (responseJson.message === 'Time slot already taken.') {
-              showMessageBox('Sorry, this time slot for the selected table is already booked. Please choose another time or table.', 'warning');
-            } else {
-              showMessageBox(responseJson.message || 'Reservation could not be completed.', 'error');
-            }
+            const errors = json.errors || {};
+            const messages = Object.values(errors).flat().join("\n");
+            showMessageBox(messages || json.message || "Reservation failed", "error");
           }
-        } catch {
-          showMessageBox('Something went wrong while submitting the reservation.', 'error');
+        } catch (err) {
+          console.error(err);
+          showMessageBox("Something went wrong while submitting the reservation.", "error");
         } finally {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Submit Reservation';
+          submitBtn.textContent = "Submit Reservation";
         }
 
       });
@@ -869,7 +811,6 @@
         });
       }
 
-      // Orders modal
       const ordersButton = document.getElementById("ordersButton");
       const defaultModal = document.getElementById("default-modal");
       const closeButtons = defaultModal.querySelectorAll("[data-modal-hide='default-modal']");
@@ -882,7 +823,6 @@
         });
       });
 
-      // Payment modal clear
       function clearPaymentFields() {
         paymentModal.querySelectorAll("input").forEach(input => {
           input.value = "";
@@ -901,7 +841,6 @@
         document.getElementById('selectedTableNumber').value = '';
         Object.keys(selectedOrders).forEach(k => delete selectedOrders[k]);
 
-        // Restore default advance payment
         advancePaymentInput.value = defaultAdvancePayment.toFixed(2);
         if (advancePaymentLabel) {
           advancePaymentLabel.textContent = defaultAdvancePayment.toFixed(2);
@@ -915,8 +854,43 @@
         clearPaymentFields();
       }
     });
-  </script>
 
+
+    function gatherReservationDataBlock() {
+      const orders = Object.values(selectedOrders).map(item => ({
+        menu_id: item.id,
+        quantity: item.quantity,
+        notes: item.notes || ''
+      }));
+
+      const activeTab = document.querySelector(".tab-content:not(.hidden)");
+      const method = activeTab.id.includes("gcash") ? "Gcash" : "Maya";
+
+      const paymentDetails = {
+        number: activeTab.querySelector(".gcash-number, .maya-number")?.value.trim() || "",
+        registered_name: activeTab.querySelector(".registered-name")?.value.trim() || "",
+        amount: activeTab.querySelector(".amount")?.value.trim() || "",
+        ref_no: activeTab.querySelector(".ref-no")?.value.trim() || "",
+        proof_uploaded: !!activeTab.querySelector(".proof")?.files[0]
+      };
+
+      return {
+        orders,
+        pax: paxInput.value,
+        customer_name: nameInput.value.trim(),
+        contact_number: contactInput.value.trim(),
+        reserved_date: dateInput.value,
+        arrival_time: timeInput.value,
+        table_id: selectedTableNumber,
+        advance_payment: advancePaymentInput.value.trim(),
+        notes: notesInput.value.trim(),
+        payment_method: method,
+        payment_details: paymentDetails
+      };
+    }
+
+
+  </script>
 </body>
 
 </html>

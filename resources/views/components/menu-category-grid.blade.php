@@ -13,7 +13,7 @@
         ? str_replace([' Lunch', ' Dinner'], '', $item->menu_item)
         : $item->menu_item;
       @endphp
-  
+
         @if($key !== 'main' || !in_array($baseName, $displayedMainItems))
         @if($key === 'main') @php $displayedMainItems[] = $baseName; @endphp @endif
 
@@ -21,15 +21,18 @@
         class="menu-card bg-gray-150 border border-gray-300 rounded-md shadow hover:shadow-md hover:bg-gray-100 cursor-pointer transition duration-200 mt-5"
         onclick="selectMenuItem(this)" data-id="{{ $item->id }}" data-name="{{ $baseName }}" data-category="{{ $key }}"
         data-price="{{ $item->price }}">
-        <div class="menu-image-container flex justify-center items-center h-[90px] w-full">
+
+        <div class="menu-image-container w-full flex justify-center items-center">
         <img src="{{ asset('assets/jeongol-menu/' . $item->image) }}" alt="{{ $baseName }}"
-        class="w-full h-full object-cover" />
+        class="object-cover" />
         </div>
 
         <div class="p-2">
         <h5 class="text-[13px] font-medium text-center text-black truncate">{{ $baseName }}</h5>
         </div>
+
         </div>
+
       @endif
     @endforeach
 

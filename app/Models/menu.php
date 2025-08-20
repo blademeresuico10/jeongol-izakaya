@@ -8,5 +8,9 @@ class menu extends Model
 {
     protected $table = 'menu';
     protected $fillable = ['menu_item', 'price'];
-    
+
+    public function orders()
+    {
+        return $this->hasMany(OrderDetail::class);
+    }
 }

@@ -13,5 +13,12 @@ class customers extends Model
         'id_type',
     ];
 
-    
+    public function orders()
+    {
+        return $this->hasMany(OrderDetail::class);
+    }
+    public function reservations()
+    {
+        return $this->hasMany(Reservation::class);
+    }
 }

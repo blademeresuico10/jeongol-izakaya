@@ -58,7 +58,7 @@
     flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
-    margin-top: 50px;
+    margin-top: 5px;
     padding: 20px;
     flex-grow: 1;
   }

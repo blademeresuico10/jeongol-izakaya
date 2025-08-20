@@ -16,27 +16,26 @@
   body {
     background: #f9f9f9;
   }
+    .back-button {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #0c6cc6;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: bold;
+      z-index: 1000;
+    }
 
-  .back-button {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #dc3545;
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    z-index: 1000;
-  }
-
-  .back-button:hover {
-    background: #c82333;
-  }
+    .back-button:hover {
+      background: blue;
+    }
 
   thead th {
-    background-color: #28a745 !important;
-    color: white !important;
+    background-color: #0c6cc6;
+    color: white;
     text-align: left;
     padding: 12px;
   }
@@ -202,20 +201,18 @@
     });
 
     function updateOrdersInput() {
-    const ordersBox = document.getElementById('ordersBox');
-    const tags = document.querySelectorAll('#ordersBox .order-tag');
-    const orders = Array.from(tags).map(tag => {
+      const ordersBox = document.getElementById('ordersBox');
+      const tags = document.querySelectorAll('#ordersBox .order-tag');
+      const orders = Array.from(tags).map(tag => {
         const item = tag.dataset.item;
         const qty = parseInt(tag.querySelector('input')?.value || 1);
         return {
-            menu_name: item,
-            quantity: qty
+          menu_name: item,
+          quantity: qty
         };
-    });
-    document.getElementById('ordersInput').value = JSON.stringify(orders);
-}
-
-
+      });
+      document.getElementById('ordersInput').value = JSON.stringify(orders);
+    }
     function addOrderTag(itemName, qty = 1) {
       const ordersBox = document.getElementById('ordersBox');
       const exists = Array.from(ordersBox.children).some(tag => tag.dataset.item === itemName);
@@ -253,7 +250,6 @@
       ordersBox.appendChild(tag);
     }
 
-
     document.addEventListener('DOMContentLoaded', function () {
       const select = document.getElementById('add_item');
       const ordersBox = document.getElementById('ordersBox');
@@ -266,18 +262,14 @@
         updateOrdersInput();
         select.selectedIndex = 0;
       });
-
-
     });
 
-
     document.getElementById('updateOrderForm').addEventListener('submit', function (e) {
-      e.preventDefault(); // prevent default form submission
+      e.preventDefault();
 
       const form = e.target;
       const formData = new FormData(form);
 
-      // AJAX POST using fetch
       fetch(form.action, {
         method: 'POST',
         headers: {
@@ -291,7 +283,7 @@
           if (data.success) {
             alert(data.message);
             closeModal();
-            location.reload(); // or update the UI dynamically instead of reload
+            location.reload(); 
           } else {
             alert(data.message + "\n" + (data.error ?? ''));
           }

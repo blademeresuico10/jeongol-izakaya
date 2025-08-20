@@ -343,7 +343,6 @@
 
     });
 
-
     function animateFlyToCart(imageEl, targetSelector) {
         const imgRect = imageEl.getBoundingClientRect();
         const targetEl = document.querySelector(targetSelector);
@@ -375,7 +374,6 @@
             flyingImg.remove();
         });
     }
-
     // Manila time display
     setInterval(() => {
         const now = new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
@@ -390,13 +388,12 @@
             document.getElementById('timeFrameDisplay').textContent = '';
             return;
         }
-
         const [hours, minutes] = arrivalTime.split(':').map(Number);
         const start = new Date();
         start.setHours(hours);
         start.setMinutes(minutes);
 
-        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // add 2 hours
+        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); 
 
         const options = { hour: 'numeric', minute: '2-digit', hour12: true };
         const startStr = start.toLocaleTimeString('en-US', options);

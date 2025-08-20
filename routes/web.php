@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CashierController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LoginController;
@@ -7,10 +8,22 @@ use App\Http\Controllers\ReceptionistController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\CustomerController;
 
+
 // Customer landing page
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
 Route::post('/customer/reserve', [CustomerController::class, 'storeReservation'])->name('customer.reserve');
+
+Route::get('/payments/{reservation}', function (\App\Models\Reservation $reservation) {
+    $reservation->load('payment');
+
+    return response()->json([
+        'advance_payment' => $reservation->advance_payment,
+        'payment' => $reservation->payment,
+    ]);
+});
+
+
 
 
 // Login routes
@@ -63,10 +76,16 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/receptionist/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('receptionist.modify_orders');
     Route::get('/receptionist/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('receptionist.view_kitchen');
     Route::post('/receptionist/update-order', [ReceptionistController::class, 'updateOrder'])->name('receptionist.updateOrder');
+    Route::post('/receptionist/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])
+        ->name('receptionist.accept-reservation');
+    Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment']);
 
     // Kitchen Routes
     Route::get('/kitchen/home', [KitchenController::class, 'home'])->name('kitchen.home');
     Route::post('/kitchen/update-stock', [KitchenController::class, 'updateStock'])->name('kitchen.updateStock');
     Route::post('/kitchen/complete-order', [KitchenController::class, 'storeCompletedOrders'])->name('kitchen.completeOrder');
 
+    // Cashier Routes
+    Route::get('/cashier/home', [CashierController::class, 'home'])->name('cashier.home');
+    Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
 });

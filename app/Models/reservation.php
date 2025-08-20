@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class reservation extends Model
+class Reservation extends Model
 {
     protected $fillable = [
         'pax',
@@ -29,5 +29,10 @@ class reservation extends Model
     public function user()
     {
         return $this->belongsTo(\App\Models\User::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(\App\Models\ReservationPayment::class);
     }
 }

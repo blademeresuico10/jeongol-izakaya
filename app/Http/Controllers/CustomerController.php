@@ -53,9 +53,9 @@ class CustomerController extends Controller
 
     public function storeReservation(Request $request)
     {
-        $data = $request->json()->all();
 
-        $validator = validator($data, [
+
+        $validator = validator($request->all(), [
             'table_id'           => 'required|exists:tables,id',
             'customer_name'      => 'required|string',
             'contact_number'     => 'nullable|string|max:12',
@@ -68,6 +68,7 @@ class CustomerController extends Controller
             'orders.*.menu_id'   => 'required|exists:menu,id',
             'orders.*.quantity'  => 'required|integer|min:1',
             'orders.*.notes'     => 'nullable|string',
+            'proof'              => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:9120',
         ]);
 
         if ($validator->fails()) {
@@ -112,6 +113,7 @@ class CustomerController extends Controller
 
             $conflict = DB::table('reservations')
                 ->where('table_number', $table->table_number)
+                ->where('status', 'Accepted')
                 ->where(function ($query) use ($reservedDateTime, $endDateTime) {
                     $query->where('reservation_time', '<', $endDateTime)
                         ->where('reservation_end_time', '>', $reservedDateTime);
@@ -142,7 +144,31 @@ class CustomerController extends Controller
                 'customer_id'          => $customerId,
                 'user_id'              => $userId,
                 'total_price'          => $totalPrice,
+                'status'               => 'Pending',
             ]);
+
+            if ($request->has('payment_method')) {
+                $proofPath = null;
+
+                if ($request->hasFile('proof')) {
+                    $proofPath = $request->file('proof')->store('payment_proofs', 'public');
+                }
+
+                DB::table('reservation_payments')->insert([
+                    'reservation_id'  => $reservation->id,
+                    'registered_name' => $request->input('registered_name'),
+                    'number'          => $request->input('number'),
+                    'amount'          => $request->input('amount') ?? 0.00,
+                    'method'          => $request->input('payment_method'),
+                    'ref_no'          => $request->input('ref_no'),
+                    'proof_path'      => $proofPath,
+                    'status'          => 'pending',
+                    'created_at'      => now(),
+                    'updated_at'      => now(),
+                ]);
+            }
+
+
 
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
@@ -159,6 +185,10 @@ class CustomerController extends Controller
                     'created_at'     => now(),
                     'updated_at'     => now(),
                 ]);
+            }
+
+            foreach (\App\Models\User::where('role', 'receptionist')->get() as $user) {
+                $user->notify(new \App\Notifications\ReservationPaid($reservation));
             }
 
             return response()->json([

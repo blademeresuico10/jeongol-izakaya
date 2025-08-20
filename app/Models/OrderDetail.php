@@ -29,4 +29,9 @@ class OrderDetail extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');
     }
+
+    public function reservation()
+    {
+        return $this->belongsTo(reservation::class);
+    }
 }

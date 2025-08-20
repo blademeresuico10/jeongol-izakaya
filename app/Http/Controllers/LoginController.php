@@ -27,10 +27,10 @@ class LoginController extends Controller
 
         if ($user && Hash::check($request->password, $user->password)) {
             
-        Auth::login($user); // Laravel will now manage the session
-        $request->session()->regenerate(); // Security best practice
+        Auth::login($user); 
+        $request->session()->regenerate(); 
 
-            // Check role and redirect accordingly
+            
             if ($user->role === 'admin') {
                 return redirect()->route('admin.home');
             } 

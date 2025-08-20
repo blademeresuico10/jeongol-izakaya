@@ -16,7 +16,7 @@
       position: fixed;
       bottom: 20px;
       right: 20px;
-      background: #dc3545;
+      background: #0c6cc6;
       color: white;
       padding: 10px 15px;
       border-radius: 5px;
@@ -26,7 +26,7 @@
     }
 
     .back-button:hover {
-      background: #c82333;
+      background: blue;
     }
 
     thead th {

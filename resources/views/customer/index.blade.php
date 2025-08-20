@@ -12,40 +12,33 @@
 
 <body class="flex flex-col min-h-screen bg-gray-50 text-center font-sans">
 
-  <!-- Header -->
   <header class="p-4 font-bold flex flex-col items-center text-center">
     <p class="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-7">
       Welcome to Jeongol Izakaya
     </p>
-
     <button id="openLocation" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
       Location
     </button>
   </header>
 
-
-  <!-- Reserve Now -->
   <main class="flex-1">
     <a href="{{ route('customer.place_reservation') }}"
       class="inline-block my-4 px-6 py-3 bg-orange-600 text-white font-bold rounded hover:bg-orange-600 transition">
       Reserve Now!
     </a>
 
-    <!-- Gallery -->
     <div class="flex flex-wrap justify-center gap-4 px-4">
       <img src="" alt="Samgyupsal" class="w-48 h-auto rounded bg-gray-200">
       <img src="" alt="Hotpot" class="w-48 h-auto rounded bg-gray-200">
       <img src="" alt="Fusion" class="w-48 h-auto rounded bg-gray-200">
     </div>
 
-    <!-- Feedback Button -->
     <button id="openFeedback"
       class="mt-8 mb-4 px-5 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 transition">
       Submit Feedback
     </button>
   </main>
 
-  <!-- Location Modal -->
   <div id="locationModal" class="fixed inset-0 hidden bg-black/50 flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl overflow-hidden">
       <div class="flex justify-between items-center p-4 border-b">
@@ -59,8 +52,6 @@
     </div>
   </div>
 
-
-  <!-- Feedback Modal -->
   <div id="feedbackModal" class="fixed inset-0 hidden bg-black bg-opacity-50 items-center justify-center p-4 z-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
       <div class="flex justify-between items-center p-4 border-b">
@@ -78,43 +69,37 @@
     </div>
   </div>
 
-  <!-- Footer -->
   <footer class="bg-gray-900 text-white py-4">
     <div class="max-w-7xl mx-auto px-4 text-center">
       <p class="mb-2 text-lg font-semibold">Contact us</p>
 
       <div class="flex justify-center gap-4 mb-3">
-        <!-- Facebook -->
+
         <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" rel="noopener noreferrer"
           aria-label="Facebook"
           class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
           <i class="fab fa-facebook-f text-lg"></i>
         </a>
 
-        <!-- Instagram -->
         <a href="#" aria-label="Instagram"
           class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
           <i class="fab fa-instagram text-lg"></i>
         </a>
 
-        <!-- Twitter -->
         <a href="#" aria-label="Twitter"
           class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
           <i class="fab fa-twitter text-lg"></i>
         </a>
 
-        <!-- Email -->
         <a href="mailto:info@jeongolizakaya.com" aria-label="Email"
           class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
           <i class="fas fa-envelope text-lg"></i>
         </a>
       </div>
-
       <p class="text-sm">&copy; {{ date('Y') }} Jeongol Izakaya. All rights reserved.</p>
     </div>
   </footer>
 
-  <!-- Modal Script -->
   <script>
     function openModal(id) {
       document.getElementById(id).classList.remove('hidden');
