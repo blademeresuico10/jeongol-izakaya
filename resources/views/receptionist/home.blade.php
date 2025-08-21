@@ -38,49 +38,40 @@
   }
 
   [x-cloak] {
-    display: none !important;
+    display: none;
   }
 </style>
 
-
 <body>
-  <div x-data="headerData()">
+  <div class="relative">
     <!-- Header -->
-    <header class="mt-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-7">
+    <header class="mt-2 border-b border-gray-200 flex items-center justify-between px-7">
       <div class="logo flex items-center ml-5">
         <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-13 w-20" />
       </div>
 
       <div class="relative">
         <!-- Profile Button -->
-        <button @click="userOpen = !userOpen" class="relative flex items-center gap-2 p-4 hover:bg-gray-100">
+        <button id="userBtn" class="relative flex items-center gap-2 p-4 hover:bg-gray-100 z-50">
           <div class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
             {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
           </div>
-          <template x-if="notifCount > 0">
-            <span
-              class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
-              x-text="notifCount"></span>
-          </template>
+          <span id="notifBadge"
+            class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
+            style="{{ auth()->user()?->unreadNotifications->count() ? '' : 'display:none;' }}">
+            {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
+          </span>
         </button>
 
         <!-- User Dropdown -->
-        <div x-show="userOpen" @click.away="userOpen = false" x-cloak
-          class="profile absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
+        <div id="userMenu" class="hidden absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
           <div class="px-4 py-3 border-b">
             <p class="text-sm font-medium">{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}</p>
             <p class="text-xs text-gray-500">{{ Auth::user()->role }}</p>
           </div>
 
-          <a href="javascript:void(0)" @click="notifOpen = true; userOpen = false"
-            class="block px-4 py-2 hover:bg-gray-100 relative">
-            Notifications
-            <template x-if="notifCount > 0">
-              <span
-                class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
-                x-text="notifCount"></span>
-            </template>
-          </a>
+          <a href="javascript:void(0)" id="notifBtn"
+            class="block px-4 py-2 hover:bg-gray-100 relative">Notifications</a>
 
           <form method="POST" action="{{ route('logout') }}">
             @csrf
@@ -90,56 +81,50 @@
       </div>
     </header>
 
-    <!-- Notifications Modal (outside header but inside same x-data) -->
-    <div x-show="notifOpen" x-cloak @click.away="notifOpen = false"
-      class="hidden md:flex fixed inset-0 items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
-
+    <!-- Notifications Modal -->
+    <div id="notifModal"
+      class="hidden fixed inset-0 flex items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
       <div class="w-full max-w-xs sm:w-80 bg-white rounded-lg shadow-lg">
         <div class="p-5 relative">
           <h2 class="text-lg font-semibold mb-4">Notifications</h2>
-          <ul class="space-y-2 max-h-96 overflow-y-auto">
-            <template x-for="n in notifications" :key="n.id">
-              <li class="p-3 bg-gray-100 rounded cursor-pointer"
-                @click="$dispatch('open-payment', { id: n.data.reservation_id }); notifOpen = false">
-                <p class="text-sm font-medium" x-text="n.data.name ?? 'Unknown'"></p>
-                <p class="text-xs text-gray-500" x-text="n.data.message ?? ''"></p>
-                <p class="text-xs text-gray-400 mt-1" x-text="n.created_at_diff"></p>
-              </li>
-            </template>
-            <template x-if="notifications.length === 0">
-              <li class="p-3 text-center text-gray-500">No notifications</li>
-            </template>
+          <ul id="notifList" class="space-y-2 max-h-96 overflow-y-auto">
+            @foreach(auth()->user()?->unreadNotifications ?? [] as $n)
+        <li class="p-3 bg-gray-100 rounded cursor-pointer" data-reservation-id="{{ $n->data['reservation_id'] }}">
+          <p class="text-sm font-medium">{{ $n->data['name'] ?? 'Unknown' }}</p>
+          <p class="text-xs text-gray-500">{{ $n->data['message'] ?? '' }}</p>
+          <p class="text-xs text-gray-400 mt-1">{{ $n->created_at->diffForHumans() }}</p>
+        </li>
+      @endforeach
+            @if((auth()->user()?->unreadNotifications->count() ?? 0) === 0)
+        <li class="p-3 text-center text-gray-500">No notifications</li>
+      @endif
           </ul>
-          <button @click="notifOpen = false" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900">✖</button>
+          <button id="notifClose" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900">✖</button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Payment Modal (outside header) -->
-  <div x-data="paymentModal()" @open-payment.window="open($event.detail.id)">
-    <div x-show="show" x-cloak
-      class="hidden md:flex fixed inset-0 items-center justify-center z-50 bg-black bg-opacity-50">
+    <!-- Payment Modal -->
+    <div id="paymentModal"
+      class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-4">
       <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto">
         <h2 class="text-lg font-bold mb-4">Payment Details</h2>
         <div>
           <p>Transaction Receipt</p>
-          <template x-if="payment?.payment?.proof_path">
-            <img :src="'/storage/' + payment.payment.proof_path" class="mb-2 w-full object-contain">
-          </template>
+          <img id="paymentProof" src="" class="mb-2 w-full object-contain" style="display:none;">
         </div>
-        <p><span class="font-semibold">Required Amount:</span> <span x-text="payment.advance_payment ?? 'N/A'"></span>
-        </p>
-        <p><span class="font-semibold">Status:</span> <span x-text="payment.payment?.status ?? 'N/A'"></span></p>
-        <div class="mt-4 text-center">
-          <form :action="'/receptionist/accept-reservation/' + reservationId" method="POST" class="inline">
+        <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
+        <p><strong>Status:</strong> <span id="paymentStatus">N/A</span></p>
+        <div class="mt-4 text-center flex justify-center gap-2">
+          <form id="acceptForm" method="POST" class="inline">
             @csrf
             <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Accept</button>
           </form>
-          <button @click="close()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Close</button>
+          <button id="closePaymentBtn" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Close</button>
         </div>
       </div>
     </div>
+
   </div>
 
   @if(session('success'))
@@ -148,7 +133,6 @@
     {{ session('success') }}
     </div>
   @endif
-
 
   <div id="fly-animation-container" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;">
   </div>
@@ -295,91 +279,75 @@
   </div>
 
   <script>
-    document.addEventListener("alpine:init", () => {
-      Alpine.data("paymentModal", () => ({
-        show: false,
-        payment: {},
-        reservationId: null,
-        open(reservationId) {
-          this.reservationId = reservationId;
-          fetch(`/payments/${reservationId}`)
-            .then(res => res.json())
-            .then(data => {
-              this.payment = data;
-              this.show = true;
-            })
-            .catch(err => {
-              console.error('Payment fetch error:', err);
-              alert('Failed to load payment details.');
-            });
-        },
-        close() {
-          this.show = false;
-          this.payment = {};
-          this.reservationId = null;
-        }
-      }));
+    const userBtn = document.getElementById('userBtn');
+    const userMenu = document.getElementById('userMenu');
+
+    userBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userMenu.classList.toggle('hidden');
     });
 
-    function headerData() {
-      return {
-        userOpen: false,
-        notifOpen: false,
-        showPayment: false,
-        payment: {},
-        reservationId: null,
-        notifications: @json(auth()->user()?->unreadNotifications ?? []),
-        notifCount: @json(auth()->user()?->unreadNotifications->count() ?? 0),
-      }
-    }
+    userMenu.addEventListener('click', (e) => {
+      e.stopPropagation();
+    });
 
-    document.addEventListener('alpine:init', () => {
-      window.addEventListener('open-payment', (e) => {
-        const id = e.detail.id;
-        fetch(`/payments/${id}`)
-          .then(r => r.json())
+    document.addEventListener('click', () => {
+      userMenu.classList.add('hidden');
+    });
+
+    const notifBtn = document.getElementById('notifBtn');
+    const notifModal = document.getElementById('notifModal');
+    const notifClose = document.getElementById('notifClose');
+
+    notifBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      notifModal.classList.remove('hidden');
+    });
+    notifClose.addEventListener('click', () => notifModal.classList.add('hidden'));
+
+    notifModal.addEventListener('click', () => notifModal.classList.add('hidden'));
+    notifModal.querySelector('div').addEventListener('click', (e) => e.stopPropagation());
+
+    const paymentModal = document.getElementById('paymentModal');
+    const paymentProof = document.getElementById('paymentProof');
+    const requiredAmount = document.getElementById('requiredAmount');
+    const paymentStatus = document.getElementById('paymentStatus');
+    const acceptForm = document.getElementById('acceptForm');
+    const closePaymentBtn = document.getElementById('closePaymentBtn');
+    let reservationId = null;
+
+    document.querySelectorAll('#notifList li[data-reservation-id]').forEach(li => {
+      li.addEventListener('click', () => {
+        reservationId = li.dataset.reservationId;
+        fetch(`/payments/${reservationId}`)
+          .then(res => res.json())
           .then(data => {
-            const alpineRoot = document.querySelector('[x-data]');
-            if (alpineRoot && alpineRoot.__x) {
-              alpineRoot.__x.$data.payment = data;
-              alpineRoot.__x.$data.reservationId = id;
-              alpineRoot.__x.$data.showPayment = true;
+            paymentModal.classList.remove('hidden');
+            if (data.payment?.proof_path) {
+              paymentProof.src = `/storage/${data.payment.proof_path}`;
+              paymentProof.style.display = 'block';
+            } else {
+              paymentProof.style.display = 'none';
             }
+            requiredAmount.textContent = data.advance_payment ?? 'N/A';
+            paymentStatus.textContent = data.payment?.status ?? 'N/A';
+            acceptForm.action = `/receptionist/accept-reservation/${reservationId}`;
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Failed to load payment details.');
           });
       });
     });
 
-
-    window.addEventListener("open-payment", e => {
-      const modalEl = document.querySelector('[x-data="paymentModal()"]');
-      if (modalEl && modalEl.__x) {
-        modalEl.__x.$data.open(e.detail.id);
-      }
+    closePaymentBtn.addEventListener('click', () => {
+      paymentModal.classList.add('hidden');
+      paymentProof.src = '';
+      reservationId = null;
+      requiredAmount.textContent = 'N/A';
+      paymentStatus.textContent = 'N/A';
     });
-
-    document.addEventListener("alpine:init", () => {
-      Alpine.data("paymentModal", () => ({
-        show: false,
-        payment: {},
-        reservationId: null,
-        open(reservationId) {
-          this.reservationId = reservationId;
-          this.show = true;
-          fetch(`/payments/${reservationId}`)
-            .then(res => res.json())
-            .then(data => { this.payment = data })
-            .catch(err => { console.error(err); alert('Failed to load payment details.') });
-        },
-        close() {
-          this.show = false;
-          this.payment = {};
-          this.reservationId = null;
-        }
-      }));
-    });
-
   </script>
-
 
   @include('receptionist.components.script')
 

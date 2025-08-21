@@ -116,7 +116,7 @@
         document.getElementById('arrivalTimeInput').addEventListener('input', updateTimeFrameDisplay);
         document.getElementById('selectedOrdersContainer').innerHTML = '';
         document.getElementById('customerName').value = '';
-        documetn.getElementById('contactNumber').value = '';
+        document.getElementById('contactNumber').value = '';
         document.getElementById('numberOfPax').value = 1;
         document.getElementById('customerNotes').value = '';
         document.getElementById('advance_payment').value = '';
@@ -290,7 +290,7 @@
 
         const data = {
             customer_name: document.getElementById('customerName').value.trim(),
-            contact_number : document.getElementById('contactNumber').value.trim(),
+            contact_number: document.getElementById('contactNumber').value.trim(),
             pax: document.getElementById('numberOfPax').value.trim(),
             reserved_date: reserved_date.value,
             arrival_time: arrivalTimeInput.value,
@@ -307,12 +307,12 @@
 
         };
 
-        fetch(window.jeongolConfig.storeReservationUrl, {
+        fetch("{{ route('receptionist.storeReservation') }}", {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': window.jeongolConfig.csrfToken,
-                'Accept': 'application/json'
+                "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+                "Accept": "application/json"
             },
             body: JSON.stringify(data)
         })
@@ -374,8 +374,8 @@
             flyingImg.remove();
         });
     }
-   
-   
+
+
     function updateTimeFrameDisplay() {
         const arrivalTime = document.getElementById('arrivalTimeInput').value;
 
@@ -388,7 +388,7 @@
         start.setHours(hours);
         start.setMinutes(minutes);
 
-        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); 
+        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
 
         const options = { hour: 'numeric', minute: '2-digit', hour12: true };
         const startStr = start.toLocaleTimeString('en-US', options);
