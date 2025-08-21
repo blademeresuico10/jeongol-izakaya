@@ -15,145 +15,132 @@
   @vite('resources/css/app.css')
 </head>
 
+<style>
+  ul::-webkit-scrollbar {
+    width: 6px;
+
+  }
+
+  ul::-webkit-scrollbar-thumb {
+    background-color: #a0aec0;
+
+    border-radius: 4px;
+  }
+
+  ul::-webkit-scrollbar-thumb:hover {
+    background-color: #718096;
+
+  }
+
+  ul {
+    scrollbar-width: thin;
+    scrollbar-color: #a0aec0 transparent;
+  }
+
+  [x-cloak] {
+    display: none !important;
+  }
+</style>
+
+
 <body>
-  <header class="mt-2">
-    <div x-data="{ show: false, payment: {}, showImage: false, reservationId: null }" x-on:open-payment.window="
-        reservationId = $event.detail.id;
-        fetch('/payments/' + reservationId)
-          .then(res => res.json())
-          .then(data => { payment = data; show = true })
-">
-      <div x-show="show" x-cloak class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-        <div class="bg-white rounded-lg shadow-lg p-6 w-96 relative">
-          <h2 class="text-lg font-bold mb-4">Payment Details</h2>
-
-          <div>
-            <p>Transaction Receipt</p>
-            <template x-if="payment?.payment?.proof_path">
-              <img :src="'/storage/' + payment.payment.proof_path">
-            </template>
-
-          </div>
-
-          <p>
-            <span class="font-semibold">Required Amount:</span>
-            <span x-text="payment.advance_payment ?? 'N/A'"></span>
-          </p>
-
-          <p>
-            <span class="font-semibold">Status:</span>
-            <span x-text="payment.payment?.status ?? 'N/A'"></span>
-          </p>
-
-          <div class="mt-4 text-center">
-
-            <form :action="'/receptionist/accept-reservation/' + reservationId" method="POST" style="display:inline;">
-              @csrf
-              <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-                Accept
-              </button>
-            </form>
-
-            <button @click="show = false" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
-              Close
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div x-show="showImage" x-cloak
-        class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]"
-        @click="showImage = false">
-        <div class="relative max-w-3xl max-h-[90vh] w-auto">
-          <img :src="'/storage/' + payment.payment?.proof_path" alt="Full Proof"
-            class="max-w-full max-h-[90vh] rounded shadow-lg object-contain">
-          <button @click.stop="showImage = false"
-            class="absolute top-2 right-2 bg-red-600 text-white px-3 py-1 rounded">
-            ✖
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-7 relative">
-
-      <div class="flex items-center ml-5">
+  <div x-data="headerData()">
+    <!-- Header -->
+    <header class="mt-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-7">
+      <div class="logo flex items-center ml-5">
         <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-13 w-20" />
       </div>
 
-      <div class="relative z-0" x-data="{ open: false, notifModal: false }">
-
-        <button @click="open = !open" class="flex items-center gap-2 p-4 hover:bg-gray-100">
-          <div class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center text-black font-bold">
+      <div class="relative">
+        <!-- Profile Button -->
+        <button @click="userOpen = !userOpen" class="relative flex items-center gap-2 p-4 hover:bg-gray-100">
+          <div class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
             {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
           </div>
+          <template x-if="notifCount > 0">
+            <span
+              class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
+              x-text="notifCount"></span>
+          </template>
         </button>
 
-        <div x-show="open" @click.away="open = false"
-          class="absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
-
+        <!-- User Dropdown -->
+        <div x-show="userOpen" @click.away="userOpen = false" x-cloak
+          class="profile absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
           <div class="px-4 py-3 border-b">
-            <p class="text-sm font-medium text-gray-700">
-              {{ Auth::user()->firstname }} {{ Auth::user()->lastname }}
-            </p>
-            <p class="text-xs text-gray-500">
-              {{ Auth::user()->role }}
-            </p>
+            <p class="text-sm font-medium">{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}</p>
+            <p class="text-xs text-gray-500">{{ Auth::user()->role }}</p>
           </div>
 
-          <a href="javascript:void(0)" @click="notifModal = true; open = false"
-            class="block px-4 py-2 hover:bg-gray-100">Notifications</a>
+          <a href="javascript:void(0)" @click="notifOpen = true; userOpen = false"
+            class="block px-4 py-2 hover:bg-gray-100 relative">
+            Notifications
+            <template x-if="notifCount > 0">
+              <span
+                class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
+                x-text="notifCount"></span>
+            </template>
+          </a>
 
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
           </form>
         </div>
+      </div>
+    </header>
 
-        <div x-show="notifModal" x-cloak
-          class="absolute top-0 right-20 mt-16 w-80 bg-white rounded-lg shadow-lg border z-50">
-          <div class="p-5 relative">
-            <h2 class="text-lg font-semibold mb-4">Notifications</h2>
+    <!-- Notifications Modal (outside header but inside same x-data) -->
+    <div x-show="notifOpen" x-cloak @click.away="notifOpen = false"
+      class="hidden md:flex fixed inset-0 items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
 
-            @php
-        $notifications = auth()->user()?->notifications ?? collect();
-      @endphp
-
-            <ul class="space-y-2 max-h-60 overflow-y-auto">
-              @forelse($notifications as $n)
-          <li class="p-3 bg-gray-100 rounded flex justify-between items-start">
-          <div>
-            <p class="text-sm font-medium text-gray-700">
-            {{ $n->data['name'] ?? 'Unknown' }}
-            </p>
-            <p class="text-xs text-gray-500">
-            {{ $n->data['message'] ?? '' }}
-            </p>
-
-            <p class="text-xs text-gray-400 mt-1">
-            {{ $n->created_at->diffForHumans() }}
-            </p>
-          </div>
-
-          <button class="text-blue-500 text-xs underline"
-            @click="$dispatch('open-payment', { id: {{ $n->data['reservation_id'] ?? 'null' }} })">
-            View
-          </button>
-
-          </li>
-        @empty
-          <li class="p-3 text-center text-gray-500">No notifications</li>
-        @endforelse
-            </ul>
-
-            <button @click="notifModal = false" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900">
-              ✖
-            </button>
-          </div>
+      <div class="w-full max-w-xs sm:w-80 bg-white rounded-lg shadow-lg">
+        <div class="p-5 relative">
+          <h2 class="text-lg font-semibold mb-4">Notifications</h2>
+          <ul class="space-y-2 max-h-96 overflow-y-auto">
+            <template x-for="n in notifications" :key="n.id">
+              <li class="p-3 bg-gray-100 rounded cursor-pointer"
+                @click="$dispatch('open-payment', { id: n.data.reservation_id }); notifOpen = false">
+                <p class="text-sm font-medium" x-text="n.data.name ?? 'Unknown'"></p>
+                <p class="text-xs text-gray-500" x-text="n.data.message ?? ''"></p>
+                <p class="text-xs text-gray-400 mt-1" x-text="n.created_at_diff"></p>
+              </li>
+            </template>
+            <template x-if="notifications.length === 0">
+              <li class="p-3 text-center text-gray-500">No notifications</li>
+            </template>
+          </ul>
+          <button @click="notifOpen = false" class="absolute top-2 right-2 text-gray-600 hover:text-gray-900">✖</button>
         </div>
       </div>
     </div>
-  </header>
+  </div>
+
+  <!-- Payment Modal (outside header) -->
+  <div x-data="paymentModal()" @open-payment.window="open($event.detail.id)">
+    <div x-show="show" x-cloak
+      class="hidden md:flex fixed inset-0 items-center justify-center z-50 bg-black bg-opacity-50">
+      <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto">
+        <h2 class="text-lg font-bold mb-4">Payment Details</h2>
+        <div>
+          <p>Transaction Receipt</p>
+          <template x-if="payment?.payment?.proof_path">
+            <img :src="'/storage/' + payment.payment.proof_path" class="mb-2 w-full object-contain">
+          </template>
+        </div>
+        <p><span class="font-semibold">Required Amount:</span> <span x-text="payment.advance_payment ?? 'N/A'"></span>
+        </p>
+        <p><span class="font-semibold">Status:</span> <span x-text="payment.payment?.status ?? 'N/A'"></span></p>
+        <div class="mt-4 text-center">
+          <form :action="'/receptionist/accept-reservation/' + reservationId" method="POST" class="inline">
+            @csrf
+            <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Accept</button>
+          </form>
+          <button @click="close()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   @if(session('success'))
     <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
@@ -166,10 +153,7 @@
   <div id="fly-animation-container" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;">
   </div>
 
-
   <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;"> @csrf </form>
-
-  <div class="time-display" id="manilaTimeDisplay"></div>
 
   <div class="table-layout">
     @foreach($tables as $table)
@@ -231,7 +215,6 @@
             <span id="timeFrameDisplay" class="text-sm font-medium text-red-500"></span>
           </p>
         </div>
-
       </div>
 
       <div class="modal-section">
@@ -312,50 +295,91 @@
   </div>
 
   <script>
-    window.jeongolConfig = {
-      storeReservationUrl: "{{ route('receptionist.storeReservation') }}",
-      csrfToken: "{{ csrf_token() }}"
-    };
-
     document.addEventListener("alpine:init", () => {
-      window.addEventListener("open-payment", (e) => {
-        const reservationId = e.detail.id;
-
-        console.log("Opening payment modal for reservation:", reservationId);
-
-        const input = document.getElementById("payment_reservation_id");
-        if (input) {
-          input.value = reservationId;
+      Alpine.data("paymentModal", () => ({
+        show: false,
+        payment: {},
+        reservationId: null,
+        open(reservationId) {
+          this.reservationId = reservationId;
+          fetch(`/payments/${reservationId}`)
+            .then(res => res.json())
+            .then(data => {
+              this.payment = data;
+              this.show = true;
+            })
+            .catch(err => {
+              console.error('Payment fetch error:', err);
+              alert('Failed to load payment details.');
+            });
+        },
+        close() {
+          this.show = false;
+          this.payment = {};
+          this.reservationId = null;
         }
+      }));
+    });
 
-        if (window.Alpine) {
-          const root = document.querySelector('[x-data]');
-          if (root && root.__x) {
-            root.__x.$data.reservationId = reservationId;
-          }
-          Alpine.store("paymentModal", true);
-        }
+    function headerData() {
+      return {
+        userOpen: false,
+        notifOpen: false,
+        showPayment: false,
+        payment: {},
+        reservationId: null,
+        notifications: @json(auth()->user()?->unreadNotifications ?? []),
+        notifCount: @json(auth()->user()?->unreadNotifications->count() ?? 0),
+      }
+    }
 
-        fetchPayment(reservationId);
+    document.addEventListener('alpine:init', () => {
+      window.addEventListener('open-payment', (e) => {
+        const id = e.detail.id;
+        fetch(`/payments/${id}`)
+          .then(r => r.json())
+          .then(data => {
+            const alpineRoot = document.querySelector('[x-data]');
+            if (alpineRoot && alpineRoot.__x) {
+              alpineRoot.__x.$data.payment = data;
+              alpineRoot.__x.$data.reservationId = id;
+              alpineRoot.__x.$data.showPayment = true;
+            }
+          });
       });
     });
 
-    function fetchPayment(id) {
-      fetch(`/payments/${id}`)
-        .then(res => res.json())
-        .then(data => {
-          const root = document.querySelector('[x-data]');
-          if (root && root.__x) {
-            root.__x.$data.payment = data;
-            root.__x.$data.show = true;
-          }
-        })
-        .catch(error => {
-          console.error('Payment fetch error:', error);
-          alert('Failed to load payment details.');
-        });
-    }
+
+    window.addEventListener("open-payment", e => {
+      const modalEl = document.querySelector('[x-data="paymentModal()"]');
+      if (modalEl && modalEl.__x) {
+        modalEl.__x.$data.open(e.detail.id);
+      }
+    });
+
+    document.addEventListener("alpine:init", () => {
+      Alpine.data("paymentModal", () => ({
+        show: false,
+        payment: {},
+        reservationId: null,
+        open(reservationId) {
+          this.reservationId = reservationId;
+          this.show = true;
+          fetch(`/payments/${reservationId}`)
+            .then(res => res.json())
+            .then(data => { this.payment = data })
+            .catch(err => { console.error(err); alert('Failed to load payment details.') });
+        },
+        close() {
+          this.show = false;
+          this.payment = {};
+          this.reservationId = null;
+        }
+      }));
+    });
+
   </script>
+
 
   @include('receptionist.components.script')
 

@@ -29,79 +29,100 @@
       background: #c82333;
     }
 
-
-
     thead th {
       background-color: #28a745 !important;
       color: #fff !important;
+    }
+
+    @media (max-width: 768px) {
+      .back-button {
+        bottom: 15px;
+        right: 15px;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+      }
+
+      table {
+        font-size: 0.8rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .back-button {
+        bottom: 10px;
+        right: 10px;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+      }
+
+      table {
+        font-size: 0.7rem;
+      }
     }
   </style>
 </head>
 
 <body>
-
   <div class="reservation-section">
-    <div class="items-center mt-4 mb-3">
-      <div class="flex-1 text-center">
-        <h2 style="font-size: 2rem; font-weight: 700;">Reservations</h2>
-      </div>
+    <div class="items-center mt-4 mb-3 text-center">
+      <h2 style="font-size: 2rem; font-weight: 700;">Reservations</h2>
     </div>
 
     @php
     $reservationGroups = $reservations->groupBy('reservation_id');
-    @endphp
+  @endphp
 
     <div class="d-flex justify-content-center mb-4">
       @if ($reservationGroups->isEmpty())
       <div class="alert alert-warning">No reservations found for today.</div>
     @else
-      <div class="border rounded shadow bg-white p-3" style="max-height: 500px; width: 80%; overflow-y: auto;">
-      <table class="table table-bordered align-middle mb-0">
-        <thead class="bg-color">
-        <tr>
+      <div class="border rounded shadow bg-white p-3" style="max-height:500px; overflow:auto;">
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+        <thead class="table-success">
+          <tr>
           <th>Table Number</th>
           <th>No. of Pax</th>
           <th>Orders</th>
           <th>Quantity</th>
           <th>Note</th>
           <th>Order Time</th>
-        </tr>
+          </tr>
         </thead>
         <tbody>
-        @foreach ($reservationGroups as $reservationId => $group)
-        @php
-      $first = $group->first();
-      $orders = $group->map(function ($r) {
+          @foreach ($reservationGroups as $reservationId => $group)
+          @php
+        $first = $group->first();
+        $orders = $group->map(function ($r) {
         if (!$r->menu_item)
         return null;
         $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
         return $r->quantity . 'x ' . $cleanName;
-      })->filter()->implode(', ');
+        })->filter()->implode(', ');
 
-      $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
-      @endphp
-        <tr>
-        <td>{{ $first->table_number }}</td>
-        <td>{{ $first->pax }}</td>
-        <td>{{ $orders ?: 'No orders' }}</td>
-        <td>{{ $group->sum('quantity') }}</td>
-        <td>{{ $notes ?: 'None' }}</td>
-        <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
-        </tr>
+        $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
+        @endphp
+          <tr>
+          <td>{{ $first->table_number }}</td>
+          <td>{{ $first->pax }}</td>
+          <td>{{ $orders ?: 'No orders' }}</td>
+          <td>{{ $group->sum('quantity') }}</td>
+          <td>{{ $notes ?: 'None' }}</td>
+          <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
+          </tr>
       @endforeach
         </tbody>
-      </table>
+        </table>
       </div>
+      </div>
+
     @endif
     </div>
   </div>
 
-
-
-  <a class="back-button" href="{{ route('receptionist.home') }} ">
+  <a class="back-button" href="{{ route('receptionist.home') }}">
     Back to main page
   </a>
-
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

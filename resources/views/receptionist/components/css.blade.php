@@ -41,18 +41,6 @@
     right: 20px;
   }
 
-  .time-display {
-    position: absolute;
-    top: 20px;
-    right: 150px;
-    background-color: #343a40;
-    color: white;
-    padding: 8px 12px;
-    border-radius: 5px;
-    font-size: 14px;
-    font-family: monospace;
-  }
-
   .table-layout {
     display: flex;
     flex-wrap: wrap;
@@ -87,20 +75,24 @@
   }
 
   @media (max-width: 768px) {
+    .logo{
+      align-content: first baseline;
+      width: 18%;
+      height: 18%;
+    }
     .table-link {
       flex: 0 1 calc(33.33% - 10px);
     }
-  }
 
-
-  /* Tablets (landscape and portrait) */
-  @media (max-width: 768px) {
-    .table-link {
-      flex: 0 1 calc(33.33% - 10px);
+    .payment_details{
+      width: 100%;
+      height: 100%;
+      display: block;
+      justify-content: center;
+      align-items: center;
     }
   }
 
-  /* Mobile devices */
   @media (max-width: 480px) {
     .table-link {
       flex: 0 1 calc(33.33% - 10px);

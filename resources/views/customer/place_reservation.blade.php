@@ -263,6 +263,16 @@
     .animate-fade-in {
       animation: fade-in 0.3s ease-out;
     }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
   </style>
 </head>
 
@@ -301,8 +311,10 @@
 
         <div class="modal-section">
           <label for="contactNumber">Contact Number</label>
-          <input type="text" id="contactNumber" name="contact_number" placeholder="09XXXXXXXXX" />
+          <input type="number" id="contactNumber" name="contact_number" placeholder="09XXXXXXXXX" maxlength="11" />
+          <span class="inline-error text-red-500 text-sm hidden"></span>
         </div>
+
 
         <div class="modal-section">
           <label for="pax">Pax</label>
@@ -357,8 +369,9 @@
         <button type="button" data-tab="maya" class="flex-1 text-center py-2 font-semibold">Maya</button>
       </div>
 
-      <x-payment-form method="gcash" />
-      <x-payment-form method="maya" />
+      <x-payment-form method="gcash" :readonly="true" :data="['amount' => 0]" />
+      <x-payment-form method="maya" :readonly="true" :data="['amount' => 0]" />
+
 
       <button id="submitBtn" type="button"
         class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
@@ -701,7 +714,8 @@
 
       function validateInputs() {
         let hasError = false;
-        let requiredFields = [nameInput, contactInput, paxInput, timeInput, dateInput];
+
+        const requiredFields = [nameInput, contactInput, paxInput, timeInput, dateInput];
         requiredFields.forEach(field => {
           if (!field.value.trim()) {
             field.classList.add('input-error');
@@ -710,6 +724,38 @@
             field.classList.remove('input-error');
           }
         });
+
+        const activeTab = document.querySelector(".tab-content:not(.hidden)");
+        const paymentFields = [
+          activeTab.querySelector(".gcash-number, .maya-number"),
+          activeTab.querySelector(".registered-name"),
+          activeTab.querySelector(".ref-no"),
+          activeTab.querySelector(".amount"),
+          activeTab.querySelector(".proof")
+        ];
+
+        paymentFields.forEach(field => {
+          if (field) {
+            let value = field.value || (field.files && field.files.length > 0 ? field.files[0] : "");
+            if (!value) {
+              field.classList.add('input-error');
+              const errorSpan = field.nextElementSibling;
+              if (errorSpan) {
+                errorSpan.textContent = 'This field is required';
+                errorSpan.classList.remove('hidden');
+              }
+              hasError = true;
+            } else {
+              field.classList.remove('input-error');
+              const errorSpan = field.nextElementSibling;
+              if (errorSpan) {
+                errorSpan.textContent = '';
+                errorSpan.classList.add('hidden');
+              }
+            }
+          }
+        });
+
         return !hasError;
       }
 
@@ -855,7 +901,6 @@
       }
     });
 
-
     function gatherReservationDataBlock() {
       const orders = Object.values(selectedOrders).map(item => ({
         menu_id: item.id,
@@ -888,6 +933,64 @@
         payment_details: paymentDetails
       };
     }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const paymentBtn = document.getElementById('paymentBtn');
+      const paymentModal = document.getElementById('paymentModal');
+      const closeBtn = document.getElementById('closePaymentModal');
+
+      const tabButtons = paymentModal.querySelectorAll('[data-tab]');
+      const tabContents = paymentModal.querySelectorAll('.tab-content');
+
+      tabButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.getAttribute('data-tab');
+
+          tabContents.forEach(tc => tc.classList.add('hidden'));
+
+          const selectedTab = document.getElementById(`tab-${tab}`);
+          if (selectedTab) selectedTab.classList.remove('hidden');
+        });
+      });
+
+      paymentBtn.addEventListener('click', () => {
+        const advancePayment = parseFloat(document.getElementById('advance_payment').value) || 0;
+
+        const amountInputs = paymentModal.querySelectorAll('.tab-content .amount');
+        amountInputs.forEach(input => {
+          input.value = advancePayment;
+          input.min = advancePayment;
+          input.readOnly = true;
+        });
+
+        paymentModal.classList.remove('hidden');
+      });
+
+      closeBtn.addEventListener('click', () => {
+        paymentModal.classList.add('hidden');
+      });
+    });
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const contactInput = document.getElementById('contactNumber');
+      const error = contactInput.nextElementSibling;
+
+      contactInput.addEventListener('input', () => {
+        let value = contactInput.value.replace(/\D/g, '');
+
+        if (value.length > 11) {
+          value = value.slice(0, 11);
+          error.classList.remove('hidden');
+        } else if (!/^09[0-9]{0,9}$/.test(value)) {
+          error.textContent = 'Enter a valid contact number';
+          error.classList.remove('hidden');
+        } else {
+          error.textContent = '';
+          error.classList.add('hidden');
+        }
+        contactInput.value = value;
+      });
+    });
 
 
   </script>

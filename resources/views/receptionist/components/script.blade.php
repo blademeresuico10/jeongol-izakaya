@@ -374,13 +374,8 @@
             flyingImg.remove();
         });
     }
-    // Manila time display
-    setInterval(() => {
-        const now = new Date().toLocaleString("en-PH", { timeZone: "Asia/Manila", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-        document.getElementById("manilaTimeDisplay").textContent = `Current Time: ${now}`;
-    }, 1000);
-    document.getElementById('reserved_date').value = new Date().toISOString().substring(0, 10);
-
+   
+   
     function updateTimeFrameDisplay() {
         const arrivalTime = document.getElementById('arrivalTimeInput').value;
 

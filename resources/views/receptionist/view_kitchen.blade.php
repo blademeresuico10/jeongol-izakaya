@@ -33,6 +33,43 @@
       background-color: #0d6efd !important;
       color: #fff;
     }
+
+    @media (max-width: 768px) {
+      .back-button {
+        bottom: 15px;
+        right: 15px;
+        padding: 8px 12px;
+        font-size: 0.875rem;
+      }
+
+      .table-responsive {
+        overflow-x: auto;
+      }
+
+      table {
+        font-size: 0.8rem;
+        white-space: nowrap;
+        
+      }
+    }
+
+    @media (max-width: 480px) {
+      .back-button {
+        bottom: 10px;
+        right: 10px;
+        padding: 6px 10px;
+        font-size: 0.75rem;
+      }
+
+      table {
+        font-size: 0.7rem;
+      }
+
+      th,
+      td {
+        padding: 0.3rem !important;
+      }
+    }
   </style>
 </head>
 
@@ -47,49 +84,52 @@
 
     @php
     $reservationGroups = $reservations->groupBy('reservation_id');
-  @endphp
+    @endphp
 
     <div class="d-flex justify-content-center mb-4">
       @if ($reservationGroups->isEmpty())
       <div class="alert alert-warning">No reservations found for today.</div>
     @else
-      <div class="border rounded shadow bg-white p-3" style="max-height: 500px; width: 80%; overflow-y: auto;">
-      <table class="table table-bordered align-middle mb-0">
-        <thead>
-        <tr>
+      <div class="border rounded shadow bg-white p-3" style="max-height: 500px; width: 100%; max-width: 800px;">
+      <div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0">
+        <thead class="table-primary">
+          <tr>
           <th>Table Number</th>
           <th>No. of Pax</th>
           <th>Orders/Quantity</th>
           <th>Note</th>
           <th>Order Time</th>
-        </tr>
+          </tr>
         </thead>
         <tbody>
-        @foreach ($reservationGroups as $reservationId => $group)
+          @foreach ($reservationGroups as $reservationId => $group)
         @php
-        $first = $group->first();
-        $orders = $group->map(function ($r) {
+      $first = $group->first();
+      $orders = $group->map(function ($r) {
         if (!$r->menu_item)
         return null;
         $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
         return $r->quantity . 'x ' . $cleanName;
-        })->filter()->implode(', ');
+      })->filter()->implode(', ');
 
-        $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
-        @endphp
+      $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
+      @endphp
         <tr>
-          <td>{{ $first->table_number }}</td>
-          <td>{{ $first->pax }}</td>
-          <td>{{ $orders ?: 'No orders' }}</td>
-          <td>{{ $notes ?: 'None' }}</td>
-          <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
+        <td>{{ $first->table_number }}</td>
+        <td>{{ $first->pax }}</td>
+        <td>{{ $orders ?: 'No orders' }}</td>
+        <td>{{ $notes ?: 'None' }}</td>
+        <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
         </tr>
       @endforeach
         </tbody>
-      </table>
+        </table>
+      </div>
       </div>
     @endif
     </div>
+
 
   </div>
 

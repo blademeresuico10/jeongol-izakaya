@@ -7,7 +7,8 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ReceptionistController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\CustomerController;
-
+use App\Models\reservation;
+use App\Notifications\ReservationPaid;
 
 // Customer landing page
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
@@ -65,10 +66,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/receptionist/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('receptionist.modify_orders');
     Route::get('/receptionist/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('receptionist.view_kitchen');
     Route::post('/receptionist/update-order', [ReceptionistController::class, 'updateOrder'])->name('receptionist.updateOrder');
-    Route::post('/receptionist/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])
-        ->name('receptionist.accept-reservation');
+    Route::post('/receptionist/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])->name('receptionist.accept-reservation');
     Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment']);
-
+    Route::post('/receptionist/notifications/{id}/read', [ReceptionistController::class, 'markNotificationRead'])
+        ->name('receptionist.notifications.read');
 
     // Kitchen Routes
     Route::get('/kitchen/home', [KitchenController::class, 'home'])->name('kitchen.home');

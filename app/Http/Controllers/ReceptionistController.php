@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\OrderDetail;
 use App\Models\menu;
+use Illuminate\Notifications\DatabaseNotification;
 use App\Models\User;
 
 class ReceptionistController extends Controller
@@ -199,26 +200,27 @@ class ReceptionistController extends Controller
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
         $menuItems = DB::table('menu')->select('menu_item', 'price')->get();
 
-        $order_details = DB::table('order_details')
-            ->join('customers', 'order_details.customer_id', '=', 'customers.id')
-            ->leftJoin('reservations', 'order_details.reservation_id', '=', 'reservations.id')
-            ->leftJoin('menu', 'order_details.menu_id', '=', 'menu.id')
+        $order_details = DB::table('reservations')
+            ->join('customers', 'reservations.customer_id', '=', 'customers.id')
+            ->leftJoin('order_details', 'order_details.reservation_id', '=', 'reservations.id')
+            ->leftJoin('menu', 'menu.id', '=', 'order_details.menu_id')
             ->select(
-                'order_details.id as order_id',
-                'order_details.quantity',
-                'order_details.notes as order_notes',
-                'customers.name as customer_name',
                 'reservations.id as reservation_id',
                 'reservations.table_number',
                 'reservations.pax',
                 'reservations.reservation_time',
                 'reservations.status',
+                'customers.name as customer_name',
+                'order_details.id as order_id',
+                'order_details.quantity',
+                'order_details.notes as order_notes',
                 'menu.menu_item'
             )
-            ->whereDate('reservations.reservation_time', $targetDate)   
-            ->where('reservations.status', 'Accepted')                  
+            ->whereDate('reservations.reservation_time', $targetDate)
+            ->where('reservations.status', 'Accepted')
             ->orderBy('reservations.reservation_time')
             ->get();
+
 
         $groupedOrders = $order_details->groupBy('reservation_id')->map(function ($orders, $reservationId) {
             return (object)[
@@ -314,16 +316,12 @@ class ReceptionistController extends Controller
             ->where('reservations.status', 'Accepted')
             ->orderBy('reservations.reservation_time')
             ->get();
-
-
-
         return view('receptionist.view_kitchen', compact('stock', 'reservations'));
     }
 
-    public function acceptReservation($id)
+    public function acceptReservation(Request $request, $id)
     {
         $reservation = Reservation::findOrFail($id);
-
         $reservation->status = 'Accepted';
         $reservation->save();
 
@@ -332,9 +330,32 @@ class ReceptionistController extends Controller
             $reservation->payment->save();
         }
 
+        $user = Auth::user();
+        if ($user) {
+            $user->notifications
+                ->where('data', '!=', null) 
+                ->each(function ($notification) use ($id) {
+                    
+                    $data = $notification->data;
+                    if (isset($data['reservation_id']) && $data['reservation_id'] == $id) {
+                        $notification->delete(); 
+                    }
+                });
+        }
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
         return redirect()->back()->with('success', 'Reservation accepted successfully.');
     }
 
+    public function markNotificationRead(Request $request, $id)
+    {
+        $notification = DatabaseNotification::findOrFail($id);
+        $notification->markAsRead();
+
+        return response()->json(['success' => true]);
+    }
     public function showPayment($id)
     {
         try {
