@@ -10,42 +10,44 @@ class CashierController extends Controller
 {
     public function home()
     {
+        $now = Carbon::now();
+
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
-
-        $now = Carbon::now();
 
         $reservations = DB::table('reservations')
             ->whereDate('reservation_time', $now->toDateString())
             ->where('reservation_time', '<=', $now)
             ->where('reservation_end_time', '>=', $now)
+            ->where('status', 'Accepted')
             ->get();
 
-        $occupiedMap = [];
-        foreach ($reservations as $res) {
-            $occupiedMap[$res->table_number] = $res;
-        }
+        $reservationIds = $reservations->pluck('id')->toArray();
+        $orders = DB::table('order_details')
+            ->whereIn('reservation_id', $reservationIds)
+            ->get()
+            ->groupBy('reservation_id'); 
 
+        $occupiedTables = [];
         foreach ($tables as $table) {
-            if (isset($occupiedMap[$table->table_number])) {
-                $reservation = $occupiedMap[$table->table_number];
-                $table->current_reservation_id = $reservation->id;
+            $res = $reservations->firstWhere('table_id', $table->id);
 
-                // Calculate remaining seconds
-                $endTime = Carbon::parse($reservation->reservation_end_time);
-                if ($endTime->lessThanOrEqualTo($now)) {
-                    $table->remaining_seconds = 0;
-                } else {
-                    $table->remaining_seconds = $now->diffInSeconds($endTime);
-                }
+            if ($res) {
+                $table->current_reservation_id = $res->id;
+
+                $endTime = Carbon::parse($res->reservation_end_time);
+                $table->remaining_seconds = $endTime->lessThanOrEqualTo($now)
+                    ? 0
+                    : $now->diffInSeconds($endTime);
+
+                $table->current_orders = $orders[$res->id] ?? [];
+                $occupiedTables[] = $table->id;
             } else {
                 $table->current_reservation_id = null;
                 $table->remaining_seconds = null;
+                $table->current_orders = [];
             }
         }
-
-        $occupiedTables = array_keys($occupiedMap);
-
         $menuPricesMap = [];
         foreach ($menuItems as $item) {
             $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
@@ -62,7 +64,6 @@ class CashierController extends Controller
                 $menuPricesMap[$baseName]['dinner'] = $item->price;
             }
         }
-
         $groupedMenu = [];
         foreach ($menuItems as $item) {
             $groupedMenu[$item->category][] = $item;
@@ -77,8 +78,6 @@ class CashierController extends Controller
             'occupiedTables'
         ));
     }
-
-
 
     public function getOrders($reservationId)
     {
@@ -97,7 +96,6 @@ class CashierController extends Controller
             return response()->json(null);
         }
 
-        // Get order details
         $orders = DB::table('order_details')
             ->join('menu', 'order_details.menu_id', '=', 'menu.id')
             ->where('order_details.reservation_id', $reservationId)
@@ -107,7 +105,6 @@ class CashierController extends Controller
                 'order_details.order_price as price'
             )
             ->get();
-
 
         return response()->json([
             'reservation_id' => $reservation->reservation_id,

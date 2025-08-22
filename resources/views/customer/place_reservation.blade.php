@@ -66,22 +66,24 @@
     .modal {
       display: none;
       position: fixed;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.6);
       justify-content: center;
       align-items: center;
-
+      z-index: 1000;
     }
 
     .modal-content {
       background: white;
       padding: 20px;
       border-radius: 10px;
-      width: 70%;
-      max-width: 400px;
+      width: 90%;
+      max-width: 500px;
       max-height: auto;
-
+      position: relative;
     }
 
     .modal-section {
@@ -120,7 +122,7 @@
 
     .modal-order h3 {
       font-size: 1.2rem;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       text-align: center;
     }
 
@@ -204,23 +206,17 @@
     }
 
     @media (max-width: 768px) {
-      .modal-section label {
-        font-size: 14px;
-      }
-
-      .modal-section input,
-      .modal-section textarea {
-        font-size: 14px;
-        padding: 8px;
-      }
-
-      .flex.gap-4 button {
-        font-size: 14px;
-        padding: 10px;
+      .table-link {
+        flex: 0 1 calc(33.33% - 10px);
       }
     }
 
-    /* mobile */
+    @media (max-width: 768px) {
+      .table-link {
+        flex: 0 1 calc(33.33% - 10px);
+      }
+    }
+
     @media (max-width: 480px) {
 
       .table-layout {
@@ -347,7 +343,6 @@
     .other-menu-grid {
       display: grid !important;
       grid-template-columns: repeat(3, 1fr) !important;
-
     }
 
     .menu-card img {
@@ -422,7 +417,7 @@
   <div id="tableModal" class="modal">
     <div class="modal-content">
       <span id="closeModal" class="close-modal text-end text-lg cursor-pointer">&times;</span>
-      <p class="mb-2 text-lg text-center"><strong>Please Enter Reservation Details</strong></p>
+      <h3 class="mb-2 text-lg text-center"><strong>Please Enter Reservation Details</strong></h3>
       <form id="reservationForm">
         <div class="modal-section">
           <label for="customerName">Customer</label>
@@ -457,7 +452,8 @@
         <input type="number" id="advance_payment" class="form-control" value="600" readonly />
         <div class="modal-section">
           <label for="notesTextarea">Notes</label>
-          <textarea id="notesTextarea" rows="2"></textarea>
+          <textarea id="notesTextarea" name="notes" rows="2"
+            placeholder="Enter any special requests or notes"></textarea>
         </div>
 
         <input type="hidden" id="selectedTableNumber">
@@ -585,7 +581,7 @@
       <a href="#" class="text-white mx-2"><i class="bi bi-twitter"></i></a>
       <a href="#" class="text-white mx-2"><i class="bi bi-envelope-fill"></i></a>
     </div>
-    <p class="mt-2">&copy; 2025 Jeongol Izakaya. All rights reserved.</p>
+    <p class="mt-2">&copy; 2023 Jeongol Izakaya. All rights reserved.</p>
   </footer>
 
   <div id="fly-animation-container"
@@ -597,74 +593,95 @@
       csrfToken: "{{ csrf_token() }}"
     };
 
-    const paymentBtn = document.getElementById('paymentBtn');
-    const paymentModal = document.getElementById('paymentModal');
-    const closePaymentModal = document.getElementById('closePaymentModal');
+    const selectedOrders = {};
+    let selectedTableNumber = 0;
+    let defaultAdvancePayment = 0;
 
-    paymentBtn.addEventListener('click', () => {
-      paymentModal.classList.remove('hidden');
-      paymentModal.classList.add('flex');
-    });
+    let elements = {};
 
-    closePaymentModal.addEventListener('click', () => {
-      paymentModal.classList.add('hidden');
-      paymentModal.classList.remove('flex');
-    });
+    function showMessageBox(message, type = 'success') {
+      const box = document.getElementById('messageBox');
+      box.textContent = message;
 
-    document.querySelectorAll('[data-tab]').forEach(tabBtn => {
-      tabBtn.addEventListener('click', () => {
+      const colors = {
+        success: '#4CAF50',
+        error: '#f44336',
+        warning: '#ff9800'
+      };
 
-        document.querySelectorAll('[data-tab]').forEach(btn => {
-          btn.classList.remove('bg-gray-200', 'font-bold',);
-          btn.classList.add('border-transparent');
-        });
+      box.style.background = colors[type] || colors.success;
+      box.style.display = 'block';
 
-        tabBtn.classList.remove('border-transparent');
-        tabBtn.classList.add('bg-gray-200', 'font-bold', 'rounded');
+      setTimeout(() => {
+        box.style.display = 'none';
+      }, 3000);
+    }
 
-        const tabName = tabBtn.getAttribute('data-tab');
+    function animateFlyToCart(imageEl, targetSelector) {
+      const imgRect = imageEl.getBoundingClientRect();
+      const targetEl = document.querySelector(targetSelector);
+      const targetRect = targetEl.getBoundingClientRect();
 
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.add('hidden');
-        });
-
-        document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+      const flyingImg = imageEl.cloneNode(true);
+      Object.assign(flyingImg.style, {
+        position: 'fixed',
+        left: `${imgRect.left}px`,
+        top: `${imgRect.top}px`,
+        width: `${imgRect.width}px`,
+        height: `${imgRect.height}px`,
+        transition: 'all 0.8s ease-in-out',
+        filter: 'blur(2px)',
+        zIndex: '10000',
+        pointerEvents: 'none',
+        borderRadius: '10px'
       });
-    });
 
+      document.getElementById('fly-animation-container').appendChild(flyingImg);
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+      requestAnimationFrame(() => {
+        Object.assign(flyingImg.style, {
+          left: `${targetRect.left + targetRect.width / 2}px`,
+          top: `${targetRect.top + targetRect.height / 2}px`,
+          width: '0px',
+          height: '0px',
+          opacity: '0.3'
+        });
+      });
 
-      const modal = document.getElementById('tableModal');
-      const closeModal = document.getElementById('closeModal');
-      const tableLinks = document.querySelectorAll('.table-link');
+      flyingImg.addEventListener('transitionend', () => {
+        flyingImg.remove();
+      });
+    }
 
-      const nameInput = document.getElementById('customerName');
-      const contactInput = document.getElementById('contactNumber');
-      const paxInput = document.getElementById('pax');
-      const notesInput = document.getElementById('notesTextarea');
-      const dateInput = document.getElementById('reserved_date');
-      const timeInput = document.getElementById('arrivalTimeInput');
-      const advancePaymentInput = document.getElementById('advance_payment');
-      const advancePaymentLabel = document.getElementById('advance_payment_label');
+    function initializeTabs() {
+      document.querySelectorAll('[data-tab]').forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+          document.querySelectorAll('[data-tab]').forEach(btn => {
+            btn.classList.remove('bg-gray-200', 'font-bold');
+            btn.classList.add('border-transparent');
+          });
 
+          tabBtn.classList.remove('border-transparent');
+          tabBtn.classList.add('bg-gray-200', 'font-bold', 'rounded');
 
-      const defaultAdvancePayment = parseFloat(advancePaymentInput?.value) || 0;
+          const tabName = tabBtn.getAttribute('data-tab');
+          document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+          });
+          document.getElementById(`tab-${tabName}`)?.classList.remove('hidden');
+        });
+      });
+    }
 
-      const submitBtn = document.getElementById('submitBtn');
-      const orderBtn = document.getElementById('order');
+    function initializeModals() {
+      const modal = elements.tableModal;
+      const closeModal = elements.closeModal;
 
-      const fullMenuPrices = @json($menuPricesMap);
-      const selectedOrders = {};
-
-      let selectedTableNumber = 0;
-
-      tableLinks.forEach(link => {
+      elements.tableLinks.forEach(link => {
         link.addEventListener('click', e => {
           e.preventDefault();
           selectedTableNumber = parseInt(link.getAttribute('data-table-id'));
-          document.getElementById('selectedTableNumber').value = selectedTableNumber;
+          elements.selectedTableNumber.value = selectedTableNumber;
           modal.style.display = 'flex';
         });
       });
@@ -674,178 +691,206 @@
         resetReservationForm();
       });
 
+      elements.paymentBtn.addEventListener('click', () => {
+        const advancePayment = parseFloat(elements.advancePaymentInput.value) || 0;
+
+        elements.paymentModal.querySelectorAll('.tab-content .amount').forEach(input => {
+          input.value = advancePayment;
+          input.min = advancePayment;
+          input.readOnly = true;
+        });
+
+        elements.paymentModal.classList.remove('hidden');
+        elements.paymentModal.classList.add('flex');
+      });
+
+      elements.closePaymentModal.addEventListener('click', () => {
+        elements.paymentModal.classList.add('hidden');
+        elements.paymentModal.classList.remove('flex');
+      });
+
+      elements.orderBtn.addEventListener('click', () => {
+        elements.orderModal.style.display = 'flex';
+      });
+
+      elements.closeOrderModal.addEventListener('click', () => {
+        elements.orderModal.style.display = 'none';
+      });
+
+      elements.ordersButton.addEventListener('click', () => {
+        elements.defaultModal.classList.remove('hidden');
+      });
+
+      elements.closeDefaultModal.forEach(btn => {
+        btn.addEventListener('click', () => {
+          elements.defaultModal.classList.add('hidden');
+        });
+      });
+    }
+
+    function initializeDateTimeInputs() {
       const now = new Date();
+
       if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
         now.setDate(now.getDate() + 1);
       }
-      dateInput.value = now.toISOString().split('T')[0];
+
+      elements.dateInput.value = now.toISOString().split('T')[0];
+
       const today = new Date();
       const maxDate = new Date();
       maxDate.setDate(today.getDate() + 2);
-      dateInput.min = today.toISOString().split('T')[0];
-      dateInput.max = maxDate.toISOString().split('T')[0];
 
-      window.selectMenuItem = function (card) {
-        const img = card.querySelector('img');
-        if (img) {
-          animateFlyToCart(img, '#ordersButton');
-        }
+      elements.dateInput.min = today.toISOString().split('T')[0];
+      elements.dateInput.max = maxDate.toISOString().split('T')[0];
+    }
 
-        const id = card.dataset.id;
-        const name = card.dataset.name;
-        const category = card.dataset.category;
-        const price = parseFloat(card.dataset.price);
+    window.selectMenuItem = function (card) {
+      const img = card.querySelector('img');
+      if (img) {
+        animateFlyToCart(img, '#ordersButton');
+      }
 
-        if (!selectedOrders[id]) {
-          selectedOrders[id] = {
-            id,
-            name,
-            category,
-            price,
-            quantity: 1,
-            total: price
-          };
-        } else {
-          selectedOrders[id].quantity += 1;
-          selectedOrders[id].total = selectedOrders[id].quantity * price;
-        }
+      const id = card.dataset.id;
+      const name = card.dataset.name;
+      const category = card.dataset.category;
+      const price = parseFloat(card.dataset.price);
 
-        updateOrderSummary();
-      };
+      if (!selectedOrders[id]) {
+        selectedOrders[id] = {
+          id, name, category, price,
+          quantity: 1,
+          total: price
+        };
+      } else {
+        selectedOrders[id].quantity += 1;
+        selectedOrders[id].total = selectedOrders[id].quantity * price;
+      }
 
-      function updateOrderSummary() {
-        const container = document.getElementById('selectedOrdersContainer');
-        container.innerHTML = '';
+      updateOrderSummary();
+    };
 
-        let total = 0;
-        let totalQuantity = 0;
-        const orderCount = Object.keys(selectedOrders).length;
+    function updateOrderSummary() {
+      const container = elements.selectedOrdersContainer;
+      container.innerHTML = '';
+
+      let total = 0;
+      let totalQuantity = 0;
+      const orderCount = Object.keys(selectedOrders).length;
+
+      if (orderCount > 0) {
+        const header = document.createElement('li');
+        header.className = "grid grid-cols-3 mb-2 font-semibold border-b pb-1";
+        header.innerHTML = `
+          <span>Menu</span>
+          <span class="text-center">Qty</span>
+          <span class="text-right">Subtotal</span>
+        `;
+        container.appendChild(header);
+      }
+
+      Object.entries(selectedOrders).forEach(([id, item]) => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        totalQuantity += item.quantity;
+
+        const row = document.createElement('li');
+        row.className = "grid grid-cols-3 items-center mb-2 gap-2";
+        row.innerHTML = `
+          <span class="truncate">${item.name}</span>
+          <input type="number" min="1" value="${item.quantity}" 
+              class="w-14 text-center border border-gray-400 rounded text-black text-sm"
+              data-id="${id}"
+              onchange="updateQuantity(this)">
+          <span class="text-sm text-gray-700 text-right">₱${itemTotal.toFixed(2)}</span>
+        `;
+        container.appendChild(row);
+      });
+
+      updateAdvancePayment(orderCount);
+
+      if (elements.totalQuantity) {
+        elements.totalQuantity.textContent = totalQuantity;
+      }
+      if (elements.totalPrice) {
+        elements.totalPrice.textContent = `₱${total.toFixed(2)}`;
+      }
+    }
+
+    function updateAdvancePayment(orderCount) {
+      if (elements.advancePaymentInput) {
+        let advance = defaultAdvancePayment;
 
         if (orderCount > 0) {
-          const header = document.createElement('li');
-          header.className = "grid grid-cols-3 mb-2 font-semibold border-b pb-1";
-          header.innerHTML = `
-        <span>Menu</span>
-        <span class="text-center">Qty</span>
-        <span class="text-right">Subtotal</span>
-      `;
-          container.appendChild(header);
+          advance += (orderCount * 50);
         }
 
-        Object.entries(selectedOrders).forEach(([id, item]) => {
-          const itemTotal = item.price * item.quantity;
-          total += itemTotal;
-          totalQuantity += item.quantity;
+        elements.advancePaymentInput.value = advance.toFixed(2);
 
-          const row = document.createElement('li');
-          row.className = "grid grid-cols-3 items-center mb-2 gap-2";
-          row.innerHTML = `
-        <span class="truncate">${item.name}</span>
-        <input type="number" min="1" value="${item.quantity}" 
-            class="w-14 text-center border border-gray-400 rounded text-black text-sm"
-            data-id="${id}"
-            onchange="updateQuantity(this)">
-        <span class="text-sm text-gray-700 text-right">₱${itemTotal.toFixed(2)}</span>
-      `;
-          container.appendChild(row);
-        });
-
-        if (advancePaymentInput) {
-          let advance = defaultAdvancePayment;
-
-          if (orderCount > 0) {
-            advance += (orderCount * 50);
-          }
-
-          advancePaymentInput.value = advance.toFixed(2);
-
-          if (advancePaymentLabel) {
-            advancePaymentLabel.textContent = advance.toFixed(2);
-          }
+        if (elements.advancePaymentLabel) {
+          elements.advancePaymentLabel.textContent = advance.toFixed(2);
         }
+      }
+    }
 
-        if (document.getElementById('totalQuantity')) {
-          document.getElementById('totalQuantity').textContent = totalQuantity;
+    window.updateQuantity = function (input) {
+      const id = input.dataset.id;
+      const newQuantity = parseInt(input.value);
+
+      if (selectedOrders[id] && newQuantity > 0) {
+        selectedOrders[id].quantity = newQuantity;
+        selectedOrders[id].total = selectedOrders[id].quantity * selectedOrders[id].price;
+      }
+
+      updateOrderSummary();
+    };
+
+    // New function to handle individual item notes
+    window.updateItemNotes = function (input) {
+      const id = input.dataset.id;
+      const notes = input.value.trim();
+
+      if (selectedOrders[id]) {
+        selectedOrders[id].notes = notes;
+      }
+    };
+
+    function clearOrders() {
+      Object.keys(selectedOrders).forEach(k => delete selectedOrders[k]);
+      updateOrderSummary();
+    }
+
+    function validateInputs() {
+      let hasError = false;
+
+      const requiredFields = [
+        elements.nameInput,
+        elements.contactInput,
+        elements.paxInput,
+        elements.timeInput,
+        elements.dateInput
+      ];
+
+      requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+          field.classList.add('input-error');
+          hasError = true;
+        } else {
+          field.classList.remove('input-error');
         }
-        if (document.getElementById('totalPrice')) {
-          document.getElementById('totalPrice').textContent = `₱${total.toFixed(2)}`;
+      });
+
+      const selectedTime = elements.timeInput.value;
+      if (selectedTime) {
+        const [hours, minutes] = selectedTime.split(':').map(Number);
+        if (hours < 11 || hours > 18 || (hours === 18 && minutes > 0)) {
+          showMessageBox('Reservations are only allowed between 11:00 AM and 6:00 PM.', 'error');
+          hasError = true;
         }
       }
 
-      window.updateQuantity = function (input) {
-        const id = input.dataset.id;
-        const newQuantity = parseInt(input.value);
-        if (selectedOrders[id] && newQuantity > 0) {
-          selectedOrders[id].quantity = newQuantity;
-        }
-        updateOrderSummary();
-      };
-
-      document.getElementById('clearOrdersBtn').addEventListener('click', () => {
-        Object.keys(selectedOrders).forEach(k => delete selectedOrders[k]);
-        updateOrderSummary();
-      });
-
-      orderBtn.addEventListener('click', () => {
-        document.getElementById('orderModal').style.display = 'flex';
-      });
-      document.getElementById('closeOrderModal').addEventListener('click', () => {
-        document.getElementById('orderModal').style.display = 'none';
-      });
-
-      function gatherReservationData() {
-        const formData = new FormData();
-
-        const menuItems = Object.values(selectedOrders).map(item => ({
-          menu_id: item.id,
-          quantity: item.quantity,
-          notes: item.notes || ''
-        }));
-
-        const activeTab = document.querySelector(".tab-content:not(.hidden)");
-        const method = activeTab.id.includes("gcash") ? "Gcash" : "Maya";
-
-        menuItems.forEach((item, index) => {
-          formData.append(`orders[${index}][menu_id]`, item.menu_id);
-          formData.append(`orders[${index}][quantity]`, item.quantity);
-          formData.append(`orders[${index}][notes]`, item.notes);
-        });
-
-        formData.append("pax", paxInput.value);
-        formData.append("customer_name", nameInput.value.trim());
-        formData.append("contact_number", contactInput.value.trim());
-        formData.append("reserved_date", dateInput.value);
-        formData.append("arrival_time", timeInput.value);
-        formData.append("table_id", selectedTableNumber);
-        formData.append("advance_payment", advancePaymentInput.value.trim());
-        formData.append("notes", notesInput.value.trim());
-
-        formData.append("payment_method", method);
-        formData.append("number", activeTab.querySelector(".gcash-number, .maya-number")?.value.trim() ?? "");
-        formData.append("registered_name", activeTab.querySelector(".registered-name")?.value.trim() ?? "");
-        formData.append("amount", activeTab.querySelector(".amount")?.value.trim() ?? "");
-        formData.append("ref_no", activeTab.querySelector(".ref-no")?.value.trim() ?? "");
-
-        const proofFile = activeTab.querySelector(".proof")?.files[0];
-        if (proofFile) formData.append('proof', proofFile);
-
-        return formData;
-      }
-
-      function validateInputs() {
-        let hasError = false;
-
-        const requiredFields = [nameInput, contactInput, paxInput, timeInput, dateInput];
-        requiredFields.forEach(field => {
-          if (!field.value.trim()) {
-            field.classList.add('input-error');
-            hasError = true;
-          } else {
-            field.classList.remove('input-error');
-          }
-        });
-
-        const activeTab = document.querySelector(".tab-content:not(.hidden)");
+      const activeTab = document.querySelector(".tab-content:not(.hidden)");
+      if (activeTab) {
         const paymentFields = [
           activeTab.querySelector(".gcash-number, .maya-number"),
           activeTab.querySelector(".registered-name"),
@@ -875,234 +920,24 @@
             }
           }
         });
-
-        return !hasError;
       }
 
-      submitBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        if (!validateInputs()) {
-          showMessageBox('Please complete all required fields.', 'error');
-          return;
-        }
-        const selectedTime = timeInput.value;
-        if (selectedTime) {
-          const [hours, minutes] = selectedTime.split(':').map(Number);
-          if (hours < 8 || hours > 18 || (hours === 18 && minutes > 0)) {
-            showMessageBox('Reservations are only allowed between 11:00 AM and 6:00 PM.', 'error');
-            return;
-          }
-        } else {
-          showMessageBox('Please select a reservation time.', 'error');
-          return;
-        }
-
-        function showMessageBox(message, type = 'success') {
-          const box = document.getElementById('messageBox');
-          box.textContent = message;
-
-          if (type === 'success') box.style.background = '#4CAF50';
-          if (type === 'error') box.style.background = '#f44336';
-          if (type === 'warning') box.style.background = '#ff9800';
-
-          box.style.display = 'block';
-
-          setTimeout(() => {
-            box.style.display = 'none';
-          }, 3000);
-        }
-
-        const data = gatherReservationData();
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Submitting...";
-
-        try {
-          const res = await fetch("/customer/reserve", {
-            method: "POST",
-            headers: {
-              "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-              "Accept": "application/json"
-            },
-            body: data
-          });
-
-          const json = await res.json();
-
-          if (res.ok && json.success) {
-            showMessageBox("Reservation successful!", "success");
-            resetReservationForm();
-            modal.style.display = 'none';
-          } else {
-            const errors = json.errors || {};
-            const messages = Object.values(errors).flat().join("\n");
-            showMessageBox(messages || json.message || "Reservation failed", "error");
-          }
-        } catch (err) {
-          console.error(err);
-          showMessageBox("Something went wrong while submitting the reservation.", "error");
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Submit Reservation";
-        }
-
-      });
-
-      function animateFlyToCart(imageEl, targetSelector) {
-        const imgRect = imageEl.getBoundingClientRect();
-        const targetEl = document.querySelector(targetSelector);
-        const targetRect = targetEl.getBoundingClientRect();
-
-        const flyingImg = imageEl.cloneNode(true);
-        flyingImg.style.position = 'fixed';
-        flyingImg.style.left = `${imgRect.left}px`;
-        flyingImg.style.top = `${imgRect.top}px`;
-        flyingImg.style.width = `${imgRect.width}px`;
-        flyingImg.style.height = `${imgRect.height}px`;
-        flyingImg.style.transition = 'all 0.8s ease-in-out';
-        flyingImg.style.filter = 'blur(2px)';
-        flyingImg.style.zIndex = '10000';
-        flyingImg.style.pointerEvents = 'none';
-        flyingImg.style.borderRadius = '10px';
-
-        document.getElementById('fly-animation-container').appendChild(flyingImg);
-        requestAnimationFrame(() => {
-          flyingImg.style.left = `${targetRect.left + targetRect.width / 2}px`;
-          flyingImg.style.top = `${targetRect.top + targetRect.height / 2}px`;
-          flyingImg.style.width = `0px`;
-          flyingImg.style.height = `0px`;
-          flyingImg.style.opacity = '0.3';
-        });
-        flyingImg.addEventListener('transitionend', () => {
-          flyingImg.remove();
-        });
-      }
-
-      const ordersButton = document.getElementById("ordersButton");
-      const defaultModal = document.getElementById("default-modal");
-      const closeButtons = defaultModal.querySelectorAll("[data-modal-hide='default-modal']");
-      ordersButton.addEventListener("click", () => {
-        defaultModal.classList.remove("hidden");
-      });
-      closeButtons.forEach(btn => {
-        btn.addEventListener("click", () => {
-          defaultModal.classList.add("hidden");
-        });
-      });
-
-      function clearPaymentFields() {
-        paymentModal.querySelectorAll("input").forEach(input => {
-          input.value = "";
-          input.classList.remove("input-error");
-        });
-      }
-
-      document.getElementById("paymentBtn")?.addEventListener("click", () => {
-        paymentModal.classList.remove("hidden");
-      });
-
-      function resetReservationForm() {
-        [nameInput, contactInput, dateInput, timeInput, notesInput].forEach(el => el.value = '');
-        paxInput.value = '';
-        selectedTableNumber = 0;
-        document.getElementById('selectedTableNumber').value = '';
-        Object.keys(selectedOrders).forEach(k => delete selectedOrders[k]);
-
-        advancePaymentInput.value = defaultAdvancePayment.toFixed(2);
-        if (advancePaymentLabel) {
-          advancePaymentLabel.textContent = defaultAdvancePayment.toFixed(2);
-        }
-        updateOrderSummary();
-
-        if (paymentModal) {
-          paymentModal.classList.add('hidden');
-          clearPaymentFields();
-        }
-        clearPaymentFields();
-      }
-    });
-
-    function gatherReservationDataBlock() {
-      const orders = Object.values(selectedOrders).map(item => ({
-        menu_id: item.id,
-        quantity: item.quantity,
-        notes: item.notes || ''
-      }));
-
-      const activeTab = document.querySelector(".tab-content:not(.hidden)");
-      const method = activeTab.id.includes("gcash") ? "Gcash" : "Maya";
-
-      const paymentDetails = {
-        number: activeTab.querySelector(".gcash-number, .maya-number")?.value.trim() || "",
-        registered_name: activeTab.querySelector(".registered-name")?.value.trim() || "",
-        amount: activeTab.querySelector(".amount")?.value.trim() || "",
-        ref_no: activeTab.querySelector(".ref-no")?.value.trim() || "",
-        proof_uploaded: !!activeTab.querySelector(".proof")?.files[0]
-      };
-
-      return {
-        orders,
-        pax: paxInput.value,
-        customer_name: nameInput.value.trim(),
-        contact_number: contactInput.value.trim(),
-        reserved_date: dateInput.value,
-        arrival_time: timeInput.value,
-        table_id: selectedTableNumber,
-        advance_payment: advancePaymentInput.value.trim(),
-        notes: notesInput.value.trim(),
-        payment_method: method,
-        payment_details: paymentDetails
-      };
+      return !hasError;
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      const paymentBtn = document.getElementById('paymentBtn');
-      const paymentModal = document.getElementById('paymentModal');
-      const closeBtn = document.getElementById('closePaymentModal');
-
-      const tabButtons = paymentModal.querySelectorAll('[data-tab]');
-      const tabContents = paymentModal.querySelectorAll('.tab-content');
-
-      tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const tab = btn.getAttribute('data-tab');
-
-          tabContents.forEach(tc => tc.classList.add('hidden'));
-
-          const selectedTab = document.getElementById(`tab-${tab}`);
-          if (selectedTab) selectedTab.classList.remove('hidden');
-        });
-      });
-
-      paymentBtn.addEventListener('click', () => {
-        const advancePayment = parseFloat(document.getElementById('advance_payment').value) || 0;
-
-        const amountInputs = paymentModal.querySelectorAll('.tab-content .amount');
-        amountInputs.forEach(input => {
-          input.value = advancePayment;
-          input.min = advancePayment;
-          input.readOnly = true;
-        });
-
-        paymentModal.classList.remove('hidden');
-      });
-
-      closeBtn.addEventListener('click', () => {
-        paymentModal.classList.add('hidden');
-      });
-    });
-
-    document.addEventListener('DOMContentLoaded', function () {
-      const contactInput = document.getElementById('contactNumber');
+    function initializeContactValidation() {
+      const contactInput = elements.contactInput;
       const error = contactInput.nextElementSibling;
 
       contactInput.addEventListener('input', () => {
         let value = contactInput.value.replace(/\D/g, '');
 
-        if (value.length > 11) {
+        if (value.length >= 11) {
           value = value.slice(0, 11);
-          error.classList.remove('hidden');
-        } else if (!/^09[0-9]{0,9}$/.test(value)) {
-          error.textContent = 'Enter a valid contact number';
+        }
+
+        if (value && !/^09\d{0,9}$/.test(value)) {
+          error.textContent = 'Enter a valid contact number (09XXXXXXXXX)';
           error.classList.remove('hidden');
         } else {
           error.textContent = '';
@@ -1110,9 +945,212 @@
         }
         contactInput.value = value;
       });
+
+      contactInput.addEventListener('keypress', (e) => {
+        if (contactInput.value.replace(/\D/g, '').length >= 11 && !['Backspace', 'Delete'].includes(e.key)) {
+          e.preventDefault();
+        }
+      });
+    }
+
+
+
+    function gatherReservationData() {
+      const formData = new FormData();
+      const activeTab = document.querySelector(".tab-content:not(.hidden)");
+
+      if (!activeTab) {
+        console.error('No active payment tab found');
+        return formData;
+      }
+
+      const method = activeTab.id.includes("gcash") ? "Gcash" : "Maya";
+
+      const orders = Object.values(selectedOrders);
+      if (orders.length > 0) {
+        // Get the general notes from the form to apply to ALL orders
+        const generalNotes = elements.notesInput.value.trim();
+
+        orders.forEach((item, index) => {
+          formData.append(`orders[${index}][menu_id]`, item.id);
+          formData.append(`orders[${index}][quantity]`, item.quantity);
+          // Apply the general notes to each order item
+          formData.append(`orders[${index}][notes]`, generalNotes);
+        });
+      }
+
+      const basicData = {
+        table_id: selectedTableNumber,
+        customer_name: elements.nameInput.value.trim(),
+        contact_number: elements.contactInput.value.trim(),
+        pax: parseInt(elements.paxInput.value) || 1,
+        reserved_date: elements.dateInput.value,
+        arrival_time: elements.timeInput.value,
+        advance_payment: parseFloat(elements.advancePaymentInput.value.trim()) || 0,
+        payment_method: method
+      };
+
+      Object.entries(basicData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== '') {
+          formData.append(key, value);
+        }
+      });
+
+      const paymentFields = {
+        number: activeTab.querySelector(".gcash-number, .maya-number"),
+        registered_name: activeTab.querySelector(".registered-name"),
+        amount: activeTab.querySelector(".amount"),
+        ref_no: activeTab.querySelector(".ref-no")
+      };
+
+      Object.entries(paymentFields).forEach(([key, field]) => {
+        if (field && field.value && field.value.trim()) {
+          formData.append(key, field.value.trim());
+        }
+      });
+
+      const proofInput = activeTab.querySelector(".proof");
+      if (proofInput && proofInput.files && proofInput.files[0]) {
+        formData.append('proof', proofInput.files[0]);
+      }
+
+      return formData;
+    }
+
+    function resetReservationForm() {
+      [elements.nameInput, elements.contactInput, elements.dateInput,
+      elements.timeInput, elements.notesInput].forEach(el => {
+        if (el) el.value = '';
+      });
+
+      if (elements.paxInput) elements.paxInput.value = '';
+
+      selectedTableNumber = 0;
+      if (elements.selectedTableNumber) elements.selectedTableNumber.value = '';
+
+      clearOrders();
+
+      if (elements.advancePaymentInput) {
+        elements.advancePaymentInput.value = defaultAdvancePayment.toFixed(2);
+      }
+      if (elements.advancePaymentLabel) {
+        elements.advancePaymentLabel.textContent = defaultAdvancePayment.toFixed(2);
+      }
+
+      if (elements.paymentModal) {
+        elements.paymentModal.classList.add('hidden');
+        clearPaymentFields();
+      }
+    }
+
+    function clearPaymentFields() {
+      elements.paymentModal.querySelectorAll("input").forEach(input => {
+        input.value = "";
+        input.classList.remove("input-error");
+      });
+    }
+
+    async function submitReservation() {
+      if (!validateInputs()) {
+        showMessageBox('Please complete all required fields.', 'error');
+        return;
+      }
+
+      const data = gatherReservationData();
+      const submitBtn = elements.submitBtn;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Submitting...";
+
+      try {
+        const response = await fetch("/customer/reserve", {
+          method: "POST",
+          headers: {
+            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+            "Accept": "application/json"
+          },
+          body: data
+        });
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          showMessageBox("Server error: Invalid response format", "error");
+          return;
+        }
+
+        const json = await response.json();
+
+        if (response.ok && json.success) {
+          showMessageBox("Reservation successful!", "success");
+          resetReservationForm();
+          elements.tableModal.style.display = 'none';
+        } else {
+          const errors = json.errors || {};
+          const messages = Object.values(errors).flat().join("\n");
+          showMessageBox(messages || json.message || "Reservation failed", "error");
+        }
+      } catch (error) {
+        showMessageBox("Network error: " + error.message, "error");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Submit Reservation";
+      }
+
+    }
+
+    function initializeElements() {
+      elements = {
+        tableModal: document.getElementById('tableModal'),
+        paymentModal: document.getElementById('paymentModal'),
+        orderModal: document.getElementById('orderModal'),
+        defaultModal: document.getElementById('default-modal'),
+
+        closeModal: document.getElementById('closeModal'),
+        closePaymentModal: document.getElementById('closePaymentModal'),
+        closeOrderModal: document.getElementById('closeOrderModal'),
+        closeDefaultModal: document.querySelectorAll("[data-modal-hide='default-modal']"),
+
+        paymentBtn: document.getElementById('paymentBtn'),
+        orderBtn: document.getElementById('order'),
+        submitBtn: document.getElementById('submitBtn'),
+        ordersButton: document.getElementById('ordersButton'),
+        clearOrdersBtn: document.getElementById('clearOrdersBtn'),
+
+        nameInput: document.getElementById('customerName'),
+        contactInput: document.getElementById('contactNumber'),
+        paxInput: document.getElementById('pax'),
+        notesInput: document.getElementById('notesTextarea'),
+        dateInput: document.getElementById('reserved_date'),
+        timeInput: document.getElementById('arrivalTimeInput'),
+        advancePaymentInput: document.getElementById('advance_payment'),
+        advancePaymentLabel: document.getElementById('advance_payment_label'),
+        selectedTableNumber: document.getElementById('selectedTableNumber'),
+
+        selectedOrdersContainer: document.getElementById('selectedOrdersContainer'),
+        totalQuantity: document.getElementById('totalQuantity'),
+        totalPrice: document.getElementById('totalPrice'),
+
+        tableLinks: document.querySelectorAll('.table-link')
+      };
+
+      defaultAdvancePayment = parseFloat(elements.advancePaymentInput?.value) || 600;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeElements();
+      initializeTabs();
+      initializeModals();
+      initializeDateTimeInputs();
+      initializeContactValidation();
+
+      elements.clearOrdersBtn?.addEventListener('click', clearOrders);
+      elements.submitBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitReservation();
+      });
+
+      updateOrderSummary();
     });
-
-
   </script>
 </body>
 

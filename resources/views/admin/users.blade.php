@@ -1,16 +1,13 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
 
-<!-- Content Wrapper -->
 <div id="content-wrapper" class="d-flex flex-column">
     <div id="content">
 
-        <!-- Topbar -->
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">User Management</h1>
         </nav>
 
-        <!-- Begin Page Content -->
         <div class="container-fluid">
             @if (session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
@@ -33,8 +30,6 @@
                                         <th>Contact</th>
                                         <th>Status</th>
                                         <th>Actions</th>
-
-                                        
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -52,14 +47,13 @@
                                                 @endif
                                             </td>
                                             <td class="text-center align-middle">
-                                                <!-- Functional Pencil Icon -->
-                                                <a href="#" title="Modify" data-toggle="modal" data-target="#editUserModal{{ $user->id }}" style="all: unset; cursor: pointer;">
+                                                <a href="#" title="Modify" data-toggle="modal"
+                                                    data-target="#editUserModal{{ $user->id }}"
+                                                    style="all: unset; cursor: pointer;">
                                                     <i class="fas fa-edit text-primary"></i>
                                                 </a>
                                             </td>
                                         </tr>
-
-                                        <!-- Edit User Modal -->
                                         <div class="modal fade" id="editUserModal{{ $user->id }}" tabindex="-1" role="dialog">
                                             <div class="modal-dialog" role="document">
                                                 <form action="{{ route('admin.updateuser', $user->id) }}" method="POST">
@@ -68,11 +62,14 @@
                                                     <div class="modal-content">
                                                         <div class="modal-header">
                                                             <h5 class="modal-title">Modify account information</h5>
-                                                            <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                                            <button type="button" class="close"
+                                                                data-dismiss="modal">&times;</button>
                                                         </div>
                                                         <div class="modal-body">
                                                             <label>Name</label>
-                                                            <input type="text" name="name" value="{{ $user->firstname }} {{ $user->lastname }}" class="form-control">
+                                                            <input type="text" name="name"
+                                                                value="{{ $user->firstname }} {{ $user->lastname }}"
+                                                                class="form-control">
 
                                                             <label>Role</label>
                                                             <select name="role" class="form-control">
@@ -83,8 +80,9 @@
 
                                                             </select>
                                                             <label>Password</label>
-                                                            <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current password">
-     
+                                                            <input type="password" name="password" class="form-control"
+                                                                placeholder="Leave blank to keep current password">
+
 
                                                             <label>Status</label><br>
                                                             <input type="checkbox" name="status" {{ $user->status ? 'checked' : '' }}> Active
@@ -98,8 +96,6 @@
                                         </div>
                                     @endforeach
                                 </tbody>
-
-
                             </table>
                         @else
                             <p class="text-center">No users found.</p>
@@ -108,11 +104,7 @@
                 </div>
             </div>
         </div>
-        <!-- /.container-fluid -->
-
     </div>
 </div>
 
 @include('admin.layouts.script')
-
-

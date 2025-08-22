@@ -76,17 +76,17 @@
 
     <div class="d-flex ms-4">
       @foreach ($stock as $item)
-        @php
-        $qty = $item->stock_quantity;
-        $statusColor = $qty >= 60 ? 'bg-success' :
-        ($qty >= 30 ? 'bg-warning' : 'bg-danger');
-      @endphp
-        <div class="d-flex flex-column align-items-center mx-3">
-        <div class="progress-vertical mb-1">
-          <div class="progress-bar-vertical {{ $statusColor }}" style="height: {{ $qty }}%;"></div>
-        </div>
-        <div class="fw-medium">{{ $item->stock_name }}</div>
-        </div>
+      @php
+      $qty = $item->stock_quantity;
+      $statusColor = $qty >= 60 ? 'bg-success' :
+      ($qty >= 30 ? 'bg-warning' : 'bg-danger');
+    @endphp
+      <div class="d-flex flex-column align-items-center mx-3">
+      <div class="progress-vertical mb-1">
+        <div class="progress-bar-vertical {{ $statusColor }}" style="height: {{ $qty }}%;"></div>
+      </div>
+      <div class="fw-medium">{{ $item->stock_name }}</div>
+      </div>
     @endforeach
     </div>
 
@@ -109,8 +109,6 @@
       Update Stock
     </button>
   </div>
-
-
 
   @php
   $reservationGroups = $reservations->groupBy('reservation_id');
@@ -138,7 +136,6 @@
         @php
       $first = $group->first();
 
-      // Orders display
       $orders = $group->map(function ($r) {
       if (!$r->menu_item)
       return null;
@@ -194,7 +191,7 @@
             $qty = $item->stock_quantity;
             $statusColor = $qty >= 60 ? 'bg-success' :
             ($qty >= 30 ? 'bg-warning' : 'bg-danger');
-          @endphp
+            @endphp
               <tr>
                 <td>{{ $item->stock_name }}</td>
                 <td>

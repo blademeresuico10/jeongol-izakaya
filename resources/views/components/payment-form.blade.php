@@ -66,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const inputs = form.querySelectorAll('input');
 
     inputs.forEach(input => {
-        // Ensure there is an error span
         let error = input.nextElementSibling;
         if (!error || !error.classList.contains('inline-error')) {
             error = document.createElement('span');

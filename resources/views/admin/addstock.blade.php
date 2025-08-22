@@ -16,15 +16,14 @@
                 <h1 class="h3 mb-0 text-gray-800">Add Stock</h1>
             </div>
         </nav>
-        <!-- End of Topbar -->
 
-        <!-- Begin Page Content -->
         <div class="container-fluid">
             <div class="row justify-content-center mt-4">
                 <div class="col-lg-4">
                     <div class="card shadow rounded" style="padding: 0.5rem 0;">
                         <div class="card-body py-1 px-4 ">
-                            <h5 class="mb-4 text-center fw-bold" style="font-size: 1.7rem; color: black">Add Stock Item</h5>
+                            <h5 class="mb-4 text-center fw-bold" style="font-size: 1.7rem; color: black">Add Stock Item
+                            </h5>
 
                             @if (session('success'))
                                 <div class="alert alert-success">{{ session('success') }}</div>
@@ -44,17 +43,20 @@
 
                                 <div class="mb-2">
                                     <label for="stock_name">Stock Name</label>
-                                    <input type="text" id="stock_name" name="stock_name" class="form-control form-control-sm" required>
+                                    <input type="text" id="stock_name" name="stock_name"
+                                        class="form-control form-control-sm" required>
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="stock_quantity">Quantity</label>
-                                    <input type="number" id="stock_quantity" name="stock_quantity" class="form-control form-control-sm" step="0.01" min="0" required>
+                                    <input type="number" id="stock_quantity" name="stock_quantity"
+                                        class="form-control form-control-sm" step="0.01" min="0" required>
                                 </div>
 
                                 <div class="d-flex justify-content-between">
                                     <button type="submit" class="btn btn-sm btn-primary">Add</button>
-                                    <a href="{{ route('admin.stock_management') }}" class="btn btn-sm btn-secondary">Back</a>
+                                    <a href="{{ route('admin.stock_management') }}"
+                                        class="btn btn-sm btn-secondary">Back</a>
                                 </div>
                             </form>
                         </div>
@@ -62,15 +64,7 @@
                 </div>
             </div>
         </div>
-        <!-- /.container-fluid -->
-
     </div>
-    <!-- End of Main Content -->
-
 </div>
-<!-- End of Content Wrapper -->
-
 </div>
-<!-- End of Page Wrapper -->
-
 @include('admin.layouts.script')

@@ -17,9 +17,6 @@
                 <h1 class="h3 mb-0 text-gray-800"></h1>
             </div>
         </nav>
-        <!-- End of Topbar -->
-
-        <!-- Begin Page Content -->
         <div class="container-fluid">
             <div class="row justify-content-center mt-4">
                 <div class="col-lg-4">
@@ -27,12 +24,9 @@
                         <div class="card-body py-1 px-4">
                             <h5 class="mb-4 text-center fw-bold" style="font-size: 1.7rem; color: black">Add User</h5>
 
-                            <!-- Success Message -->
                             @if(session('success'))
                                 <div class="alert alert-success">{{ session('success') }}</div>
                             @endif
-
-                            <!-- Validation Errors -->
                             @if ($errors->any())
                                 <div class="alert alert-danger">
                                     <ul class="mb-0">
@@ -42,55 +36,61 @@
                                     </ul>
                                 </div>
                             @endif
-
-                            <!-- Password match warning -->
-                            <div id="password-warning" class="alert alert-danger py-1" style="display:none; font-size: 0.9rem;">
+                            <div id="password-warning" class="alert alert-danger py-1"
+                                style="display:none; font-size: 0.9rem;">
                                 Passwords do not match.
                             </div>
 
-                            <!-- Form Start -->
                             <form action="{{ route('storeUser') }}" method="POST">
                                 @csrf
 
                                 <div class="mb-2">
                                     <label for="firstname">Firstname</label>
-                                    <input type="text" id="firstname" name="firstname" class="form-control form-control-sm" value="{{ old('firstname') }}" required>
+                                    <input type="text" id="firstname" name="firstname"
+                                        class="form-control form-control-sm" value="{{ old('firstname') }}" required>
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="lastname">Lastname</label>
-                                    <input type="text" id="lastname" name="lastname" class="form-control form-control-sm" value="{{ old('lastname') }}" required>
+                                    <input type="text" id="lastname" name="lastname"
+                                        class="form-control form-control-sm" value="{{ old('lastname') }}" required>
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="role">Role</label>
                                     <select id="role" name="role" class="form-control form-control-sm" required>
                                         <option value="" disabled selected>Select Role</option>
-                                        <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                                        <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin
+                                        </option>
                                         <option value="receptionist" {{ old('role') == 'receptionist' ? 'selected' : '' }}>Receptionist</option>
-                                        <option value="cashier" {{ old('role') == 'cashier' ? 'selected' : '' }}>Cashier</option>
+                                        <option value="cashier" {{ old('role') == 'cashier' ? 'selected' : '' }}>Cashier
+                                        </option>
                                         <option value="kitchen-staff" {{ old('role') == 'kitchen-staff' ? 'selected' : '' }}>Kitchen Staff</option>
                                     </select>
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="contact">Contact</label>
-                                    <input type="text" id="contact" name="contact" class="form-control form-control-sm" value="{{ old('contact') }}" required>
+                                    <input type="text" id="contact" name="contact" class="form-control form-control-sm"
+                                        value="{{ old('contact') }}" required>
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="username">Username</label>
-                                    <input type="text" id="username" name="username" class="form-control form-control-sm" value="{{ old('username') }}" required>
+                                    <input type="text" id="username" name="username"
+                                        class="form-control form-control-sm" value="{{ old('username') }}" required>
                                 </div>
 
                                 <div class="mb-2">
                                     <label for="password">Password</label>
-                                    <input type="password" id="password" name="password" class="form-control form-control-sm" required>
+                                    <input type="password" id="password" name="password"
+                                        class="form-control form-control-sm" required>
                                 </div>
 
                                 <div class="mb-3">
                                     <label for="confirm_password">Confirm Password</label>
-                                    <input type="password" id="confirm_password" name="password_confirmation" class="form-control form-control-sm" required>
+                                    <input type="password" id="confirm_password" name="password_confirmation"
+                                        class="form-control form-control-sm" required>
                                 </div>
 
                                 <div class="d-flex justify-content-between">
@@ -98,21 +98,14 @@
                                     <a href="{{ url('users') }}" class="btn btn-sm btn-secondary">Back</a>
                                 </div>
                             </form>
-                            <!-- Form End -->
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <!-- /.container-fluid -->
     </div>
-    <!-- End of Main Content -->
 </div>
-<!-- End of Content Wrapper -->
 </div>
-<!-- End of Page Wrapper -->
-
-<!-- JavaScript -->
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const password = document.getElementById('password');
@@ -142,7 +135,6 @@
         password.addEventListener('input', checkPasswordMatch);
         confirmPassword.addEventListener('input', checkPasswordMatch);
 
-        // Initial check
         checkPasswordMatch();
     });
 </script>

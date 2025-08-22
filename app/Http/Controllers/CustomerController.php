@@ -53,8 +53,6 @@ class CustomerController extends Controller
 
     public function storeReservation(Request $request)
     {
-
-
         $validator = validator($request->all(), [
             'table_id'           => 'required|exists:tables,id',
             'customer_name'      => 'required|string',
@@ -99,7 +97,6 @@ class CustomerController extends Controller
                 ]);
 
             $table = DB::table('tables')->where('id', $validated['table_id'])->first();
-
             if (!$table) {
                 return response()->json(['success' => false, 'message' => 'Invalid table.'], 404);
             }
@@ -112,7 +109,7 @@ class CustomerController extends Controller
             }
 
             $conflict = DB::table('reservations')
-                ->where('table_number', $table->table_number)
+                ->where('table_id', $table->id)
                 ->where('status', 'Accepted')
                 ->where(function ($query) use ($reservedDateTime, $endDateTime) {
                     $query->where('reservation_time', '<', $endDateTime)
@@ -124,13 +121,12 @@ class CustomerController extends Controller
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
 
+
             $totalPrice = 0;
-            if (!empty($validated['orders'])) {
-                foreach ($validated['orders'] as $order) {
-                    $menu = DB::table('menu')->find($order['menu_id']);
-                    if ($menu) {
-                        $totalPrice += $menu->price * $order['quantity'];
-                    }
+            foreach ($validated['orders'] ?? [] as $order) {
+                $menu = DB::table('menu')->find($order['menu_id']);
+                if ($menu) {
+                    $totalPrice += $menu->price * $order['quantity'];
                 }
             }
 
@@ -139,20 +135,14 @@ class CustomerController extends Controller
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
                 'reservation_time'     => $reservedDateTime,
                 'reservation_end_time' => $endDateTime,
-                'table_number'         => $table->table_number,
-                'notes'                => $validated['notes'] ?? null,
+                'table_id'             => $table->id,
                 'customer_id'          => $customerId,
                 'user_id'              => $userId,
-                'total_price'          => $totalPrice,
                 'status'               => 'Pending',
             ]);
 
             if ($request->has('payment_method')) {
-                $proofPath = null;
-
-                if ($request->hasFile('proof')) {
-                    $proofPath = $request->file('proof')->store('payment_proofs', 'public');
-                }
+                $proofPath = $request->hasFile('proof') ? $request->file('proof')->store('payment_proofs', 'public') : null;
 
                 DB::table('reservation_payments')->insert([
                     'reservation_id'  => $reservation->id,
@@ -167,8 +157,6 @@ class CustomerController extends Controller
                     'updated_at'      => now(),
                 ]);
             }
-
-
 
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
@@ -196,15 +184,14 @@ class CustomerController extends Controller
                 'message' => 'Reservation placed successfully',
             ]);
         } catch (\Exception $e) {
-            Log::error('Reservation Error: ' . $e->getMessage());
-
             return response()->json([
                 'success' => false,
                 'message' => 'Reservation failed.',
-                'error'   => $e->getMessage()
+                'error'   => $e->getMessage(),
             ], 500);
         }
     }
+
 
     public function storeFeedback(Request $request)
     {

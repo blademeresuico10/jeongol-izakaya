@@ -49,7 +49,7 @@
       table {
         font-size: 0.8rem;
         white-space: nowrap;
-        
+
       }
     }
 
@@ -84,7 +84,7 @@
 
     @php
     $reservationGroups = $reservations->groupBy('reservation_id');
-    @endphp
+  @endphp
 
     <div class="d-flex justify-content-center mb-4">
       @if ($reservationGroups->isEmpty())
@@ -129,7 +129,6 @@
       </div>
     @endif
     </div>
-
 
   </div>
 

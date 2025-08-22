@@ -11,9 +11,10 @@ class Reservation extends Model
         'advance_payment',
         'reservation_time',
         'reservation_end_time',
-        'table_number',
+        'table_id',
         'customer_id',
         'user_id',
+        'status',
     ];
 
     public function orderDetails()

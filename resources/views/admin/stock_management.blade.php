@@ -19,8 +19,8 @@
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Stock Items</h5>
-                    <!-- Button to trigger Add Modal -->
-                    <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addStockModal">Add Stock</button>
+                    <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addStockModal">Add
+                        Stock</button>
                 </div>
                 <div class="card-body">
                     <table class="table table-bordered table-sm text-start">
@@ -37,7 +37,9 @@
                                     <td>{{ $stock->stock_name }}</td>
                                     <td>{{ $stock->stock_quantity }}</td>
                                     <td>
-                                        <a href="#" title="Modify" data-toggle="modal" data-target="#editStockModal{{ $stock->id }}" style="all: unset; cursor: pointer;">
+                                        <a href="#" title="Modify" data-toggle="modal"
+                                            data-target="#editStockModal{{ $stock->id }}"
+                                            style="all: unset; cursor: pointer;">
                                             <i class="fas fa-edit text-primary"></i>
                                         </a>
                                     </td>
@@ -47,9 +49,9 @@
                     </table>
                 </div>
             </div>
-
             <!-- Add Modal -->
-            <div class="modal fade" id="addStockModal" tabindex="-1" role="dialog" aria-labelledby="addStockModalLabel" aria-hidden="true">
+            <div class="modal fade" id="addStockModal" tabindex="-1" role="dialog" aria-labelledby="addStockModalLabel"
+                aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('admin.storeStock') }}" method="POST">
                         @csrf
@@ -65,7 +67,8 @@
                                 <input type="text" name="stock_name" class="form-control" required>
 
                                 <label class="mt-2">Quantity</label>
-                                <input type="number" name="stock_quantity" class="form-control" step="0.01" min="0" required>
+                                <input type="number" name="stock_quantity" class="form-control" step="0.01" min="0"
+                                    required>
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-primary">Add</button>
@@ -75,10 +78,10 @@
                     </form>
                 </div>
             </div>
-
             <!-- Edit Modals -->
             @foreach ($stocks as $stock)
-                <div class="modal fade" id="editStockModal{{ $stock->id }}" tabindex="-1" role="dialog" aria-labelledby="editStockModalLabel{{ $stock->id }}" aria-hidden="true">
+                <div class="modal fade" id="editStockModal{{ $stock->id }}" tabindex="-1" role="dialog"
+                    aria-labelledby="editStockModalLabel{{ $stock->id }}" aria-hidden="true">
                     <div class="modal-dialog" role="document">
                         <form action="{{ route('admin.updateStock', $stock->id) }}" method="POST">
                             @csrf
@@ -92,10 +95,12 @@
                                 </div>
                                 <div class="modal-body">
                                     <label>Stock Name</label>
-                                    <input type="text" name="stock_name" value="{{ $stock->stock_name }}" class="form-control" required>
+                                    <input type="text" name="stock_name" value="{{ $stock->stock_name }}"
+                                        class="form-control" required>
 
                                     <label class="mt-2">Quantity</label>
-                                    <input type="number" name="stock_quantity" value="{{ $stock->stock_quantity }}" class="form-control" step="0.01" min="0" required>
+                                    <input type="number" name="stock_quantity" value="{{ $stock->stock_quantity }}"
+                                        class="form-control" step="0.01" min="0" required>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="submit" class="btn btn-primary">Update</button>
@@ -106,10 +111,8 @@
                     </div>
                 </div>
             @endforeach
-
         </div>
         <!-- /.container-fluid -->
-
     </div>
 </div>
 

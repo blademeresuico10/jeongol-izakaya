@@ -4,23 +4,18 @@
 <!-- Content Wrapper -->
 <div id="content-wrapper" class="d-flex flex-column">
     <div id="content">
-
-        <!-- Topbar -->
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">Menu Management</h1>
         </nav>
-
-        <!-- Begin Page Content -->
         <div class="container-fluid">
             @if (session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
-
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Menu</h5>
-                    <!-- Button to trigger Add Modal -->
-                    <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addMenuModal">Add Menu</button>
+                    <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addMenuModal">Add
+                        Menu</button>
                 </div>
                 <div class="card-body">
                     <table class="table table-bordered table-sm text-start">
@@ -37,7 +32,9 @@
                                     <td>{{ $item->menu_item }}</td>
                                     <td>{{ number_format($item->price, 2) }}</td>
                                     <td>
-                                        <a href="#" title="Modify" data-toggle="modal" data-target="#editMenuModal{{ $item->id }}" style="all: unset; cursor: pointer;">
+                                        <a href="#" title="Modify" data-toggle="modal"
+                                            data-target="#editMenuModal{{ $item->id }}"
+                                            style="all: unset; cursor: pointer;">
                                             <i class="fas fa-edit text-primary"></i>
                                         </a>
                                     </td>
@@ -47,9 +44,8 @@
                     </table>
                 </div>
             </div>
-
-            
-            <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel" aria-hidden="true">
+            <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel"
+                aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('storeMenu') }}" method="POST">
                         @csrf
@@ -76,9 +72,9 @@
                 </div>
             </div>
 
-            
             @foreach ($menu as $item)
-                <div class="modal fade" id="editMenuModal{{ $item->id }}" tabindex="-1" role="dialog" aria-labelledby="editMenuModalLabel{{ $item->id }}" aria-hidden="true">
+                <div class="modal fade" id="editMenuModal{{ $item->id }}" tabindex="-1" role="dialog"
+                    aria-labelledby="editMenuModalLabel{{ $item->id }}" aria-hidden="true">
                     <div class="modal-dialog" role="document">
                         <form action="{{ route('admin.updatemenu', $item->id) }}" method="POST">
                             @csrf
@@ -92,10 +88,12 @@
                                 </div>
                                 <div class="modal-body">
                                     <label>Menu Item</label>
-                                    <input type="text" name="menu_item" value="{{ $item->menu_item }}" class="form-control" required>
+                                    <input type="text" name="menu_item" value="{{ $item->menu_item }}" class="form-control"
+                                        required>
 
                                     <label class="mt-2">Price</label>
-                                    <input type="number" name="price" value="{{ $item->price }}" class="form-control" step="0.01" min="0" required>
+                                    <input type="number" name="price" value="{{ $item->price }}" class="form-control"
+                                        step="0.01" min="0" required>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="submit" class="btn btn-primary">Update</button>
@@ -106,9 +104,7 @@
                     </div>
                 </div>
             @endforeach
-
         </div>
-        <!-- /.container-fluid -->
 
     </div>
 </div>
