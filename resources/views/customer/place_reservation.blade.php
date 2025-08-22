@@ -66,24 +66,22 @@
     .modal {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.6);
       justify-content: center;
       align-items: center;
-      z-index: 1000;
+
     }
 
     .modal-content {
       background: white;
       padding: 20px;
       border-radius: 10px;
-      width: 90%;
-      max-width: 500px;
+      width: 70%;
+      max-width: 400px;
       max-height: auto;
-      position: relative;
+
     }
 
     .modal-section {
@@ -122,7 +120,7 @@
 
     .modal-order h3 {
       font-size: 1.2rem;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       text-align: center;
     }
 
@@ -206,28 +204,150 @@
     }
 
     @media (max-width: 768px) {
-      .table-link {
-        flex: 0 1 calc(33.33% - 10px);
+      .modal-section label {
+        font-size: 14px;
+      }
+
+      .modal-section input,
+      .modal-section textarea {
+        font-size: 14px;
+        padding: 8px;
+      }
+
+      .flex.gap-4 button {
+        font-size: 14px;
+        padding: 10px;
       }
     }
 
-    @media (max-width: 768px) {
-      .table-link {
-        flex: 0 1 calc(33.33% - 10px);
-      }
-    }
-
+    /* mobile */
     @media (max-width: 480px) {
-      .table-link {
-        flex: 0 1 calc(33.33% - 10px);
+
+      .table-layout {
+        grid-template-columns: repeat(6, 2fr);
+        gap: 10px;
       }
 
+      .table-link .table {
+        height: 100px;
+        padding: 6px;
+      }
+
+      .table-link .table-number {
+        font-size: 12px;
+      }
+
+      .table-link .absolute {
+        font-size: 11px;
+      }
+
+      .modal-content {
+        width: 70%;
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 12px;
+      }
+
+      .modal-section {
+        margin-bottom: 8px;
+      }
+
+      .modal-section label {
+        font-size: 13px;
+      }
+
+      .modal-section input,
+      .modal-section textarea {
+        font-size: 13px;
+        padding: 6px;
+      }
+
+      .flex.gap-4 {
+        flex-direction: row;
+        gap: 6px;
+      }
+
+      .flex.gap-4 button {
+        flex: 1;
+        width: auto;
+        font-size: 13px;
+        padding: 3px;
+      }
+
+      .modal-content p.text-lg strong {
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      /* order */
+      #default-modal .relative {
+        width: 95%;
+        max-width: 360px;
+        height: 65vh;
+      }
+
+      #default-modal h3 {
+        font-size: 15px;
+        margin-top: 6px;
+        margin-left: 8px;
+      }
+
+      #orderSummary {
+        font-size: 12px;
+        padding: 7px;
+      }
+
+      #default-modal button {
+        font-size: 12px;
+        padding: 6px 12px;
+      }
+
+      #default-modal .flex.gap-4 {
+        gap: 6px;
+      }
+
+      /*payment*/
+      #paymentModal .bg-white {
+        width: 80%;
+        max-width: 300px;
+        padding: 12px;
+      }
+
+      #paymentModal h2 strong {
+        font-size: 17px;
+
+      }
+
+      #paymentModal button {
+        font-size: 14px;
+        padding: 8px 10px;
+      }
+
+      #paymentModal h2 {
+        font-size: 16px;
+      }
+
+      #paymentModal .flex button {
+        font-size: 14px;
+      }
+
+      #paymentModal #submitBtn {
+        font-size: 14px;
+        padding: 8px;
+      }
+
+      #paymentModal label,
+      #paymentModal input,
+      #paymentModal span {
+        font-size: 13px;
+      }
     }
 
     .main-menu-grid,
     .other-menu-grid {
       display: grid !important;
       grid-template-columns: repeat(3, 1fr) !important;
+
     }
 
     .menu-card img {
@@ -302,7 +422,7 @@
   <div id="tableModal" class="modal">
     <div class="modal-content">
       <span id="closeModal" class="close-modal text-end text-lg cursor-pointer">&times;</span>
-      <h3 class="mb-2 text-lg text-center"><strong>Please Enter Reservation Details</strong></h3>
+      <p class="mb-2 text-lg text-center"><strong>Please Enter Reservation Details</strong></p>
       <form id="reservationForm">
         <div class="modal-section">
           <label for="customerName">Customer</label>
@@ -465,7 +585,7 @@
       <a href="#" class="text-white mx-2"><i class="bi bi-twitter"></i></a>
       <a href="#" class="text-white mx-2"><i class="bi bi-envelope-fill"></i></a>
     </div>
-    <p class="mt-2">&copy; 2023 Jeongol Izakaya. All rights reserved.</p>
+    <p class="mt-2">&copy; 2025 Jeongol Izakaya. All rights reserved.</p>
   </footer>
 
   <div id="fly-animation-container"

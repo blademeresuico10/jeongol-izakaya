@@ -6,15 +6,12 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('feedback', function (Blueprint $table) {
             $table->id();
-            $table->text('feedback');
-            $table->text('name')->nullable();
+            $table->text('message');
+            $table->string('email');
             $table->timestamps();
         });
     }

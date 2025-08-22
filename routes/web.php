@@ -14,7 +14,7 @@ use App\Notifications\ReservationPaid;
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
 Route::post('/customer/reserve', [CustomerController::class, 'storeReservation'])->name('customer.reserve');
-
+Route::post('/customer/feedback', [CustomerController::class,'storeFeedback'])->name('customer.feedback');
 
 // Login routes
 Route::get('/login', [LoginController::class, 'index'])->name('login');

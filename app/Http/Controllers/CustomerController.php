@@ -205,4 +205,27 @@ class CustomerController extends Controller
             ], 500);
         }
     }
+
+    public function storeFeedback(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'message' => 'required|string|max:500',
+        ]);
+
+        try {
+            DB::table('feedback')->insert([
+                'email' => $validated['email'],
+                'message' => $validated['message'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return redirect()->back()->with('success', 'Feedback submitted successfully.');
+        } catch (\Exception $e) {
+            Log::error('Feedback Error: ' . $e->getMessage());
+
+            return redirect()->back()->with('error', 'Feedback submission failed. Please try again.');
+        }
+    }
 }

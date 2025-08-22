@@ -16,14 +16,14 @@
     <p class="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-7">
       Welcome to Jeongol Izakaya
     </p>
-    <button id="openLocation" class="mt-3 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition">
+    <button id="openLocation" class="mt-3 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition">
       Location
     </button>
   </header>
 
   <main class="flex-1">
     <a href="{{ route('customer.place_reservation') }}"
-      class="inline-block my-4 px-6 py-3 bg-orange-600 text-white font-bold rounded hover:bg-orange-600 transition">
+      class="inline-block my-4 px-6 py-3 bg-green-600 text-white font-bold rounded transition">
       Reserve Now!
     </a>
 
@@ -33,8 +33,7 @@
       <img src="" alt="Fusion" class="w-48 h-auto rounded bg-gray-200">
     </div>
 
-    <button id="openFeedback"
-      class="mt-8 mb-4 px-5 py-2 bg-red-600 text-white font-bold rounded hover:bg-red-700 transition">
+    <button id="openFeedback" class="mt-8 mb-4 px-5 py-2 bg-green-600 text-white font-bold rounded transition">
       Submit Feedback
     </button>
   </main>
@@ -52,22 +51,47 @@
     </div>
   </div>
 
-  <div id="feedbackModal" class="fixed inset-0 hidden bg-black bg-opacity-50 items-center justify-center p-4 z-50">
+  <div id="feedbackModal" class="fixed inset-0 hidden bg-black/50 items-center justify-center p-4 z-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
       <div class="flex justify-between items-center p-4 border-b">
         <h2 class="text-lg font-bold">Submit Feedback</h2>
         <button class="text-gray-500 hover:text-gray-800" onclick="closeModal('feedbackModal')">&times;</button>
       </div>
       <div class="p-4">
-        <form>
-          <input type="text" placeholder="Your feedback..."
-            class="w-full p-2 border rounded mb-3 focus:ring focus:ring-red-300">
-          <button type="submit"
-            class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition">Submit</button>
+        <form action="{{ route('customer.feedback') }}" method="POST">
+          @csrf
+
+          <label for="email" class="block mb-1 font-medium text-left">Email</label>
+          <input id="email" type="email" name="email" placeholder="example@example.com"
+            class="w-full p-2 border rounded mb-3 " required pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$">
+
+          <label for="message" class="block mb-1 font-medium text-left">Message</label>
+          <textarea id="message" name="message" placeholder="Your feedback..." class="w-full p-2 border rounded mb-3 "
+            rows="4" required></textarea>
+
+          <button type="submit" class="w-full px-4 py-2 bg-green-500 text-white font-bold rounded transition">
+            Submit
+          </button>
         </form>
       </div>
     </div>
   </div>
+
+  @if(session('success'))
+    <div id="successAlert"
+    class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50 opacity-100 transition-opacity duration-500">
+    {{ session('success') }}
+    </div>
+  @endif
+
+  @if(session('error'))
+    <div id="errorAlert"
+    class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-red-900 text-white px-4 py-2 rounded shadow-lg z-50 opacity-100 transition-opacity duration-500">
+    {{ session('error') }}
+    </div>
+  @endif
+
+
 
   <footer class="bg-gray-900 text-white py-4">
     <div class="max-w-7xl mx-auto px-4 text-center">
@@ -111,6 +135,20 @@
     }
     document.getElementById('openLocation').addEventListener('click', () => openModal('locationModal'));
     document.getElementById('openFeedback').addEventListener('click', () => openModal('feedbackModal'));
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const successAlert = document.getElementById('successAlert');
+      const errorAlert = document.getElementById('errorAlert');
+
+      [successAlert, errorAlert].forEach(alert => {
+        if (alert) {
+          setTimeout(() => {
+            alert.classList.add('opacity-0');
+            setTimeout(() => alert.remove(), 500);
+          }, 2000);
+        }
+      });
+    });
   </script>
 
 </body>
