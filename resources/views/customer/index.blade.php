@@ -1,3 +1,4 @@
+Try AI directly in your favorite apps … Use Gemini to generate drafts and refine content, plus get Gemini Pro with access to Google's next-gen AI for ₱1,100.00 ₱0 for 1 month
 <!DOCTYPE html>
 <html lang="en">
 
@@ -10,35 +11,116 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
-<body class="flex flex-col min-h-screen bg-gray-50 text-center font-sans">
+<body class="flex flex-col min-h-screen text-center font-sans relative">
 
-  <header class="p-4 font-bold flex flex-col items-center text-center">
-    <p class="text-2xl sm:text-3xl md:text-4xl font-extrabold mb-7">
-      Welcome to Jeongol Izakaya
-    </p>
-    <button id="openLocation" class="mt-3 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition">
-      Location
-    </button>
-  </header>
+  <!-- Background Cover -->
+  <div class="absolute inset-0">
+    <img src="{{ asset('assets/Front.jpg') }}" alt="Front Cover" class="w-full h-full object-cover">
+    <!-- Dark overlay -->
+    <div class="absolute inset-0 bg-black/60"></div>
+  </div>
 
-  <main class="flex-1">
-    <a href="{{ route('customer.place_reservation') }}"
-      class="inline-block my-4 px-6 py-3 bg-green-600 text-white font-bold rounded transition">
-      Reserve Now!
-    </a>
+  <!-- Page Content (on top of background) -->
+  <div class="relative z-10 flex flex-col min-h-screen text-white">
 
-    <div class="flex flex-wrap justify-center gap-4 px-4">
-      <img src="" alt="Samgyupsal" class="w-48 h-auto rounded bg-gray-200">
-      <img src="" alt="Hotpot" class="w-48 h-auto rounded bg-gray-200">
-      <img src="" alt="Fusion" class="w-48 h-auto rounded bg-gray-200">
-    </div>
+    <!-- Header -->
+    <header class="p-6 font-bold flex flex-col items-center text-center">
+      <p class="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 drop-shadow-lg">
+        Welcome to Jeongol Izakaya
+      </p>
+      <button id="openLocation" class="mt-3 px-6 py-3 bg-orange-600 text-white rounded hover:bg-orange-700 transition">
+        Location
+      </button>
+    </header>
 
-    <button id="openFeedback" class="mt-8 mb-4 px-5 py-2 bg-green-600 text-white font-bold rounded transition">
-      Submit Feedback
-    </button>
-  </main>
+    <!-- Main -->
+    <main class="flex-1 flex flex-col items-center justify-center">
+      <!-- Reserve Button -->
+      <a href="{{ route('customer.place_reservation') }}"
+        class="inline-block mb-4 px-8 py-4 bg-green-600 text-white font-bold rounded transition hover:bg-green-700">
+        Reserve Now!
+      </a>
 
-  <div id="locationModal" class="fixed inset-0 hidden bg-black/50 flex items-center justify-center p-4 z-50">
+      <!-- Section Title -->
+      <h2 class="text-2xl md:text-3xl font-semibold mb-6">OUR BEST SELLERS</h2>
+
+      <!-- Image Buttons -->
+      <div class="flex flex-col sm:flex-row gap-6 sm:gap-10 mb-6 w-full max-w-5xl justify-center">
+
+        <!-- Samgyupsal -->
+        <div class="flex flex-col items-center w-full sm:w-1/3">
+          <button onclick="toggleDetails('samgyup-details')" class="focus:outline-none">
+            <img src="{{ asset('assets/samgyup.png') }}" alt="Samgyupsal"
+              class="w-36 h-36 md:w-48 md:h-48 lg:w-56 lg:h-56 rounded-xl shadow-md hover:scale-110 transition">
+          </button>
+          <p class="mt-2 text-lg font-semibold">Samgyupsal</p>
+          <div id="samgyup-details"
+            class="max-h-0 overflow-hidden transition-all duration-500 ease-in-out mt-2 text-white text-sm">
+            Freshly grilled pork belly served with authentic Korean sides and dipping sauces.
+          </div>
+        </div>
+
+        <!-- Hotpot -->
+        <div class="flex flex-col items-center w-full sm:w-1/3">
+          <button onclick="toggleDetails('hotpot-details')" class="focus:outline-none">
+            <img src="{{ asset('assets/Hotpot.png') }}" alt="Hotpot"
+              class="w-36 h-36 md:w-48 md:h-48 lg:w-56 lg:h-56 rounded-xl shadow-md hover:scale-110 transition">
+          </button>
+          <p class="mt-2 text-lg font-semibold">Hotpot</p>
+          <div id="hotpot-details"
+            class="max-h-0 overflow-hidden transition-all duration-500 ease-in-out mt-2 text-white text-sm">
+            A hearty broth with fresh vegetables, meats, and noodles for the perfect hotpot experience.
+          </div>
+        </div>
+
+        <!-- Fusion -->
+        <div class="flex flex-col items-center w-full sm:w-1/3">
+          <button onclick="toggleDetails('fusion-details')" class="focus:outline-none">
+            <img src="{{ asset('assets/Fusion.png') }}" alt="Fusion"
+              class="w-36 h-36 md:w-48 md:h-48 lg:w-56 lg:h-56 rounded-xl shadow-md hover:scale-110 transition">
+          </button>
+          <p class="mt-2 text-lg font-semibold">Fusion</p>
+          <div id="fusion-details"
+            class="max-h-0 overflow-hidden transition-all duration-500 ease-in-out mt-2 text-white text-sm">
+            A delightful mix of Japanese and Korean flavors, crafted into unique fusion dishes.
+          </div>
+        </div>
+      </div>
+
+      <!-- Feedback Button -->
+      <button id="openFeedback"
+        class="mt-6 px-6 py-3 bg-green-600 text-white font-bold rounded transition hover:bg-green-700">
+        Submit Feedback
+      </button>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black/70 text-white py-4">
+      <div class="max-w-7xl mx-auto px-4 text-center">
+        <p class="mb-2 text-lg font-semibold">Contact us</p>
+        <div class="flex justify-center gap-4 mb-3">
+          <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" rel="noopener noreferrer"
+            class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition transform hover:scale-105">
+            <i class="fab fa-facebook-f text-lg"></i>
+          </a>
+          <a href="#" class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition transform hover:scale-105">
+            <i class="fab fa-instagram text-lg"></i>
+          </a>
+          <a href="#" class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition transform hover:scale-105">
+            <i class="fab fa-twitter text-lg"></i>
+          </a>
+          <a href="mailto:info@jeongolizakaya.com"
+            class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition transform hover:scale-105">
+            <i class="fas fa-envelope text-lg"></i>
+          </a>
+        </div>
+        <p class="text-sm">&copy; {{ date('Y') }} Jeongol Izakaya. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Location Modal -->
+  <div id="locationModal" class="fixed inset-0 hidden bg-black/70 flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl overflow-hidden">
       <div class="flex justify-between items-center p-4 border-b">
         <h2 class="text-lg font-bold">Our Location</h2>
@@ -51,7 +133,8 @@
     </div>
   </div>
 
-  <div id="feedbackModal" class="fixed inset-0 hidden bg-black/50 items-center justify-center p-4 z-50">
+  <!-- Feedback Modal -->
+  <div id="feedbackModal" class="fixed inset-0 hidden bg-black/70 items-center justify-center p-4 z-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-lg">
       <div class="flex justify-between items-center p-4 border-b">
         <h2 class="text-lg font-bold">Submit Feedback</h2>
@@ -60,10 +143,9 @@
       <div class="p-4">
         <form action="{{ route('customer.feedback') }}" method="POST">
           @csrf
-
           <label for="email" class="block mb-1 font-medium text-left">Email</label>
           <input id="email" type="email" name="email" placeholder="example@example.com"
-            class="w-full p-2 border rounded mb-3 " required pattern="^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$">
+            class="w-full p-2 border rounded mb-3 " required>
 
           <label for="message" class="block mb-1 font-medium text-left">Message</label>
           <textarea id="message" name="message" placeholder="Your feedback..." class="w-full p-2 border rounded mb-3 "
@@ -77,6 +159,7 @@
     </div>
   </div>
 
+  <!-- Alerts -->
   @if(session('success'))
     <div id="successAlert"
     class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50 opacity-100 transition-opacity duration-500">
@@ -91,40 +174,23 @@
     </div>
   @endif
 
-
-
-  <footer class="bg-gray-900 text-white py-4">
-    <div class="max-w-7xl mx-auto px-4 text-center">
-      <p class="mb-2 text-lg font-semibold">Contact us</p>
-
-      <div class="flex justify-center gap-4 mb-3">
-
-        <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" rel="noopener noreferrer"
-          aria-label="Facebook"
-          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
-          <i class="fab fa-facebook-f text-lg"></i>
-        </a>
-
-        <a href="#" aria-label="Instagram"
-          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
-          <i class="fab fa-instagram text-lg"></i>
-        </a>
-
-        <a href="#" aria-label="Twitter"
-          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
-          <i class="fab fa-twitter text-lg"></i>
-        </a>
-
-        <a href="mailto:info@jeongolizakaya.com" aria-label="Email"
-          class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition transform hover:scale-105">
-          <i class="fas fa-envelope text-lg"></i>
-        </a>
-      </div>
-      <p class="text-sm">&copy; {{ date('Y') }} Jeongol Izakaya. All rights reserved.</p>
-    </div>
-  </footer>
-
+  <!-- Scripts -->
   <script>
+    function toggleDetails(id) {
+      const allDetails = document.querySelectorAll('[id$="-details"]');
+      allDetails.forEach(div => {
+        if (div.id !== id) {
+          div.style.maxHeight = '0px';
+        }
+      });
+      const target = document.getElementById(id);
+      if (target.style.maxHeight && target.style.maxHeight !== '0px') {
+        target.style.maxHeight = '0px';
+      } else {
+        target.style.maxHeight = target.scrollHeight + 'px';
+      }
+    }
+
     function openModal(id) {
       document.getElementById(id).classList.remove('hidden');
       document.getElementById(id).classList.add('flex');
@@ -152,5 +218,4 @@
   </script>
 
 </body>
-
 </html>

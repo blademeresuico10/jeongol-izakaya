@@ -79,4 +79,6 @@ Route::middleware(['auth'])->group(function () {
     // Cashier Routes
     Route::get('/cashier/home', [CashierController::class, 'home'])->name('cashier.home');
     Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
+    Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
+    Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
 });

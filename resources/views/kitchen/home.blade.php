@@ -104,7 +104,6 @@
         <span class="ms-2 text-nowrap">Below 29kg</span>
       </div>
     </div>
-
     <button class="update-stock-btn ms-4" data-bs-toggle="modal" data-bs-target="#updateStockModal">
       Update Stock
     </button>

@@ -6,218 +6,149 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>Customer Orders</title>
-  @vite('resources/css/app.css')
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
   <link rel="shortcut icon" type="image/x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+
 </head>
 
-<style>
-  body {
-    background: #f9f9f9;
-  }
-
-  .back-button {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #0c6cc6;
-    color: white;
-    padding: 10px 15px;
-    border-radius: 5px;
-    text-decoration: none;
-    font-weight: bold;
-    z-index: 1000;
-  }
-
-  .back-button:hover {
-    background: blue;
-  }
-
-  thead th {
-    background-color: #0c6cc6;
-    color: white;
-    text-align: left;
-    padding: 12px;
-  }
-
-  .table-card {
-    display: none;
-    border: 1px solid #ccc;
-    border-radius: 0.5rem;
-    margin-bottom: 10px;
-    padding: 10px;
-    background-color: #fff;
-  }
-
-  .table-card p {
-    margin: 3px 0;
-  }
-
-  @media (max-width: 768px) {
-    .w-11/12 {
-      width: 95%;
-    }
-
-    table {
-      display: none;
-    }
-
-    .table-card {
-      display: block;
-    }
-
-    .back-button {
-      bottom: 15px;
-      right: 15px;
-      padding: 8px 12px;
-      font-size: 0.875rem;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .back-button {
-      bottom: 10px;
-      right: 10px;
-      padding: 6px 10px;
-      font-size: 0.75rem;
-    }
-  }
-</style>
-
-<body>
+<body class="bg-gray-100 min-h-screen font-sans">
   <div class="items-center mt-4 mb-3 text-center">
-    <h2 style="font-size: 2rem; font-weight: 700;">Customer Orders</h2>
+    <h2 class="text-3xl font-bold text-gray-800">Customer Orders</h2>
   </div>
 
+  <!-- Search -->
   <div class="flex justify-center mt-4 mb-4">
     <div class="flex items-center">
-      <input type="text" id="searchInput" placeholder="Search by customer name" class="form-control"
-        style="width: 350px;" />
+      <input type="text" id="searchInput" placeholder="Search by customer name"
+        class="border rounded-lg px-3 py-2 w-80 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none" />
     </div>
   </div>
 
-  <div class="w-full flex flex-col items-center mt-6">
-    @if ($groupedOrders->isEmpty())
-    <div class="alert alert-warning mb-3">No orders found for today.</div>
-    @endif
+  <div class="flex justify-center mb-4 px-6">
 
-    <div class="w-11/12 max-w-6xl bg-white rounded-2xl shadow-lg p-6">
-      <!-- Desktop Table -->
-      <div class="overflow-x-auto border rounded">
-        <table class="w-full table-fixed">
-          <thead class="bg-success text-white">
-            <tr>
-              <th>Customer Name</th>
-              <th>Table</th>
-              <th>Pax</th>
-              <th>Orders</th>
-              <th>Note</th>
-              <th>Modify</th>
+    <div class="border border-gray-200 rounded-lg shadow-md bg-white p-3 w-full max-w-6xl"
+      style="max-height:500px; overflow:auto;">
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse">
+          <thead>
+            <tr class="bg-green-600 text-white">
+              <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Customer Name</th>
+              <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Table</th>
+              <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Pax</th>
+              <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Orders</th>
+              <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Note</th>
+              <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Modify</th>
             </tr>
           </thead>
           <tbody>
             @foreach ($groupedOrders as $order)
-            <tr>
-              <td>{{ $order->customer_name }}</td>
-              <td>{{ $order->table_number }}</td>
-              <td>{{ $order->pax }}</td>
-              <td>{{ $order->orders }}</td>
-              <td>{{ $order->note }}</td>
-              <td>
-                <button type="button" data-reservation-id="{{ $order->reservation_id }}" data-pax="{{ $order->pax }}"
-                  data-orders="{{ $order->orders }}" data-note="{{ $order->note }}" onclick="openModal(this)"
-                  class="text-blue-600 hover:text-blue-800 font-semibold rounded-full bg-gray-200 p-1">
-                  <i class="fas fa-edit"></i>
-                </button>
-              </td>
-            </tr>
-            @endforeach
+        <tr class="hover:bg-gray-50">
+          <td class="border border-gray-300 px-4 py-3">{{ $order->customer_name }}</td>
+          <td class="border border-gray-300 px-4 py-3">{{ $order->table_number }}</td>
+          <td class="border border-gray-300 px-4 py-3">{{ $order->pax }}</td>
+          <td class="border border-gray-300 px-4 py-3">{{ $order->orders }}</td>
+          <td class="border border-gray-300 px-4 py-3">{{ $order->note }}</td>
+          <td class="border border-gray-300 px-4 py-3">
+          <button type="button" data-reservation-id="{{ $order->reservation_id }}" data-pax="{{ $order->pax }}"
+            data-orders="{{ $order->orders }}" data-note="{{ $order->note }}" onclick="openModal(this)"
+            class="bg-blue-100 text-blue-600 hover:bg-blue-200 px-2 py-1 rounded text-sm border border-blue-300">
+            <i class="fas fa-edit"></i>
+          </button>
+          </td>
+        </tr>
+      @endforeach
           </tbody>
         </table>
       </div>
-
-      <!-- Mobile Cards -->
-      @foreach ($groupedOrders as $order)
-      <div class="table-card">
-        <p><strong>Customer Name:</strong> {{ $order->customer_name }}</p>
-        <p><strong>Table:</strong> {{ $order->table_number }}</p>
-        <p><strong>Pax:</strong> {{ $order->pax }}</p>
-        <p><strong>Orders:</strong> {{ $order->orders }}</p>
-        <p><strong>Note:</strong> {{ $order->note }}</p>
-        <p>
-          <button type="button" data-reservation-id="{{ $order->reservation_id }}" data-pax="{{ $order->pax }}"
-            data-orders="{{ $order->orders }}" data-note="{{ $order->note }}" onclick="openModal(this)"
-            class="text-blue-600 hover:text-blue-800 font-semibold rounded-full bg-gray-200 p-1">
-            <i class="fas fa-edit"></i> Modify
-          </button>
-        </p>
-      </div>
-      @endforeach
     </div>
+
+  </div>
+
+  <!-- Mobile Cards -->
+  <div class="md:hidden px-4">
+    @foreach ($groupedOrders as $order)
+    <div class="border p-4 mb-3 bg-white shadow-sm">
+      <p><strong>Customer Name:</strong> {{ $order->customer_name }}</p>
+      <p><strong>Table:</strong> {{ $order->table_number }}</p>
+      <p><strong>Pax:</strong> {{ $order->pax }}</p>
+      <p><strong>Orders:</strong> {{ $order->orders }}</p>
+      <p><strong>Note:</strong> {{ $order->note }}</p>
+      <button type="button" data-reservation-id="{{ $order->reservation_id }}" data-pax="{{ $order->pax }}"
+      data-orders="{{ $order->orders }}" data-note="{{ $order->note }}" onclick="openModal(this)"
+      class="mt-2 bg-gray-200 text-blue-600 hover:text-blue-800 px-3 py-1 rounded-lg text-sm">
+      <i class="fas fa-edit"></i> Modify
+      </button>
+    </div>
+  @endforeach
   </div>
 
   <!-- Modal -->
-  <div id="crud-modal" tabindex="-1" aria-hidden="true"
-    class="hidden fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overflow-x-hidden p-4">
-    <div class="relative w-full max-w-md">
-      <div class="bg-white rounded-xl shadow-md overflow-hidden">
-        <div class="flex items-center justify-between px-5 py-4 border-b bg-green-600">
-          <h3 class="text-xlg font-semibold text-white">Modify Order Form</h3>
-          <button><i class="fas fa-times text-black" onclick="closeModal()"></i></button>
+  <div id="crud-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white rounded-xl shadow-md w-full max-w-md">
+      <div class="flex items-center justify-between px-5 py-3 border-b bg-green-600">
+        <h3 class="text-lg font-semibold text-white">Modify Order Form</h3>
+        <button onclick="closeModal()" class="text-white hover:text-gray-200">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form id="updateOrderForm" method="POST" action="{{ route('receptionist.updateOrder') }}"
+        class="px-5 py-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        @csrf
+        <input type="hidden" name="reservation_id" id="reservation_id">
+
+        <div>
+          <label for="pax" class="block text-sm font-medium">Pax</label>
+          <input type="number" name="pax" id="pax"
+            class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500" required>
         </div>
 
-        <form id="updateOrderForm" method="POST" action="{{ route('receptionist.updateOrder') }}"
-          class="px-5 py-4 overflow-y-auto max-h-[70vh]">
-          @csrf
-          <input type="hidden" name="reservation_id" id="reservation_id">
+        <div>
+          <label for="add_item" class="block text-sm font-medium">Add Order</label>
+          <select id="add_item" name="add_item"
+            class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
+            <option value="" disabled selected>Select an item</option>
+            @foreach ($menuItems as $item)
+        <option value="{{ $item->menu_item }}">{{ $item->menu_item }}</option>
+      @endforeach
+          </select>
+        </div>
 
-          <div class="grid gap-4 mb-4 grid-cols-2">
-            <div class="col-span-2 sm:col-span-1">
-              <label for="pax" class="block mb-2 text-sm font-medium text-black-900">Pax</label>
-              <input type="number" name="pax" id="pax" class="w-full p-2.5 text-sm text-gray-900 border border-black-300 rounded-lg"
-                required>
-            </div>
+        <div>
+          <p class="block text-sm font-medium">Orders</p>
+          <div id="ordersBox" class="w-full min-h-[3rem] p-2 border rounded-lg flex flex-wrap gap-2 bg-white"></div>
+          <input type="hidden" name="orders" id="ordersInput" required>
+        </div>
 
-            <div class="col-span-2 sm:col-span-1">
-              <label for="add_item" class="block mb-2 text-sm font-medium text-black-900">Add Order</label>
-              <select id="add_item" name="add_item" class="w-full p-2.5 text-sm text-gray-900 border border-black-300 rounded-lg">
-                <option value="" disabled selected>Select an item</option>
-                @foreach ($menuItems as $item)
-                <option value="{{ $item->menu_item }}">{{ $item->menu_item }}</option>
-                @endforeach
-              </select>
-            </div>
+        <div>
+          <label for="note" class="block text-sm font-medium">Note</label>
+          <textarea id="note" rows="3" name="note"
+            class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
 
-            <div class="col-span-2">
-              <p class="block mb-2 text-sm font-medium text-black-900">Orders</p>
-              <div id="ordersBox"
-                class="w-full min-h-[3rem] p-2.5 text-sm text-gray-900 border border-black-300 rounded-lg flex flex-wrap gap-2 bg-white">
-              </div>
-              <input type="hidden" name="orders" id="ordersInput" required>
-            </div>
-
-            <div class="col-span-2">
-              <label for="note" class="block mb-2 text-sm font-medium text-black-900">Note</label>
-              <textarea id="note" rows="3" name="note" class="w-full p-2.5 text-sm text-gray-900 border border-black-300 rounded-lg"></textarea>
-            </div>
-          </div>
-
-          <button type="submit"
-            class="w-full text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
-            <svg class="inline w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd"
-                d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                clip-rule="evenodd"></path>
-            </svg>
-            Update Order
-          </button>
-        </form>
-      </div>
+        <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium">
+          <i class="fas fa-save mr-1"></i> Update Order
+        </button>
+      </form>
     </div>
   </div>
 
-  <a class="back-button" href="{{ route('receptionist.home') }}">Back to main page</a>
+  <!-- Toast -->
+  <div id="toast"
+    class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-500">
+    <span id="toast-message"></span>
+  </div>
+
+  <!-- Back Button -->
+  <a class="fixed bottom-5 right-5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded z-50 transition-colors duration-200 
+           md:bottom-4 md:right-4 md:py-3 md:px-5
+           sm:bottom-3 sm:right-3 sm:py-2 sm:px-3 sm:text-sm
+           max-sm:bottom-2 max-sm:right-2 max-sm:py-1 max-sm:px-2 max-sm:text-xs"
+    href="{{ route('receptionist.home') }}">
+    Back to main page
+  </a>
 
   <script>
     function openModal(button) {
@@ -334,6 +265,20 @@
         })
         .catch(error => { console.error(error); alert('An error occurred while updating the reservation.'); });
     });
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      const msg = document.getElementById("toast-message");
+      msg.textContent = message;
+      toast.classList.remove("hidden", "opacity-0");
+      toast.classList.add("opacity-100");
+
+      setTimeout(() => {
+        toast.classList.remove("opacity-100");
+        toast.classList.add("opacity-0");
+        setTimeout(() => toast.classList.add("hidden"), 500);
+      }, 2000);
+    }
   </script>
 </body>
 

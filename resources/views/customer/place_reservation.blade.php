@@ -880,14 +880,14 @@
         }
       });
 
-      const selectedTime = elements.timeInput.value;
+      /* const selectedTime = elements.timeInput.value;
       if (selectedTime) {
         const [hours, minutes] = selectedTime.split(':').map(Number);
         if (hours < 11 || hours > 18 || (hours === 18 && minutes > 0)) {
           showMessageBox('Reservations are only allowed between 11:00 AM and 6:00 PM.', 'error');
           hasError = true;
         }
-      }
+      }*/
 
       const activeTab = document.querySelector(".tab-content:not(.hidden)");
       if (activeTab) {

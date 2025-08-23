@@ -4,127 +4,72 @@
 <head>
   <meta charset="UTF-8">
   <title>Kitchen</title>
-  @vite('resources/css/app.css')
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      background: #f9f9f9;
-    }
-
-    .back-button {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #dc3545;
-      color: white;
-      padding: 10px 15px;
-      border-radius: 5px;
-      text-decoration: none;
-      font-weight: bold;
-      z-index: 1000;
-    }
-
-    .back-button:hover {
-      background: #c82333;
-    }
-
-    thead th {
-      background-color: #28a745 !important;
-      color: #fff !important;
-    }
-
-    @media (max-width: 768px) {
-      .back-button {
-        bottom: 15px;
-        right: 15px;
-        padding: 8px 12px;
-        font-size: 0.875rem;
-      }
-
-      table {
-        font-size: 0.8rem;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .back-button {
-        bottom: 10px;
-        right: 10px;
-        padding: 6px 10px;
-        font-size: 0.75rem;
-      }
-
-      table {
-        font-size: 0.7rem;
-      }
-    }
-  </style>
 </head>
 
-<body>
+<body class="bg-gray-100 min-h-screen">
   <div class="reservation-section">
-    <div class="items-center mt-4 mb-3 text-center">
-      <h2 style="font-size: 2rem; font-weight: 700;">Reservations</h2>
+    <div class="flex items-center justify-center mt-4 mb-3">
+      <h2 class="text-3xl font-bold text-gray-800">Reservations</h2>
     </div>
 
     @php
     $reservationGroups = $reservations->groupBy('reservation_id');
-  @endphp
+    @endphp
 
-    <div class="d-flex justify-content-center mb-4">
-      @if ($reservationGroups->isEmpty())
-      <div class="alert alert-warning">No reservations found for today.</div>
-    @else
-      <div class="border rounded shadow bg-white p-3" style="max-height:500px; overflow:auto;">
-      <div class="table-responsive">
-        <table class="table table-bordered align-middle mb-0">
-        <thead class="table-success">
-          <tr>
-          <th>Table Number</th>
-          <th>No. of Pax</th>
-          <th>Orders</th>
-          <th>Quantity</th>
-          <th>Note</th>
-          <th>Order Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          @foreach ($reservationGroups as $reservationId => $group)
-          @php
-        $first = $group->first();
-        $orders = $group->map(function ($r) {
-        if (!$r->menu_item)
-        return null;
-        $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
-        return $r->quantity . 'x ' . $cleanName;
-        })->filter()->implode(', ');
+    <div class="flex justify-center mb-4 px-4">
+     
+        <div class="border border-gray-200 rounded-lg shadow-md bg-white p-3 w-full max-w-8xl" style="max-height:500px; overflow:auto;">
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse"> 
+              <thead>
+                <tr class="bg-green-600 text-white">
+                  <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Table Number</th>
+                  <th class="border border-gray-300 px-4 py-3 text-left font-semibold">No. of Pax</th>
+                  <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Orders</th>
+                  <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Quantity</th>
+                  <th class="border border-gray-300 px-4 py-3 text-left font-semibold">Order Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                @foreach ($reservationGroups as $reservationId => $group)
+                  @php
+                    $first = $group->first();
+                    $orders = $group->map(function ($r) {
+                      if (!$r->menu_item)
+                        return null;
+                      $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
+                      return $r->quantity . 'x ' . $cleanName;
+                    })->filter()->implode(', ');
 
-        $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
-        @endphp
-          <tr>
-          <td>{{ $first->table_number }}</td>
-          <td>{{ $first->pax }}</td>
-          <td>{{ $orders ?: 'No orders' }}</td>
-          <td>{{ $group->sum('quantity') }}</td>
-          <td>{{ $notes ?: 'None' }}</td>
-          <td>{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
-          </tr>
-      @endforeach
-        </tbody>
-        </table>
-      </div>
-      </div>
-
-    @endif
+                    $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
+                  @endphp
+                  <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-300 px-4 py-3">{{ $first->table_number }}</td>
+                    <td class="border border-gray-300 px-4 py-3">{{ $first->pax }}</td>
+                    <td class="border border-gray-300 px-4 py-3">{{ $orders ?: 'No orders' }}</td>
+                    <td class="border border-gray-300 px-4 py-3">{{ $group->sum('quantity') }}</td>
+                    <td class="border border-gray-300 px-4 py-3">{{ \Carbon\Carbon::parse($first->reservation_time)->format('h:i A') }}</td>
+                  </tr>
+                @endforeach
+              </tbody>
+            </table>
+          </div>
+        </div>
+     
     </div>
   </div>
 
-  <a class="back-button" href="{{ route('receptionist.home') }}">
+  <!-- Back Button -->
+  <a class="fixed bottom-5 right-5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded z-50 transition-colors duration-200 
+           md:bottom-4 md:right-4 md:py-3 md:px-5
+           sm:bottom-3 sm:right-3 sm:py-2 sm:px-3 sm:text-sm
+           max-sm:bottom-2 max-sm:right-2 max-sm:py-1 max-sm:px-2 max-sm:text-xs" 
+     href="{{ route('receptionist.home') }}">
     Back to main page
   </a>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

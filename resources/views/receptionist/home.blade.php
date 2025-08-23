@@ -62,7 +62,6 @@
             {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
           </span>
         </button>
-
         <!-- User Dropdown -->
         <div id="userMenu" class="hidden absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
           <div class="px-4 py-3 border-b">
@@ -70,8 +69,12 @@
             <p class="text-xs text-gray-500">{{ Auth::user()->role }}</p>
           </div>
 
-          <a href="javascript:void(0)" id="notifBtn"
-            class="block px-4 py-2 hover:bg-gray-100 relative">Notifications</a>
+          <a href="javascript:void(0)" id="notifBtn" class="block px-4 py-2 hover:bg-gray-100 relative">
+            <span id="notifBadge"
+              class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
+              style="{{ auth()->user()?->unreadNotifications->count() ? '' : 'display:none;' }}">
+              {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
+            </span>Notifications</a>
 
           <form method="POST" action="{{ route('logout') }}">
             @csrf
@@ -160,7 +163,7 @@
   </div>
 
   <div class="bottom-buttons">
-    <a class="view-button" href="{{ route('receptionist.view_kitchen') }}">View Kitchen</a>
+    <a class="view-button" href="{{ route('receptionist.reservations') }}">View Reservations</a>
     <a class="view-button" href="{{ route('receptionist.modify_orders') }}">View Orders</a>
   </div>
 

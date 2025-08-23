@@ -176,10 +176,11 @@ class ReceptionistController extends Controller
         $reservations = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('order_details', 'reservations.id', '=', 'order_details.reservation_id')
+            ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
             ->leftJoin('menu', 'order_details.menu_id', '=', 'menu.id')
             ->select(
                 'reservations.id as reservation_id',
-                'reservations.table_number',
+                'tables.table_number',
                 'reservations.pax',
                 'reservations.reservation_time',
                 'customers.name as customer_name',
@@ -204,9 +205,10 @@ class ReceptionistController extends Controller
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('order_details', 'order_details.reservation_id', '=', 'reservations.id')
             ->leftJoin('menu', 'menu.id', '=', 'order_details.menu_id')
+            ->leftJoin('tables', 'tables.id', '=', 'reservations.table_id')
             ->select(
                 'reservations.id as reservation_id',
-                'reservations.table_number',
+                'tables.table_number',
                 'reservations.pax',
                 'reservations.reservation_time',
                 'reservations.status',

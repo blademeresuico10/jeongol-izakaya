@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Exception;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CashierController extends Controller
 {
@@ -26,7 +29,7 @@ class CashierController extends Controller
         $orders = DB::table('order_details')
             ->whereIn('reservation_id', $reservationIds)
             ->get()
-            ->groupBy('reservation_id'); 
+            ->groupBy('reservation_id');
 
         $occupiedTables = [];
         foreach ($tables as $table) {
@@ -48,6 +51,7 @@ class CashierController extends Controller
                 $table->current_orders = [];
             }
         }
+
         $menuPricesMap = [];
         foreach ($menuItems as $item) {
             $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
@@ -64,6 +68,7 @@ class CashierController extends Controller
                 $menuPricesMap[$baseName]['dinner'] = $item->price;
             }
         }
+
         $groupedMenu = [];
         foreach ($menuItems as $item) {
             $groupedMenu[$item->category][] = $item;
@@ -81,14 +86,14 @@ class CashierController extends Controller
 
     public function getOrders($reservationId)
     {
-
         $reservation = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
             ->where('reservations.id', $reservationId)
             ->select(
                 'reservations.id as reservation_id',
                 'customers.name as customer_name',
-                'reservations.pax'
+                'reservations.pax',
+                'reservations.customer_id'
             )
             ->first();
 
@@ -100,17 +105,188 @@ class CashierController extends Controller
             ->join('menu', 'order_details.menu_id', '=', 'menu.id')
             ->where('order_details.reservation_id', $reservationId)
             ->select(
+                'order_details.id as order_detail_id',
                 'menu.menu_item as order_name',
                 'order_details.quantity',
-                'order_details.order_price as price'
+                'menu.price as price'
             )
             ->get();
 
         return response()->json([
             'reservation_id' => $reservation->reservation_id,
             'customer_name' => $reservation->customer_name,
+            'customer_id' => $reservation->customer_id,
             'pax' => $reservation->pax,
             'orders' => $orders
         ]);
+    }
+
+    public function processPayment(Request $request)
+    {
+        $request->validate([
+            'reservation_id' => 'required|integer|exists:reservations,id',
+            'customer_name' => 'required|string',
+            'total' => 'required|numeric|min:0',
+            'orders' => 'required|array|min:1',
+            'orders.*.order_detail_id' => 'required|integer',
+            'orders.*.order_name' => 'required|string',
+            'orders.*.quantity' => 'required|integer|min:1',
+            'orders.*.price' => 'required|numeric|min:0'
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $reservation = DB::table('reservations')
+                ->join('customers', 'reservations.customer_id', '=', 'customers.id')
+                ->where('reservations.id', $request->reservation_id)
+                ->select(
+                    'reservations.id as reservation_id',
+                    'reservations.customer_id',
+                    'customers.name as customer_name'
+                )
+                ->first();
+
+            if (!$reservation) {
+                throw new Exception('Reservation not found');
+            }
+
+            $subtotal = 0;
+            $totalDiscountAmount = 0;
+            $processedOrders = [];
+
+            foreach ($request->orders as $orderData) {
+                $itemSubtotal = $orderData['price'] * $orderData['quantity'];
+                $subtotal += $itemSubtotal;
+
+                $discountedPersons = $request->input("discounted_persons.{$orderData['order_detail_id']}", 0);
+                $discountPerPerson = 0;
+                $itemDiscountTotal = 0;
+
+                if ($discountedPersons > 0) {
+                    $perPersonCost = $itemSubtotal / $orderData['quantity'];
+                    $discountPerPerson = $perPersonCost * 0.20; 
+                    $itemDiscountTotal = $discountPerPerson * $discountedPersons;
+                    $totalDiscountAmount += $itemDiscountTotal;
+                }
+
+                $processedOrders[] = [
+                    'order_detail_id' => $orderData['order_detail_id'],
+                    'item_name' => $orderData['order_name'],
+                    'quantity' => $orderData['quantity'],
+                    'unit_price' => $orderData['price'],
+                    'item_subtotal' => $itemSubtotal,
+                    'discounted_persons' => $discountedPersons,
+                    'discount_per_person' => $discountPerPerson,
+                    'item_discount_total' => $itemDiscountTotal,
+                    'total_amount' => $itemSubtotal - $itemDiscountTotal
+                ];
+            }
+
+            $finalTotal = $subtotal - $totalDiscountAmount;
+
+            $transactionNo = 'TXN-' . date('Ymd') . '-' . str_pad(
+                DB::table('transactions')->whereDate('created_at', today())->count() + 1,
+                4,
+                '0',
+                STR_PAD_LEFT
+            );
+
+            $transactionId = DB::table('transactions')->insertGetId([
+                'subtotal' => $subtotal,
+                'discount_amount' => $totalDiscountAmount,
+                'total_amount' => $finalTotal,
+                'payment_method' => 'cash', 
+                'status' => 'completed',
+                'reservation_id' => $request->reservation_id,
+                'customer_id' => $reservation->customer_id,
+                'cashier_id' => Auth::id(),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+
+            foreach ($processedOrders as $order) {
+                DB::table('transaction_details')->insert([
+                    'transaction_id' => $transactionId,
+                    'order_detail_id' => $order['order_detail_id'],
+                    'item_name' => $order['item_name'],
+                    'quantity' => $order['quantity'],
+                    'unit_price' => $order['unit_price'],
+                    'item_subtotal' => $order['item_subtotal'],
+                    'discounted_persons' => $order['discounted_persons'],
+                    'discount_per_person' => $order['discount_per_person'],
+                    'item_discount_total' => $order['item_discount_total'],
+                    'total_amount' => $order['total_amount'],
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            DB::table('reservations')
+                ->where('id', $request->reservation_id)
+                ->update([
+                    'status' => 'Completed',
+                    'updated_at' => now()
+                ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payment processed successfully',
+                'transaction_no' => $transactionNo,
+                'transaction_id' => $transactionId,
+                'total_amount' => $finalTotal
+            ]);
+        } catch (Exception $e) {
+            DB::rollback();
+            Log::error('Payment processing failed: ' . $e->getMessage(), [
+                'reservation_id' => $request->reservation_id,
+                'error' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment processing failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     */
+    public function getTransactionReceipt($transactionId)
+    {
+        try {
+            $transaction = DB::table('transactions')
+                ->join('customers', 'transactions.customer_id', '=', 'customers.id')
+                ->join('users', 'transactions.cashier_id', '=', 'users.id')
+                ->where('transactions.id', $transactionId)
+                ->select(
+                    'transactions.*',
+                    'customers.name as customer_name',
+                    'users.name as cashier_name'
+                )
+                ->first();
+
+            if (!$transaction) {
+                return response()->json(['error' => 'Transaction not found'], 404);
+            }
+
+            $transactionDetails = DB::table('transaction_details')
+                ->where('transaction_id', $transactionId)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'transaction' => $transaction,
+                'details' => $transactionDetails
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve transaction receipt'
+            ], 500);
+        }
     }
 }
