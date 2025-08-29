@@ -8,6 +8,9 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Reservation;
+use Illuminate\Notifications\DatabaseNotification;
+use App\Models\User;
 
 class CashierController extends Controller
 {
@@ -18,11 +21,15 @@ class CashierController extends Controller
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
 
+        // Modified query to exclude reservations that have been paid for
         $reservations = DB::table('reservations')
-            ->whereDate('reservation_time', $now->toDateString())
-            ->where('reservation_time', '<=', $now)
-            ->where('reservation_end_time', '>=', $now)
-            ->where('status', 'Accepted')
+            ->leftJoin('transactions', 'reservations.id', '=', 'transactions.reservation_id')
+            ->whereDate('reservations.reservation_time', $now->toDateString())
+            ->where('reservations.reservation_time', '<=', $now)
+            ->where('reservations.reservation_end_time', '>=', $now)
+            ->where('reservations.status', 'Accepted')
+            ->whereNull('transactions.id') // Only get reservations without transactions (unpaid)
+            ->select('reservations.*') // Select only reservation columns
             ->get();
 
         $reservationIds = $reservations->pluck('id')->toArray();
@@ -44,7 +51,7 @@ class CashierController extends Controller
                     : $now->diffInSeconds($endTime);
 
                 $table->current_orders = $orders[$res->id] ?? [];
-                $occupiedTables[] = $table->id;
+                $occupiedTables[] = $table->table_number; // Changed from $table->id to $table->table_number
             } else {
                 $table->current_reservation_id = null;
                 $table->remaining_seconds = null;
@@ -143,6 +150,7 @@ class CashierController extends Controller
                 ->select(
                     'reservations.id as reservation_id',
                     'reservations.customer_id',
+                    'reservations.table_id',
                     'customers.name as customer_name'
                 )
                 ->first();
@@ -165,7 +173,7 @@ class CashierController extends Controller
 
                 if ($discountedPersons > 0) {
                     $perPersonCost = $itemSubtotal / $orderData['quantity'];
-                    $discountPerPerson = $perPersonCost * 0.20; 
+                    $discountPerPerson = $perPersonCost * 0.20;
                     $itemDiscountTotal = $discountPerPerson * $discountedPersons;
                     $totalDiscountAmount += $itemDiscountTotal;
                 }
@@ -196,7 +204,7 @@ class CashierController extends Controller
                 'subtotal' => $subtotal,
                 'discount_amount' => $totalDiscountAmount,
                 'total_amount' => $finalTotal,
-                'payment_method' => 'cash', 
+                'payment_method' => 'cash',
                 'status' => 'completed',
                 'reservation_id' => $request->reservation_id,
                 'customer_id' => $reservation->customer_id,
@@ -204,7 +212,6 @@ class CashierController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
-
 
             foreach ($processedOrders as $order) {
                 DB::table('transaction_details')->insert([
@@ -223,12 +230,18 @@ class CashierController extends Controller
                 ]);
             }
 
+            // Keep reservation status as 'Accepted' since payment is processed
+            // The transaction record itself indicates payment completion
             DB::table('reservations')
                 ->where('id', $request->reservation_id)
                 ->update([
-                    'status' => 'Completed',
+                    'status' => 'Accepted',
                     'updated_at' => now()
                 ]);
+
+            // Since there's no direct table occupancy field in your schema,
+            // we'll rely on the combination of reservation status and transaction existence
+            // to determine table availability in the controller
 
             DB::commit();
 
@@ -237,7 +250,8 @@ class CashierController extends Controller
                 'message' => 'Payment processed successfully',
                 'transaction_no' => $transactionNo,
                 'transaction_id' => $transactionId,
-                'total_amount' => $finalTotal
+                'total_amount' => $finalTotal,
+                'reservation_status' => 'Accepted' // Include this for frontend reference
             ]);
         } catch (Exception $e) {
             DB::rollback();
@@ -289,4 +303,114 @@ class CashierController extends Controller
             ], 500);
         }
     }
+
+    public function acceptReservation(Request $request, $id)
+    {
+        $reservation = Reservation::findOrFail($id);
+        $reservation->status = 'Accepted';
+        $reservation->save();
+
+        if ($reservation->payment) {
+            $reservation->payment->status = 'Paid';
+            $reservation->payment->save();
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Reservation accepted successfully.');
+    }
+
+
+    public function cancelReservation(Request $request, $id)
+    {
+        $reservation = Reservation::findOrFail($id);
+        $reservation->status = 'Rejected';
+        $reservation->save();
+
+        if ($reservation->payment) {
+            $reservation->payment->status = 'Rejected';
+            $reservation->payment->save();
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->back()->with('success', 'Reservation cancelled successfully.');
+    }
+
+    public function markNotificationRead(Request $request, $id)
+    {
+        DatabaseNotification::where('data->reservation_id', $id)
+            ->update(['read_at' => now()]);
+
+        return response()->json(['success' => true]);
+    }
+    public function showPayment($id)
+    {
+        try {
+            $reservation = Reservation::with('payment')->findOrFail($id);
+
+            return response()->json([
+                'advance_payment' => $reservation->advance_payment,
+                'payment' => $reservation->payment,
+                'reservation' => [
+                    'status' => $reservation->status,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function getNotifications()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['notifications' => [], 'unread_count' => 0]);
+        }
+
+        $allNotifications = DB::table('notifications')
+            ->where('notifiable_id', $user->id)
+            ->where('notifiable_type', 'App\\Models\\User')
+            ->where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $notifications = [];
+        $unreadCount = 0;
+
+        foreach ($allNotifications as $n) {
+            $data = json_decode($n->data, true) ?? [];
+
+            if ($n->read_at === null) {
+                $unreadCount++;
+            }
+
+            $reservation = \App\Models\Reservation::find($data['reservation_id'] ?? null);
+
+            $notifications[] = [
+                'id'             => $n->id,
+                'reservation_id' => $data['reservation_id'] ?? null,
+                'name'           => $n->data['customer_name']
+                    ?? $reservation?->customer?->name
+                    ?? 'Unknown',
+                'message'        => $data['message'] ?? '',
+                'time'           => \Carbon\Carbon::parse($n->created_at)->diffForHumans(),
+                'status'         => $reservation?->status ?? 'Pending',
+                'is_read'        => $n->read_at !== null,
+            ];
+        }
+
+        return response()->json([
+            'notifications' => $notifications,
+            'unread_count' => $unreadCount
+        ]);
+    }
+
+    
 }

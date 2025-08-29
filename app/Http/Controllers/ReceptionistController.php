@@ -91,7 +91,6 @@ class ReceptionistController extends Controller
             } else {
                 $customerId = $customer->id;
             }
-            // Reservation times
             $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
 
@@ -186,10 +185,11 @@ class ReceptionistController extends Controller
                 'customers.name as customer_name',
                 'menu.menu_item',
                 'order_details.quantity',
-                'order_details.notes'
-
+                'order_details.notes',
+                'reservations.status'
             )
             ->whereDate('reservations.reservation_time', $targetDate)
+            ->where('reservations.status', 'Accepted')
             ->orderBy('reservations.reservation_time')
             ->get();
 
@@ -328,33 +328,58 @@ class ReceptionistController extends Controller
         $reservation->save();
 
         if ($reservation->payment) {
-            $reservation->payment->status = 'approved';
+            $reservation->payment->status = 'Paid';
             $reservation->payment->save();
         }
 
-        $user = Auth::user();
-        if ($user) {
-            $user->notifications
-                ->where('data', '!=', null) 
-                ->each(function ($notification) use ($id) {
-                    
-                    $data = $notification->data;
-                    if (isset($data['reservation_id']) && $data['reservation_id'] == $id) {
-                        $notification->delete(); 
-                    }
-                });
-        }
         if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['success' => true]);
+            return response()->json([
+                'success'       => true,
+                'status'        => $reservation->status, 
+                'reservationId' => $reservation->id,
+                'unread_count'  => DB::table('notifications')
+                    ->where('notifiable_id', Auth::id())
+                    ->where('notifiable_type', 'App\\Models\\User')
+                    ->whereNull('read_at')
+                    ->count(),
+            ]);
         }
 
         return redirect()->back()->with('success', 'Reservation accepted successfully.');
     }
 
+    public function cancelReservation(Request $request, $id)
+    {
+        $reservation = Reservation::findOrFail($id);
+        $reservation->status = 'Rejected';
+        $reservation->save();
+
+        if ($reservation->payment) {
+            $reservation->payment->status = 'Rejected';
+            $reservation->payment->save();
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success'       => true,
+                'status'        => $reservation->status, 
+                'reservationId' => $reservation->id,
+                'unread_count'  => DB::table('notifications')
+                    ->where('notifiable_id', Auth::id())
+                    ->where('notifiable_type', 'App\\Models\\User')
+                    ->whereNull('read_at')
+                    ->count(),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Reservation cancelled successfully.');
+    }
+
+
     public function markNotificationRead(Request $request, $id)
     {
-        $notification = DatabaseNotification::findOrFail($id);
-        $notification->markAsRead();
+        DatabaseNotification::where('data->reservation_id', $id)
+            ->update(['read_at' => now()]);
 
         return response()->json(['success' => true]);
     }
@@ -366,6 +391,9 @@ class ReceptionistController extends Controller
             return response()->json([
                 'advance_payment' => $reservation->advance_payment,
                 'payment' => $reservation->payment,
+                'reservation' => [
+                    'status' => $reservation->status,
+                ]
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -373,5 +401,50 @@ class ReceptionistController extends Controller
                 'message' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function getNotifications()
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return response()->json(['notifications' => [], 'unread_count' => 0]);
+        }
+
+        $allNotifications = DB::table('notifications')
+            ->where('notifiable_id', $user->id)
+            ->where('notifiable_type', 'App\\Models\\User')
+            ->where('created_at', '>=', now()->subHours(24))
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $notifications = [];
+        $unreadCount = 0;
+
+        foreach ($allNotifications as $n) {
+            $data = json_decode($n->data, true) ?? [];
+
+            if ($n->read_at === null) {
+                $unreadCount++;
+            }
+
+            $reservation = \App\Models\Reservation::find($data['reservation_id'] ?? null);
+
+            $notifications[] = [
+                'id'             => $n->id,
+                'reservation_id' => $data['reservation_id'] ?? null,
+                'name'           => $n->data['customer_name']
+                    ?? $reservation?->customer?->name
+                    ?? 'Unknown',
+                'message'        => $data['message'] ?? '',
+                'time'           => \Carbon\Carbon::parse($n->created_at)->diffForHumans(),
+                'status'         => $reservation?->status ?? 'Pending',
+                'is_read'        => $n->read_at !== null,
+            ];
+        }
+
+        return response()->json([
+            'notifications' => $notifications,
+            'unread_count' => $unreadCount
+        ]);
     }
 }

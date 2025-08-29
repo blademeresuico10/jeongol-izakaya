@@ -9,7 +9,6 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Cashier</title>
     @vite('resources/css/app.css')
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <style>
         .menu-image-container {
@@ -206,260 +205,357 @@
             ring-color: #3b82f6;
             border-color: #3b82f6;
         }
+
+        /* Hide dropdown by default */
+        .dropdown-menu {
+            display: none;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
     </style>
 </head>
 
-<body x-data="{ openDropdown: false }" class="relative">
-
-    <!-- Dropdown -->
-    <div x-show="openDropdown" @click.away="openDropdown = false"
-        class="fixed top-16 right-14 w-48 bg-white border rounded shadow-lg z-[9999]">
-        <a href="#notifications" class="block px-4 py-2 hover:bg-gray-100">Notifications</a>
-        <a href="#transactions" class="block px-4 py-2 hover:bg-gray-100">Transactions</a>
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
-        </form>
-    </div>
-
-    <!-- Header -->
-    <header class="mt-2">
-        <div class="border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-7 relative">
-            <div class="flex items-center ml-5">
+<body class="relative">
+    <div class="relative">
+        <div class="mt-2 border-b border-gray-200 flex items-center justify-between px-7">
+            <div class="logo flex items-center ml-5">
                 <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-13 w-20" />
             </div>
-            <div>
-                <button @click="openDropdown = !openDropdown"
-                    class="inline-flex items-center justify-center p-4 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300">
-                    <svg class="w-8 h-8 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="currentColor"
-                        viewBox="0 0 20 20">
-                        <path
-                            d="M10 0a10 10 0 1 0 10 10A10.011 10.011 0 0 0 10 0Zm0 5a3 3 0 1 1 0 6 3 3 0 0 1 0-6Zm0 13a8.949 8.949 0 0 1-4.951-1.488A3.987 3.987 0 0 1 9 13h2a3.987 3.987 0 0 1 3.951 3.512A8.949 8.949 0 0 1 10 18Z" />
-                    </svg>
+            <div class="relative">
+                <!-- Profile Button -->
+                <button id="userBtn" class="relative flex items-center gap-2 p-4 hover:bg-gray-100 z-50">
+                    <div
+                        class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
+                        {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
+                    </div>
+                    <span id="notifBadgeProfile"
+                        class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
+                        style="display: {{ auth()->user()?->unreadNotifications->count() ? 'inline-flex' : 'none' }}">
+                        {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
+                    </span>
                 </button>
+
+                <div id="userMenu"
+                    class="hidden absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
+                    <div class="px-4 py-3 border-b">
+                        <p class="text-sm font-medium">{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}</p>
+                        <p class="text-xs text-gray-500">{{ Auth::user()->role }}</p>
+                    </div>
+
+                    <a href="javascript:void(0)" id="notifBtn" class="block px-4 py-2 hover:bg-gray-100 relative">
+                        Notifications
+                        <span id="notifBadgeLink"
+                            class="absolute top-1 right-1 hidden items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full">
+                            {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
+                        </span>
+
+                    </a>
+
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
+                    </form>
+                </div>
             </div>
+
+            <!-- Notifications Modal -->
+            <div id="notifModal"
+                class="hidden fixed inset-0 flex items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
+                <div class="w-full max-w-xs sm:w-80 bg-white rounded-lg shadow-lg">
+                    <div class="p-5 relative">
+                        <h2 class="text-lg font-semibold mb-4">Notifications</h2>
+                        <ul id="notifList" class="space-y-2 max-h-96 overflow-y-auto"></ul>
+                        <button id="notifClose" class="absolute top-2 right-2">✖</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="paymentModal"
+                class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-4">
+                <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto relative">
+                    <button id="closePaymentBtn"
+                        class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 font-bold text-xl">×</button>
+                    <h2 class="text-lg font-bold mb-4">Payment Details</h2>
+                    <div>
+                        <p>Transaction Receipt</p>
+                        <img id="paymentProof" src="" class="mb-2 w-full object-contain" style="display:none;">
+                    </div>
+                    <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
+                    <p><strong>Status:</strong> <span id="paymentStatus">N/A</span></p>
+                    <div id="actionButtons" class="mt-4 text-center flex justify-center gap-2">
+                        <form id="acceptForm" method="POST" class="inline">@csrf
+                            <button type="submit"
+                                class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Accept</button>
+                        </form>
+                        <button id="cancelReservationBtn" class="px-4 py-2 bg-red-500 text-white">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
-    </header>
 
-    <!-- Tables -->
-    <div id="dineInContent" class="flex justify-center m-5">
-        <div class="table-layout grid lg:grid-cols-5 gap-10 justify-center">
-            @foreach($tables as $table)
-                @php
-                    $isOccupied = in_array($table->table_number, $occupiedTables);
-                    $reservationId = $table->current_reservation_id ?? '';
-                @endphp
-                <div class="table-link cursor-pointer" data-reservation-id="{{ $reservationId }}"
-                    data-table-number="{{ $table->table_number }}" data-table-capacity="{{ $table->capacity }}"
-                    data-occupied="{{ $isOccupied ? '1' : '0' }}">
-                    <div class="flex justify-center mt-5">
-                        <div class="relative h-32 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center p-4">
-                            <div class="absolute mt-2 -top-1 px-3 bg-gray-200 text-black text-xs rounded-full shadow">
-                                {{ $table->capacity }} Pax
-                            </div>
+        <!-- Tables -->
+        <div id="dineInContent" class="flex justify-center m-5">
+            <div class="table-layout grid lg:grid-cols-5 gap-10 justify-center">
+                @foreach($tables as $table)
+                    @php
+                        $isOccupied = in_array($table->table_number, $occupiedTables);
+                        $reservationId = $table->current_reservation_id ?? '';
+                    @endphp
+                    <div class="table-link cursor-pointer" data-reservation-id="{{ $reservationId }}"
+                        data-table-number="{{ $table->table_number }}" data-table-capacity="{{ $table->capacity }}"
+                        data-occupied="{{ $isOccupied ? '1' : '0' }}">
+                        <div class="flex justify-center mt-5">
                             <div
-                                class="absolute top-0 left-1/4 -translate-x-1/2 -translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                            </div>
-                            <div
-                                class="absolute top-0 left-3/4 -translate-x-1/2 -translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                            </div>
-                            <div
-                                class="absolute bottom-0 left-1/4 -translate-x-1/2 translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                            </div>
-                            <div
-                                class="absolute bottom-0 left-3/4 -translate-x-1/2 translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                            </div>
-
-                            <div class="flex flex-col items-center mt-4">
-                                <div
-                                    class="w-16 h-16 rounded-full {{ $isOccupied ? 'bg-red-600' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
-                                    <span class="text-lg font-semibold">T-{{ $table->table_number }}</span>
+                                class="relative h-32 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center p-4">
+                                <div class="absolute mt-2 -top-1 px-3 bg-gray-200 text-black text-xs rounded-full shadow">
+                                    {{ $table->capacity }} Pax
                                 </div>
-                                @if($table->current_reservation_id && $table->remaining_seconds > 0)
-                                    <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-600" fill="none"
-                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round"
-                                                d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
-                                        </svg>
-                                        <span class="countdown" data-seconds="{{ $table->remaining_seconds }}">--:--:--</span>
-                                    </span>
-                                @else
-                                    <span class="text-green-600 font-medium mt-2">Available</span>
-                                @endif
+                                <div
+                                    class="absolute top-0 left-1/4 -translate-x-1/2 -translate-y-full w-14 h-2 bg-gray-200 rounded-full">
+                                </div>
+                                <div
+                                    class="absolute top-0 left-3/4 -translate-x-1/2 -translate-y-full w-14 h-2 bg-gray-200 rounded-full">
+                                </div>
+                                <div
+                                    class="absolute bottom-0 left-1/4 -translate-x-1/2 translate-y-full w-14 h-2 bg-gray-200 rounded-full">
+                                </div>
+                                <div
+                                    class="absolute bottom-0 left-3/4 -translate-x-1/2 translate-y-full w-14 h-2 bg-gray-200 rounded-full">
+                                </div>
+
+                                <div class="flex flex-col items-center mt-4">
+                                    <div
+                                        class="w-16 h-16 rounded-full {{ $isOccupied ? 'bg-red-600' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
+                                        <span class="text-lg font-semibold">T-{{ $table->table_number }}</span>
+                                    </div>
+                                    @if($table->current_reservation_id && $table->remaining_seconds > 0)
+                                        <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-600" fill="none"
+                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
+                                            </svg>
+                                            <span class="countdown"
+                                                data-seconds="{{ $table->remaining_seconds }}">--:--:--</span>
+                                        </span>
+                                    @else
+                                        <span class="text-green-600 font-medium mt-2">Available</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            @endforeach
+                @endforeach
+            </div>
         </div>
-    </div>
 
-    <div id="invoice-modal" aria-hidden="true"
-        class="hidden fixed top-0 left-0 right-0 z-50 flex justify-center items-center w-full h-screen bg-black bg-opacity-50">
-        <div class="relative p-4 w-full max-w-lg">
-            <div class="bg-white rounded-lg shadow">
-                <div class="flex justify-between items-center p-4 border-b">
-                    <h3 class="text-lg font-semibold text-gray-900">Invoice</h3>
-                    <button type="button"
-                        class="text-gray-500 hover:bg-gray-200 rounded-lg w-8 h-8 flex justify-center items-center"
-                        onclick="closeInvoiceModal()">✕</button>
+        <div id="invoice-modal" aria-hidden="true"
+            class="hidden fixed top-0 left-0 right-0 z-50 flex justify-center items-center w-full h-screen bg-black bg-opacity-50">
+            <div class="relative p-4 w-full max-w-lg">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="flex justify-between items-center p-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Invoice</h3>
+                        <button type="button"
+                            class="text-gray-500 hover:bg-gray-200 rounded-lg w-8 h-8 flex justify-center items-center"
+                            onclick="closeInvoiceModal()">✕</button>
 
-                </div>
-
-                <div class="p-4 space-y-4">
-                    <div>
-                        <p><strong>Date: </strong><span id="invoice_date"></span></p>
-                        <p><strong>Customer: </strong><span id="customer_name"></span></p>
                     </div>
 
-                    <div>
-                        <div class="flex justify-between font-semibold border-b pb-2">
-                            <span class="flex-1">Item</span>
-                            <span class="w-16 text-center">Qty</span>
-                            <span class="w-20 text-right">Price</span>
-                            <span class="w-24 text-right">Subtotal</span>
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <p><strong>Date: </strong><span id="invoice_date"></span></p>
+                            <p><strong>Customer: </strong><span id="customer_name"></span></p>
                         </div>
-                        <div id="invoiceItemsList" class="space-y-1"></div>
+
+                        <div>
+                            <div class="flex justify-between font-semibold border-b pb-2">
+                                <span class="flex-1">Item</span>
+                                <span class="w-16 text-center">Qty</span>
+                                <span class="w-20 text-right">Price</span>
+                                <span class="w-24 text-right">Subtotal</span>
+                            </div>
+                            <div id="invoiceItemsList" class="space-y-1"></div>
+                        </div>
+
+                        <div class="flex justify-end font-bold text-lg border-t pt-2">
+                            <span>Total: </span>
+                            <input type="text" id="total_price" name="total_price"
+                                class="bg-gray-200 border border-gray-300 text-sm rounded-lg w-32 p-2.5 ml-4 text-right"
+                                readonly />
+                        </div>
+                        <div class="flex justify-center space-x-2">
+                            <button onclick="openPrintInvoice()"
+                                class="w-60 py-2.5 text-black font-bold bg-gray-200 hover:bg-gray-300 rounded-lg">
+                                Print Invoice
+                            </button>
+                            <button onclick="openPaymentModal()"
+                                class="w-60 py-2.5 text-white font-bold bg-blue-600 hover:bg-blue-700 rounded-lg">
+                                Payment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="print_invoice" aria-hidden="true"
+            class="hidden fixed top-0 left-0 right-0 z-50 flex justify-center items-center w-full h-screen bg-black bg-opacity-50">
+            <div class="relative p-4 w-full max-w-lg">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="flex justify-between items-center p-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">Invoice</h3>
                     </div>
 
-                    <div class="flex justify-end font-bold text-lg border-t pt-2">
-                        <span>Total: </span>
-                        <input type="text" id="total_price" name="total_price"
-                            class="bg-gray-200 border border-gray-300 text-sm rounded-lg w-32 p-2.5 ml-4 text-right"
-                            readonly />
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <p><strong>Date: </strong><span id="print_invoice_date"></span></p>
+                            <p><strong>Customer: </strong><span id="print_customer_name"></span></p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between font-semibold border-b pb-2">
+                                <span class="flex-1">Item</span>
+                                <span class="w-16 text-center">Qty</span>
+                                <span class="w-20 text-right">Price</span>
+                                <span class="w-24 text-right">Subtotal</span>
+                            </div>
+                            <div id="print_invoiceItemsList" class="space-y-1"></div>
+                        </div>
+
+                        <div class="flex justify-end font-bold text-lg border-t pt-2">
+                            <span>Total: </span>
+                            <span id="print_total_price" class="ml-4 w-32 text-right"></span>
+                        </div>
                     </div>
-                    <div class="flex justify-center space-x-2">
-                        <button onclick="openPrintInvoice()"
-                            class="w-60 py-2.5 text-black font-bold bg-gray-200 hover:bg-gray-300 rounded-lg">
-                            Print Invoice
+                </div>
+            </div>
+        </div>
+
+        <div id="payment-modal" tabindex="-1" aria-hidden="true"
+            class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto h-full bg-black bg-opacity-50 flex justify-center items-center">
+            <div class="relative w-full max-w-3xl">
+                <div class="relative bg-white text-black rounded-lg shadow-lg h-[85vh] overflow-y-auto flex flex-col">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 rounded-t">
+                        <h3 class="text-2xl font-semibold">Payment</h3>
+                        <button type="button" onclick="closePaymentModal()"
+                            class="text-gray-500 hover:bg-gray-200 hover:text-black rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center">
+                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14"
+                                stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M1 1l6 6m0 0l6 6M7 7l6-6M7 7L1 13" />
+                            </svg>
                         </button>
-                        <button onclick="openPaymentModal()"
-                            class="w-60 py-2.5 text-white font-bold bg-blue-600 hover:bg-blue-700 rounded-lg">
-                            Payment
+                    </div>
+
+                    <div class="flex-1 px-6 py-5 space-y-6">
+                        <div class="border rounded-lg p-4 bg-gray-50">
+                            <h4 class="text-lg font-semibold mb-3">Customer Information</h4>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Customer Name</label>
+                                    <input type="text" id="payment_customer_name"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-1">Table Pax</label>
+                                    <input type="number" id="payment_pax"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="border rounded-lg p-4">
+                            <h4 class="text-lg font-semibold mb-3">Order Details</h4>
+                            <div class="flex justify-between font-semibold border-b pb-2 text-sm">
+                                <span class="flex-1">Item</span>
+                                <span class="w-16 text-center">Qty</span>
+                                <span class="w-20 text-right">Price</span>
+                                <span class="w-24 text-right">Subtotal</span>
+                                <span class="w-24 text-right">Mga Sabad</span>
+                            </div>
+                            <div id="paymentItemsList" class="space-y-1 text-sm mt-2"></div>
+                        </div>
+
+                        <div class="border rounded-lg p-4 bg-gray-50">
+                            <h4 class="text-lg font-semibold mb-3">Payment Summary</h4>
+                            <div class="space-y-2">
+                                <div class="flex justify-between text-lg font-bold border-t pt-2">
+                                    <span>Total Amount:</span>
+                                    <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="flex justify-end gap-4 px-6 py-4 border-t border-gray-200">
+                        <button onclick="closePaymentModal()" type="button"
+                            class="px-6 py-2.5 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-sm">
+                            Cancel
+                        </button>
+                        <button onclick="submitPayment()" type="button"
+                            class="px-8 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">
+                            Process Payment
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <div id="print_invoice" aria-hidden="true"
-        class="hidden fixed top-0 left-0 right-0 z-50 flex justify-center items-center w-full h-screen bg-black bg-opacity-50">
-        <div class="relative p-4 w-full max-w-lg">
-            <div class="bg-white rounded-lg shadow">
-                <div class="flex justify-between items-center p-4 border-b">
-                    <h3 class="text-lg font-semibold text-gray-900">Invoice</h3>
-                </div>
-
-                <div class="p-4 space-y-4">
-                    <div>
-                        <p><strong>Date: </strong><span id="print_invoice_date"></span></p>
-                        <p><strong>Customer: </strong><span id="print_customer_name"></span></p>
-                    </div>
-
-                    <div>
-                        <div class="flex justify-between font-semibold border-b pb-2">
-                            <span class="flex-1">Item</span>
-                            <span class="w-16 text-center">Qty</span>
-                            <span class="w-20 text-right">Price</span>
-                            <span class="w-24 text-right">Subtotal</span>
-                        </div>
-                        <div id="print_invoiceItemsList" class="space-y-1"></div>
-                    </div>
-
-                    <div class="flex justify-end font-bold text-lg border-t pt-2">
-                        <span>Total: </span>
-                        <span id="print_total_price" class="ml-4 w-32 text-right"></span>
-                    </div>
-                </div>
-            </div>
+        <!-- Toast -->
+        <div id="toast"
+            class="fixed top-5 right-5 z-50 hidden opacity-0 px-4 py-3 rounded-lg shadow-md bg-red-600 text-white text-sm font-medium transition-opacity duration-300 ease-in-out">
+            <span id="toast-message">Something went wrong</span>
         </div>
-    </div>
-
-    <div id="payment-modal" tabindex="-1" aria-hidden="true"
-        class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto h-full bg-black bg-opacity-50 flex justify-center items-center">
-        <div class="relative w-full max-w-3xl">
-            <div class="relative bg-white text-black rounded-lg shadow-lg h-[85vh] overflow-y-auto flex flex-col">
-                <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 rounded-t">
-                    <h3 class="text-2xl font-semibold">Payment</h3>
-                    <button type="button" onclick="closePaymentModal()"
-                        class="text-gray-500 hover:bg-gray-200 hover:text-black rounded-lg text-sm w-8 h-8 inline-flex justify-center items-center">
-                        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M1 1l6 6m0 0l6 6M7 7l6-6M7 7L1 13" />
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="flex-1 px-6 py-5 space-y-6">
-                    <div class="border rounded-lg p-4 bg-gray-50">
-                        <h4 class="text-lg font-semibold mb-3">Customer Information</h4>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Customer Name</label>
-                                <input type="text" id="payment_customer_name"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium mb-1">Table Pax</label>
-                                <input type="number" id="payment_pax"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="border rounded-lg p-4">
-                        <h4 class="text-lg font-semibold mb-3">Order Details</h4>
-                        <div class="flex justify-between font-semibold border-b pb-2 text-sm">
-                            <span class="flex-1">Item</span>
-                            <span class="w-16 text-center">Qty</span>
-                            <span class="w-20 text-right">Price</span>
-                            <span class="w-24 text-right">Subtotal</span>
-                            <span class="w-24 text-right">Mga Sabad</span>
-                        </div>
-                        <div id="paymentItemsList" class="space-y-1 text-sm mt-2"></div>
-                    </div>
-
-                    <div class="border rounded-lg p-4 bg-gray-50">
-                        <h4 class="text-lg font-semibold mb-3">Payment Summary</h4>
-                        <div class="space-y-2">
-                            <div class="flex justify-between text-lg font-bold border-t pt-2">
-                                <span>Total Amount:</span>
-                                <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Modal Footer -->
-                <div class="flex justify-end gap-4 px-6 py-4 border-t border-gray-200">
-                    <button onclick="closePaymentModal()" type="button"
-                        class="px-6 py-2.5 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-sm">
-                        Cancel
-                    </button>
-                    <button onclick="submitPayment()" type="button"
-                        class="px-8 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">
-                        Process Payment
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast -->
-    <div id="toast"
-        class="fixed top-5 right-5 z-50 hidden opacity-0 px-4 py-3 rounded-lg shadow-md bg-red-600 text-white text-sm font-medium transition-opacity duration-300 ease-in-out">
-        <span id="toast-message">Something went wrong</span>
-    </div>
 
 </body>
 
 <script>
     let currentReservationData = null;
 
+    // Dropdown functionality
+    function initializeDropdown() {
+        const dropdownToggle = document.getElementById('userBtn'); // match your button ID
+        const dropdownMenu = document.getElementById('userMenu');  // match your dropdown ID
+
+        if (!dropdownToggle || !dropdownMenu) {
+            console.error('Dropdown elements not found');
+            return;
+        }
+
+        // Toggle dropdown visibility
+        dropdownToggle.addEventListener('click', function (event) {
+            event.stopPropagation();
+            dropdownMenu.classList.toggle('hidden'); // Tailwind uses 'hidden'
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (event) {
+            if (!dropdownMenu.contains(event.target) && !dropdownToggle.contains(event.target)) {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+
+        // Close dropdown when clicking on links inside it
+        dropdownMenu.addEventListener('click', function (event) {
+            if (event.target.tagName === 'A') {
+                dropdownMenu.classList.add('hidden');
+            }
+        });
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
+        initializeDropdown();
+    });
+
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Initialize dropdown
+        initializeDropdown();
+
         const dineInContent = document.getElementById("dineInContent");
         const tabLinks = document.querySelectorAll(".tab-link");
         const invoiceModal = document.getElementById("invoice-modal");
@@ -682,6 +778,7 @@
         }
     }
 
+
     function calculateTotalDiscount() {
         const discountInputs = document.querySelectorAll('.discount-input');
         let totalDiscount = 0;
@@ -767,70 +864,188 @@
         invoiceModal.classList.remove("flex");
     }
 
-    function submitPayment() {
+    // Updated submitPayment function with immediate table update
+function submitPayment() {
+    if (!currentReservationData) {
+        showToast("No reservation data available", "error");
+        return;
+    }
 
-        if (!currentReservationData) {
-            showToast("No reservation data available", "error");
+    const totalText = document.getElementById("payment_total").textContent;
+    const total = parseFloat(totalText.replace('₱', '').replace(',', ''));
+
+    const discountInputs = document.querySelectorAll('.discount-input');
+    const discountedPersons = {};
+
+    discountInputs.forEach((input, index) => {
+        const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
+        const discountValue = parseInt(input.value) || 0;
+
+        if (discountValue > 0 && orderDetailId) {
+            discountedPersons[orderDetailId] = discountValue;
+        }
+    });
+
+    const paymentData = {
+        reservation_id: currentReservationData.reservation_id,
+        customer_name: currentReservationData.customer_name,
+        total: total,
+        orders: currentReservationData.orders,
+        discounted_persons: discountedPersons
+    };
+
+    const submitBtn = event.target;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Processing...";
+
+    fetch('/process-payment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify(paymentData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Update table status immediately
+            updateTableStatusAfterPayment(currentReservationData.reservation_id);
+            
+            showToast("Payment processed successfully!", "success");
+            closePaymentModal();
+            closeInvoiceModal();
+            
+            // Shorter delay before reload to show immediate feedback
+            setTimeout(() => { location.reload(); }, 800);
+        } else {
+            showToast(data.message || "Payment processing failed", "error");
+        }
+    })
+    .catch(error => {
+        console.error('Payment error:', error);
+        showToast("Payment processing failed. Please try again.", "error");
+    })
+    .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Process Payment";
+    });
+}
+
+// New function to update table status immediately after payment
+function updateTableStatusAfterPayment(reservationId) {
+    // Find the table element with this reservation ID
+    const tableElement = document.querySelector(`[data-reservation-id="${reservationId}"]`);
+    
+    if (tableElement) {
+        // Update the table's visual status
+        const tableCircle = tableElement.querySelector('.w-16.h-16.rounded-full');
+        const statusText = tableElement.querySelector('.text-red-600, .text-green-600');
+        const countdownElement = tableElement.querySelector('.countdown');
+        
+        if (tableCircle) {
+            tableCircle.classList.remove('bg-red-600');
+            tableCircle.classList.add('bg-green-600');
+        }
+        
+        if (statusText) {
+            statusText.textContent = 'Available';
+            statusText.classList.remove('text-red-600');
+            statusText.classList.add('text-green-600');
+        }
+        
+        // Hide countdown if present
+        if (countdownElement && countdownElement.parentElement) {
+            countdownElement.parentElement.style.display = 'none';
+        }
+        
+        // Update data attributes
+        tableElement.setAttribute('data-occupied', '0');
+        tableElement.setAttribute('data-reservation-id', '');
+        
+        // Remove any pulsing animations
+        tableElement.classList.remove('table-occupied');
+        tableElement.classList.add('table-available');
+    }
+}
+
+// Updated table click handler to prevent clicks on recently processed tables
+function updateTableClickHandler() {
+    const dineInContent = document.getElementById("dineInContent");
+    
+    dineInContent.addEventListener("click", function (event) {
+        const table = event.target.closest(".table-link");
+        if (!table) return;
+
+        const reservationId = table.getAttribute("data-reservation-id");
+        const isOccupied = table.getAttribute("data-occupied") === "1";
+
+        // Prevent interaction if table was recently processed
+        if (table.classList.contains('processing')) {
+            showToast("Please wait, table status is being updated...", "info");
             return;
         }
 
-        const totalText = document.getElementById("payment_total").textContent;
-        const total = parseFloat(totalText.replace('₱', '').replace(',', ''));
+        if (isOccupied && reservationId) {
+            // Add processing class to prevent multiple clicks
+            table.classList.add('processing');
+            
+            // Remove processing class after a delay
+            setTimeout(() => {
+                table.classList.remove('processing');
+            }, 3000);
 
-        const discountInputs = document.querySelectorAll('.discount-input');
-        const discountedPersons = {};
+            invoiceItemsList.innerHTML = '';
+            totalPriceInput.value = formatCurrency(0);
 
-        discountInputs.forEach((input, index) => {
-            const orderDetailId = currentReservationData.orders[index].order_detail_id;
-            const discountValue = parseInt(input.value) || 0;
-            if (discountValue > 0) {
-                discountedPersons[orderDetailId] = discountValue;
-            }
-        });
-        const paymentData = {
-            reservation_id: currentReservationData.reservation_id,
-            customer_name: currentReservationData.customer_name,
-            total: total,
-            orders: currentReservationData.orders,
-            discounted_persons: discountedPersons
-        };
+            fetch(`/orders/${reservationId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data) return;
 
-        const submitBtn = event.target;
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Processing...";
+                    currentReservationData = data;
+                    customerNameSpan.textContent = data.customer_name || "N/A";
+                    let total = 0;
 
-        fetch('/process-payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify(paymentData)
+                    data.orders.forEach(order => {
+                        const price = parseFloat(order.price);
+                        const qty = parseInt(order.quantity);
+                        const subtotal = price * qty;
+                        total += subtotal;
 
-        })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast("Done!", "success");
-                    closePaymentModal();
-                    document.getElementById("invoice-modal").classList.add("hidden");
-                    document.getElementById("invoice-modal").classList.remove("flex");
-                    setTimeout(() => { location.reload(); }, 1500);
-                } else {
-                    showToast(data.message || "Payment processing failed", "error");
-                }
-            })
-            .catch(error => {
-                console.error('Payment error:', error);
-                showToast("Payment processing failed. Please try again.", "error");
-            })
-            .finally(() => {
-                submitBtn.disabled = false;
-                submitBtn.textContent = "Process Payment";
-            });
-    }
+                        const orderLine = document.createElement("div");
+                        orderLine.classList.add("flex", "justify-between", "items-center", "py-1", "border-b", "border-gray-100");
+                        orderLine.innerHTML = `
+                            <span class="flex-1">${order.order_name}</span>
+                            <span class="w-16 text-center">${qty}</span>
+                            <span class="w-20 text-right">${formatCurrency(price)}</span>
+                            <span class="w-24 text-right">${formatCurrency(subtotal)}</span>
+                        `;
+                        invoiceItemsList.appendChild(orderLine);
+                    });
 
-    function displayPaymentItems() {
+                    totalPriceInput.value = formatCurrency(total);
+                    invoiceModal.classList.remove("hidden");
+                    invoiceModal.classList.add("flex");
+                })
+                .catch(() => { 
+                    showToast("Failed to load invoice data.", "error"); 
+                    table.classList.remove('processing');
+                });
+        } else {
+            showToast("Table is not occupied.", "info");
+        }
+    });
+}
+
+    function displayPaymentItemsComplete() {
         if (!currentReservationData) return;
 
         const paymentItemsList = document.getElementById("paymentItemsList");
@@ -906,8 +1121,200 @@
             summarySection.appendChild(discountSection);
         }
     }
-</script>
 
+    const userBtn = document.getElementById('userBtn');
+    const userMenu = document.getElementById('userMenu');
+    const notifBtn = document.getElementById('notifBtn');
+    const notifModal = document.getElementById('notifModal');
+    const notifClose = document.getElementById('notifClose');
+
+    const badgeProfile = document.getElementById('notifBadgeProfile');
+    const badgeLink = document.getElementById('notifBadgeLink');
+    const notifList = document.getElementById('notifList');
+
+    userBtn.addEventListener('click', e => { e.stopPropagation(); userMenu.classList.toggle('hidden'); });
+    userMenu.addEventListener('click', e => e.stopPropagation());
+    document.addEventListener('click', () => userMenu.classList.add('hidden'));
+
+    notifBtn.addEventListener('click', e => { e.stopPropagation(); notifModal.classList.remove('hidden'); });
+    notifClose.addEventListener('click', () => notifModal.classList.add('hidden'));
+    notifModal.addEventListener('click', () => notifModal.classList.add('hidden'));
+    notifModal.querySelector('div').addEventListener('click', e => e.stopPropagation());
+
+
+    function fetchNotifications() {
+        fetch('/receptionist/notifications')
+            .then(res => res.json())
+            .then(data => {
+                let notifications = data.notifications ?? [];
+                const unreadCount = data.unread_count ?? 0;
+
+                const pendingCount = notifications.filter(n => n.status === "Pending").length;
+
+                [badgeProfile, badgeLink].forEach(b => {
+                    b.textContent = pendingCount;  
+                    b.style.display = pendingCount ? 'inline-flex' : 'none';
+                });
+
+                if (!notifications.length) {
+                    notifList.innerHTML = `<li class="no-notifs p-3 text-center text-gray-500">No notifications</li>`;
+                    return;
+                }
+
+                notifList.innerHTML = '';
+
+                notifications.sort((a, b) => {
+                    const order = { "Pending": 1, "Accepted": 2, "Rejected": 3 };
+                    return (order[a.status] || 4) - (order[b.status] || 4);
+                });
+
+                notifications.forEach(n => {
+                    const li = document.createElement('li');
+                    li.className = 'p-3 bg-gray-100 rounded cursor-pointer mb-2';
+                    li.dataset.reservationId = n.reservation_id;
+                    li.onclick = () => openNotifModal(n.reservation_id);
+
+                    let badgeClass = "bg-gray-300 text-gray-700";
+                    if (n.status === "Accepted") badgeClass = "bg-green-100 text-green-700";
+                    else if (n.status === "Rejected") badgeClass = "bg-red-100 text-red-700";
+
+                    li.innerHTML = `
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium">${n.name}</p>
+              <p class="text-xs text-gray-500">${n.message}</p>
+              <p class="text-xs text-gray-400 mt-1">${n.time}</p>
+            </div>
+            <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">
+              ${n.status}
+            </span>
+          </div>
+        `;
+
+                    notifList.appendChild(li);
+                });
+            })
+            .catch(err => console.error(err));
+    }
+
+    setInterval(fetchNotifications, 3000);
+    fetchNotifications();
+
+    const paymentModal = document.getElementById('paymentModal');
+    const acceptForm = document.getElementById('acceptForm');
+    let reservationId = null;
+
+    acceptForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!reservationId) return;
+
+        fetch(acceptForm.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    paymentModal.classList.add('hidden');
+
+                    [badgeProfile, badgeLink].forEach(b => {
+                        b.textContent = data.unread_count;
+                        b.style.display = data.unread_count ? 'inline-flex' : 'none';
+                    });
+
+                    const li = notifList.querySelector(`[data-reservation-id="${data.reservationId}"]`);
+                    if (li) {
+                        li.querySelector('span').textContent = data.status;
+                        li.querySelector('span').className = `px-2 py-1 text-xs font-semibold rounded-full ${data.status === "Accepted" ? "bg-green-100 text-green-700" :
+                            data.status === "Rejected" ? "bg-red-100 text-red-700" : "bg-gray-300 text-gray-700"
+                            }`;
+                    }
+
+                    reservationId = null;
+                } else {
+                    alert(data.message || 'Failed to accept reservation');
+                }
+            })
+            .catch(err => { console.error(err); alert('Server error'); });
+    });
+
+    function openNotifModal(id) {
+        reservationId = id;
+        paymentModal.classList.remove('hidden');
+        acceptForm.action = `/receptionist/accept-reservation/${id}`;
+
+        fetch(`/payments/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                const paymentProof = document.getElementById('paymentProof');
+                const requiredAmount = document.getElementById('requiredAmount');
+                const paymentStatus = document.getElementById('paymentStatus');
+                const actionButtons = document.getElementById('actionButtons');
+
+                if (data.payment?.proof_path) {
+                    paymentProof.src = `/storage/${data.payment.proof_path}`;
+                    paymentProof.style.display = 'block';
+                } else {
+                    paymentProof.style.display = 'none';
+                }
+
+                requiredAmount.textContent = data.advance_payment ?? 'N/A';
+                paymentStatus.textContent = data.payment?.status ?? 'N/A';
+
+                const reservationStatus = data.reservation?.status;
+                if (reservationStatus === "Accepted" || reservationStatus === "Rejected") {
+                    actionButtons.style.display = "none";
+                } else {
+                    actionButtons.style.display = "flex";
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching payment details:', err);
+                alert('Failed to load payment details.');
+            });
+    }
+
+    closePaymentBtn.addEventListener('click', () => {
+        paymentModal.classList.add('hidden');
+    });
+
+    const cancelReservationBtn = document.getElementById('cancelReservationBtn');
+
+    cancelReservationBtn.addEventListener('click', () => {
+        if (!reservationId) return;
+
+        fetch(`/receptionist/cancel-reservation/${reservationId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    paymentModal.classList.add('hidden');
+
+                    const li = notifList.querySelector(`[data-reservation-id="${reservationId}"]`);
+                    if (li) {
+                        li.classList.add("text-red-600", "font-semibold");
+                        li.innerHTML += `<p class="text-xs">Cancelled</p>`;
+                    }
+
+                    reservationId = null;
+                } else {
+                    alert(data.message || "Failed to cancel reservation");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Server error while cancelling reservation.");
+            });
+    });
+</script>
 
 </body>
 

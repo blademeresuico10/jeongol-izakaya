@@ -14,7 +14,7 @@ use App\Notifications\ReservationPaid;
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
 Route::post('/customer/reserve', [CustomerController::class, 'storeReservation'])->name('customer.reserve');
-Route::post('/customer/feedback', [CustomerController::class,'storeFeedback'])->name('customer.feedback');
+Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])->name('customer.feedback');
 
 // Login routes
 Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -26,6 +26,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Admin Routes
     Route::get('/home', [AdminController::class, 'index'])->name('admin.home');
+    Route::get('/home/dashboard/sales-data', [AdminController::class, 'salesData'])->name('home.dashboard.sales-data');
+    Route::get('/home/dashboard-data', [AdminController::class, 'dashboardData'])->name('home.dashboard.data');
+
+
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/adduser', [AdminController::class, 'adduser'])->name('admin.adduser');
     Route::post('/users/storeUser', [AdminController::class, 'storeUser'])->name('storeUser');
@@ -53,6 +57,10 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/updatestock/{id}', [AdminController::class, 'updateStock'])->name('admin.updateStock');
     Route::get('/editstock/{id}', [AdminController::class, 'editStock'])->name('admin.editstock');
 
+    // Admin feedback view
+    Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
+
+
     // Reports view
     Route::get('/reports', function () {
         return view('admin.reports');
@@ -68,8 +76,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/receptionist/update-order', [ReceptionistController::class, 'updateOrder'])->name('receptionist.updateOrder');
     Route::post('/receptionist/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])->name('receptionist.accept-reservation');
     Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment']);
-    Route::post('/receptionist/notifications/{id}/read', [ReceptionistController::class, 'markNotificationRead'])
-        ->name('receptionist.notifications.read');
+    Route::get('/receptionist/notifications', [ReceptionistController::class, 'getNotifications'])->name('receptionist.notifications');
+    Route::post('/receptionist/cancel-reservation/{id}', [ReceptionistController::class, 'cancelReservation'])->name('receptionist.cancel-reservation');
 
     // Kitchen Routes
     Route::get('/kitchen/home', [KitchenController::class, 'home'])->name('kitchen.home');
@@ -81,4 +89,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
     Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
     Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
+    Route::post('/cashier/accept-reservation/{id}', [CashierController::class, 'acceptReservation'])->name('cashier.accept-reservation');
+    Route::get('/payments/{id}', [CashierController::class, 'showPayment']);
+    Route::get('/cashier/notifications', [CashierController::class, 'getNotifications'])->name('cashier.notifications');
+    Route::post('/cashier/cancel-reservation/{id}', [CashierController::class, 'cancelReservation'])->name('cashier.cancel-reservation');
 });

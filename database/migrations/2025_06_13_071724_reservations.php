@@ -8,18 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-            Schema::create('reservations', function (Blueprint $reservations) {
-                $reservations->id();
-                $reservations->unsignedInteger('pax');
-                $reservations->dateTime('reservation_time');
-                $reservations->dateTime('reservation_end_time');
-                $reservations->decimal('advance_payment', 8, 2)->nullable()->default(0.00);
-                $reservations->foreignId('table_id')->constrained('tables')->onDelete('cascade');
-                $reservations->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('cascade');
-                $reservations->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-                $reservations->string('status')->default('Pending');
-                $reservations->timestamps(); 
-            });
+        Schema::create('reservations', function (Blueprint $reservations) {
+            $reservations->id();
+            $reservations->unsignedInteger('pax');
+            $reservations->dateTime('reservation_time');
+            $reservations->dateTime('reservation_end_time');
+            $reservations->decimal('advance_payment', 8, 2)->nullable()->default(0.00);
+            $reservations->foreignId('table_id')->constrained('tables')->onDelete('cascade');
+            $reservations->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('cascade');
+            $reservations->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+            $reservations->enum('status', ['Pending', 'Accepted', 'Rejected'])->default('Pending');
+            $reservations->timestamps();
+        });
     }
 
     public function down(): void

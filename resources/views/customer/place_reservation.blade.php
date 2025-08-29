@@ -581,7 +581,7 @@
       <a href="#" class="text-white mx-2"><i class="bi bi-twitter"></i></a>
       <a href="#" class="text-white mx-2"><i class="bi bi-envelope-fill"></i></a>
     </div>
-    <p class="mt-2">&copy; 2023 Jeongol Izakaya. All rights reserved.</p>
+    <p class="mt-2">&copy; 2025 Jeongol Izakaya. All rights reserved.</p>
   </footer>
 
   <div id="fly-animation-container"

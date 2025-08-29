@@ -145,7 +145,7 @@
       $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
       @endphp
         <tr>
-        <td>{{ $first->table_number }}</td>
+        <td>{{ $first->table_id }}</td>
         <td>{{ $first->pax }}</td>
         <td>{{ $orders ?: 'No orders' }}</td>
         <td>{{ $notes ?: 'None' }}</td>

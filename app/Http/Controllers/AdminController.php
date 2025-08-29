@@ -6,13 +6,113 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-
+use App\Models\feedback;
+use App\Models\Transaction;
+use Carbon\Carbon;
+use App\Models\customers;
+use App\Models\Stock;
 
 class AdminController extends Controller
 {
     public function index()
     {
-        return view('admin.home');
+        $todayRevenue = transaction::whereDate('created_at', Carbon::today())
+            ->sum('total_amount');
+
+        $todayCustomers = customers::whereDate('created_at', Carbon::today())
+            ->count();
+
+        $stocks = Stock::all();
+
+        $totalStock = $stocks->sum('stock_quantity');
+
+        $stockChartData = $stocks->map(function ($stock) use ($totalStock) {
+            return [
+                'name' => $stock->stock_name,
+                'quantity' => $stock->stock_quantity,
+                'percentage' => $totalStock > 0 ? ($stock->stock_quantity / $totalStock) * 100 : 0
+            ];
+        });
+
+        // Only today's transactions
+        $transactions = Transaction::with('cashier')
+            ->whereDate('created_at', Carbon::today())
+            ->latest()
+            ->get();
+
+        $weeklyRevenue = Transaction::whereBetween('created_at', [
+            Carbon::now()->startOfWeek(),
+            Carbon::now()->endOfWeek()
+        ])
+            ->get()
+            ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('D'))
+            ->map(fn($day) => $day->sum('total_amount'));
+
+        $monthlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+            ->get()
+            ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('M'))
+            ->map(fn($month) => $month->sum('total_amount'));
+
+        $quarterlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+            ->get()
+            ->groupBy(fn($t) => 'Q' . ceil(Carbon::parse($t->created_at)->month / 3))
+            ->map(fn($q) => $q->sum('total_amount'));
+
+        return view('admin.home', compact(
+            'todayRevenue',
+            'todayCustomers',
+            'totalStock',
+            'stockChartData',
+            'transactions',
+            'weeklyRevenue',
+            'monthlyRevenue',
+            'quarterlyRevenue'
+        ));
+    }
+
+    public function dashboardData()
+    {
+        $todayRevenue = transaction::whereDate('created_at', Carbon::today())->sum('total_amount');
+        $todayCustomers = customers::whereDate('created_at', Carbon::today())->count();
+        $stocks = Stock::all();
+
+        $totalStock = $stocks->sum('stock_quantity');
+        $stockChartData = $stocks->map(fn($s) => [
+            'name' => $s->stock_name,
+            'quantity' => $s->stock_quantity,
+            'percentage' => $totalStock > 0 ? ($s->stock_quantity / $totalStock) * 100 : 0
+        ]);
+
+        return response()->json([
+            'revenue' => $todayRevenue,
+            'customers' => $todayCustomers,
+            'stock' => $stockChartData
+        ]);
+    }
+    public function salesData()
+    {
+        $weeklyRevenue = Transaction::whereBetween('created_at', [
+            Carbon::now()->startOfWeek(),
+            Carbon::now()->endOfWeek()
+        ])->get()->groupBy(function ($t) {
+            return Carbon::parse($t->created_at)->format('D'); // Mon, Tue, ...
+        })->map(fn($day) => $day->sum('total_amount'));
+
+        $monthlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+            ->get()
+            ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('M'))
+            ->map(fn($month) => $month->sum('total_amount'));
+
+        $quarterlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+            ->get()
+            ->groupBy(fn($t) => 'Q' . ceil(Carbon::parse($t->created_at)->month / 3))
+            ->map(fn($q) => $q->sum('total_amount'));
+
+        return response()->json([
+            'weekly' => $weeklyRevenue,
+            'monthly' => $monthlyRevenue,
+            'quarterly' => $quarterlyRevenue,
+        ]);
     }
 
     public function users()
@@ -227,5 +327,11 @@ class AdminController extends Controller
     {
 
         return view('admin.reports');
+    }
+
+    public function feedback()
+    {
+        $feedbacks = DB::table('feedback')->get();
+        return view('admin.feedback', compact('feedbacks'));
     }
 }

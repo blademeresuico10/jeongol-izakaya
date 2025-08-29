@@ -1,6 +1,6 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const toggleButton = document.getElementById("sidebarToggleTop"); // Correct ID
+        const toggleButton = document.getElementById("sidebarToggleTop"); 
         const sidebar = document.getElementById("accordionSidebar");
 
         toggleButton.addEventListener("click", function () {

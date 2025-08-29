@@ -152,7 +152,7 @@ class CustomerController extends Controller
                     'method'          => $request->input('payment_method'),
                     'ref_no'          => $request->input('ref_no'),
                     'proof_path'      => $proofPath,
-                    'status'          => 'pending',
+                    'status'          => 'Pending',
                     'created_at'      => now(),
                     'updated_at'      => now(),
                 ]);
@@ -175,10 +175,9 @@ class CustomerController extends Controller
                 ]);
             }
 
-            foreach (\App\Models\User::where('role', 'receptionist')->get() as $user) {
+            foreach (\App\Models\User::whereIn('role', ['receptionist', 'cashier'])->get() as $user) {
                 $user->notify(new \App\Notifications\ReservationPaid($reservation));
             }
-
             return response()->json([
                 'success' => true,
                 'message' => 'Reservation placed successfully',
@@ -191,7 +190,6 @@ class CustomerController extends Controller
             ], 500);
         }
     }
-
 
     public function storeFeedback(Request $request)
     {
