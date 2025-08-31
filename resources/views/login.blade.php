@@ -123,12 +123,10 @@
         <div class="login-box">
             <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo">
 
-            {{-- Display session error --}}
             @if(session('error'))
                 <div class="error-message">{{ session('error') }}</div>
             @endif
 
-            {{-- Display validation errors --}}
             @if ($errors->any())
                 <div class="error-message">
                     <ul style="margin: 0; padding-left: 1rem;">

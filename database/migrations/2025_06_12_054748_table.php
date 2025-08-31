@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
+
     public function up(): void
     {
         Schema::create('tables', function (Blueprint $table) {
@@ -14,13 +14,9 @@ return new class extends Migration
             $table->integer('table_number')->unique();
             $table->integer('capacity');
             $table->timestamps();
-            
-        });  
-        
+            $table->softDeletes();
+        });
     }
 
-    public function down(): void
-    {
-       
-    }
+    public function down(): void {}
 };

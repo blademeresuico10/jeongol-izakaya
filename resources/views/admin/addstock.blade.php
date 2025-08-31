@@ -1,16 +1,11 @@
 @include('admin.layouts.header')
 
-<!-- Sidebar -->
 @include('admin.layouts.sidebar')
-<!-- End of Sidebar -->
 
-<!-- Content Wrapper -->
 <div id="content-wrapper" class="d-flex flex-column">
 
-    <!-- Main Content -->
     <div id="content">
 
-        <!-- Topbar -->
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <div class="d-sm-flex align-items-center justify-content-between">
                 <h1 class="h3 mb-0 text-gray-800">Add Stock</h1>

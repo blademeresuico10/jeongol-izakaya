@@ -1,13 +1,9 @@
 @include('admin.layouts.header')
 
-<!-- Sidebar -->
 @include('admin.layouts.sidebar')
-<!-- End of Sidebar -->
 
-<!-- Content Wrapper -->
 <div id="content-wrapper" class="d-flex flex-column">
 
-    <!-- Main Content -->
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <div class="d-sm-flex align-items-center justify-content-between">
@@ -33,7 +29,6 @@
                                     </ul>
                                 </div>
                             @endif
-
                             <form action="{{ route('storeTable') }}" method="POST">
                                 @csrf
 

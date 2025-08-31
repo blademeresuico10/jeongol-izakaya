@@ -12,16 +12,13 @@
 
 <body class="flex flex-col min-h-screen font-sans relative text-white">
 
-  <!-- Background -->
   <div class="absolute inset-0">
     <img src="{{ asset('assets/Front.jpg') }}" alt="Front Cover" class="w-full h-full object-cover">
     <div class="absolute inset-0 bg-black/60"></div>
   </div>
 
-  <!-- Page Content -->
   <div class="relative z-10 flex flex-col min-h-screen">
 
-    <!-- Header -->
     <header class="p-6 flex flex-col items-center text-center">
       <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold mb-6 drop-shadow-lg">
         Welcome to Jeongol Izakaya
@@ -32,22 +29,17 @@
       </button>
     </header>
 
-    <!-- Main Content -->
     <main class="flex-1 flex flex-col items-center justify-center">
 
-      <!-- Reserve Button -->
       <a href="{{ route('customer.place_reservation') }}"
         class="mb-4 px-8 py-4 bg-green-600 rounded font-bold hover:bg-green-700 transition">
         Reserve Now!
       </a>
 
-      <!-- Section Title -->
       <h2 class="text-2xl md:text-3xl font-semibold mb-6">OUR BEST SELLERS</h2>
 
-      <!-- Best Seller Items -->
       <div class="flex flex-col sm:flex-row gap-6 sm:gap-10 mb-6 w-full max-w-5xl justify-center">
 
-        <!-- Samgyupsal -->
         <div class="flex flex-col items-center w-full sm:w-1/3">
           <button onclick="toggleDetails('samgyup-details')" >
             <img src="{{ asset('assets/samgyup.png') }}" alt="Samgyupsal"
@@ -60,7 +52,6 @@
           </div>
         </div>
 
-        <!-- Hotpot -->
         <div class="flex flex-col items-center w-full sm:w-1/3">
           <button onclick="toggleDetails('hotpot-details')" >
             <img src="{{ asset('assets/Hotpot.png') }}" alt="Hotpot"
@@ -73,7 +64,6 @@
           </div>
         </div>
 
-        <!-- Fusion -->
         <div class="flex flex-col items-center w-full sm:w-1/3">
           <button onclick="toggleDetails('fusion-details')" >
             <img src="{{ asset('assets/Fusion.png') }}" alt="Fusion"
@@ -88,7 +78,6 @@
 
       </div>
 
-      <!-- Feedback Button -->
       <button id="openFeedback"
         class="mt-6 px-6 py-3 bg-green-600 rounded font-bold hover:bg-green-700 transition">
         Submit Feedback

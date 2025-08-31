@@ -43,7 +43,6 @@ class ReceptionistController extends Controller
             }
         }
 
-        //  Group items by category
         $groupedMenu = [];
         foreach ($menuItems as $item) {
             $groupedMenu[$item->category][] = $item;
@@ -374,8 +373,6 @@ class ReceptionistController extends Controller
 
         return redirect()->back()->with('success', 'Reservation cancelled successfully.');
     }
-
-
     public function markNotificationRead(Request $request, $id)
     {
         DatabaseNotification::where('data->reservation_id', $id)
@@ -441,7 +438,6 @@ class ReceptionistController extends Controller
                 'is_read'        => $n->read_at !== null,
             ];
         }
-
         return response()->json([
             'notifications' => $notifications,
             'unread_count' => $unreadCount

@@ -6,8 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
-
-
 class KitchenController extends Controller
 {
     public function home()
@@ -33,8 +31,6 @@ class KitchenController extends Controller
             ->whereDate('reservations.reservation_time', $today)
             ->orderBy('reservations.reservation_time')
             ->get();
-
-
         return view('kitchen.home', compact('stock', 'reservations'));
     }
 

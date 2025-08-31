@@ -49,14 +49,12 @@
             <span>Stock</span>
         </a>
     </li>
-<!-- Sidebar - Reports
     <li @class(['nav-item', 'active' => request()->is('reports*')])>
         <a class="nav-link" href="{{ url('reports') }}">
             <i class="fas fa-file-alt"></i>
-            <span>Report and Analytics</span>
+            <span>Reports</span>
         </a>
     </li>
--->
     <li class="nav-item">
         <a class="nav-link" href="{{ route('admin.feedback') }}">
             <i class="fas fa-comments"></i>

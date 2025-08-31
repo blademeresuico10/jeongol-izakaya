@@ -21,15 +21,14 @@ class CashierController extends Controller
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
 
-        // Modified query to exclude reservations that have been paid for
         $reservations = DB::table('reservations')
             ->leftJoin('transactions', 'reservations.id', '=', 'transactions.reservation_id')
             ->whereDate('reservations.reservation_time', $now->toDateString())
             ->where('reservations.reservation_time', '<=', $now)
             ->where('reservations.reservation_end_time', '>=', $now)
             ->where('reservations.status', 'Accepted')
-            ->whereNull('transactions.id') // Only get reservations without transactions (unpaid)
-            ->select('reservations.*') // Select only reservation columns
+            ->whereNull('transactions.id') 
+            ->select('reservations.*')
             ->get();
 
         $reservationIds = $reservations->pluck('id')->toArray();
@@ -51,7 +50,7 @@ class CashierController extends Controller
                     : $now->diffInSeconds($endTime);
 
                 $table->current_orders = $orders[$res->id] ?? [];
-                $occupiedTables[] = $table->table_number; // Changed from $table->id to $table->table_number
+                $occupiedTables[] = $table->table_number; 
             } else {
                 $table->current_reservation_id = null;
                 $table->remaining_seconds = null;
@@ -230,18 +229,12 @@ class CashierController extends Controller
                 ]);
             }
 
-            // Keep reservation status as 'Accepted' since payment is processed
-            // The transaction record itself indicates payment completion
             DB::table('reservations')
                 ->where('id', $request->reservation_id)
                 ->update([
                     'status' => 'Accepted',
                     'updated_at' => now()
                 ]);
-
-            // Since there's no direct table occupancy field in your schema,
-            // we'll rely on the combination of reservation status and transaction existence
-            // to determine table availability in the controller
 
             DB::commit();
 
@@ -267,8 +260,6 @@ class CashierController extends Controller
         }
     }
 
-    /**
-     */
     public function getTransactionReceipt($transactionId)
     {
         try {

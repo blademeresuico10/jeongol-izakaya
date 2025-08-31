@@ -474,7 +474,7 @@
                                 <span class="w-16 text-center">Qty</span>
                                 <span class="w-20 text-right">Price</span>
                                 <span class="w-24 text-right">Subtotal</span>
-                                <span class="w-24 text-right">Mga Sabad</span>
+                                <span class="w-24 text-right">Discounts</span>
                             </div>
                             <div id="paymentItemsList" class="space-y-1 text-sm mt-2"></div>
                         </div>
@@ -760,7 +760,7 @@
         <h5 class="font-semibold text-gray-700 mb-2">DISCOUNTED PERSON TO PAY:</h5>
         <div id="discount_items_breakdown" class="space-y-1 mb-3"></div>
         <div class="flex justify-between text-lg font-bold text-green-600 border-b pb-2">
-            <span>Mga Sabad:</span>
+            <span>Discounts:</span>
             <span id="discount_person_total" class="font-mono">₱0.00</span>
         </div>
     `;
@@ -1104,7 +1104,7 @@ function updateTableClickHandler() {
         <h5 class="font-semibold text-gray-700 mb-2">DISCOUNTED PERSON TO PAY:</h5>
         <div id="discount_items_breakdown" class="space-y-1 mb-3"></div>
         <div class="flex justify-between text-lg font-bold text-green-600 border-b pb-2">
-            <span>Mga Sabad:</span>
+            <span>Discounts:</span>
             <span id="discount_person_total" class="font-mono">₱0.00</span>
         </div>
     `;

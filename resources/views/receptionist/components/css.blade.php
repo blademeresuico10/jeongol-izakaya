@@ -106,7 +106,6 @@
     grid-template-columns: repeat(3, 1fr) !important;
   }
 
-  /* Image size */
   .menu-card img {
     height: 90px !important;
     width: 100% !important;
@@ -114,7 +113,6 @@
 
   }
 
-  /* Reduce spacing if needed */
   .menu-card h5 {
     font-size: 12px;
   }
@@ -213,8 +211,6 @@
     margin-top: 5px;
   }
 
-  
-
   .table {
     display: flex;
     flex-direction: column;
@@ -226,6 +222,5 @@
     font-weight: bold;
     margin-bottom: 5px;
   }
-
   
 </style>

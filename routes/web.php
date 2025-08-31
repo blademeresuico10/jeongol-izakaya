@@ -42,6 +42,9 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/menu_management/storeMenu', [AdminController::class, 'storeMenu'])->name('storeMenu');
     Route::get('/editmenu/{id}', [AdminController::class, 'editMenu'])->name('admin.editmenu');
     Route::put('/updatemenu/{id}', [AdminController::class, 'updateMenu'])->name('admin.updatemenu');
+    Route::delete('/deletemenu/{id}', [AdminController::class, 'deleteMenu'])->name('admin.deleteMenu');
+    Route::patch('/restoremenu/{id}', [AdminController::class, 'restoreMenu'])->name('admin.restoreMenu');
+    Route::delete('/forcedeletemenu/{id}', [AdminController::class, 'forceDeleteMenu'])->name('admin.forceDeleteMenu');
 
     // Admin table management
     Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
@@ -49,22 +52,29 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/table_management/storeTable', [AdminController::class, 'storeTable'])->name('storeTable');
     Route::get('/edittable/{id}', [AdminController::class, 'editTable'])->name('admin.edittable');
     Route::put('/updatetable/{id}', [AdminController::class, 'updateTable'])->name('admin.updatetable');
+    Route::delete('/deletetable/{id}', [AdminController::class, 'deleteTable'])->name('admin.deleteTable');
+    Route::patch('/restoretable/{id}', [AdminController::class, 'restoreTable'])->name('admin.restoreTable');
+    Route::delete('/forcedeletetable/{id}', [AdminController::class, 'forceDeleteTable'])->name('admin.forceDeleteTable');
 
     // Admin stock management
     Route::get('/stock_management', [AdminController::class, 'stock_management'])->name('admin.stock_management');
-    Route::get('/addstock', [AdminController::class, 'addStock'])->name('admin.addstock');
+    Route::post('/addstock', [AdminController::class, 'addStock'])->name('admin.addstock');
     Route::post('/stock_management/storeStock', [AdminController::class, 'storeStock'])->name('admin.storeStock');
-    Route::put('/updatestock/{id}', [AdminController::class, 'updateStock'])->name('admin.updateStock');
     Route::get('/editstock/{id}', [AdminController::class, 'editStock'])->name('admin.editstock');
+    Route::put('/updatestock/{id}', [AdminController::class, 'updateStock'])->name('admin.updateStock');
+    Route::delete('/deletestock/{id}', [AdminController::class, 'deleteStock'])->name('admin.deleteStock');
+    Route::patch('/restorestock/{id}', [AdminController::class, 'restoreStock'])->name('admin.restoreStock');
+    Route::delete('/forcedeletestock/{id}', [AdminController::class, 'forceDeleteStock'])->name('admin.forceDeleteStock');
 
     // Admin feedback view
     Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
 
 
     // Reports view
-    Route::get('/reports', function () {
-        return view('admin.reports');
-    })->name('admin.reports');
+    Route::get('/reports', [AdminController::class, 'reports'])->name('admin.reports');
+
+    // Export routes
+    Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');
 
     // Receptionist Routes
     Route::get('/receptionist/home', [ReceptionistController::class, 'home'])->name('receptionist.home');

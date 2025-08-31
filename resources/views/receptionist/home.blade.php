@@ -49,7 +49,6 @@
         <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-13 w-20" />
       </div>
       <div class="relative">
-        <!-- Profile Button -->
         <button id="userBtn" class="relative flex items-center gap-2 p-4 hover:bg-gray-100 z-50">
           <div class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
             {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
@@ -83,7 +82,6 @@
         </div>
       </div>
 
-      <!-- Notifications Modal -->
       <div id="notifModal"
         class="hidden fixed inset-0 flex items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
         <div class="w-full max-w-xs sm:w-80 bg-white rounded-lg shadow-lg">
@@ -385,8 +383,6 @@
           .catch(err => { console.error(err); alert('Server error'); });
       });
 
-
-
       function openNotifModal(id) {
         reservationId = id;
         paymentModal.classList.remove('hidden');
@@ -422,7 +418,6 @@
             alert('Failed to load payment details.');
           });
       }
-
 
       closePaymentBtn.addEventListener('click', () => {
         paymentModal.classList.add('hidden');

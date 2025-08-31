@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
+
     public function up(): void
     {
         Schema::create('menu', function (Blueprint $menu) {
@@ -16,7 +16,7 @@ return new class extends Migration
             $menu->string('image')->nullable();
             $menu->string('category')->nullable();
             $menu->timestamps();
-            
+            $menu->softDeletes();
         });
     }
 

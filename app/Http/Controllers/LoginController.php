@@ -14,8 +14,6 @@ class LoginController extends Controller
 
         return view('login'); 
     }
-
-
     public function login(Request $request)
     {
         $request->validate([
@@ -29,7 +27,6 @@ class LoginController extends Controller
             
         Auth::login($user); 
         $request->session()->regenerate(); 
-
             
             if ($user->role === 'admin') {
                 return redirect()->route('admin.home');

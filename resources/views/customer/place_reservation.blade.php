@@ -845,7 +845,6 @@
       updateOrderSummary();
     };
 
-    // New function to handle individual item notes
     window.updateItemNotes = function (input) {
       const id = input.dataset.id;
       const notes = input.value.trim();

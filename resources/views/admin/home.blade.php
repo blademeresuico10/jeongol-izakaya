@@ -16,7 +16,6 @@
 
     <div id="content-wrapper" class="flex flex-col min-h-screen">
         <div id="content" class="flex-1">
-            <!-- Top Navigation Bar -->
             <nav class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <button id="sidebarToggleTop" class="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100">
                     <i class="fas fa-bars"></i>
@@ -24,10 +23,8 @@
                 <h1 class="text-2xl font-semibold text-gray-800">Dashboard</h1>
             </nav>
 
-            <!-- Dashboard Content -->
             <div class="p-6 space-y-6">
 
-                <!-- Stats Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     @php
                         $cards = [
@@ -62,7 +59,8 @@
                     @endphp
 
                     @foreach($cards as $card)
-                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                        <div
+                            class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                             <div class="flex items-center justify-between mb-4">
                                 <div class="flex items-center space-x-3">
                                     <div class="p-3 {{ $card['bgColor'] }} rounded-lg">
@@ -76,25 +74,26 @@
                             </div>
 
                             @if($card['title'] !== 'Stock')
-                                <h2 id="{{ $card['id'] }}" class="text-5xl md:text-6xl font-bold text-gray-900">{{ $card['value'] }}</h2>
+                                <h2 id="{{ $card['id'] }}" class="text-5xl md:text-6xl font-bold text-gray-900">
+                                    {{ $card['value'] }}</h2>
                             @else
                                 <div id="stockContainer" class="grid grid-cols-1 gap-2">
                                     @foreach($stockChartData as $stock)
                                         <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-sm">
                                             <div class="flex items-center space-x-3">
                                                 <div class="w-6 h-2 rounded-sm" style="background-color:
-                                                    @if($stock['quantity'] >= 60) green
-                                                    @elseif($stock['quantity'] >= 30) orange
-                                                    @else red
-                                                    @endif;"></div>
+                                                                @if($stock['quantity'] >= 60) green
+                                                                @elseif($stock['quantity'] >= 30) orange
+                                                                @else red
+                                                                @endif;"></div>
                                                 <span class="text-gray-800 font-medium">{{ $stock['name'] }}</span>
                                             </div>
                                             <div>
                                                 <span class="text-sm font-semibold
-                                                    @if($stock['quantity'] >= 60) text-green-600
-                                                    @elseif($stock['quantity'] >= 30) text-orange-500
-                                                    @else text-red-600
-                                                    @endif">
+                                                                @if($stock['quantity'] >= 60) text-green-600
+                                                                @elseif($stock['quantity'] >= 30) text-orange-500
+                                                                @else text-red-600
+                                                                @endif">
                                                     @if($stock['quantity'] >= 60) Sufficient
                                                     @elseif($stock['quantity'] >= 30) Low
                                                     @else Critical
@@ -109,10 +108,8 @@
                     @endforeach
                 </div>
 
-                <!-- Charts & Calendar -->
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-                    <!-- Transaction History -->
                     <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h4 class="text-lg font-semibold text-gray-800">Transaction History</h4>
@@ -140,8 +137,7 @@
                         </div>
                     </div>
 
-                    <!-- Sales Chart -->
-                    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <div class="flex items-center justify-between mb-4">
                             <h4 class="text-lg font-semibold text-gray-800">Sales Overview</h4>
                             <i class="fas fa-chart-area text-gray-400"></i>
@@ -159,42 +155,6 @@
                         </div>
                         <div class="w-full h-72 relative">
                             <canvas id="revenueChart" class="absolute inset-0 w-full h-full"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Calendar -->
-                    <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div class="flex items-center justify-between mb-4">
-                            <h4 class="text-lg font-semibold text-gray-800">Calendar</h4>
-                            <i class="fas fa-calendar-alt text-gray-400"></i>
-                        </div>
-
-                        <div class="flex items-center justify-between mb-4">
-                            <button id="prevMonth"
-                                class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <h5 id="calendarMonth" class="text-base font-semibold text-gray-800"></h5>
-                            <button id="nextMonth"
-                                class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
-
-                        <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-gray-500 mb-2">
-                            <div class="py-2">Sun</div>
-                            <div class="py-2">Mon</div>
-                            <div class="py-2">Tue</div>
-                            <div class="py-2">Wed</div>
-                            <div class="py-2">Thu</div>
-                            <div class="py-2">Fri</div>
-                            <div class="py-2">Sat</div>
-                        </div>
-                        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
-
-                        <div class="mt-4 pt-4 border-t border-gray-100 flex justify-between text-sm">
-                            <span class="text-gray-500">Today's Date</span>
-                            <span class="font-medium text-gray-800" id="todayDate"></span>
                         </div>
                     </div>
                 </div>
@@ -290,70 +250,11 @@
         const prevMonthBtn = document.getElementById('prevMonth');
         const nextMonthBtn = document.getElementById('nextMonth');
 
-        function renderCalendar(month, year) {
-            if (!calendarGrid) return;
-            
-            calendarGrid.innerHTML = '';
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            if (calendarMonth) {
-                calendarMonth.textContent = new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' });
-            }
-
-            for (let i = 0; i < firstDay; i++) {
-                const emptyDiv = document.createElement('div');
-                emptyDiv.className = 'h-8';
-                calendarGrid.appendChild(emptyDiv);
-            }
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayCell = document.createElement('div');
-                dayCell.textContent = day;
-                dayCell.className = "h-8 w-8 flex items-center justify-center text-sm rounded-lg cursor-pointer hover:bg-indigo-50";
-                
-                if (day === state.today.getDate() && month === state.today.getMonth() && year === state.today.getFullYear()) {
-                    dayCell.classList.add('bg-indigo-600', 'text-white', 'font-semibold', 'shadow-sm');
-                    dayCell.classList.remove('hover:bg-indigo-50');
-                } else {
-                    dayCell.classList.add('text-gray-700', 'hover:text-indigo-600');
-                }
-                calendarGrid.appendChild(dayCell);
-            }
-        }
-
-        if (prevMonthBtn) {
-            prevMonthBtn.addEventListener('click', () => {
-                state.currentMonth--;
-                if (state.currentMonth < 0) {
-                    state.currentMonth = 11;
-                    state.currentYear--;
-                }
-                renderCalendar(state.currentMonth, state.currentYear);
-            });
-        }
-
-        if (nextMonthBtn) {
-            nextMonthBtn.addEventListener('click', () => {
-                state.currentMonth++;
-                if (state.currentMonth > 11) {
-                    state.currentMonth = 0;
-                    state.currentYear++;
-                }
-                renderCalendar(state.currentMonth, state.currentYear);
-            });
-        }
-
-        if (todayDate) {
-            todayDate.textContent = state.today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
-        renderCalendar(state.currentMonth, state.currentYear);
-
         async function refreshDashboard() {
             try {
                 const res = await fetch("{{ route('home.dashboard.data') }}");
                 const data = await res.json();
-                
+
                 const revenueElement = document.getElementById('revenueValue');
                 if (revenueElement) {
                     const revenueValue = data.revenue.toString().startsWith('₱') ? data.revenue : '₱ ' + data.revenue;
@@ -417,17 +318,17 @@
             try {
                 const res = await fetch("{{ route('home.dashboard.sales-data') }}");
                 const data = await res.json();
-                
+
                 ['weekly', 'monthly', 'quarterly'].forEach(period => {
                     if (data[period]) {
                         state.salesData[period].labels = Object.keys(data[period]);
                         state.salesData[period].data = Object.values(data[period]);
                     }
                 });
-                
+
                 const activeTab = document.querySelector('.tab-btn.bg-indigo-600');
                 const period = activeTab ? activeTab.dataset.period : 'weekly';
-                
+
                 if (state.revenueChart) {
                     state.revenueChart.data.labels = state.salesData[period].labels;
                     state.revenueChart.data.datasets[0].data = state.salesData[period].data;
@@ -438,7 +339,7 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             initRevenueChart();
             refreshDashboard();
             refreshSalesChart();

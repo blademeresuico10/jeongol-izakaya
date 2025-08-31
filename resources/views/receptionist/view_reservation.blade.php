@@ -35,14 +35,11 @@
             $orderTime = \Carbon\Carbon::parse($first->reservation_time)->format('h:i A');
           @endphp
           
-          <!-- Reservation Card -->
           <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
-            <!-- Header - Always Visible -->
             <div class="reservation-header cursor-pointer p-4 hover:bg-gray-50 transition-colors duration-200" 
                  onclick="toggleOrders('reservation-{{ $reservationId }}')">
               <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
-                  <!-- Customer Name - Most Prominent -->
                   <div class="flex items-center space-x-2">
                     <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -50,12 +47,10 @@
                     <span class="text-lg font-bold text-gray-900">{{ $customerName }}</span>
                   </div>
                   
-                  <!-- Table Number Badge -->
                   <div class="bg-green-600 text-white px-3 py-1 rounded-full font-semibold text-sm">
                     Table {{ $first->table_number }}
                   </div>
                   
-                  <!-- Pax Info -->
                   <div class="flex items-center space-x-2">
                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-4.5l1.5 1.5-1.5 1.5"></path>
@@ -63,7 +58,6 @@
                     <span class="text-gray-700 font-medium">{{ $first->pax }} pax</span>
                   </div>
                   
-                  <!-- Order Count -->
                   <div class="flex items-center space-x-2">
                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
@@ -73,7 +67,6 @@
                 </div>
                 
                 <div class="flex items-center space-x-3">
-                  <!-- Order Time -->
                   <div class="flex items-center space-x-2">
                     <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -81,7 +74,6 @@
                     <span class="text-gray-700 font-medium">{{ $orderTime }}</span>
                   </div>
                   
-                  <!-- Chevron Icon -->
                   <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 chevron-icon" 
                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -90,7 +82,6 @@
               </div>
             </div>
             
-            <!-- Order Details - Hidden by Default -->
             <div id="reservation-{{ $reservationId }}" class="order-details hidden border-t border-gray-200">
               <div class="p-4 bg-gray-50">
                 <h4 class="text-sm font-semibold text-gray-800 mb-3 flex items-center">
@@ -124,7 +115,6 @@
                   </div>
                 @endif
                 
-                <!-- Additional Info -->
                 <div class="mt-4 pt-3 border-t border-gray-200">
                   <div class="grid grid-cols-3 gap-4 text-sm">
                     <div>
@@ -156,7 +146,6 @@
     </div>
   </div>
 
-  <!-- Back Button -->
   <a class="fixed bottom-5 right-5 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg shadow-lg z-50 transition-all duration-200 transform hover:scale-105
            md:bottom-4 md:right-4 md:py-3 md:px-5
            sm:bottom-3 sm:right-3 sm:py-2 sm:px-3 sm:text-sm
@@ -175,13 +164,11 @@
       const chevron = header.querySelector('.chevron-icon');
       
       if (orderDetails.classList.contains('hidden')) {
-        // Show details
         orderDetails.classList.remove('hidden');
         orderDetails.classList.add('animate-fade-in');
         chevron.style.transform = 'rotate(180deg)';
         header.classList.add('bg-gray-50');
       } else {
-        // Hide details
         orderDetails.classList.add('hidden');
         orderDetails.classList.remove('animate-fade-in');
         chevron.style.transform = 'rotate(0deg)';
@@ -189,7 +176,6 @@
       }
     }
 
-    // Add custom CSS for fade animation
     const style = document.createElement('style');
     style.textContent = `
       .animate-fade-in {

@@ -34,11 +34,9 @@
             menuPrices[id] = isLunch ? lunch : dinner;
         }
     }
-    // Modal open/close
     closeModal.onclick = () => modal.style.display = 'none';
     window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
 
-    // Handle table click
     const inlineOptionHandler = link => {
         link.addEventListener('click', e => {
             e.preventDefault();
@@ -374,7 +372,6 @@
             flyingImg.remove();
         });
     }
-
 
     function updateTimeFrameDisplay() {
         const arrivalTime = document.getElementById('arrivalTimeInput').value;
