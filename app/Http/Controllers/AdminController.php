@@ -287,12 +287,10 @@ class AdminController extends Controller
         $showDeleted = $request->has('show_deleted');
 
         if ($showDeleted) {
-            // Show only soft-deleted tables
             $tables = DB::table('tables')
                 ->whereNotNull('deleted_at')
                 ->get();
         } else {
-            // Show only active tables
             $tables = DB::table('tables')
                 ->whereNull('deleted_at')
                 ->get();
@@ -400,12 +398,10 @@ class AdminController extends Controller
         $showDeleted = $request->has('show_deleted');
 
         if ($showDeleted) {
-            // Show only soft-deleted stocks
             $stocks = DB::table('stock')
                 ->whereNotNull('deleted_at')
                 ->get();
         } else {
-            // Show active stocks
             $stocks = DB::table('stock')
                 ->whereNull('deleted_at')
                 ->get();
@@ -640,14 +636,14 @@ class AdminController extends Controller
             fputcsv($file, ['JEONGOL IZAKAYA - SALES REPORT']);
             fputcsv($file, ['Period: ' . $dateFrom->format('M d, Y') . ' - ' . $dateTo->format('M d, Y')]);
             fputcsv($file, ['Generated: ' . now()->format('M d, Y h:i A')]);
-            fputcsv($file, []); 
+            fputcsv($file, []);
 
             fputcsv($file, ['SUMMARY']);
             fputcsv($file, ['Metric', 'Value']);
             fputcsv($file, ['Total Sales', number_format($totalSales, 2)]);
             fputcsv($file, ['Total Pax', $totalPax]);
             fputcsv($file, ['Total Discounts', number_format($totalDiscounts, 2)]);
-            fputcsv($file, []); 
+            fputcsv($file, []);
 
             fputcsv($file, ['PRODUCT CONSUMPTION']);
             fputcsv($file, ['Product', 'Category', 'Quantity', 'Revenue']);
@@ -659,7 +655,7 @@ class AdminController extends Controller
                     number_format($product->total_revenue, 2)
                 ]);
             }
-            fputcsv($file, []); 
+            fputcsv($file, []);
 
             fputcsv($file, ['SALES BREAKDOWN']);
             fputcsv($file, ['Date', 'Table', 'Customer', 'Pax', 'Subtotal', 'Discount', 'Total']);

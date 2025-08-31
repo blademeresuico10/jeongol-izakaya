@@ -543,15 +543,13 @@
           </div>
 
           <div class="flex justify-end gap-4 p-2 border-t border-gray-200 dark:border-gray-600">
-
-            <button data-modal-hide="default-modal" type="button"
-              class="bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
-              Close
-            </button>
-
             <button id="clearOrdersBtn" type="button"
               class="bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800">
               Clear
+            </button>
+            <button data-modal-hide="default-modal" type="button"
+              class="bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
+              Ok
             </button>
           </div>
         </div>

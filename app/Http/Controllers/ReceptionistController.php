@@ -55,7 +55,6 @@ class ReceptionistController extends Controller
     {
         $data = $request->json()->all();
         $data['orders'] = $request->input('orders');
-
         try {
             $validated = validator($data, [
                 'table_id'           => 'required|exists:tables,id',
@@ -74,7 +73,6 @@ class ReceptionistController extends Controller
 
             $userId = Auth::id();
 
-
             $customer = DB::table('customers')
                 ->where('name', $validated['customer_name'])
                 ->where('contact_number', $validated['contact_number'] ?? '')
@@ -90,6 +88,7 @@ class ReceptionistController extends Controller
             } else {
                 $customerId = $customer->id;
             }
+
             $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
 
@@ -97,10 +96,9 @@ class ReceptionistController extends Controller
                 return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
 
-            $table = DB::table('tables')->where('id', $validated['table_id'])->first();
-
+            // FIX: Use table_id instead of table_number
             $conflict = DB::table('reservations')
-                ->where('table_number', $table->table_number)
+                ->where('table_id', $validated['table_id'])  // ✅ Changed from table_number to table_id
                 ->where(function ($query) use ($reservedDateTime, $endDateTime) {
                     $query->where('reservation_time', '<', $endDateTime)
                         ->where('reservation_end_time', '>', $reservedDateTime);
@@ -110,7 +108,6 @@ class ReceptionistController extends Controller
             if ($conflict) {
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
-
 
             $isLunch = $reservedDateTime->format('H') < 17;
             $totalPrice = 0;
@@ -124,19 +121,22 @@ class ReceptionistController extends Controller
                 }
             }
 
+            // Get table info for storing table_number if needed
+            $table = DB::table('tables')->where('id', $validated['table_id'])->first();
+
             $reservation = Reservation::create([
                 'pax'                  => $validated['pax'],
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
                 'reservation_time'     => $reservedDateTime,
                 'reservation_end_time' => $endDateTime,
-                'table_number'         => $table->table_number,
+                'table_id'             => $validated['table_id'],  // ✅ Use table_id
+                'table_number'         => $table->table_number,    // ✅ Store table_number if your model needs it
                 'notes'                => $validated['notes'] ?? null,
                 'customer_id'          => $customerId,
                 'user_id'              => $userId,
                 'total_price'          => $totalPrice,
                 'status'               => 'Pending',
             ]);
-
 
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
@@ -334,7 +334,7 @@ class ReceptionistController extends Controller
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success'       => true,
-                'status'        => $reservation->status, 
+                'status'        => $reservation->status,
                 'reservationId' => $reservation->id,
                 'unread_count'  => DB::table('notifications')
                     ->where('notifiable_id', Auth::id())
@@ -361,7 +361,7 @@ class ReceptionistController extends Controller
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success'       => true,
-                'status'        => $reservation->status, 
+                'status'        => $reservation->status,
                 'reservationId' => $reservation->id,
                 'unread_count'  => DB::table('notifications')
                     ->where('notifiable_id', Auth::id())
@@ -429,7 +429,7 @@ class ReceptionistController extends Controller
             $notifications[] = [
                 'id'             => $n->id,
                 'reservation_id' => $data['reservation_id'] ?? null,
-                'name'           => $n->data['customer_name']
+                'name'           => $data['customer_name']
                     ?? $reservation?->customer?->name
                     ?? 'Unknown',
                 'message'        => $data['message'] ?? '',
@@ -438,6 +438,7 @@ class ReceptionistController extends Controller
                 'is_read'        => $n->read_at !== null,
             ];
         }
+
         return response()->json([
             'notifications' => $notifications,
             'unread_count' => $unreadCount

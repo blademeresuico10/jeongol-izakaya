@@ -190,11 +190,6 @@
           </div>
         </div>
 
-        <div class="modal-section">
-          <label><strong>Advance Payment </strong></label>
-          <input class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" type="number"
-            id="advance_payment" readonly>
-        </div>
         <hr class="mt-2 border-t-10 mb-2 border-black-300">
 
         <div class="modal-flex flex-col md:flex-row gap-6">
@@ -206,6 +201,13 @@
           @endif
       @endforeach
           </div>
+
+
+          <div class="modal-section">
+            <label><strong>Advance Payment </strong></label>
+            <input class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" type="number"
+              id="advance_payment" readonly>
+          </div><br><br>
 
           <div class="flex justify-center md:items-center mt-4 md:mt-2 mb-3">
             <button type="button" id="viewOrdersBtn"
@@ -247,15 +249,13 @@
             </div>
 
             <div class="flex justify-end gap-4 p-2 border-t border-gray-200 dark:border-gray-600">
-
-              <button data-modal-hide="default-modal" type="button"
-                class="bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
-                Close
-              </button>
-
               <button id="clearOrdersBtn" type="button"
                 class="bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-red-300 dark:bg-red-500 dark:hover:bg-red-600 dark:focus:ring-red-800">
                 Clear
+              </button>
+              <button data-modal-hide="default-modal" type="button"
+                class="bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
+                Ok
               </button>
             </div>
 
@@ -263,7 +263,22 @@
         </div>
       </div>
 
-      <div></div>
+      <div id="successModal"
+        class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
+          <div class="mb-4">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+              <i class="fas fa-check text-2xl text-green-600"></i>
+            </div>
+            <h2 id="successTitle" class="text-lg font-bold text-gray-800">Success!</h2>
+            <p id="successMessage" class="text-gray-600 mt-2">Operation completed successfully.</p>
+          </div>
+
+          <button id="successOkBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded">
+            OK
+          </button>
+        </div>
+      </div>
 
     </div>
 
@@ -455,6 +470,31 @@
             console.error(err);
             alert("Server error while cancelling reservation.");
           });
+      });
+
+      function showSuccessModal(type) {
+        const modal = document.getElementById('successModal');
+        const title = document.getElementById('successTitle');
+        const message = document.getElementById('successMessage');
+
+        if (type === 'order') {
+          title.textContent = 'Order Placed!';
+          message.textContent = 'The order has been successfully placed.';
+        } else {
+          title.textContent = 'Reservation Created!';
+          message.textContent = 'The reservation has been successfully submitted.';
+        }
+
+        modal.classList.remove('hidden');
+      }
+
+      function closeSuccessModal() {
+        document.getElementById('successModal').classList.add('hidden');
+      }
+
+      document.getElementById('successOkBtn').addEventListener('click', closeSuccessModal);
+      document.getElementById('successModal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeSuccessModal();
       });
     </script>
 

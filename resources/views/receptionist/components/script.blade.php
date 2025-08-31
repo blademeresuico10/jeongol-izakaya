@@ -323,11 +323,12 @@
             })
             .then(response => {
                 if (response.success) {
-                    alert("Reservation submitted!");
-                    modal.style.display = 'none';
-                    location.reload();
+                    document.getElementById('tableModal').classList.add('hidden');
+                    showSuccessModal(isPlacingOrder ? 'order' : 'reservation');
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Submit";
                 } else {
-                    alert(response.message || "Failed to save reservation.");
+                    showErrorModal(response.message || "Failed to save reservation.");
                     submitBtn.disabled = false;
                     submitBtn.textContent = "Submit";
                 }
@@ -340,6 +341,40 @@
             });
 
     });
+
+    function showErrorModal(message) {
+        let errorModal = document.getElementById('errorModal');
+        if (!errorModal) {
+            errorModal = document.createElement('div');
+            errorModal.id = 'errorModal';
+            errorModal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
+            errorModal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
+                <div class="mb-4">
+                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-times text-2xl text-red-600"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-gray-800">Error</h2>
+                    <p id="errorMessage" class="text-gray-600 mt-2"></p>
+                </div>
+                <button id="errorOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded">
+                    OK
+                </button>
+            </div>
+        `;
+            document.body.appendChild(errorModal);
+
+            document.getElementById('errorOkBtn').addEventListener('click', () => {
+                errorModal.classList.add('hidden');
+            });
+            errorModal.addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) errorModal.classList.add('hidden');
+            });
+        }
+
+        document.getElementById('errorMessage').textContent = message;
+        errorModal.classList.remove('hidden');
+    }
 
     function animateFlyToCart(imageEl, targetSelector) {
         const imgRect = imageEl.getBoundingClientRect();

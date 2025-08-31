@@ -27,7 +27,7 @@ class CashierController extends Controller
             ->where('reservations.reservation_time', '<=', $now)
             ->where('reservations.reservation_end_time', '>=', $now)
             ->where('reservations.status', 'Accepted')
-            ->whereNull('transactions.id') 
+            ->whereNull('transactions.id')
             ->select('reservations.*')
             ->get();
 
@@ -50,7 +50,7 @@ class CashierController extends Controller
                     : $now->diffInSeconds($endTime);
 
                 $table->current_orders = $orders[$res->id] ?? [];
-                $occupiedTables[] = $table->table_number; 
+                $occupiedTables[] = $table->table_number;
             } else {
                 $table->current_reservation_id = null;
                 $table->remaining_seconds = null;
@@ -387,7 +387,7 @@ class CashierController extends Controller
             $notifications[] = [
                 'id'             => $n->id,
                 'reservation_id' => $data['reservation_id'] ?? null,
-                'name'           => $n->data['customer_name']
+                'name'           => $data['customer_name']
                     ?? $reservation?->customer?->name
                     ?? 'Unknown',
                 'message'        => $data['message'] ?? '',
@@ -402,6 +402,4 @@ class CashierController extends Controller
             'unread_count' => $unreadCount
         ]);
     }
-
-    
 }
