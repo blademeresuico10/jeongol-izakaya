@@ -7,10 +7,10 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use App\Models\feedback;
-use App\Models\Transaction;
+use App\Models\transaction;
 use Carbon\Carbon;
 use App\Models\customers;
-use App\Models\Stock;
+use App\Models\stock;
 
 
 class AdminController extends Controller
