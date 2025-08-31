@@ -424,7 +424,7 @@ class ReceptionistController extends Controller
                 $unreadCount++;
             }
 
-            $reservation = \App\Models\Reservation::find($data['reservation_id'] ?? null);
+            $reservation = \App\Models\reservation::find($data['reservation_id'] ?? null);
 
             $notifications[] = [
                 'id'             => $n->id,

@@ -220,23 +220,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="successModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title"><i class="fas fa-check-circle"></i> Success</h5>
-                            <button type="button" class="close text-white"
-                                data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">
-                            <p id="successMessage"></p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-success" data-dismiss="modal">OK</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+       
 
         </div>
     </div>
@@ -248,19 +232,19 @@
     $(document).ready(function () {
         window.showDeleteModal = function (id, itemName) {
             $('#deleteItemName').text(itemName);
-            $('#deleteForm').attr('action', "{{ url('admin/deletestock') }}/" + id);
+            $('#deleteForm').attr('action', "{{ url('deletestock') }}/" + id);
             $('#deleteConfirmModal').modal('show');
         };
 
         window.showRestoreModal = function (id, itemName) {
             $('#restoreItemName').text(itemName);
-            $('#restoreForm').attr('action', "{{ url('admin/restorestock') }}/" + id);
+            $('#restoreForm').attr('action', "{{ url('restorestock') }}/" + id);
             $('#restoreConfirmModal').modal('show');
         };
 
         window.showForceDeleteModal = function (id, itemName) {
             $('#forceDeleteItemName').text(itemName);
-            $('#forceDeleteForm').attr('action', "{{ url('admin/forcedeletestock') }}/" + id);
+            $('#forceDeleteForm').attr('action', "{{ url('forcedeletestock') }}/" + id);
             $('#forceDeleteConfirmModal').modal('show');
         };
 

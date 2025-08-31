@@ -129,8 +129,8 @@
                         </div>
                         <div class="modal-footer bg-light">
                             <form id="deleteForm" method="POST">
-                                @csrf
                                 @method('DELETE')
+                                @csrf
                                 <button type="submit" class="btn btn-danger">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
@@ -208,26 +208,6 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="successModal" tabindex="-1" role="dialog">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title">
-                                <i class="fas fa-check-circle"></i> Success
-                            </h5>
-                            <button type="button" class="close text-white" data-dismiss="modal">
-                                <span>&times;</span>
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <p id="successMessage"></p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-success" data-dismiss="modal">OK</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             @foreach ($menu as $item)
                 @if(!$item->deleted_at)
@@ -281,7 +261,7 @@
 
             if (deleteItemNameElement && deleteFormElement) {
                 deleteItemNameElement.textContent = itemName;
-                deleteFormElement.action = "{{ url('admin/deletemenu') }}/" + id;
+                deleteFormElement.action = "{{ route('admin.deleteMenu', ':id') }}".replace(':id', id);
                 $('#deleteConfirmModal').modal('show');
             } else {
                 console.error('Delete modal elements not found');
@@ -294,7 +274,7 @@
 
             if (restoreItemNameElement && restoreFormElement) {
                 restoreItemNameElement.textContent = itemName;
-                restoreFormElement.action = "{{ url('admin/restoremenu') }}/" + id;
+                restoreFormElement.action = "{{ url('restoremenu') }}/" + id;
                 $('#restoreConfirmModal').modal('show');
             } else {
                 console.error('Restore modal elements not found');
@@ -307,7 +287,7 @@
 
             if (forceDeleteItemNameElement && forceDeleteFormElement) {
                 forceDeleteItemNameElement.textContent = itemName;
-                forceDeleteFormElement.action = "{{ url('admin/forcedeletemenu') }}/" + id;
+                forceDeleteFormElement.action = "{{ url('forcedeletemenu') }}/" + id;
                 $('#forceDeleteConfirmModal').modal('show');
             } else {
                 console.error('Force delete modal elements not found:', {

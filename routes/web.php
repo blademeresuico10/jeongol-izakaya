@@ -43,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/editmenu/{id}', [AdminController::class, 'editMenu'])->name('admin.editmenu');
     Route::put('/updatemenu/{id}', [AdminController::class, 'updateMenu'])->name('admin.updatemenu');
     Route::delete('/deletemenu/{id}', [AdminController::class, 'deleteMenu'])->name('admin.deleteMenu');
+    Route::post('/deletemenu/{id}', [AdminController::class, 'deleteMenu']);
     Route::patch('/restoremenu/{id}', [AdminController::class, 'restoreMenu'])->name('admin.restoreMenu');
     Route::delete('/forcedeletemenu/{id}', [AdminController::class, 'forceDeleteMenu'])->name('admin.forceDeleteMenu');
 

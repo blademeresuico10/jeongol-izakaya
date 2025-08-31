@@ -170,116 +170,116 @@ class AdminController extends Controller
         return redirect()->route('admin.users')->with('success', 'User updated successfully!');
     }
 
-    public function menu_management(Request $request)
-    {
-        $showDeleted = $request->has('show_deleted');
+        public function menu_management(Request $request)
+        {
+            $showDeleted = $request->has('show_deleted');
 
-        if ($showDeleted) {
-            $menu = DB::table('menu')
-                ->whereNotNull('deleted_at')
-                ->get();
-        } else {
-            $menu = DB::table('menu')
-                ->whereNull('deleted_at')
-                ->get();
+            if ($showDeleted) {
+                $menu = DB::table('menu')
+                    ->whereNotNull('deleted_at')
+                    ->get();
+            } else {
+                $menu = DB::table('menu')
+                    ->whereNull('deleted_at')
+                    ->get();
+            }
+
+            return view('admin.menu_management', compact('menu'));
         }
 
-        return view('admin.menu_management', compact('menu'));
-    }
-
-    public function addmenu()
-    {
-        return view('admin.addmenu');
-    }
-
-    public function storeMenu(Request $request)
-    {
-        $request->validate([
-            'menu_item' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-        ]);
-
-        DB::table('menu')->insert([
-            'menu_item' => $request->menu_item,
-            'price' => $request->price,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        return redirect()->route('admin.menu_management')->with('success', 'Menu item added successfully!');
-    }
-
-    public function editMenu($id)
-    {
-        $menuItem = DB::table('menu')->where('id', $id)->whereNull('deleted_at')->first();
-        if (!$menuItem) {
-            return redirect()->route('admin.menu_management')->with('error', 'Menu item not found!');
-        }
-        return view('admin.editmenu', compact('menuItem'));
-    }
-
-    public function updateMenu(Request $request, $id)
-    {
-        $request->validate([
-            'menu_item' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-        ]);
-
-        DB::table('menu')->where('id', $id)->update([
-            'menu_item' => $request->menu_item,
-            'price' => $request->price,
-            'updated_at' => now(),
-        ]);
-
-        return redirect()->route('admin.menu_management')->with('success', 'Menu item updated successfully!');
-    }
-
-    public function deleteMenu($id)
-    {
-        $menuItem = DB::table('menu')->where('id', $id)->whereNull('deleted_at')->first();
-
-        if (!$menuItem) {
-            return redirect()->back()->with('error', 'Menu item not found!');
+        public function addmenu()
+        {
+            return view('admin.addmenu');
         }
 
-        DB::table('menu')->where('id', $id)->update([
-            'deleted_at' => now(),
-            'updated_at' => now(),
-        ]);
+        public function storeMenu(Request $request)
+        {
+            $request->validate([
+                'menu_item' => 'required|string|max:255',
+                'price' => 'required|numeric|min:0',
+            ]);
 
-        return redirect()->back()->with('success', 'Menu item deleted successfully!');
-    }
+            DB::table('menu')->insert([
+                'menu_item' => $request->menu_item,
+                'price' => $request->price,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-
-    public function restoreMenu($id)
-    {
-        $menuItem = DB::table('menu')->where('id', $id)->whereNotNull('deleted_at')->first();
-
-        if (!$menuItem) {
-            return redirect()->back()->with('error', 'Menu item not found or not deleted!');
+            return redirect()->route('admin.menu_management')->with('success', 'Menu item added successfully!');
         }
 
-        DB::table('menu')->where('id', $id)->update([
-            'deleted_at' => null,
-            'updated_at' => now(),
-        ]);
-
-        return redirect()->back()->with('success', 'Menu item restored successfully!');
-    }
-
-
-    public function forceDeleteMenu($id)
-    {
-        $menuItem = DB::table('menu')->where('id', $id)->first();
-
-        if (!$menuItem) {
-            return redirect()->back()->with('error', 'Menu item not found!');
+        public function editMenu($id)
+        {
+            $menuItem = DB::table('menu')->where('id', $id)->whereNull('deleted_at')->first();
+            if (!$menuItem) {
+                return redirect()->route('admin.menu_management')->with('error', 'Menu item not found!');
+            }
+            return view('admin.editmenu', compact('menuItem'));
         }
 
-        DB::table('menu')->where('id', $id)->delete();
+        public function updateMenu(Request $request, $id)
+        {
+            $request->validate([
+                'menu_item' => 'required|string|max:255',
+                'price' => 'required|numeric|min:0',
+            ]);
 
-        return redirect()->back()->with('success', 'Menu item permanently deleted!');
-    }
+            DB::table('menu')->where('id', $id)->update([
+                'menu_item' => $request->menu_item,
+                'price' => $request->price,
+                'updated_at' => now(),
+            ]);
+
+            return redirect()->route('admin.menu_management')->with('success', 'Menu item updated successfully!');
+        }
+
+        public function deleteMenu($id)
+        {
+            $menuItem = DB::table('menu')->where('id', $id)->whereNull('deleted_at')->first();
+
+            if (!$menuItem) {
+                return redirect()->back()->with('error', 'Menu item not found!');
+            }
+
+            DB::table('menu')->where('id', $id)->update([
+                'deleted_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return redirect()->back()->with('success', 'Menu item deleted successfully!');
+        }
+
+
+        public function restoreMenu($id)
+        {
+            $menuItem = DB::table('menu')->where('id', $id)->whereNotNull('deleted_at')->first();
+
+            if (!$menuItem) {
+                return redirect()->back()->with('error', 'Menu item not found or not deleted!');
+            }
+
+            DB::table('menu')->where('id', $id)->update([
+                'deleted_at' => null,
+                'updated_at' => now(),
+            ]);
+
+            return redirect()->back()->with('success', 'Menu item restored successfully!');
+        }
+
+
+        public function forceDeleteMenu($id)
+        {
+            $menuItem = DB::table('menu')->where('id', $id)->first();
+
+            if (!$menuItem) {
+                return redirect()->back()->with('error', 'Menu item not found!');
+            }
+
+            DB::table('menu')->where('id', $id)->delete();
+
+            return redirect()->back()->with('success', 'Menu item permanently deleted!');
+        }
 
 
     public function table_management(Request $request)

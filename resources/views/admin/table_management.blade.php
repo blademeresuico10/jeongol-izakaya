@@ -228,19 +228,19 @@
 <script>
     window.showDeleteModal = function (id, itemName) {
         document.getElementById('deleteItemName').textContent = itemName;
-        document.getElementById('deleteForm').action = "{{ url('admin/deletetable') }}/" + id;
+        document.getElementById('deleteForm').action = "{{ url('deletetable') }}/" + id;
         $('#deleteConfirmModal').modal('show');
     };
 
     window.showRestoreModal = function (id, itemName) {
         document.getElementById('restoreItemName').textContent = itemName;
-        document.getElementById('restoreForm').action = "{{ url('admin/restoretable') }}/" + id;
+        document.getElementById('restoreForm').action = "{{ url('restoretable') }}/" + id;
         $('#restoreConfirmModal').modal('show');
     };
 
     window.showForceDeleteModal = function (id, itemName) {
         document.getElementById('forceDeleteItemName').textContent = itemName;
-        document.getElementById('forceDeleteForm').action = "{{ url('admin/forcedeletetable') }}/" + id;
+        document.getElementById('forceDeleteForm').action = "{{ url('forcedeletetable') }}/" + id;
         $('#forceDeleteConfirmModal').modal('show');
     };
 </script>

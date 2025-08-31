@@ -8,7 +8,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Reservation;
+use App\Models\reservation;
 use Illuminate\Notifications\DatabaseNotification;
 use App\Models\User;
 
@@ -382,7 +382,7 @@ class CashierController extends Controller
                 $unreadCount++;
             }
 
-            $reservation = \App\Models\Reservation::find($data['reservation_id'] ?? null);
+            $reservation = \App\Models\reservation::find($data['reservation_id'] ?? null);
 
             $notifications[] = [
                 'id'             => $n->id,
