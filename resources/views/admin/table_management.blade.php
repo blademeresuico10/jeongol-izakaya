@@ -153,7 +153,8 @@
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong>?</p>
+                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong> from
+                                the list?</p>
                         </div>
                         <div class="modal-footer">
                             <form id="deleteForm" method="POST">

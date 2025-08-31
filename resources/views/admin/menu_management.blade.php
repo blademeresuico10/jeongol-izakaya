@@ -84,7 +84,7 @@
                 </div>
             </div>
 
-           <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel"
+            <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel"
                 aria-hidden="true">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('storeMenu') }}" method="POST">
@@ -123,10 +123,9 @@
                             </button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-danger">
-                                <i class="fas fa-info-circle"></i> This item will be moved to deleted items and can be restored later.
-                            </div>
-                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong>?</p>
+                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong> from
+                                the list?</p>
+
                         </div>
                         <div class="modal-footer bg-light">
                             <form id="deleteForm" method="POST">
@@ -187,10 +186,11 @@
                         <div class="modal-body bg-light">
                             <div class="alert alert-danger border-danger">
                                 <h6 class="text-danger"><strong>⚠️ CRITICAL WARNING</strong></h6>
-                                <p class="mb-0">This action cannot be undone! The item will be completely removed from the database.</p>
+                                <p class="mb-0">This action cannot be undone! The item will be completely removed from
+                                    the database.</p>
                             </div>
                             <p class="text-center">
-                                Are you sure you want to <strong class="text-danger">permanently delete</strong> 
+                                Are you sure you want to <strong class="text-danger">permanently delete</strong>
                                 <span class="badge badge-danger" id="forceDeleteItemName"></span>?
                             </p>
                         </div>

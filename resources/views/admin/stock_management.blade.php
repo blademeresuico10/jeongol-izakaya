@@ -154,11 +154,7 @@
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-danger">
-                                <i class="fas fa-info-circle"></i> This item will be moved to deleted items and can be
-                                restored later.
-                            </div>
-                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong>?</p>
+                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong> from the list?</p>
                         </div>
                         <div class="modal-footer bg-light">
                             <form id="deleteForm" method="POST">@csrf @method('DELETE')
@@ -180,8 +176,6 @@
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-success"><i class="fas fa-info-circle"></i> This item will be
-                                restored to the active stock list.</div>
                             <p>Are you sure you want to restore <strong><span id="restoreItemName"></span></strong>?</p>
                         </div>
                         <div class="modal-footer bg-light">
