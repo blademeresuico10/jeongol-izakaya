@@ -153,9 +153,6 @@
                             </button>
                         </div>
                         <div class="modal-body">
-                            <div class="alert alert-success">
-                                <i class="fas fa-info-circle"></i> This item will be restored to the active menu.
-                            </div>
                             <p>Are you sure you want to restore <strong><span id="restoreItemName"></span></strong>?</p>
                         </div>
                         <div class="modal-footer bg-light">
@@ -186,13 +183,12 @@
                         <div class="modal-body bg-light">
                             <div class="alert alert-danger border-danger">
                                 <h6 class="text-danger"><strong>⚠️ CRITICAL WARNING</strong></h6>
-                                <p class="mb-0">This action cannot be undone! The item will be completely removed from
-                                    the database.</p>
-                            </div>
-                            <p class="text-center">
+                               <p class="text-center">
                                 Are you sure you want to <strong class="text-danger">permanently delete</strong>
-                                <span class="badge badge-danger" id="forceDeleteItemName"></span>?
+                                <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
                             </p>
+                            </div>
+                            
                         </div>
                         <div class="modal-footer bg-danger">
                             <form id="forceDeleteForm" method="POST">
@@ -207,7 +203,6 @@
                     </div>
                 </div>
             </div>
-
 
             @foreach ($menu as $item)
                 @if(!$item->deleted_at)
@@ -359,6 +354,5 @@
                 }
             });
         }
-
     });
 </script>

@@ -373,13 +373,6 @@ class ReceptionistController extends Controller
 
         return redirect()->back()->with('success', 'Reservation cancelled successfully.');
     }
-    public function markNotificationRead(Request $request, $id)
-    {
-        DatabaseNotification::where('data->reservation_id', $id)
-            ->update(['read_at' => now()]);
-
-        return response()->json(['success' => true]);
-    }
     public function showPayment($id)
     {
         try {

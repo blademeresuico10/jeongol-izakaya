@@ -54,8 +54,8 @@
             {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
           </div>
           <span id="notifBadgeProfile"
-            class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
-            style="display: {{ auth()->user()?->unreadNotifications->count() ? 'inline-flex' : 'none' }}">
+            class="absolute top-1 right-1 items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full hidden"
+            data-count="{{ auth()->user()?->unreadNotifications->count() ?? 0 }}">
             {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
           </span>
         </button>
@@ -201,8 +201,6 @@
           @endif
       @endforeach
           </div>
-
-
           <div class="modal-section">
             <label><strong>Advance Payment </strong></label>
             <input class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" type="number"

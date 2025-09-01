@@ -153,7 +153,7 @@
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong> from
+                            <p>Are you sure you want to delete table <strong><span id="deleteItemName"></span></strong> from
                                 the list?</p>
                         </div>
                         <div class="modal-footer">
@@ -178,7 +178,7 @@
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <p>Are you sure you want to restore <strong><span id="restoreItemName"></span></strong>?</p>
+                            <p>Are you sure you want to restore table <strong><span id="restoreItemName"></span></strong>?</p>
                         </div>
                         <div class="modal-footer">
                             <form id="restoreForm" method="POST">
@@ -202,11 +202,17 @@
                             <button type="button" class="close text-white"
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
-                        <div class="modal-body">
-                            <p>This action cannot be undone. Permanently delete <strong><span
-                                        id="forceDeleteItemName"></span></strong>?</p>
+                        <div class="modal-body bg-light">
+                            <div class="alert alert-danger border-danger">
+                                <h6 class="text-danger"><strong>⚠️ CRITICAL WARNING</strong></h6>
+                                <p class="text-center">Are you sure you want to <strong class="text-danger">permanently
+                                        delete table </strong>
+                                    <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
+                                </p>
+                            </div>
+
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer bg-danger">
                             <form id="forceDeleteForm" method="POST">
                                 @csrf
                                 @method('DELETE')

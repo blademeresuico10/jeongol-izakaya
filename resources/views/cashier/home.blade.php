@@ -206,7 +206,6 @@
             border-color: #3b82f6;
         }
 
-        /* Hide dropdown by default */
         .dropdown-menu {
             display: none;
         }
@@ -231,8 +230,8 @@
                         {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
                     </div>
                     <span id="notifBadgeProfile"
-                        class="absolute top-1 right-1 inline-flex items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full"
-                        style="display: {{ auth()->user()?->unreadNotifications->count() ? 'inline-flex' : 'none' }}">
+                        class="absolute top-1 right-1 items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full hidden"
+                        data-count="{{ auth()->user()?->unreadNotifications->count() ?? 0 }}">
                         {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
                     </span>
                 </button>
@@ -865,185 +864,185 @@
     }
 
     // Updated submitPayment function with immediate table update
-function submitPayment() {
-    if (!currentReservationData) {
-        showToast("No reservation data available", "error");
-        return;
-    }
-
-    const totalText = document.getElementById("payment_total").textContent;
-    const total = parseFloat(totalText.replace('₱', '').replace(',', ''));
-
-    const discountInputs = document.querySelectorAll('.discount-input');
-    const discountedPersons = {};
-
-    discountInputs.forEach((input, index) => {
-        const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
-        const discountValue = parseInt(input.value) || 0;
-
-        if (discountValue > 0 && orderDetailId) {
-            discountedPersons[orderDetailId] = discountValue;
-        }
-    });
-
-    const paymentData = {
-        reservation_id: currentReservationData.reservation_id,
-        customer_name: currentReservationData.customer_name,
-        total: total,
-        orders: currentReservationData.orders,
-        discounted_persons: discountedPersons
-    };
-
-    const submitBtn = event.target;
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Processing...";
-
-    fetch('/process-payment', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify(paymentData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                throw new Error(`HTTP ${response.status}: ${text}`);
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Update table status immediately
-            updateTableStatusAfterPayment(currentReservationData.reservation_id);
-            
-            showToast("Payment processed successfully!", "success");
-            closePaymentModal();
-            closeInvoiceModal();
-            
-            // Shorter delay before reload to show immediate feedback
-            setTimeout(() => { location.reload(); }, 800);
-        } else {
-            showToast(data.message || "Payment processing failed", "error");
-        }
-    })
-    .catch(error => {
-        console.error('Payment error:', error);
-        showToast("Payment processing failed. Please try again.", "error");
-    })
-    .finally(() => {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Process Payment";
-    });
-}
-
-// New function to update table status immediately after payment
-function updateTableStatusAfterPayment(reservationId) {
-    // Find the table element with this reservation ID
-    const tableElement = document.querySelector(`[data-reservation-id="${reservationId}"]`);
-    
-    if (tableElement) {
-        // Update the table's visual status
-        const tableCircle = tableElement.querySelector('.w-16.h-16.rounded-full');
-        const statusText = tableElement.querySelector('.text-red-600, .text-green-600');
-        const countdownElement = tableElement.querySelector('.countdown');
-        
-        if (tableCircle) {
-            tableCircle.classList.remove('bg-red-600');
-            tableCircle.classList.add('bg-green-600');
-        }
-        
-        if (statusText) {
-            statusText.textContent = 'Available';
-            statusText.classList.remove('text-red-600');
-            statusText.classList.add('text-green-600');
-        }
-        
-        // Hide countdown if present
-        if (countdownElement && countdownElement.parentElement) {
-            countdownElement.parentElement.style.display = 'none';
-        }
-        
-        // Update data attributes
-        tableElement.setAttribute('data-occupied', '0');
-        tableElement.setAttribute('data-reservation-id', '');
-        
-        // Remove any pulsing animations
-        tableElement.classList.remove('table-occupied');
-        tableElement.classList.add('table-available');
-    }
-}
-
-// Updated table click handler to prevent clicks on recently processed tables
-function updateTableClickHandler() {
-    const dineInContent = document.getElementById("dineInContent");
-    
-    dineInContent.addEventListener("click", function (event) {
-        const table = event.target.closest(".table-link");
-        if (!table) return;
-
-        const reservationId = table.getAttribute("data-reservation-id");
-        const isOccupied = table.getAttribute("data-occupied") === "1";
-
-        // Prevent interaction if table was recently processed
-        if (table.classList.contains('processing')) {
-            showToast("Please wait, table status is being updated...", "info");
+    function submitPayment() {
+        if (!currentReservationData) {
+            showToast("No reservation data available", "error");
             return;
         }
 
-        if (isOccupied && reservationId) {
-            // Add processing class to prevent multiple clicks
-            table.classList.add('processing');
-            
-            // Remove processing class after a delay
-            setTimeout(() => {
-                table.classList.remove('processing');
-            }, 3000);
+        const totalText = document.getElementById("payment_total").textContent;
+        const total = parseFloat(totalText.replace('₱', '').replace(',', ''));
 
-            invoiceItemsList.innerHTML = '';
-            totalPriceInput.value = formatCurrency(0);
+        const discountInputs = document.querySelectorAll('.discount-input');
+        const discountedPersons = {};
 
-            fetch(`/orders/${reservationId}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (!data) return;
+        discountInputs.forEach((input, index) => {
+            const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
+            const discountValue = parseInt(input.value) || 0;
 
-                    currentReservationData = data;
-                    customerNameSpan.textContent = data.customer_name || "N/A";
-                    let total = 0;
+            if (discountValue > 0 && orderDetailId) {
+                discountedPersons[orderDetailId] = discountValue;
+            }
+        });
 
-                    data.orders.forEach(order => {
-                        const price = parseFloat(order.price);
-                        const qty = parseInt(order.quantity);
-                        const subtotal = price * qty;
-                        total += subtotal;
+        const paymentData = {
+            reservation_id: currentReservationData.reservation_id,
+            customer_name: currentReservationData.customer_name,
+            total: total,
+            orders: currentReservationData.orders,
+            discounted_persons: discountedPersons
+        };
 
-                        const orderLine = document.createElement("div");
-                        orderLine.classList.add("flex", "justify-between", "items-center", "py-1", "border-b", "border-gray-100");
-                        orderLine.innerHTML = `
+        const submitBtn = event.target;
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Processing...";
+
+        fetch('/process-payment', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify(paymentData)
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`HTTP ${response.status}: ${text}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update table status immediately
+                    updateTableStatusAfterPayment(currentReservationData.reservation_id);
+
+                    showToast("Payment processed successfully!", "success");
+                    closePaymentModal();
+                    closeInvoiceModal();
+
+                    // Shorter delay before reload to show immediate feedback
+                    setTimeout(() => { location.reload(); }, 800);
+                } else {
+                    showToast(data.message || "Payment processing failed", "error");
+                }
+            })
+            .catch(error => {
+                console.error('Payment error:', error);
+                showToast("Payment processing failed. Please try again.", "error");
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.textContent = "Process Payment";
+            });
+    }
+
+    // New function to update table status immediately after payment
+    function updateTableStatusAfterPayment(reservationId) {
+        // Find the table element with this reservation ID
+        const tableElement = document.querySelector(`[data-reservation-id="${reservationId}"]`);
+
+        if (tableElement) {
+            // Update the table's visual status
+            const tableCircle = tableElement.querySelector('.w-16.h-16.rounded-full');
+            const statusText = tableElement.querySelector('.text-red-600, .text-green-600');
+            const countdownElement = tableElement.querySelector('.countdown');
+
+            if (tableCircle) {
+                tableCircle.classList.remove('bg-red-600');
+                tableCircle.classList.add('bg-green-600');
+            }
+
+            if (statusText) {
+                statusText.textContent = 'Available';
+                statusText.classList.remove('text-red-600');
+                statusText.classList.add('text-green-600');
+            }
+
+            // Hide countdown if present
+            if (countdownElement && countdownElement.parentElement) {
+                countdownElement.parentElement.style.display = 'none';
+            }
+
+            // Update data attributes
+            tableElement.setAttribute('data-occupied', '0');
+            tableElement.setAttribute('data-reservation-id', '');
+
+            // Remove any pulsing animations
+            tableElement.classList.remove('table-occupied');
+            tableElement.classList.add('table-available');
+        }
+    }
+
+    // Updated table click handler to prevent clicks on recently processed tables
+    function updateTableClickHandler() {
+        const dineInContent = document.getElementById("dineInContent");
+
+        dineInContent.addEventListener("click", function (event) {
+            const table = event.target.closest(".table-link");
+            if (!table) return;
+
+            const reservationId = table.getAttribute("data-reservation-id");
+            const isOccupied = table.getAttribute("data-occupied") === "1";
+
+            // Prevent interaction if table was recently processed
+            if (table.classList.contains('processing')) {
+                showToast("Please wait, table status is being updated...", "info");
+                return;
+            }
+
+            if (isOccupied && reservationId) {
+                // Add processing class to prevent multiple clicks
+                table.classList.add('processing');
+
+                // Remove processing class after a delay
+                setTimeout(() => {
+                    table.classList.remove('processing');
+                }, 3000);
+
+                invoiceItemsList.innerHTML = '';
+                totalPriceInput.value = formatCurrency(0);
+
+                fetch(`/orders/${reservationId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data) return;
+
+                        currentReservationData = data;
+                        customerNameSpan.textContent = data.customer_name || "N/A";
+                        let total = 0;
+
+                        data.orders.forEach(order => {
+                            const price = parseFloat(order.price);
+                            const qty = parseInt(order.quantity);
+                            const subtotal = price * qty;
+                            total += subtotal;
+
+                            const orderLine = document.createElement("div");
+                            orderLine.classList.add("flex", "justify-between", "items-center", "py-1", "border-b", "border-gray-100");
+                            orderLine.innerHTML = `
                             <span class="flex-1">${order.order_name}</span>
                             <span class="w-16 text-center">${qty}</span>
                             <span class="w-20 text-right">${formatCurrency(price)}</span>
                             <span class="w-24 text-right">${formatCurrency(subtotal)}</span>
                         `;
-                        invoiceItemsList.appendChild(orderLine);
-                    });
+                            invoiceItemsList.appendChild(orderLine);
+                        });
 
-                    totalPriceInput.value = formatCurrency(total);
-                    invoiceModal.classList.remove("hidden");
-                    invoiceModal.classList.add("flex");
-                })
-                .catch(() => { 
-                    showToast("Failed to load invoice data.", "error"); 
-                    table.classList.remove('processing');
-                });
-        } else {
-            showToast("Table is not occupied.", "info");
-        }
-    });
-}
+                        totalPriceInput.value = formatCurrency(total);
+                        invoiceModal.classList.remove("hidden");
+                        invoiceModal.classList.add("flex");
+                    })
+                    .catch(() => {
+                        showToast("Failed to load invoice data.", "error");
+                        table.classList.remove('processing');
+                    });
+            } else {
+                showToast("Table is not occupied.", "info");
+            }
+        });
+    }
 
     function displayPaymentItemsComplete() {
         if (!currentReservationData) return;
@@ -1152,7 +1151,7 @@ function updateTableClickHandler() {
                 const pendingCount = notifications.filter(n => n.status === "Pending").length;
 
                 [badgeProfile, badgeLink].forEach(b => {
-                    b.textContent = pendingCount;  
+                    b.textContent = pendingCount;
                     b.style.display = pendingCount ? 'inline-flex' : 'none';
                 });
 

@@ -154,7 +154,8 @@
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body">
-                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong> from the list?</p>
+                            <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong> from
+                                the list?</p>
                         </div>
                         <div class="modal-footer bg-light">
                             <form id="deleteForm" method="POST">@csrf @method('DELETE')
@@ -201,13 +202,12 @@
                         <div class="modal-body bg-light">
                             <div class="alert alert-danger border-danger">
                                 <h6 class="text-danger"><strong>⚠️ CRITICAL WARNING</strong></h6>
-                                <p class="mb-0">This action cannot be undone! The item will be completely removed from
-                                    the database.</p>
+                                <p class="text-center">Are you sure you want to <strong class="text-danger">permanently
+                                        delete</strong>
+                                    <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
+                                </p>
                             </div>
-                            <p class="text-center">Are you sure you want to <strong class="text-danger">permanently
-                                    delete</strong>
-                                <span class="badge badge-danger" id="forceDeleteItemName"></span>?
-                            </p>
+
                         </div>
                         <div class="modal-footer bg-danger">
                             <form id="forceDeleteForm" method="POST">@csrf @method('DELETE')
@@ -219,9 +219,6 @@
                     </div>
                 </div>
             </div>
-
-       
-
         </div>
     </div>
 </div>
