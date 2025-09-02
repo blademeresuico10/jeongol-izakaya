@@ -1254,7 +1254,7 @@
                 const actionButtons = document.getElementById('actionButtons');
 
                 if (data.payment?.proof_path) {
-                    paymentProof.src = `/storage/${data.payment.proof_path}`;
+                    paymentProof.src = `/file-serve/${data.payment.proof_path}`;
                     paymentProof.style.display = 'block';
                 } else {
                     paymentProof.style.display = 'none';

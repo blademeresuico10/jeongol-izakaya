@@ -21,6 +21,22 @@ Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
+Route::get('/file-serve/{path}', function ($path) {
+    $possiblePaths = [
+        storage_path('app/public/' . $path),
+        public_path('storage/' . $path),
+        base_path('storage/app/public/' . $path),
+    ];
+
+    foreach ($possiblePaths as $filePath) {
+        if (file_exists($filePath) && is_readable($filePath)) {
+            return response()->file($filePath);
+        }
+    }
+
+    abort(404);
+})->where('path', '.*');
+
 
 Route::middleware(['auth'])->group(function () {
 

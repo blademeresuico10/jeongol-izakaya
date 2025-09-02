@@ -96,9 +96,8 @@ class ReceptionistController extends Controller
                 return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
 
-            // FIX: Use table_id instead of table_number
             $conflict = DB::table('reservations')
-                ->where('table_id', $validated['table_id'])  // ✅ Changed from table_number to table_id
+                ->where('table_id', $validated['table_id'])  
                 ->where(function ($query) use ($reservedDateTime, $endDateTime) {
                     $query->where('reservation_time', '<', $endDateTime)
                         ->where('reservation_end_time', '>', $reservedDateTime);
@@ -121,7 +120,6 @@ class ReceptionistController extends Controller
                 }
             }
 
-            // Get table info for storing table_number if needed
             $table = DB::table('tables')->where('id', $validated['table_id'])->first();
 
             $reservation = Reservation::create([
@@ -129,13 +127,13 @@ class ReceptionistController extends Controller
                 'advance_payment'      => $validated['advance_payment'] ?? 0.00,
                 'reservation_time'     => $reservedDateTime,
                 'reservation_end_time' => $endDateTime,
-                'table_id'             => $validated['table_id'],  // ✅ Use table_id
-                'table_number'         => $table->table_number,    // ✅ Store table_number if your model needs it
+                'table_id'             => $validated['table_id'],  
+                'table_number'         => $table->table_number,    
                 'notes'                => $validated['notes'] ?? null,
                 'customer_id'          => $customerId,
                 'user_id'              => $userId,
                 'total_price'          => $totalPrice,
-                'status'               => 'Pending',
+                'status'               => 'Accepted',
             ]);
 
             foreach ($validated['orders'] ?? [] as $order) {
