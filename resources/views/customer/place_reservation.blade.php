@@ -459,12 +459,10 @@
         <input type="hidden" id="selectedTableNumber">
 
         <div class="flex gap-4 p-2 border-t border-gray-200 dark:border-gray-600">
-
           <button data-modal-hide="default-modal" type="button" id="order"
             class="w-1/2 bg-gray-500 hover:bg-gray-600 text-white font-medium text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-gray-300 dark:bg-gray-700 dark:hover:bg-gray-800 dark:focus:ring-gray-600">
             Order Food
           </button>
-
           <button type="button" id="paymentBtn"
             class="w-1/2 bg-blue-500 hover:bg-blue-600 text-white font-medium text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-700 dark:hover:bg-blue-800 dark:focus:ring-blue-600">
             Proceed to payment

@@ -9,9 +9,6 @@
         </nav>
 
         <div class="container-fluid">
-            @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
 
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -106,5 +103,29 @@
         </div>
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+<script>
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: "{{ session('success') }}",
+            toast: true,
+            position: 'top',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: "{{ session('error') }}",
+            toast: true,
+            position: 'top',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    @endif
+</script>
 @include('admin.layouts.script')

@@ -13,7 +13,8 @@ class DatabaseSeeder extends Seeder
             menuseeder::class,
             tableseeder::class,
             users::class,
-            stock::class
+            stock::class,
+            EwalletDetailsSeeder::class,
         ]);
     }
 }

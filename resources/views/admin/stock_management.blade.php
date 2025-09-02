@@ -9,9 +9,6 @@
         </nav>
 
         <div class="container-fluid">
-            @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
 
             <div class="mb-3">
                 <a href="{{ route('admin.stock_management') }}"
@@ -224,6 +221,7 @@
 </div>
 
 @include('admin.layouts.script')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
     $(document).ready(function () {
@@ -250,4 +248,26 @@
             $('#successModal').modal('show');
         @endif
 });
+
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: "{{ session('success') }}",
+            toast: true,
+            position: 'top',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: "{{ session('error') }}",
+            toast: true,
+            position: 'top',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    @endif
 </script>

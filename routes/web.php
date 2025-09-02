@@ -67,6 +67,12 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('/restorestock/{id}', [AdminController::class, 'restoreStock'])->name('admin.restoreStock');
     Route::delete('/forcedeletestock/{id}', [AdminController::class, 'forceDeleteStock'])->name('admin.forceDeleteStock');
 
+    //Admin e-wallet management
+    Route::get('/ewallet', [AdminController::class, 'ewallet_management'])->name('admin.ewallet_management');
+    Route::post('/ewallet-store', [AdminController::class, 'ewallet_store'])->name('ewallet.store');
+    Route::post('/ewallet/{id}/activate', [AdminController::class, 'activate'])->name('ewallet.activate');
+    Route::post('/ewallet/{id}/deactivate', [AdminController::class, 'deactivate'])->name('ewallet.deactivate');
+
     // Admin feedback view
     Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
 

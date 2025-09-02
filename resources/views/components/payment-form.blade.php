@@ -3,10 +3,36 @@
     'data' => [] 
 ])
 
-<div id="tab-{{ $method }}" class="tab-content {{ $method === 'maya' ? 'hidden' : '' }}">
+@php
+    use App\Models\EwalletDetail;
+    $ewalletDetail = EwalletDetail::getActivePaymentMethod($method);
+@endphp
 
-    <label class="block mb-2 text-sm font-medium">
-        {{ ucfirst($method) }} Number
+<div id="tab-{{ $method }}" class="tab-content {{ $method === 'maya' ? 'hidden' : '' }}">
+    @if($ewalletDetail)
+        <div class="mb-2">
+            <label class="block text-sm font-medium">
+                {{ ucfirst($method) }} Wallet:
+            </label>
+            <p class="ml-20 text-sm">{{ $ewalletDetail->wallet_name }}</p>
+            <div class="ml-20 flex items-center space-x-2">
+                <p class="text-sm text-blue-600">{{ $ewalletDetail->wallet_number }}</p>
+                <button 
+                    onclick="copyToClipboard('{{ $ewalletDetail->wallet_number }}')" 
+                    class="text-gray-400 hover:text-gray-600 cursor-pointer transition-colors duration-200 p-1"
+                    title="Copy to clipboard"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    @endif
+    
+    <label class="block text-sm font-medium">
+       Your {{ ucfirst($method) }} Account Number
     </label>
     <input type="tel" 
         pattern="[0-9]{11}"      
@@ -18,7 +44,7 @@
         required>
     <span class="error text-red-500 text-sm mb-2 hidden"></span>
 
-    <label class="block mb-2 text-sm font-medium">
+    <label class="block  text-sm font-medium">
         {{ ucfirst($method) }} Registered Name
     </label>
     <input type="text" 
@@ -26,17 +52,17 @@
         placeholder="Full Name"
         value="{{ $data['registered_name'] ?? '' }}" 
         required>
-    <span class="error text-red-500 text-sm mb-2 hidden"></span>
+    <span class="error text-red-500 text-sm hidden"></span>
 
-    <label class="block mb-2 text-sm font-medium">Amount</label>
+    <label class="block  text-sm font-medium">Amount</label>
     <input type="number" 
         class="amount w-full border rounded px-3 py-2 mb-1" 
         placeholder="Enter amount"
         value="{{ $data['amount'] ?? '' }}" 
         readonly> 
-    <span class="error text-red-500 text-sm mb-2 hidden"></span>
+    <span class="error text-red-500 text-sm  hidden"></span>
 
-    <label class="block mb-2 text-sm font-medium">Upload Proof of Payment</label>
+    <label class="block  text-sm font-medium">Upload Proof of Payment</label>
     @if(!empty($data['proof']))
         <div class="mb-3">
             <a href="{{ asset('storage/' . $data['proof']) }}" target="_blank"
@@ -49,7 +75,7 @@
         <span class="error text-red-500 text-sm mb-2 hidden"></span>
     @endif
 
-    <label class="block mb-2 text-sm font-medium">Reference Number</label>
+    <label class="block text-sm font-medium">Reference Number</label>
     <input type="text" 
         class="ref-no w-full border rounded px-3 py-2 mb-1" 
         placeholder="Enter 13-digit reference number"
@@ -58,6 +84,10 @@
         maxlength="13" 
         required>
     <span class="error text-red-500 text-sm mb-2 hidden"></span>
+    
+    <div id="toast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-75 text-white px-6 py-3 rounded-md shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none z-50">
+        Phone number copied!
+    </div>
 </div>
 
 <script>
@@ -84,7 +114,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
             let showError = false;
             if (input.type === 'tel') {
-             
                 const regex = /^[0-9]+$/;
                 if (!regex.test(value)) {
                     error.textContent = 'Must be a valid number';
@@ -110,4 +139,53 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(function() {
+            showToast();
+        }).catch(function(err) {
+            console.error('Failed to copy: ', err);
+            fallbackCopyTextToClipboard(text);
+        });
+    } else {
+        fallbackCopyTextToClipboard(text);
+    }
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast();
+        } else {
+            console.error('Fallback: Copying text command was unsuccessful');
+        }
+    } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+    }
+
+    document.body.removeChild(textArea);
+}
+
+function showToast() {
+    const toast = document.getElementById('toast');
+    toast.classList.remove('opacity-0');
+    toast.classList.add('opacity-100');
+    
+    setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+    }, 2000);
+}
 </script>

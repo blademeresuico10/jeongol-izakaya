@@ -1,28 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-</head>
-
-<body class="bg-gray-100">
     @include('admin.layouts.header')
     @include('admin.layouts.sidebar')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
-    <div id="content-wrapper" class="flex flex-col min-h-screen">
-        <div id="content" class="flex-1">
-            <nav class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-                <button id="sidebarToggleTop" class="md:hidden p-2 rounded-lg text-gray-500 hover:bg-gray-100">
-                    <i class="fas fa-bars"></i>
-                </button>
-                <h1 class="text-2xl font-semibold text-gray-800">Dashboard</h1>
-            </nav>
+    <div id="content-wrapper" class="d-flex flex-column">
+    <div id="content">
+            <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+            <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
+        </nav>
 
             <div class="p-6 space-y-6">
 
@@ -348,6 +334,4 @@
             setInterval(refreshSalesChart, 5000);
         });
     </script>
-</body>
-
-</html>
+    

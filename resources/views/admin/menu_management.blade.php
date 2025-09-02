@@ -7,9 +7,7 @@
             <h1 class="h3 mb-0 text-gray-800">Menu Management</h1>
         </nav>
         <div class="container-fluid">
-            @if (session('success'))
-                <div class="alert alert-success">{{ session('success') }}</div>
-            @endif
+
 
             <div class="mb-3">
                 <a href="{{ route('admin.menu_management') }}"
@@ -183,12 +181,12 @@
                         <div class="modal-body bg-light">
                             <div class="alert alert-danger border-danger">
                                 <h6 class="text-danger"><strong>⚠️ CRITICAL WARNING</strong></h6>
-                               <p class="text-center">
-                                Are you sure you want to <strong class="text-danger">permanently delete</strong>
-                                <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
-                            </p>
+                                <p class="text-center">
+                                    Are you sure you want to <strong class="text-danger">permanently delete</strong>
+                                    <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
+                                </p>
                             </div>
-                            
+
                         </div>
                         <div class="modal-footer bg-danger">
                             <form id="forceDeleteForm" method="POST">
@@ -247,7 +245,7 @@
 </div>
 
 @include('admin.layouts.script')
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () {
         window.showDeleteModal = function (id, itemName) {
@@ -355,4 +353,26 @@
             });
         }
     });
+
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: "{{ session('success') }}",
+            toast: true,
+            position: 'top',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: "{{ session('error') }}",
+            toast: true,
+            position: 'top',
+            timer: 2000,
+            showConfirmButton: false
+        });
+    @endif
 </script>

@@ -41,7 +41,7 @@ class users extends Seeder
             [
                 'firstname' => 'Kitchen',
                 'lastname' => 'User',
-                'role' => 'kitchen',
+                'role' => 'kitchen-staff',
                 'contact_number' => '09174445555',
                 'username' => 'kitchen',
                 'password' => Hash::make('q12345'),

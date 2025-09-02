@@ -15,7 +15,7 @@
     <!-- Divider -->
     <hr class="sidebar-divider my-0">
 
-    <li @class(['nav-item', 'active' => request()->is('/home')])>
+    <li @class(['nav-item', 'active' => request()->is('home')])>
         <a class="nav-link" href="{{ route('admin.home') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
             <span>Dashboard</span>
@@ -55,6 +55,14 @@
             <span>Reports</span>
         </a>
     </li>
+
+    <li @class(['nav-item', 'active' => request()->is('ewallet*')])>
+        <a class="nav-link" href="{{ route('admin.ewallet_management') }}">
+            <i class="fas fa-wallet"></i>
+            <span>E-Wallet</span>
+        </a>
+    </li>
+
     <li class="nav-item">
         <a class="nav-link" href="{{ route('admin.feedback') }}">
             <i class="fas fa-comments"></i>
