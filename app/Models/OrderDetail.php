@@ -13,7 +13,9 @@ class OrderDetail extends Model
         'customer_id',
         'user_id',
         'menu_id',
+        'is_added_order',
         'reservation_id',
+        'status'
     ];
     public function menu()
     {

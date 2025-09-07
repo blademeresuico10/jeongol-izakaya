@@ -137,7 +137,7 @@ class CashierController extends Controller
             'orders.*.order_detail_id' => 'required|integer',
             'orders.*.order_name' => 'required|string',
             'orders.*.quantity' => 'required|integer|min:1',
-            'orders.*.price' => 'required|numeric|min:0'
+            'orders.*.price' => 'required|numeric|min:0',
         ]);
 
         try {
@@ -236,6 +236,14 @@ class CashierController extends Controller
                     'updated_at' => now()
                 ]);
 
+            DB::table('order_details')
+                ->where('reservation_id', $request->reservation_id)
+                ->where('status', 'Pending')
+                ->update([
+                    'status' => 'Served',
+                    'updated_at' => now()
+                ]);
+
             DB::commit();
 
             return response()->json([
@@ -244,7 +252,7 @@ class CashierController extends Controller
                 'transaction_no' => $transactionNo,
                 'transaction_id' => $transactionId,
                 'total_amount' => $finalTotal,
-                'reservation_status' => 'Accepted' // Include this for frontend reference
+                'reservation_status' => 'Accepted'
             ]);
         } catch (Exception $e) {
             DB::rollback();
@@ -313,6 +321,27 @@ class CashierController extends Controller
         return redirect()->back()->with('success', 'Reservation accepted successfully.');
     }
 
+    public function showPayment($id)
+    {
+        try {
+            $reservation = Reservation::with('payment')->findOrFail($id);
+
+            return response()->json([
+                'table_id' => $reservation->table_id,
+                'advance_payment' => $reservation->advance_payment,
+                'payment' => $reservation->payment,
+                'pax' => $reservation->pax,
+                'reservation' => [
+                    'status' => $reservation->status,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => true,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
 
     public function cancelReservation(Request $request, $id)
     {
@@ -332,32 +361,6 @@ class CashierController extends Controller
         return redirect()->back()->with('success', 'Reservation cancelled successfully.');
     }
 
-    public function markNotificationRead(Request $request, $id)
-    {
-        DatabaseNotification::where('data->reservation_id', $id)
-            ->update(['read_at' => now()]);
-
-        return response()->json(['success' => true]);
-    }
-    public function showPayment($id)
-    {
-        try {
-            $reservation = Reservation::with('payment')->findOrFail($id);
-
-            return response()->json([
-                'advance_payment' => $reservation->advance_payment,
-                'payment' => $reservation->payment,
-                'reservation' => [
-                    'status' => $reservation->status,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => true,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-    }
     public function getNotifications()
     {
         $user = Auth::user();
@@ -369,7 +372,7 @@ class CashierController extends Controller
             ->where('notifiable_id', $user->id)
             ->where('notifiable_type', 'App\\Models\\User')
             ->where('created_at', '>=', now()->subHours(24))
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at', 'asc')
             ->get();
 
         $notifications = [];

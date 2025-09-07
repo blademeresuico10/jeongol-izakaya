@@ -8,8 +8,7 @@
     min-height: 100vh;
   }
 
-  .logout-button
-  {
+  .logout-button {
     text-decoration: none;
     background-color: #dc3545;
     color: white;
@@ -75,16 +74,17 @@
   }
 
   @media (max-width: 768px) {
-    .logo{
+    .logo {
       align-content: first baseline;
       width: 18%;
       height: 18%;
     }
+
     .table-link {
       flex: 0 1 calc(33.33% - 10px);
     }
 
-    .payment_details{
+    .payment_details {
       width: 100%;
       height: 100%;
       display: block;
@@ -107,18 +107,49 @@
   }
 
   .menu-card img {
-    height: 90px !important;
+    height: 160px !important;
     width: 100% !important;
     border-radius: 3px;
-
+    object-fit: cover;
   }
 
   .menu-card h5 {
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .menu-card .p-4 {
+    padding: 8px !important;
   }
 
   .menu-card .p-2 {
-    padding: 3px;
+    padding: 8px !important;
+  }
+
+  .menu-image-container {
+    width: 100%;
+    height: 160px;
+    overflow: hidden;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+
+  .menu-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .menu-cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    width: 100px;
+    justify-content: center;
+    max-width: 100%;
+    overflow-x: hidden;
   }
 
   .bottom-buttons {
@@ -222,5 +253,4 @@
     font-weight: bold;
     margin-bottom: 5px;
   }
-  
 </style>

@@ -36,7 +36,7 @@
         Reserve Now!
       </a>
 
-      <h2 class="text-2xl md:text-3xl font-semibold mb-6">OUR BEST SELLERS</h2>
+      <h2 class="text-2xl md:text-3xl font-semibold mb-6">OUR MAIN COURSE</h2>
 
       <div class="flex flex-col sm:flex-row gap-6 sm:gap-10 mb-6 w-full max-w-5xl justify-center">
 
@@ -79,7 +79,7 @@
       </div>
 
       <button id="openFeedback"
-        class="mt-6 px-6 py-3 bg-green-600 rounded font-bold hover:bg-green-700 transition">
+        class="mt-4 mb-4 px-6 py-3 bg-green-600 rounded font-bold hover:bg-green-700 transition">
         Submit Feedback
       </button>
 

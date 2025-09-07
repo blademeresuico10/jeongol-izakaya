@@ -37,7 +37,7 @@ class LoginController extends Controller
                 return redirect()->route('receptionist.home'); 
             }
 
-            else if ($user->role === 'kitchen') {
+            else if ($user->role === 'kitchen-staff') {
                 return redirect()->route('kitchen.home');
             }
 

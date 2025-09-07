@@ -21,8 +21,8 @@ class users extends Seeder
                 'status' => 'Active',
             ],
             [
-                'firstname' => 'Receptionist',
-                'lastname' => 'User',
+                'firstname' => 'Cyrus',
+                'lastname' => 'Alarcon',
                 'role' => 'receptionist',
                 'contact_number' => '09172223333',
                 'username' => 'receptionist',
@@ -30,8 +30,8 @@ class users extends Seeder
                 'status' => 'Active',
             ],
             [
-                'firstname' => 'Cashier',
-                'lastname' => 'User',
+                'firstname' => 'Kristal',
+                'lastname' => 'Fado',
                 'role' => 'cashier',
                 'contact_number' => '09173334444',
                 'username' => 'cashier',
@@ -39,8 +39,8 @@ class users extends Seeder
                 'status' => 'Active',
             ],
             [
-                'firstname' => 'Kitchen',
-                'lastname' => 'User',
+                'firstname' => 'Blademere',
+                'lastname' => 'Suico',
                 'role' => 'kitchen-staff',
                 'contact_number' => '09174445555',
                 'username' => 'kitchen',
@@ -51,7 +51,7 @@ class users extends Seeder
 
         foreach ($users as $user) {
             DB::table('users')->updateOrInsert(
-                ['username' => $user['username']], // Check by username
+                ['username' => $user['username']], 
                 array_merge($user, [
                     'created_at' => now(),
                     'updated_at' => now(),

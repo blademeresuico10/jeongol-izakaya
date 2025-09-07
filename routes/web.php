@@ -108,7 +108,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/receptionist/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('receptionist.view_kitchen');
     Route::post('/receptionist/update-order', [ReceptionistController::class, 'updateOrder'])->name('receptionist.updateOrder');
     Route::post('/receptionist/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])->name('receptionist.accept-reservation');
-    Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment']);
+    Route::get('/receptionist/payments/{id}', [ReceptionistController::class, 'showPayment'])->name('receptionist.showPayment');
     Route::get('/receptionist/notifications', [ReceptionistController::class, 'getNotifications'])->name('receptionist.notifications');
     Route::post('/receptionist/cancel-reservation/{id}', [ReceptionistController::class, 'cancelReservation'])->name('receptionist.cancel-reservation');
 
@@ -123,7 +123,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
     Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
     Route::post('/cashier/accept-reservation/{id}', [CashierController::class, 'acceptReservation'])->name('cashier.accept-reservation');
-    Route::get('/payments/{id}', [CashierController::class, 'showPayment']);
+    Route::get('/cashier/payments/{id}', [CashierController::class, 'showPayment'])->name('cashier.showPayment');
     Route::get('/cashier/notifications', [CashierController::class, 'getNotifications'])->name('cashier.notifications');
     Route::post('/cashier/cancel-reservation/{id}', [CashierController::class, 'cancelReservation'])->name('cashier.cancel-reservation');
 });

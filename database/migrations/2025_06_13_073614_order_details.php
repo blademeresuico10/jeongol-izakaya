@@ -13,6 +13,8 @@ return new class extends Migration
             $order_details->decimal('order_price', 8, 2)->nullable();
             $order_details->unsignedInteger('quantity')->nullable();
             $order_details->text('notes')->nullable();
+            $order_details->boolean('is_added_order')->default(false);  
+            $order_details->enum('status', ['Pending', 'Served', 'Cancelled'])->default('Pending');
             $order_details->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('cascade');
             $order_details->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
             $order_details->foreignId('menu_id')->constrained('menu')->onDelete('cascade');

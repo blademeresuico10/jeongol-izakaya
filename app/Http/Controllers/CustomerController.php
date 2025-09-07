@@ -20,15 +20,14 @@ class CustomerController extends Controller
     {
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
-
-        $now = Carbon::now();
         $reservations = DB::table('reservations')
-            ->whereDate('reservation_time', $now->toDateString())
+            ->whereDate('reservation_time', Carbon::now()->toDateString())
             ->get();
 
         $menuPricesMap = [];
         foreach ($menuItems as $item) {
             $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
+
             if (!isset($menuPricesMap[$baseName])) {
                 $menuPricesMap[$baseName] = ['lunch' => null, 'dinner' => null];
             }
@@ -43,12 +42,50 @@ class CustomerController extends Controller
             }
         }
 
-        $groupedMenu = [];
+        $processedMenuItems = collect();
+        $samgyupAdded = false;
+
         foreach ($menuItems as $item) {
-            $groupedMenu[$item->category][] = $item;
+            $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
+
+            if (str_contains($item->menu_item, 'Samgyup')) {
+                if (!$samgyupAdded && str_contains($item->menu_item, 'Lunch')) {
+                    $processedItem = clone $item;
+                    $processedItem->display_name = 'Samgyup';
+                    $processedItem->base_name = $baseName;
+                    $processedItem->is_time_based = true;
+                    $processedItem->lunch_price = $menuPricesMap[$baseName]['lunch'];
+                    $processedItem->dinner_price = $menuPricesMap[$baseName]['dinner'];
+                    $processedItem->price = $menuPricesMap[$baseName]['lunch']; 
+
+                    $processedMenuItems->push($processedItem);
+                    $samgyupAdded = true;
+                }
+            } else {
+                $processedItem = clone $item;
+                $processedItem->display_name = $item->menu_item;
+                $processedItem->base_name = $item->menu_item;
+                $processedItem->is_time_based = false;
+                $processedMenuItems->push($processedItem);
+            }
         }
 
-        return view('customer.place_reservation', compact('tables', 'menuItems', 'reservations', 'menuPricesMap', 'groupedMenu'));
+        $groupedMenu = $processedMenuItems->groupBy('category');
+
+        $timeInfo = [
+            'lunch_period_start' => 11, 
+            'lunch_period_end' => 17,   
+            'dinner_period_start' => 17, 
+            'dinner_period_end' => 23   
+        ];
+
+        return view('customer.place_reservation', compact(
+            'tables',
+            'reservations',
+            'groupedMenu',
+            'processedMenuItems',
+            'timeInfo'
+        ));
     }
 
     public function storeReservation(Request $request)
@@ -67,6 +104,7 @@ class CustomerController extends Controller
             'orders.*.quantity'  => 'required|integer|min:1',
             'orders.*.notes'     => 'nullable|string',
             'proof'              => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:9120',
+        
         ]);
 
         if ($validator->fails()) {
@@ -121,12 +159,26 @@ class CustomerController extends Controller
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
 
-
             $totalPrice = 0;
+            $reservationHour = $reservedDateTime->hour;
+            $isReservationLunchTime = $reservationHour >= 11 && $reservationHour < 17;
+
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if ($menu) {
-                    $totalPrice += $menu->price * $order['quantity'];
+                    $price = $menu->price;
+
+                    if (str_contains($menu->menu_item, 'Samgyup')) {
+                        if ($isReservationLunchTime && str_contains($menu->menu_item, 'Dinner')) {
+                            $lunchMenu = DB::table('menu')->where('menu_item', 'Samgyup Lunch')->first();
+                            $price = $lunchMenu ? $lunchMenu->price : $price;
+                        } elseif (!$isReservationLunchTime && str_contains($menu->menu_item, 'Lunch')) {
+                            $dinnerMenu = DB::table('menu')->where('menu_item', 'Samgyup Dinner')->first();
+                            $price = $dinnerMenu ? $dinnerMenu->price : $price;
+                        }
+                    }
+
+                    $totalPrice += $price * $order['quantity'];
                 }
             }
 
@@ -162,12 +214,25 @@ class CustomerController extends Controller
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if (!$menu) continue;
 
+                $orderPrice = $menu->price;
+
+                if (str_contains($menu->menu_item, 'Samgyup')) {
+                    if ($isReservationLunchTime && str_contains($menu->menu_item, 'Dinner')) {
+                        $lunchMenu = DB::table('menu')->where('menu_item', 'Samgyup Lunch')->first();
+                        $orderPrice = $lunchMenu ? $lunchMenu->price : $orderPrice;
+                    } elseif (!$isReservationLunchTime && str_contains($menu->menu_item, 'Lunch')) {
+                        $dinnerMenu = DB::table('menu')->where('menu_item', 'Samgyup Dinner')->first();
+                        $orderPrice = $dinnerMenu ? $dinnerMenu->price : $orderPrice;
+                    }
+                }
+
                 DB::table('order_details')->insert([
-                    'order_price'    => $menu->price * $order['quantity'],
+                    'order_price'    => $orderPrice * $order['quantity'],
                     'reservation_id' => $reservation->id,
                     'menu_id'        => $menu->id,
                     'quantity'       => $order['quantity'],
                     'notes'          => $order['notes'] ?? null,
+                    'status'         => 'Pending',
                     'customer_id'    => $customerId,
                     'user_id'        => $userId,
                     'created_at'     => now(),

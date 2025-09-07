@@ -5,21 +5,23 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ReservationPayment extends Model
+class reservationPayment extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
+     protected $fillable = [
         'reservation_id',
+        'registered_name',
+        'number',         
         'amount',
-        'payment_method',
+        'method',         
         'ref_no',
+        'proof_path',
         'status',
-        'name'
     ];
 
     public function reservation()
     {
-        return $this->belongsTo(\App\Models\reservation::class);
+        return $this->belongsTo(\App\Models\reservation::class, 'reservation_id', 'id');
     }
 }

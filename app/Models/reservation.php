@@ -34,6 +34,10 @@ class Reservation extends Model
 
     public function payment()
     {
-        return $this->hasOne(\App\Models\reservationPayment::class);
+        return $this->hasOne(\App\Models\reservationPayment::class, 'reservation_id', 'id');
+    }
+    public function table()
+    {
+        return $this->belongsTo(\App\Models\table::class);
     }
 }

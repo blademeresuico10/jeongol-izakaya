@@ -40,12 +40,12 @@
 
 <body>
   <div class="relative">
-    
+
     <div class="mt-2 border-b border-gray-200 flex items-center justify-between px-7">
       <div class="logo flex items-center ml-5">
         <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-13 w-20" />
       </div>
-      
+
       <div class="relative">
         <button id="userBtn" class="relative flex items-center gap-2 p-4 hover:bg-gray-100 z-50">
           <div class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
@@ -95,11 +95,13 @@
             <button id="closePaymentBtn"
               class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 font-bold text-xl">×</button>
             <h2 class="text-lg font-bold mb-4">Payment Details</h2>
+            <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
             <div>
-              <p>Transaction Receipt</p>
+              <p><strong>Transaction Receipt</strong></p>
               <img id="paymentProof" src="" class="mb-2 w-full object-contain" style="display:none;">
             </div>
             <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
+            <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
             <p><strong>Status:</strong> <span id="paymentStatus">N/A</span></p>
             <div id="actionButtons" class="mt-4 text-center flex justify-center gap-2">
               <form id="acceptForm" method="POST" class="inline">@csrf
@@ -113,33 +115,34 @@
     </div>
 
     @if(session('success'))
-      <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
-        class="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md max-w-sm text-center z-[1000]">
-        {{ session('success') }}
-      </div>
-    @endif
+    <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
+      class="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md max-w-sm text-center z-[1000]">
+      {{ session('success') }}
+    </div>
+  @endif
 
-    <div id="fly-animation-container" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;"></div>
+    <div id="fly-animation-container" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;">
+    </div>
 
     <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">@csrf</form>
 
     <div class="table-layout">
       @foreach($tables as $table)
-        <div class="table-link" data-table-id="{{ $table->id }}" data-table-number="{{ $table->table_number }}">
-          <div class="table available">
-            <div class="table-number text-center">Table {{ $table->table_number }}</div>
-            <div class="inline-options"
-              style="display:none; flex-direction: column; align-items: center; gap: 5px; margin-top: 10px;">
-              <button
-                class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
-                onclick="event.stopPropagation(); makeOrder({{ $table->id }})">Place Order</button>
-              <button
-                class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
-                onclick="event.stopPropagation(); makeReservation({{ $table->id }})">Make Reservation</button>
-            </div>
-          </div>
+      <div class="table-link" data-table-id="{{ $table->id }}" data-table-number="{{ $table->table_number }}">
+      <div class="table available">
+        <div class="table-number text-center">Table {{ $table->table_number }}</div>
+        <div class="inline-options text-center"
+        style="display:none; flex-direction: column; align-items: center; gap: 5px; margin-top: 10px;">
+        <button
+          class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
+          onclick="event.stopPropagation(); makeOrder({{ $table->id }})">Place Order</button>
+        <button
+          class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
+          onclick="event.stopPropagation(); makeReservation({{ $table->id }})">Make Reservation</button>
         </div>
-      @endforeach
+      </div>
+      </div>
+    @endforeach
     </div>
 
     <div class="bottom-buttons">
@@ -188,12 +191,12 @@
         <div class="modal-flex flex-col md:flex-row gap-6">
           <div class="modal-section flex flex-col gap-6 w-full">
             @foreach(['main' => 'Main Menu', 'add_ons' => 'Add-ons', 'drinks' => 'Drinks', 'rice' => 'Rice'] as $key => $label)
-              @if(isset($groupedMenu[$key]))
-                <x-menu-category-grid :key="$key" :label="$label" :items="$groupedMenu[$key]" />
-              @endif
-            @endforeach
+            @if(isset($groupedMenu[$key]))
+          <x-menu-category-grid :key="$key" :label="$label" :items="$groupedMenu[$key]" />
+          @endif
+      @endforeach
           </div>
-          
+
           <div class="modal-section">
             <label><strong>Advance Payment </strong></label>
             <input class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" type="number"
@@ -262,550 +265,893 @@
           </button>
         </div>
       </div>
+
+      <div id="paymentMethodModal"
+        class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+        <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
+          <div class="mb-4">
+            <h2 class="text-lg font-bold text-gray-800 mb-4">Payment Method</h2>
+            <p class="text-gray-600 mb-6">How will you pay for this reservation?</p>
+
+            <div class="space-y-3">
+              <button id="cashPayment"
+                class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
+                💵 Cash
+              </button>
+              <button id="gcashPayment"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
+                📱 GCash
+              </button>
+              <button id="mayaPayment"
+                class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
+                💳 Maya
+              </button>
+            </div>
+
+            <button id="cancelPaymentMethod" class="mt-4 text-gray-500 hover:text-gray-700 text-sm">
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <script>
-      const userBtn = document.getElementById('userBtn');
-      const userMenu = document.getElementById('userMenu');
-      const notifBtn = document.getElementById('notifBtn');
-      const notifModal = document.getElementById('notifModal');
-      const notifClose = document.getElementById('notifClose');
-      const badgeProfile = document.getElementById('notifBadgeProfile');
-      const badgeLink = document.getElementById('notifBadgeLink');
-      const notifList = document.getElementById('notifList');
+      class ReceptionistDashboard {
+        constructor() {
+          this.selectedTableId = null;
+          this.isPlacingOrder = false;
+          this.selectedOrders = {};
+          this.reservationId = null;
+          this.menuPrices = {};
+          this.selectedPaymentMethod = null;
+          this.fullMenuPrices = typeof fullMenuPrices !== 'undefined' ? fullMenuPrices : {};
 
-      userBtn.addEventListener('click', e => { e.stopPropagation(); userMenu.classList.toggle('hidden'); });
-      userMenu.addEventListener('click', e => e.stopPropagation());
-      document.addEventListener('click', () => userMenu.classList.add('hidden'));
+          this.elements = {};
+          this.init();
+        }
 
-      notifBtn.addEventListener('click', e => { e.stopPropagation(); notifModal.classList.remove('hidden'); });
-      notifClose.addEventListener('click', () => notifModal.classList.add('hidden'));
-      notifModal.addEventListener('click', () => notifModal.classList.add('hidden'));
-      notifModal.querySelector('div').addEventListener('click', e => e.stopPropagation());
+        init() {
+          document.addEventListener('DOMContentLoaded', () => {
+            this.initializeElements();
+            this.initializeEventListeners();
+            this.initializeNotifications();
+          });
+        }
 
-      function fetchNotifications() {
-        fetch('/receptionist/notifications')
-          .then(res => res.json())
-          .then(data => {
-            let notifications = data.notifications ?? [];
-            const pendingCount = notifications.filter(n => n.status === "Pending").length;
-            
-            [badgeProfile, badgeLink].forEach(b => {
-              b.textContent = pendingCount;
-              b.style.display = pendingCount ? 'inline-flex' : 'none';
+        initializeElements() {
+          this.elements = {
+            userBtn: document.getElementById('userBtn'),
+            userMenu: document.getElementById('userMenu'),
+            notifBtn: document.getElementById('notifBtn'),
+            notifModal: document.getElementById('notifModal'),
+            notifClose: document.getElementById('notifClose'),
+            notifList: document.getElementById('notifList'),
+            badgeProfile: document.getElementById('notifBadgeProfile'),
+            badgeLink: document.getElementById('notifBadgeLink'),
+            tableModal: document.getElementById('tableModal'),
+            paymentModal: document.getElementById('paymentModal'),
+            defaultModal: document.getElementById('default-modal'),
+            successModal: document.getElementById('successModal'),
+            closeModal: document.getElementById('closeModal'),
+            acceptForm: document.getElementById('acceptForm'),
+            submitBtn: document.getElementById('submitBtn'),
+            cancelReservationBtn: document.getElementById('cancelReservationBtn'),
+            clearOrdersBtn: document.getElementById('clearOrdersBtn'),
+            viewOrdersBtn: document.getElementById('viewOrdersBtn'),
+            customerName: document.getElementById('customerName'),
+            contactNumber: document.getElementById('contactNumber'),
+            numberOfPax: document.getElementById('numberOfPax'),
+            customerNotes: document.getElementById('customerNotes'),
+            reservedDate: document.getElementById('reserved_date'),
+            arrivalTimeInput: document.getElementById('arrivalTimeInput'),
+            advancePayment: document.getElementById('advance_payment'),
+            selectedOrdersContainer: document.getElementById('selectedOrdersContainer'),
+            totalQuantity: document.getElementById('totalQuantity'),
+            timeFrameDisplay: document.getElementById('timeFrameDisplay'),
+            reservationInfoGroup: document.getElementById('reservationInfoGroup'),
+            contactInput: document.getElementById('contactinput'),
+            tableLinks: document.querySelectorAll('.table-link')
+          };
+        }
+
+        initializeEventListeners() {
+          this.setupUserMenuEvents();
+          this.setupNotificationEvents();
+          this.setupModalEvents();
+          this.setupFormEvents();
+          this.setupTableEvents();
+          this.setupOrderEvents();
+        }
+
+        setupUserMenuEvents() {
+          if (this.elements.userBtn && this.elements.userMenu) {
+            this.elements.userBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              this.elements.userMenu.classList.toggle('hidden');
             });
 
-            if (!notifications.length) {
-              notifList.innerHTML = `<li class="no-notifs p-3 text-center text-gray-500">No notifications</li>`;
-              return;
-            }
-            notifList.innerHTML = '';
-
-            notifications.sort((a, b) => {
-              const order = { "Pending": 1, "Accepted": 2, "Rejected": 3 };
-              return (order[a.status] || 4) - (order[b.status] || 4);
-            });
-
-            notifications.forEach(n => {
-              const li = document.createElement('li');
-              li.className = 'p-3 bg-gray-100 rounded cursor-pointer mb-2';
-              li.dataset.reservationId = n.reservation_id;
-              li.onclick = () => openNotifModal(n.reservation_id);
-
-              let badgeClass = "bg-gray-300 text-gray-700";
-              if (n.status === "Accepted") badgeClass = "bg-green-100 text-green-700";
-              else if (n.status === "Rejected") badgeClass = "bg-red-100 text-red-700";
-
-              li.innerHTML = `
-                <div class="flex justify-between items-center">
-                  <div>
-                    <p class="text-sm font-medium">${n.name}</p>
-                    <p class="text-xs text-gray-500">${n.message}</p>
-                    <p class="text-xs text-gray-400 mt-1">${n.time}</p>
-                  </div>
-                  <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">
-                    ${n.status}
-                  </span>
-                </div>
-              `;
-              notifList.appendChild(li);
-            });
-          })
-          .catch(err => console.error(err));
-      }
-
-      setInterval(fetchNotifications, 3000);
-      fetchNotifications();
-
-      const paymentModal = document.getElementById('paymentModal');
-      const acceptForm = document.getElementById('acceptForm');
-      const cancelReservationBtn = document.getElementById('cancelReservationBtn');
-      let reservationId = null;
-
-      acceptForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (!reservationId) return;
-
-        fetch(acceptForm.action, {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
+            this.elements.userMenu.addEventListener('click', (e) => e.stopPropagation());
+            document.addEventListener('click', () => this.elements.userMenu.classList.add('hidden'));
           }
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            paymentModal.classList.add('hidden');
-            [badgeProfile, badgeLink].forEach(b => {
-              b.textContent = data.unread_count;
-              b.style.display = data.unread_count ? 'inline-flex' : 'none';
+        }
+
+        setupNotificationEvents() {
+          if (this.elements.notifBtn && this.elements.notifModal) {
+            this.elements.notifBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              this.elements.notifModal.classList.remove('hidden');
+            });
+          }
+
+          if (this.elements.notifClose) {
+            this.elements.notifClose.addEventListener('click', () => {
+              this.elements.notifModal.classList.add('hidden');
+            });
+          }
+
+          if (this.elements.notifModal) {
+            this.elements.notifModal.addEventListener('click', () => {
+              this.elements.notifModal.classList.add('hidden');
             });
 
-            const li = notifList.querySelector(`[data-reservation-id="${data.reservationId}"]`);
-            if (li) {
-              li.querySelector('span').textContent = data.status;
-              li.querySelector('span').className = `px-2 py-1 text-xs font-semibold rounded-full ${data.status === "Accepted" ? "bg-green-100 text-green-700" :
-                data.status === "Rejected" ? "bg-red-100 text-red-700" : "bg-gray-300 text-gray-700"}`;
+            const notifContent = this.elements.notifModal.querySelector('div');
+            if (notifContent) {
+              notifContent.addEventListener('click', (e) => e.stopPropagation());
             }
-            reservationId = null;
-          } else {
-            alert(data.message || 'Failed to accept reservation');
           }
-        })
-        .catch(err => { console.error(err); alert('Server error'); });
-      });
+        }
 
-      function openNotifModal(id) {
-        reservationId = id;
-        paymentModal.classList.remove('hidden');
-        acceptForm.action = `/receptionist/accept-reservation/${id}`;
+        setupModalEvents() {
+          if (this.elements.closeModal) {
+            this.elements.closeModal.onclick = () => {
+              this.elements.tableModal.style.display = 'none';
+            };
+          }
 
-        fetch(`/payments/${id}`)
-          .then(res => res.json())
-          .then(data => {
-            const paymentProof = document.getElementById('paymentProof');
-            const requiredAmount = document.getElementById('requiredAmount');
-            const paymentStatus = document.getElementById('paymentStatus');
-            const actionButtons = document.getElementById('actionButtons');
+          const closePaymentBtn = document.getElementById('closePaymentBtn');
+          if (closePaymentBtn) {
+            closePaymentBtn.addEventListener('click', () => {
+              this.elements.paymentModal.classList.add('hidden');
+            });
+          }
 
+          const successOkBtn = document.getElementById('successOkBtn');
+          if (successOkBtn) {
+            successOkBtn.addEventListener('click', () => this.closeSuccessModal());
+          }
+
+          if (this.elements.successModal) {
+            this.elements.successModal.addEventListener('click', (e) => {
+              if (e.target === e.currentTarget) this.closeSuccessModal();
+            });
+          }
+
+          if (this.elements.viewOrdersBtn && this.elements.defaultModal) {
+            this.elements.viewOrdersBtn.addEventListener('click', () => {
+              this.elements.defaultModal.classList.remove('hidden');
+            });
+
+            const closeButtons = this.elements.defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
+            closeButtons.forEach(btn => {
+              btn.addEventListener('click', () => {
+                this.elements.defaultModal.classList.add('hidden');
+              });
+            });
+
+            this.elements.defaultModal.addEventListener('click', (e) => {
+              if (e.target === this.elements.defaultModal) {
+                this.elements.defaultModal.classList.add('hidden');
+              }
+            });
+          }
+
+          // Payment Method Modal Events
+          const paymentMethodModal = document.getElementById('paymentMethodModal');
+          const cashPayment = document.getElementById('cashPayment');
+          const gcashPayment = document.getElementById('gcashPayment');
+          const mayaPayment = document.getElementById('mayaPayment');
+          const cancelPaymentMethod = document.getElementById('cancelPaymentMethod');
+
+          if (cashPayment) {
+            cashPayment.addEventListener('click', () => this.selectPaymentMethod('Cash'));
+          }
+          if (gcashPayment) {
+            gcashPayment.addEventListener('click', () => this.selectPaymentMethod('GCash'));
+          }
+          if (mayaPayment) {
+            mayaPayment.addEventListener('click', () => this.selectPaymentMethod('Maya'));
+          }
+          if (cancelPaymentMethod) {
+            cancelPaymentMethod.addEventListener('click', () => this.hidePaymentMethodModal());
+          }
+
+          if (paymentMethodModal) {
+            paymentMethodModal.addEventListener('click', (e) => {
+              if (e.target === e.currentTarget) {
+                this.hidePaymentMethodModal();
+              }
+            });
+          }
+
+          window.onclick = (e) => {
+            if (e.target === this.elements.tableModal) {
+              this.elements.tableModal.style.display = 'none';
+            }
+          };
+        }
+
+        setupFormEvents() {
+          if (this.elements.acceptForm) {
+            this.elements.acceptForm.addEventListener('submit', (e) => {
+              this.handleAcceptReservation(e);
+            });
+          }
+
+          if (this.elements.submitBtn) {
+            this.elements.submitBtn.addEventListener('click', () => {
+              this.handleSubmitReservation();
+            });
+          }
+
+          if (this.elements.cancelReservationBtn) {
+            this.elements.cancelReservationBtn.addEventListener('click', () => {
+              this.handleCancelReservation();
+            });
+          }
+
+          if (this.elements.clearOrdersBtn) {
+            this.elements.clearOrdersBtn.addEventListener('click', () => {
+              this.clearOrders();
+            });
+          }
+
+          if (this.elements.arrivalTimeInput) {
+            this.elements.arrivalTimeInput.addEventListener('input', () => {
+              this.updateTimeFrameDisplay();
+              this.updateMenuPrices();
+            });
+          }
+        }
+
+        setupTableEvents() {
+          this.elements.tableLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+              e.preventDefault();
+              this.handleTableClick(link);
+            });
+          });
+
+          document.addEventListener('click', (event) => {
+            if (!event.target.closest('.table-link')) {
+              document.querySelectorAll('.inline-options').forEach(opt => {
+                opt.style.display = 'none';
+              });
+            }
+          });
+        }
+
+        setupOrderEvents() {
+          // Order-related event setup can be added here
+        }
+
+        initializeNotifications() {
+          this.fetchNotifications();
+          setInterval(() => this.fetchNotifications(), 3000);
+        }
+
+        fetchNotifications() {
+          fetch('/receptionist/notifications')
+            .then(res => res.json())
+            .then(data => {
+              const notifications = data.notifications ?? [];
+              const pendingCount = notifications.filter(n => n.status === "Pending").length;
+
+              this.updateNotificationBadges(pendingCount);
+              this.renderNotifications(notifications);
+            })
+            .catch(err => console.error('Notification fetch error:', err));
+        }
+
+        updateNotificationBadges(count) {
+          [this.elements.badgeProfile, this.elements.badgeLink].forEach(badge => {
+            if (badge) {
+              badge.textContent = count;
+              badge.style.display = count ? 'inline-flex' : 'none';
+            }
+          });
+        }
+
+        renderNotifications(notifications) {
+          if (!this.elements.notifList) return;
+
+          if (!notifications.length) {
+            this.elements.notifList.innerHTML =
+              '<li class="no-notifs p-3 text-center text-gray-500">No notifications</li>';
+            return;
+          }
+
+          this.elements.notifList.innerHTML = '';
+
+          notifications.sort((a, b) => {
+            const order = { "Pending": 1, "Accepted": 2, "Rejected": 3 };
+            return (order[a.status] || 4) - (order[b.status] || 4);
+          });
+
+          notifications.forEach(notification => {
+            this.renderNotificationItem(notification);
+          });
+        }
+
+        renderNotificationItem(notification) {
+          const li = document.createElement('li');
+          li.className = 'p-3 bg-gray-100 rounded cursor-pointer mb-2';
+          li.dataset.reservationId = notification.reservation_id;
+          li.onclick = () => this.openNotificationModal(notification.reservation_id);
+
+          let badgeClass = "bg-gray-300 text-gray-700";
+          if (notification.status === "Accepted") badgeClass = "bg-green-100 text-green-700";
+          else if (notification.status === "Rejected") badgeClass = "bg-red-100 text-red-700";
+
+          li.innerHTML = `
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-sm font-medium">${notification.name}</p>
+          <p class="text-xs text-gray-500">${notification.message}</p>
+          <p class="text-xs text-gray-400 mt-1">${notification.time}</p>
+        </div>
+        <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">
+          ${notification.status}
+        </span>
+      </div>
+    `;
+
+          this.elements.notifList.appendChild(li);
+        }
+
+        openNotificationModal(id) {
+          this.reservationId = id;
+          this.elements.paymentModal.classList.remove('hidden');
+          this.elements.acceptForm.action = `/receptionist/accept-reservation/${id}`;
+
+          this.fetchPaymentDetails(id);
+        }
+
+        fetchPaymentDetails(id) {
+          fetch(`/receptionist/payments/${id}`)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              }
+              return response.json();
+            })
+            .then(data => {
+              this.updatePaymentModal(data);
+            })
+            .catch(error => {
+              console.error('Error fetching payment details:', error);
+              alert('Failed to load payment details: ' + error.message);
+            });
+        }
+
+        updatePaymentModal(data) {
+          const paymentProof = document.getElementById('paymentProof');
+          if (paymentProof) {
             if (data.payment?.proof_path) {
               paymentProof.src = `/file-serve/${data.payment.proof_path}`;
               paymentProof.style.display = 'block';
             } else {
               paymentProof.style.display = 'none';
             }
+          }
 
-            requiredAmount.textContent = data.advance_payment ?? 'N/A';
-            paymentStatus.textContent = data.payment?.status ?? 'N/A';
+          this.updateElementText('tableNumber', data.table_id || 'N/A');
+          this.updateElementText('requiredAmount', data.advance_payment || 'N/A');
+          this.updateElementText('paxCount', data.pax || 'N/A');
+          this.updateElementText('paymentStatus', data.payment?.status || 'N/A');
 
+          const actionButtons = document.getElementById('actionButtons');
+          if (actionButtons) {
             const reservationStatus = data.reservation?.status;
-            if (reservationStatus === "Accepted" || reservationStatus === "Rejected") {
-              actionButtons.style.display = "none";
-            } else {
-              actionButtons.style.display = "flex";
+            const shouldHideButtons = reservationStatus === "Accepted" || reservationStatus === "Rejected";
+            actionButtons.style.display = shouldHideButtons ? "none" : "flex";
+          }
+        }
+
+        updateElementText(elementId, text) {
+          const element = document.getElementById(elementId);
+          if (element) {
+            element.textContent = text;
+          }
+        }
+
+        handleAcceptReservation(e) {
+          e.preventDefault();
+          if (!this.reservationId) return;
+
+          fetch(this.elements.acceptForm.action, {
+            method: 'POST',
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+              'Accept': 'application/json'
             }
           })
-          .catch(err => {
-            console.error('Error fetching payment details:', err);
-            alert('Failed to load payment details.');
-          });
-      }
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                this.elements.paymentModal.classList.add('hidden');
+                this.updateNotificationBadges(data.unread_count);
+                this.updateNotificationStatus(data.reservationId, data.status);
+                this.reservationId = null;
+              } else {
+                alert(data.message || 'Failed to accept reservation');
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              alert('Server error');
+            });
+        }
 
-      document.getElementById('closePaymentBtn').addEventListener('click', () => {
-        paymentModal.classList.add('hidden');
-      });
+        handleCancelReservation() {
+          if (!this.reservationId) return;
 
-      cancelReservationBtn.addEventListener('click', () => {
-        if (!reservationId) return;
-
-        fetch(`/receptionist/cancel-reservation/${reservationId}`, {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
-          }
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            paymentModal.classList.add('hidden');
-            const li = notifList.querySelector(`[data-reservation-id="${reservationId}"]`);
-            if (li) {
-              li.classList.add("text-red-600", "font-semibold");
-              li.innerHTML += `<p class="text-xs">Cancelled</p>`;
+          fetch(`/receptionist/cancel-reservation/${this.reservationId}`, {
+            method: 'POST',
+            headers: {
+              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+              'Accept': 'application/json'
             }
-            reservationId = null;
-          } else {
-            alert(data.message || "Failed to cancel reservation");
+          })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success) {
+                this.elements.paymentModal.classList.add('hidden');
+                const li = this.elements.notifList.querySelector(`[data-reservation-id="${this.reservationId}"]`);
+                if (li) {
+                  li.classList.add("text-red-600", "font-semibold");
+                  li.innerHTML += '<p class="text-xs">Cancelled</p>';
+                }
+                this.reservationId = null;
+              } else {
+                alert(data.message || "Failed to cancel reservation");
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              alert("Server error while cancelling reservation.");
+            });
+        }
+
+        updateNotificationStatus(reservationId, status) {
+          const li = this.elements.notifList.querySelector(`[data-reservation-id="${reservationId}"]`);
+          if (li) {
+            const statusSpan = li.querySelector('span');
+            if (statusSpan) {
+              statusSpan.textContent = status;
+              const badgeClass = status === "Accepted" ? "bg-green-100 text-green-700" :
+                status === "Rejected" ? "bg-red-100 text-red-700" :
+                  "bg-gray-300 text-gray-700";
+              statusSpan.className = `px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`;
+            }
           }
-        })
-        .catch(err => {
-          console.error(err);
-          alert("Server error while cancelling reservation.");
-        });
-      });
-
-      function showSuccessModal(type) {
-        const modal = document.getElementById('successModal');
-        const title = document.getElementById('successTitle');
-        const message = document.getElementById('successMessage');
-
-        if (type === 'order') {
-          title.textContent = 'Order Placed!';
-        } else {
-          title.textContent = 'Reservation Created!';
         }
 
-        modal.classList.remove('hidden');
-      }
-
-      function closeSuccessModal() {
-        document.getElementById('successModal').classList.add('hidden');
-      }
-
-      document.getElementById('successOkBtn').addEventListener('click', closeSuccessModal);
-      document.getElementById('successModal').addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closeSuccessModal();
-      });
-
-      const modal = document.getElementById('tableModal');
-      const closeModal = document.getElementById('closeModal');
-      const tableLinks = document.querySelectorAll('.table-link');
-      const submitBtn = document.getElementById('submitBtn');
-      const arrivalTimeInput = document.getElementById('arrivalTimeInput');
-      const reserved_date = document.getElementById('reserved_date');
-
-      let selectedTableId = null;
-      let isPlacingOrder = false;
-      const selectedOrders = {};
-      const orderContainer = document.getElementById("selectedOrdersContainer");
-
-      @if(isset($menuPricesMap))
-        const fullMenuPrices = @json($menuPricesMap);
-      @else
-        const fullMenuPrices = {};
-      @endif
-      let menuPrices = {};
-
-      function updateMenuPrices() {
-        let [hours, minutes] = (arrivalTimeInput.value || "00:00").split(':').map(Number);
-        let time = hours * 60 + minutes;
-        const isLunch = time < 960;
-        menuPrices = {};
-        for (const id in fullMenuPrices) {
-          let lunch = fullMenuPrices[id].lunch;
-          let dinner = fullMenuPrices[id].dinner;
-          if (lunch == null) lunch = dinner;
-          if (dinner == null) dinner = lunch;
-          menuPrices[id] = isLunch ? lunch : dinner;
-        }
-      }
-
-      closeModal.onclick = () => modal.style.display = 'none';
-      window.onclick = e => { if (e.target === modal) modal.style.display = 'none'; };
-
-      const inlineOptionHandler = link => {
-        link.addEventListener('click', e => {
-          e.preventDefault();
+        handleTableClick(link) {
           document.querySelectorAll('.inline-options').forEach(opt => opt.style.display = 'none');
           const options = link.querySelector('.inline-options');
           if (options) options.style.display = 'block';
-        });
-      };
-      tableLinks.forEach(link => inlineOptionHandler(link));
-
-      function makeOrder(tableId) {
-        selectedTableId = tableId;
-        isPlacingOrder = true;
-        modal.style.display = 'flex';
-
-        const now = new Date();
-        document.getElementById('reserved_date').value = now.toISOString().substring(0, 10);
-        document.getElementById('reserved_date').disabled = true;
-
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        document.getElementById('arrivalTimeInput').value = `${hours}:${minutes}`;
-        document.getElementById('arrivalTimeInput').disabled = true;
-
-        document.getElementById('reservationInfoGroup').style.display = 'none';
-        document.getElementById('contactinput').style.display = 'none';
-        document.getElementById('advance_payment').parentElement.style.display = 'none';
-
-        document.querySelectorAll('.menu-card').forEach(card => {
-          card.classList.remove('selected');
-          const qtyInput = card.querySelector('input[type="number"]');
-          if (qtyInput) qtyInput.value = 1;
-        });
-
-        document.getElementById('selectedOrdersContainer').innerHTML = '';
-        document.getElementById('customerName').value = '';
-        document.getElementById('numberOfPax').value = 1;
-        document.getElementById('customerNotes').value = '';
-        document.getElementById('advance_payment').value = '';
-
-        updateMenuPrices();
-      }
-
-      function makeReservation(tableId) {
-        selectedTableId = tableId;
-        isPlacingOrder = false;
-        modal.style.display = 'flex';
-
-        document.getElementById('reservationInfoGroup').style.display = '';
-        document.getElementById('reserved_date').disabled = false;
-        document.getElementById('arrivalTimeInput').disabled = false;
-        document.getElementById('advance_payment').parentElement.style.display = '';
-        document.getElementById('contactinput').style.display = '';
-        
-        const now = new Date();
-        const today = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        document.getElementById('reserved_date').value = today;
-
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        document.getElementById('arrivalTimeInput').value = `${hours}:${minutes}`;
-
-        document.querySelectorAll('.menu-card').forEach(card => {
-          card.classList.remove('selected');
-          const qtyInput = card.querySelector('input[type="number"]');
-          if (qtyInput) qtyInput.value = 1;
-        });
-
-        document.getElementById('arrivalTimeInput').addEventListener('input', updateTimeFrameDisplay);
-        document.getElementById('selectedOrdersContainer').innerHTML = '';
-        document.getElementById('customerName').value = '';
-        document.getElementById('contactNumber').value = '';
-        document.getElementById('numberOfPax').value = 1;
-        document.getElementById('customerNotes').value = '';
-        document.getElementById('advance_payment').value = '';
-
-        updateMenuPrices();
-        updateTimeFrameDisplay();
-      }
-
-      function selectMenuItem(el) {
-        const id = el.dataset.id;
-        const name = el.dataset.name;
-        const price = menuPrices[id] || parseFloat(el.dataset.price);
-
-        if (selectedOrders[id]) {
-          selectedOrders[id].quantity += 1;
-        } else {
-          selectedOrders[id] = { name, quantity: 1, price };
-          el.classList.add("selected");
         }
 
-        const img = el.querySelector('img');
-        if (img) animateFlyToCart(img, '#viewOrdersBtn');
-        renderOrderSummary();
-      }
+        makeOrder(tableId) {
+          this.selectedTableId = tableId;
+          this.isPlacingOrder = true;
+          this.elements.tableModal.style.display = 'flex';
 
-      function renderOrderSummary() {
-        orderContainer.innerHTML = '';
-        let total = 0;
-        let totalQuantity = 0;
-        let hasItems = Object.keys(selectedOrders).length > 0;
-
-        if (hasItems) {
-          const header = document.createElement('li');
-          header.className = "flex justify-between mb-2 font-semibold border-b pb-1";
-          header.innerHTML = `<span>Menu</span><span>Quantity</span>`;
-          orderContainer.appendChild(header);
+          this.setupOrderForm();
+          this.resetForm();
+          this.updateMenuPrices();
         }
 
-        Object.entries(selectedOrders).forEach(([id, item]) => {
-          total += item.price * item.quantity;
-          totalQuantity += item.quantity;
+        makeReservation(tableId) {
+          this.selectedTableId = tableId;
+          this.isPlacingOrder = false;
+          this.elements.tableModal.style.display = 'flex';
 
-          const row = document.createElement('li');
-          row.className = "flex justify-between items-center mb-2";
-
-          row.innerHTML = `
-            <span class="font-medium">${item.name}</span>
-            <input type="number" min="1" value="${item.quantity}" 
-                class="text-right px-1 py-0.5 border border-gray-400 rounded text-black text-sm"
-                style="width: 2.5rem;"  
-                data-id="${id}"
-                onchange="updateQuantity(this)">
-            `;
-
-          orderContainer.appendChild(row);
-        });
-
-        const advancePaymentInput = document.getElementById('advance_payment');
-        if (!isPlacingOrder && advancePaymentInput) {
-          const halfTotal = (total / 2).toFixed(2);
-          advancePaymentInput.value = halfTotal;
+          this.setupReservationForm();
+          this.resetForm();
+          this.updateMenuPrices();
+          this.updateTimeFrameDisplay();
         }
 
-        if (document.getElementById('totalQuantity')) {
-          document.getElementById('totalQuantity').textContent = totalQuantity;
-        }
-      }
+        setupOrderForm() {
+          const now = new Date();
 
-      function updateQuantity(input) {
-        const id = input.dataset.id;
-        const newQuantity = parseInt(input.value);
+          this.elements.reservedDate.value = now.toISOString().substring(0, 10);
+          this.elements.reservedDate.disabled = true;
 
-        if (selectedOrders[id] && newQuantity > 0) {
-          selectedOrders[id].quantity = newQuantity;
-        }
+          const hours = now.getHours().toString().padStart(2, '0');
+          const minutes = now.getMinutes().toString().padStart(2, '0');
+          this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
+          this.elements.arrivalTimeInput.disabled = true;
 
-        renderOrderSummary();
-      }
-
-      document.getElementById('clearOrdersBtn').addEventListener('click', () => {
-        for (const key in selectedOrders) {
-          delete selectedOrders[key];
+          this.elements.reservationInfoGroup.style.display = 'none';
+          this.elements.contactInput.style.display = 'none';
+          this.elements.advancePayment.parentElement.style.display = 'none';
         }
 
-        document.querySelectorAll('.menu-card').forEach(card => {
-          card.classList.remove('selected');
-          const qtyInput = card.querySelector('input[type="number"]');
-          if (qtyInput) qtyInput.value = 1;
-        });
+        setupReservationForm() {
+          const now = new Date();
 
-        document.getElementById('selectedOrdersContainer').innerHTML = '';
-        document.getElementById('advance_payment').value = '';
-      });
+          this.elements.reservationInfoGroup.style.display = '';
+          this.elements.reservedDate.disabled = false;
+          this.elements.arrivalTimeInput.disabled = false;
+          this.elements.advancePayment.parentElement.style.display = '';
+          this.elements.contactInput.style.display = '';
 
-      document.querySelectorAll('.table-link').forEach(link => {
-        link.addEventListener('click', function () {
-          const options = this.querySelector('.inline-options');
-          const isVisible = options.style.display === 'flex';
+          const today = now.getFullYear() + '-' +
+            String(now.getMonth() + 1).padStart(2, '0') + '-' +
+            String(now.getDate()).padStart(2, '0');
+          this.elements.reservedDate.value = today;
 
-          document.querySelectorAll('.inline-options').forEach(opt => {
-            opt.style.display = 'none';
-          });
-
-          if (!isVisible) {
-            options.style.display = 'flex';
-          }
-        });
-      });
-
-      document.addEventListener('click', function (event) {
-        if (!event.target.closest('.table-link')) {
-          document.querySelectorAll('.inline-options').forEach(opt => {
-            opt.style.display = 'none';
-          });
-        }
-      });
-
-      document.addEventListener('DOMContentLoaded', function () {
-        const viewOrdersBtn = document.getElementById('viewOrdersBtn');
-        const defaultModal = document.getElementById('default-modal');
-        const closeButtons = defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
-
-        viewOrdersBtn.addEventListener('click', () => {
-          defaultModal.classList.remove('hidden');
-        });
-
-        closeButtons.forEach(btn => {
-          btn.addEventListener('click', () => {
-            defaultModal.classList.add('hidden');
-          });
-        });
-
-        defaultModal.addEventListener('click', (e) => {
-          if (e.target === defaultModal) {
-            defaultModal.classList.add('hidden');
-          }
-        });
-      });
-
-      submitBtn.addEventListener('click', () => {
-        if (submitBtn.disabled) return;
-
-        const [hours, minutes] = (arrivalTimeInput.value || "00:00").split(':').map(Number);
-        const timeInMinutes = hours * 60 + minutes;
-
-        let minTime = 690;
-        let maxTime = isPlacingOrder ? 1200 : 1080;
-
-        if (timeInMinutes < minTime || timeInMinutes > maxTime) {
-          alert(`Invalid time chosen. Please select a time between 11:30 AM and ${isPlacingOrder ? "8:00 PM" : "6:00 PM"}.`);
-          return;
+          const hours = now.getHours().toString().padStart(2, '0');
+          const minutes = now.getMinutes().toString().padStart(2, '0');
+          this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
         }
 
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Submitting...";
+        selectMenuItem(element) {
+          const id = element.dataset.id;
+          const name = element.dataset.name;
+          const price = this.menuPrices[id] || parseFloat(element.dataset.price);
 
-        const data = {
-          customer_name: document.getElementById('customerName').value.trim(),
-          contact_number: document.getElementById('contactNumber').value.trim(),
-          pax: document.getElementById('numberOfPax').value.trim(),
-          reserved_date: reserved_date.value,
-          arrival_time: arrivalTimeInput.value,
-          table_id: selectedTableId,
-          is_order: isPlacingOrder,
-          advance_payment: document.getElementById('advance_payment').value.trim(),
-          orders: Object.entries(selectedOrders).map(([id, item]) => ({
-            menu_id: id,
-            quantity: item.quantity,
-            price: item.price,
-            notes: document.getElementById('customerNotes').value.trim()
-          }))
-        };
-
-        fetch("{{ route('receptionist.storeReservation') }}", {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(data)
-        })
-        .then(async res => {
-          if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`Server responded with ${res.status}: ${errorText}`);
-          }
-          return res.json();
-        })
-        .then(response => {
-          if (response.success) {
-            document.getElementById('tableModal').classList.add('hidden');
-            showSuccessModal(isPlacingOrder ? 'order' : 'reservation');
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Submit";
+          if (this.selectedOrders[id]) {
+            this.selectedOrders[id].quantity += 1;
           } else {
-            showErrorModal(response.message || "Failed to save reservation.");
-            submitBtn.disabled = false;
-            submitBtn.textContent = "Submit";
+            this.selectedOrders[id] = { name, quantity: 1, price };
+            element.classList.add("selected");
           }
-        })
-        .catch(error => {
-          console.error("Reservation Error:", error);
-          alert("An error occurred while submitting the reservation.");
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Submit";
-        });
-      });
 
-      function showErrorModal(message) {
-        let errorModal = document.getElementById('errorModal');
-        if (!errorModal) {
-          errorModal = document.createElement('div');
+          const img = element.querySelector('img');
+          if (img) this.animateFlyToCart(img, '#viewOrdersBtn');
+          this.renderOrderSummary();
+        }
+
+        updateQuantity(input) {
+          const id = input.dataset.id;
+          const newQuantity = parseInt(input.value);
+
+          if (this.selectedOrders[id] && newQuantity > 0) {
+            this.selectedOrders[id].quantity = newQuantity;
+            this.renderOrderSummary();
+          }
+        }
+
+        clearOrders() {
+          Object.keys(this.selectedOrders).forEach(key => {
+            delete this.selectedOrders[key];
+          });
+
+          document.querySelectorAll('.menu-card').forEach(card => {
+            card.classList.remove('selected');
+            const qtyInput = card.querySelector('input[type="number"]');
+            if (qtyInput) qtyInput.value = 1;
+          });
+
+          this.elements.selectedOrdersContainer.innerHTML = '';
+          this.elements.advancePayment.value = '';
+        }
+
+        renderOrderSummary() {
+          const container = this.elements.selectedOrdersContainer;
+          container.innerHTML = '';
+
+          let total = 0;
+          let totalQuantity = 0;
+          const hasItems = Object.keys(this.selectedOrders).length > 0;
+
+          if (hasItems) {
+            const header = document.createElement('li');
+            header.className = "flex justify-between mb-2 font-semibold border-b pb-1";
+            header.innerHTML = '<span>Menu</span><span>Quantity</span>';
+            container.appendChild(header);
+
+            Object.entries(this.selectedOrders).forEach(([id, item]) => {
+              total += item.price * item.quantity;
+              totalQuantity += item.quantity;
+
+              const row = document.createElement('li');
+              row.className = "flex justify-between items-center mb-2";
+              row.innerHTML = `
+          <span class="font-medium">${item.name}</span>
+          <input type="number" min="1" value="${item.quantity}" 
+            class="text-right px-1 py-0.5 border border-gray-400 rounded text-black text-sm"
+            style="width: 2.5rem;"  
+            data-id="${id}"
+            onchange="dashboard.updateQuantity(this)">
+        `;
+              container.appendChild(row);
+            });
+          }
+
+          if (!this.isPlacingOrder && this.elements.advancePayment) {
+            const halfTotal = (total / 2).toFixed(2);
+            this.elements.advancePayment.value = halfTotal;
+          }
+
+          if (this.elements.totalQuantity) {
+            this.elements.totalQuantity.textContent = totalQuantity;
+          }
+        }
+
+        updateMenuPrices() {
+          const arrivalTime = this.elements.arrivalTimeInput.value || "00:00";
+          const [hours, minutes] = arrivalTime.split(':').map(Number);
+          const time = hours * 60 + minutes;
+          const isLunch = time < 960;
+
+          document.querySelectorAll('.menu-card').forEach(card => {
+            const isTimeBased = card.dataset.isTimeBased === 'true';
+            if (isTimeBased) {
+              const lunchPrice = parseFloat(card.dataset.lunchPrice);
+              const dinnerPrice = parseFloat(card.dataset.dinnerPrice);
+              const currentPrice = isLunch ? lunchPrice : dinnerPrice;
+
+              const priceElement = card.querySelector('.menu-price');
+              if (priceElement) {
+                priceElement.textContent = `₱${currentPrice.toFixed(2)}`;
+              }
+
+              card.dataset.price = currentPrice;
+            }
+          });
+
+          this.menuPrices = {};
+          for (const id in this.fullMenuPrices) {
+            let lunch = this.fullMenuPrices[id].lunch;
+            let dinner = this.fullMenuPrices[id].dinner;
+            if (lunch == null) lunch = dinner;
+            if (dinner == null) dinner = lunch;
+            this.menuPrices[id] = isLunch ? lunch : dinner;
+          }
+        }
+
+        resetForm() {
+          const fieldsToReset = [
+            this.elements.customerName,
+            this.elements.contactNumber,
+            this.elements.numberOfPax,
+            this.elements.customerNotes,
+            this.elements.advancePayment
+          ];
+
+          fieldsToReset.forEach(field => {
+            if (field) field.value = '';
+          });
+
+          if (this.elements.numberOfPax) {
+            this.elements.numberOfPax.value = 1;
+          }
+
+          this.clearOrders();
+        }
+
+        handleSubmitReservation() {
+          if (this.elements.submitBtn.disabled) return;
+
+          const [hours, minutes] = (this.elements.arrivalTimeInput.value || "00:00").split(':').map(Number);
+          const timeInMinutes = hours * 60 + minutes;
+          const minTime = 690;
+          const maxTime = this.isPlacingOrder ? 1200 : 1080;
+
+          if (timeInMinutes < minTime || timeInMinutes > maxTime) {
+            this.showErrorToast(`Invalid time chosen. Please select a time between 11:30 AM and ${this.isPlacingOrder ? "8:00 PM" : "6:00 PM"}.`);
+            return;
+          }
+
+          // Validate required fields
+          if (!this.elements.customerName.value.trim()) {
+            this.showErrorToast('Please enter customer name.');
+            return;
+          }
+
+          if (!this.isPlacingOrder && !this.elements.contactNumber.value.trim()) {
+            this.showErrorToast('Please enter contact number.');
+            return;
+          }
+
+          // If it's a reservation (not an order), show payment method modal
+          if (!this.isPlacingOrder) {
+            this.elements.submitBtn.disabled = true;
+            this.elements.submitBtn.textContent = "Processing...";
+            this.showPaymentMethodModal();
+          } else {
+            // For orders, proceed directly
+            this.elements.submitBtn.disabled = true;
+            this.elements.submitBtn.textContent = "Submitting...";
+            const data = this.prepareSubmissionData();
+            this.submitReservation(data);
+          }
+        }
+
+        // Payment Method Modal Functions
+        showPaymentMethodModal() {
+          const modal = document.getElementById('paymentMethodModal');
+          if (modal) {
+            modal.classList.remove('hidden');
+          }
+        }
+
+        hidePaymentMethodModal() {
+          const modal = document.getElementById('paymentMethodModal');
+          if (modal) {
+            modal.classList.add('hidden');
+          }
+          // Reset submit button state
+          this.elements.submitBtn.disabled = false;
+          this.elements.submitBtn.textContent = "Submit";
+        }
+
+        selectPaymentMethod(method) {
+          this.selectedPaymentMethod = method;
+          this.hidePaymentMethodModal();
+
+          // Now proceed with the actual reservation submission
+          const data = this.prepareSubmissionData();
+          data.payment_method = method; // Add payment method to the data
+          this.submitReservation(data);
+        }
+
+        showErrorToast(message) {
+          const toast = document.createElement('div');
+          toast.textContent = message;
+          toast.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #ef4444;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 6px;
+      z-index: 9999;
+      font-size: 14px;
+      max-width: 300px;
+    `;
+
+          document.body.appendChild(toast);
+
+          setTimeout(() => {
+            document.body.removeChild(toast);
+          }, 3000);
+        }
+
+        prepareSubmissionData() {
+          return {
+            customer_name: this.elements.customerName.value.trim(),
+            contact_number: this.elements.contactNumber.value.trim(),
+            pax: this.elements.numberOfPax.value.trim(),
+            reserved_date: this.elements.reservedDate.value,
+            arrival_time: this.elements.arrivalTimeInput.value,
+            table_id: this.selectedTableId,
+            is_order: this.isPlacingOrder,
+            advance_payment: this.elements.advancePayment.value.trim(),
+            orders: Object.entries(this.selectedOrders).map(([id, item]) => ({
+              menu_id: id,
+              quantity: item.quantity,
+              price: item.price,
+              notes: this.elements.customerNotes.value.trim()
+            }))
+          };
+        }
+
+        submitReservation(data) {
+          const storeUrl = document.querySelector('meta[name="store-reservation-url"]')?.getAttribute('content')
+            || '/receptionist/store-reservation';
+
+          fetch(storeUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+              "Accept": "application/json"
+            },
+            body: JSON.stringify(data)
+          })
+            .then(async res => {
+              if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(`Server responded with ${res.status}: ${errorText}`);
+              }
+              return res.json();
+            })
+            .then(response => {
+              if (response.success) {
+                this.elements.tableModal.classList.add('hidden');
+                this.showSuccessModal(this.isPlacingOrder ? 'order' : 'reservation');
+              } else {
+                this.showErrorModal(response.message || "Failed to save reservation.");
+              }
+            })
+            .catch(error => {
+              console.error("Reservation Error:", error);
+              alert("An error occurred while submitting the reservation.");
+            })
+            .finally(() => {
+              this.elements.submitBtn.disabled = false;
+              this.elements.submitBtn.textContent = "Submit";
+            });
+        }
+
+        updateTimeFrameDisplay() {
+          const timeFrameDisplay = this.elements.timeFrameDisplay;
+          if (!timeFrameDisplay || !this.elements.arrivalTimeInput.value) {
+            if (timeFrameDisplay) timeFrameDisplay.textContent = '';
+            return;
+          }
+
+          const [hours, minutes] = this.elements.arrivalTimeInput.value.split(':').map(Number);
+          const start = new Date();
+          start.setHours(hours, minutes, 0, 0);
+
+          const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+          const options = { hour: 'numeric', minute: '2-digit', hour12: true };
+          const startStr = start.toLocaleTimeString('en-US', options);
+          const endStr = end.toLocaleTimeString('en-US', options);
+
+          timeFrameDisplay.textContent = `${startStr} - ${endStr}`;
+        }
+
+        showSuccessModal(type) {
+          const modal = this.elements.successModal;
+          const title = document.getElementById('successTitle');
+
+          if (title) {
+            title.textContent = type === 'order' ? 'Order Placed!' : 'Reservation Created!';
+          }
+
+          if (modal) {
+            modal.classList.remove('hidden');
+          }
+        }
+
+        closeSuccessModal() {
+          if (this.elements.successModal) {
+            this.elements.successModal.classList.add('hidden');
+          }
+
+          if (this.elements.tableModal) {
+            this.elements.tableModal.style.display = 'none';
+          }
+        }
+
+        showErrorModal(message) {
+          let errorModal = document.getElementById('errorModal');
+          if (!errorModal) {
+            errorModal = this.createErrorModal();
+          }
+
+          document.getElementById('errorMessage').textContent = message;
+          errorModal.classList.remove('hidden');
+        }
+
+        createErrorModal() {
+          const errorModal = document.createElement('div');
           errorModal.id = 'errorModal';
           errorModal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
           errorModal.innerHTML = `
-            <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
-                <div class="mb-4">
-                    <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <i class="fas fa-times text-2xl text-red-600"></i>
+                    <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
+                        <div class="mb-4">
+                            <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                  <i class="fas fa-times text-2xl text-red-600"></i>
+                            </div>
+                              <h2 class="text-lg font-bold text-gray-800">Error</h2>
+                              <p id="errorMessage" class="text-gray-600 mt-2"></p>
+                          </div>
+                          <button id="errorOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded">
+                              OK
+                          </button>
                     </div>
-                    <h2 class="text-lg font-bold text-gray-800">Error</h2>
-                    <p id="errorMessage" class="text-gray-600 mt-2"></p>
-                </div>
-                <button id="errorOkBtn" class="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-6 rounded">
-                    OK
-                </button>
-            </div>
-          `;
+                  `;
           document.body.appendChild(errorModal);
 
           document.getElementById('errorOkBtn').addEventListener('click', () => {
@@ -814,65 +1160,81 @@
           errorModal.addEventListener('click', (e) => {
             if (e.target === e.currentTarget) errorModal.classList.add('hidden');
           });
+
+          return errorModal;
         }
 
-        document.getElementById('errorMessage').textContent = message;
-        errorModal.classList.remove('hidden');
-      }
+        animateFlyToCart(imageEl, targetSelector) {
+          const imgRect = imageEl.getBoundingClientRect();
+          const targetEl = document.querySelector(targetSelector);
 
-      function animateFlyToCart(imageEl, targetSelector) {
-        const imgRect = imageEl.getBoundingClientRect();
-        const targetEl = document.querySelector(targetSelector);
-        const targetRect = targetEl.getBoundingClientRect();
+          if (!targetEl) {
+            console.warn(`Target element ${targetSelector} not found`);
+            return;
+          }
 
-        const flyingImg = imageEl.cloneNode(true);
-        flyingImg.style.position = 'fixed';
-        flyingImg.style.left = `${imgRect.left}px`;
-        flyingImg.style.top = `${imgRect.top}px`;
-        flyingImg.style.width = `${imgRect.width}px`;
-        flyingImg.style.height = `${imgRect.height}px`;
-        flyingImg.style.transition = 'all 0.8s ease-in-out';
-        flyingImg.style.filter = 'blur(2px)';
-        flyingImg.style.zIndex = '10000';
-        flyingImg.style.pointerEvents = 'none';
-        flyingImg.style.borderRadius = '10px';
+          const targetRect = targetEl.getBoundingClientRect();
+          const flyingImg = imageEl.cloneNode(true);
 
-        document.getElementById('fly-animation-container').appendChild(flyingImg);
+          Object.assign(flyingImg.style, {
+            position: 'fixed',
+            left: `${imgRect.left}px`,
+            top: `${imgRect.top}px`,
+            width: `${imgRect.width}px`,
+            height: `${imgRect.height}px`,
+            transition: 'all 0.8s ease-in-out',
+            filter: 'blur(2px)',
+            zIndex: '10000',
+            pointerEvents: 'none',
+            borderRadius: '10px'
+          });
 
-        requestAnimationFrame(() => {
-          flyingImg.style.left = `${targetRect.left + targetRect.width / 2}px`;
-          flyingImg.style.top = `${targetRect.top + targetRect.height / 2}px`;
-          flyingImg.style.width = `0px`;
-          flyingImg.style.height = `0px`;
-          flyingImg.style.opacity = '0.3';
-        });
+          const container = document.getElementById('fly-animation-container');
+          if (container) {
+            container.appendChild(flyingImg);
+          } else {
+            document.body.appendChild(flyingImg);
+          }
 
-        flyingImg.addEventListener('transitionend', () => {
-          flyingImg.remove();
-        });
-      }
+          requestAnimationFrame(() => {
+            Object.assign(flyingImg.style, {
+              left: `${targetRect.left + targetRect.width / 2}px`,
+              top: `${targetRect.top + targetRect.height / 2}px`,
+              width: '0px',
+              height: '0px',
+              opacity: '0.3'
+            });
+          });
 
-      function updateTimeFrameDisplay() {
-        const arrivalTime = document.getElementById('arrivalTimeInput').value;
-
-        if (!arrivalTime) {
-          document.getElementById('timeFrameDisplay').textContent = '';
-          return;
+          flyingImg.addEventListener('transitionend', () => {
+            flyingImg.remove();
+          });
         }
-        
-        const [hours, minutes] = arrivalTime.split(':').map(Number);
-        const start = new Date();
-        start.setHours(hours);
-        start.setMinutes(minutes);
-
-        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-
-        const options = { hour: 'numeric', minute: '2-digit', hour12: true };
-        const startStr = start.toLocaleTimeString('en-US', options);
-        const endStr = end.toLocaleTimeString('en-US', options);
-
-        document.getElementById('timeFrameDisplay').textContent = `${startStr} - ${endStr}`;
       }
+
+      const dashboard = new ReceptionistDashboard();
+
+      window.selectMenuItem = function (element) {
+        dashboard.selectMenuItem(element);
+      };
+
+      window.updateQuantity = function (input) {
+        dashboard.updateQuantity(input);
+      };
+
+      window.makeOrder = function (tableId) {
+        dashboard.makeOrder(tableId);
+      };
+
+      window.makeReservation = function (tableId) {
+        dashboard.makeReservation(tableId);
+      };
+
+      window.openNotifModal = function (id) {
+        dashboard.openNotificationModal(id);
+      };
+
+      window.dashboard = dashboard;
     </script>
   </div>
 </body>

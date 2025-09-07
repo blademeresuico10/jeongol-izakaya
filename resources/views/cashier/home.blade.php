@@ -44,10 +44,40 @@
             }
 
             #print_invoice {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                height: auto !important;
+                background: white !important;
+                z-index: 9999 !important;
+            }
+
+            #print_invoice .fixed,
+            #print_invoice .bg-black,
+            #print_invoice .bg-opacity-50 {
+                position: static !important;
+                background: transparent !important;
+            }
+
+            #print_invoice .p-4 {
+                padding: 20px !important;
+            }
+
+            #print_invoice .flex.justify-between {
+                display: grid !important;
+                grid-template-columns: 2fr 1fr 1fr 1fr !important;
+                gap: 10px !important;
+            }
+
+            #print_invoice .flex-1 {
+                flex: none !important;
+            }
+
+            #print_invoice .w-16,
+            #print_invoice .w-20,
+            #print_invoice .w-24 {
+                width: auto !important;
+                text-align: right !important;
             }
         }
 
@@ -277,11 +307,13 @@
                     <button id="closePaymentBtn"
                         class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 font-bold text-xl">×</button>
                     <h2 class="text-lg font-bold mb-4">Payment Details</h2>
+                    <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
                     <div>
-                        <p>Transaction Receipt</p>
+                        <p><strong>Transaction Receipt</strong></p>
                         <img id="paymentProof" src="" class="mb-2 w-full object-contain" style="display:none;">
                     </div>
                     <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
+                    <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
                     <p><strong>Status:</strong> <span id="paymentStatus">N/A</span></p>
                     <div id="actionButtons" class="mt-4 text-center flex justify-center gap-2">
                         <form id="acceptForm" method="POST" class="inline">@csrf
@@ -292,7 +324,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
 
         <!-- Tables -->
@@ -306,29 +337,17 @@
                     <div class="table-link cursor-pointer" data-reservation-id="{{ $reservationId }}"
                         data-table-number="{{ $table->table_number }}" data-table-capacity="{{ $table->capacity }}"
                         data-occupied="{{ $isOccupied ? '1' : '0' }}">
-                        <div class="flex justify-center mt-5">
+                        <div class="flex justify-center ">
                             <div
-                                class="relative h-32 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center p-4">
+                                class="relative h-40 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center ">
                                 <div class="absolute mt-2 -top-1 px-3 bg-gray-200 text-black text-xs rounded-full shadow">
                                     {{ $table->capacity }} Pax
                                 </div>
-                                <div
-                                    class="absolute top-0 left-1/4 -translate-x-1/2 -translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                                </div>
-                                <div
-                                    class="absolute top-0 left-3/4 -translate-x-1/2 -translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                                </div>
-                                <div
-                                    class="absolute bottom-0 left-1/4 -translate-x-1/2 translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                                </div>
-                                <div
-                                    class="absolute bottom-0 left-3/4 -translate-x-1/2 translate-y-full w-14 h-2 bg-gray-200 rounded-full">
-                                </div>
 
-                                <div class="flex flex-col items-center mt-4">
+                                <div class="flex flex-col items-center mt-6">
                                     <div
-                                        class="w-16 h-16 rounded-full {{ $isOccupied ? 'bg-red-600' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
-                                        <span class="text-lg font-semibold">T-{{ $table->table_number }}</span>
+                                        class="w-20 h-20 rounded-full {{ $isOccupied ? 'bg-red-600' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
+                                        <span class="text-lg font-semibold">Table-{{ $table->table_number }}</span>
                                     </div>
                                     @if($table->current_reservation_id && $table->remaining_seconds > 0)
                                         <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
@@ -341,7 +360,7 @@
                                                 data-seconds="{{ $table->remaining_seconds }}">--:--:--</span>
                                         </span>
                                     @else
-                                        <span class="text-green-600 font-medium mt-2">Available</span>
+                                        <span class="text-green-600 font-medium">Available</span>
                                     @endif
                                 </div>
                             </div>
@@ -504,7 +523,6 @@
             </div>
         </div>
 
-        <!-- Toast -->
         <div id="toast"
             class="fixed top-5 right-5 z-50 hidden opacity-0 px-4 py-3 rounded-lg shadow-md bg-red-600 text-white text-sm font-medium transition-opacity duration-300 ease-in-out">
             <span id="toast-message">Something went wrong</span>
@@ -515,30 +533,26 @@
 <script>
     let currentReservationData = null;
 
-    // Dropdown functionality
     function initializeDropdown() {
-        const dropdownToggle = document.getElementById('userBtn'); // match your button ID
-        const dropdownMenu = document.getElementById('userMenu');  // match your dropdown ID
+        const dropdownToggle = document.getElementById('userBtn');
+        const dropdownMenu = document.getElementById('userMenu');
 
         if (!dropdownToggle || !dropdownMenu) {
             console.error('Dropdown elements not found');
             return;
         }
 
-        // Toggle dropdown visibility
         dropdownToggle.addEventListener('click', function (event) {
             event.stopPropagation();
-            dropdownMenu.classList.toggle('hidden'); // Tailwind uses 'hidden'
+            dropdownMenu.classList.toggle('hidden');
         });
 
-        // Close dropdown when clicking outside
         document.addEventListener('click', function (event) {
             if (!dropdownMenu.contains(event.target) && !dropdownToggle.contains(event.target)) {
                 dropdownMenu.classList.add('hidden');
             }
         });
 
-        // Close dropdown when clicking on links inside it
         dropdownMenu.addEventListener('click', function (event) {
             if (event.target.tagName === 'A') {
                 dropdownMenu.classList.add('hidden');
@@ -552,7 +566,6 @@
 
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Initialize dropdown
         initializeDropdown();
 
         const dineInContent = document.getElementById("dineInContent");
@@ -570,7 +583,6 @@
         invoiceDateSpan.textContent = formattedDate;
         printInvoiceDateSpan.textContent = formattedDate;
 
-        // Table click handling
         dineInContent.addEventListener("click", function (event) {
             const table = event.target.closest(".table-link");
             if (!table) return;
@@ -673,17 +685,132 @@
 
 
     function openPrintInvoice() {
-        document.getElementById("print_invoice_date").textContent = document.getElementById("invoice_date").textContent;
-        document.getElementById("print_customer_name").textContent = document.getElementById("customer_name").textContent;
-        const invoiceItemsList = document.getElementById("invoiceItemsList").cloneNode(true);
-        const printItemsContainer = document.getElementById("print_invoiceItemsList");
-        printItemsContainer.innerHTML = "";
-        printItemsContainer.appendChild(invoiceItemsList);
-        document.getElementById("print_total_price").textContent = document.getElementById("total_price").value;
-        const printArea = document.getElementById("print_invoice");
-        printArea.classList.remove("hidden");
-        printArea.classList.add("flex");
-        setTimeout(() => { window.print(); printArea.classList.add("hidden"); printArea.classList.remove("flex"); }, 500);
+        const printWindow = window.open('', '_blank', 'width=800,height=600');
+
+        const invoiceDate = document.getElementById("invoice_date").textContent;
+        const customerName = document.getElementById("customer_name").textContent;
+        const totalPrice = document.getElementById("total_price").value;
+        const itemsHtml = document.getElementById("invoiceItemsList").innerHTML;
+
+        printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Invoice</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    margin: 20px; 
+                    font-size: 12px;
+                }
+                .invoice-header { 
+                    text-align: center; 
+                    margin-bottom: 20px; 
+                    border-bottom: 2px solid #000;
+                    padding-bottom: 10px;
+                }
+                .invoice-items { 
+                    margin: 20px 0; 
+                    width: 100%;
+                }
+                
+                /* Table-like layout for items */
+                .item-header {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 1fr;
+                    gap: 10px;
+                    font-weight: bold;
+                    border-bottom: 1px solid #000;
+                    padding: 8px 0;
+                    margin-bottom: 5px;
+                }
+                
+                .item-row {
+                    display: grid;
+                    grid-template-columns: 2fr 1fr 1fr 1fr;
+                    gap: 10px;
+                    padding: 5px 0;
+                    border-bottom: 1px dotted #ccc;
+                }
+                
+                .item-name { text-align: left; }
+                .item-qty { text-align: center; }
+                .item-price { text-align: right; }
+                .item-subtotal { text-align: right; }
+                
+                .total-section { 
+                    margin-top: 20px; 
+                    padding-top: 10px; 
+                    border-top: 2px solid #000; 
+                    text-align: right;
+                }
+                
+                .total-row {
+                    display: grid;
+                    grid-template-columns: 3fr 1fr;
+                    gap: 10px;
+                    font-weight: bold;
+                    font-size: 14px;
+                }
+                
+                @media print {
+                    body { margin: 0; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="invoice-header">
+                <h2>Invoice</h2>
+                <p><strong>Date:</strong> ${invoiceDate}</p>
+                <p><strong>Customer:</strong> ${customerName}</p>
+            </div>
+            
+            <div class="invoice-items">
+                <div class="item-header">
+                    <span class="item-name">Item</span>
+                    <span class="item-qty">Qty</span>
+                    <span class="item-price">Price</span>
+                    <span class="item-subtotal">Subtotal</span>
+                </div>
+                <div id="items-container"></div>
+            </div>
+            
+            <div class="total-section">
+                <div class="total-row">
+                    <span>Total:</span>
+                    <span>${totalPrice}</span>
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+
+        printWindow.document.close();
+
+        const itemsContainer = printWindow.document.getElementById('items-container');
+        const originalItems = document.getElementById("invoiceItemsList").children;
+
+        Array.from(originalItems).forEach(item => {
+            const spans = item.querySelectorAll('span');
+            if (spans.length >= 4) {
+                const itemRow = printWindow.document.createElement('div');
+                itemRow.className = 'item-row';
+                itemRow.innerHTML = `
+                <span class="item-name">${spans[0].textContent}</span>
+                <span class="item-qty">${spans[1].textContent}</span>
+                <span class="item-price">${spans[2].textContent}</span>
+                <span class="item-subtotal">${spans[3].textContent}</span>
+            `;
+                itemsContainer.appendChild(itemRow);
+            }
+        });
+
+        printWindow.focus();
+
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 500);
     }
 
     function openPaymentModal() {
@@ -863,7 +990,6 @@
         invoiceModal.classList.remove("flex");
     }
 
-    // Updated submitPayment function with immediate table update
     function submitPayment() {
         if (!currentReservationData) {
             showToast("No reservation data available", "error");
@@ -938,13 +1064,10 @@
             });
     }
 
-    // New function to update table status immediately after payment
     function updateTableStatusAfterPayment(reservationId) {
-        // Find the table element with this reservation ID
         const tableElement = document.querySelector(`[data-reservation-id="${reservationId}"]`);
 
         if (tableElement) {
-            // Update the table's visual status
             const tableCircle = tableElement.querySelector('.w-16.h-16.rounded-full');
             const statusText = tableElement.querySelector('.text-red-600, .text-green-600');
             const countdownElement = tableElement.querySelector('.countdown');
@@ -960,22 +1083,18 @@
                 statusText.classList.add('text-green-600');
             }
 
-            // Hide countdown if present
             if (countdownElement && countdownElement.parentElement) {
                 countdownElement.parentElement.style.display = 'none';
             }
 
-            // Update data attributes
             tableElement.setAttribute('data-occupied', '0');
             tableElement.setAttribute('data-reservation-id', '');
 
-            // Remove any pulsing animations
             tableElement.classList.remove('table-occupied');
             tableElement.classList.add('table-available');
         }
     }
 
-    // Updated table click handler to prevent clicks on recently processed tables
     function updateTableClickHandler() {
         const dineInContent = document.getElementById("dineInContent");
 
@@ -986,17 +1105,14 @@
             const reservationId = table.getAttribute("data-reservation-id");
             const isOccupied = table.getAttribute("data-occupied") === "1";
 
-            // Prevent interaction if table was recently processed
             if (table.classList.contains('processing')) {
                 showToast("Please wait, table status is being updated...", "info");
                 return;
             }
 
             if (isOccupied && reservationId) {
-                // Add processing class to prevent multiple clicks
                 table.classList.add('processing');
 
-                // Remove processing class after a delay
                 setTimeout(() => {
                     table.classList.remove('processing');
                 }, 3000);
@@ -1245,14 +1361,15 @@
         paymentModal.classList.remove('hidden');
         acceptForm.action = `/receptionist/accept-reservation/${id}`;
 
-        fetch(`/payments/${id}`)
-            .then(res => res.json())
+        fetch(`/receptionist/payments/${id}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 const paymentProof = document.getElementById('paymentProof');
-                const requiredAmount = document.getElementById('requiredAmount');
-                const paymentStatus = document.getElementById('paymentStatus');
-                const actionButtons = document.getElementById('actionButtons');
-
                 if (data.payment?.proof_path) {
                     paymentProof.src = `/file-serve/${data.payment.proof_path}`;
                     paymentProof.style.display = 'block';
@@ -1260,9 +1377,27 @@
                     paymentProof.style.display = 'none';
                 }
 
-                requiredAmount.textContent = data.advance_payment ?? 'N/A';
-                paymentStatus.textContent = data.payment?.status ?? 'N/A';
+                const tableNumberElement = document.getElementById('tableNumber');
+                if (tableNumberElement) {
+                    tableNumberElement.textContent = data.table_id || 'N/A';
+                }
 
+                const requiredAmount = document.getElementById('requiredAmount');
+                if (requiredAmount) {
+                    requiredAmount.textContent = data.advance_payment || 'N/A';
+                }
+
+                const paxElement = document.getElementById('paxCount');
+                if (paxElement) {
+                    paxElement.textContent = data.pax || 'N/A';
+                }
+
+                const paymentStatus = document.getElementById('paymentStatus');
+                if (paymentStatus) {
+                    paymentStatus.textContent = data.payment?.status || 'N/A';
+                }
+
+                const actionButtons = document.getElementById('actionButtons');
                 const reservationStatus = data.reservation?.status;
                 if (reservationStatus === "Accepted" || reservationStatus === "Rejected") {
                     actionButtons.style.display = "none";
@@ -1270,9 +1405,9 @@
                     actionButtons.style.display = "flex";
                 }
             })
-            .catch(err => {
-                console.error('Error fetching payment details:', err);
-                alert('Failed to load payment details.');
+            .catch(error => {
+                console.error('Error fetching payment details:', error);
+                alert('Failed to load payment details: ' + error.message);
             });
     }
 

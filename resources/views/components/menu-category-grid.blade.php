@@ -1,40 +1,42 @@
 <div class="flex flex-col">
-  <p class="text-lg font-semibold text-black-800 dark:text-blak">{{ $label }}</p>
+  <p class="text-xl font-semibold text-gray-800 mb-4">{{ $label }}</p>
 
   <div class="w-full overflow-x-hidden">
-    <div class="grid gap-5 mt-1
-      {{ $key === 'main' ? 'grid-cols-3 main-menu-grid' : 'grid-cols-3 sm:grid-cols-3 md:grid-cols-3' }}">
-
-      @php $displayedMainItems = []; @endphp
+    <div class="grid gap-4 mt-1 grid-cols-3 {{ $key === 'main' ? 'main-menu-grid' : '' }}">
 
       @foreach($items as $item)
-        @php
-        $baseName = $key === 'main'
-        ? str_replace([' Lunch', ' Dinner'], '', $item->menu_item)
-        : $item->menu_item;
-      @endphp
+        <div class="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden cursor-pointer menu-card"
+             onclick="selectMenuItem(this)" 
+             data-id="{{ $item->id }}" 
+             data-name="{{ $item->display_name }}" 
+             data-category="{{ $key }}"
+             data-price="{{ $item->price }}"
+             @if($item->is_time_based ?? false)
+               data-is-time-based="true"
+               data-lunch-price="{{ $item->lunch_price }}"
+               data-dinner-price="{{ $item->dinner_price }}"
+             @else
+               data-is-time-based="false"
+             @endif>
 
-        @if($key !== 'main' || !in_array($baseName, $displayedMainItems))
-        @if($key === 'main') @php $displayedMainItems[] = $baseName; @endphp @endif
+          <div class="aspect-square w-full overflow-hidden">
+            <img src="{{ asset('assets/jeongol-menu/' . $item->image) }}" 
+                 alt="{{ $item->display_name }}" 
+                 class="w-full h-full object-cover" />
+          </div>
 
-        <div
-        class="menu-card bg-gray-150 border border-gray-300 rounded-md shadow hover:shadow-md hover:bg-gray-100 cursor-pointer transition duration-200 mt-5"
-        onclick="selectMenuItem(this)" data-id="{{ $item->id }}" data-name="{{ $baseName }}" data-category="{{ $key }}"
-        data-price="{{ $item->price }}">
-
-        <div class="menu-image-container w-full flex justify-center items-center">
-        <img src="{{ asset('assets/jeongol-menu/' . $item->image) }}" alt="{{ $baseName }}"
-        class="object-cover" />
+          <div class="p-4 text-center">
+            <h5 class="font-small text-gray-900 text-sm mb-2">{{ $item->display_name }}</h5>
+            <p class="text-md font-semibold text-orange-600 menu-price">
+              @if($item->is_time_based ?? false)
+                ₱{{ number_format($item->lunch_price, 2) }} 
+              @else
+                ₱{{ number_format($item->price, 2) }}
+              @endif
+            </p>
+          </div>
         </div>
-
-        <div class="p-2">
-        <h5 class="text-[13px] font-medium text-center text-black truncate">{{ $baseName }}</h5>
-        </div>
-
-        </div>
-
-      @endif
-    @endforeach
+      @endforeach
 
     </div>
   </div>

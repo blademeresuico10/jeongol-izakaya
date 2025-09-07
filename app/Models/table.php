@@ -12,3 +12,5 @@ class table extends Model
     use SoftDeletes;
 
 }
+
+
