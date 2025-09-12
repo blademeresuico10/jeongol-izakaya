@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>Kitchen</title>
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  <script src="https://cdn.tailwindcss.com"></script>
+  @vite('resources/css/app.css')
   <style>
     .progress-vertical {
       width: 20px;
@@ -102,52 +102,109 @@
       </thead>
       <tbody class="align-middle">
         @foreach ($reservationGroups as $reservationId => $group)
-      <tr>
-      <td class="border border-gray-300 px-4 py-2">{{ $group->first()->table_id }}</td>
-      <td class="border border-gray-300 px-4 py-2">{{ $group->first()->pax }}</td>
-      <td class="border border-gray-300 px-4 py-2">
+        <tr>
+        <td class="border border-gray-300 px-4 py-2">{{ $group->first()->table_id }}</td>
+        <td class="border border-gray-300 px-4 py-2">{{ $group->first()->pax }}</td>
+        <td class="border border-gray-300 px-4 py-2">
         @php
       $orders = $group->map(function ($r) {
-      if (!$r->menu_item)
-      return null;
-      $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
-      return $r->quantity . 'x ' . $cleanName;
+        if (!$r->menu_item)
+        return null;
+        $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
+        return $r->quantity . 'x ' . $cleanName;
       })->filter()->implode(', ');
       @endphp
         {{ $orders ?: 'No orders' }}
-      </td>
-      <td class="border border-gray-300 px-4 py-2">
+        </td>
+        <td class="border border-gray-300 px-4 py-2">
         @php
       $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
       @endphp
         {{ $notes ?: 'None' }}
-      </td>
-      <td class="border border-gray-300 px-4 py-2">
+        </td>
+        <td class="border border-gray-300 px-4 py-2">
         {{ \Carbon\Carbon::parse($group->first()->reservation_time)->format('h:i A') }}
-      </td>
-      <td class="border border-gray-300 px-4 py-2">
+        </td>
+        <!-- Replace the existing "Added Order" column in your table -->
+        <td class="border border-gray-300 px-4 py-2">
         @php
-      $addedOrders = $group->filter(function ($order) {
-      return $order->is_added_order == 1;
-      });
+      $reservationId = $group->first()->reservation_id;
 
-      if ($addedOrders->isNotEmpty()) {
-      $addedOrdersList = $addedOrders->map(function ($r) {
-      $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
-      return $r->quantity . 'x ' . $cleanName;
-      })->implode(', ');
-      } else {
-      $addedOrdersList = '';
-      }
+      // Get recent changes from order_details table
+      $recentChanges = \App\Models\OrderDetail::where('reservation_id', $reservationId)
+        ->whereNotNull('change_type')
+        ->orderBy('change_timestamp', 'desc')
+        ->limit(5)
+        ->get()
+        ->map(function ($order) {
+        $menu = \App\Models\Menu::find($order->menu_id);
+        $menuName = $menu ? str_replace([' Lunch', ' Dinner'], '', $menu->menu_item) : 'Unknown Item';
+
+        // Calculate quantity based on change type
+        $quantity = $order->quantity;
+        if ($order->change_type === 'addition' && $order->previous_quantity) {
+        // For additions: show only the amount added (new - old)
+        $quantity = $order->quantity - $order->previous_quantity;
+        } else if ($order->change_type === 'reduction' && $order->previous_quantity) {
+        // For reductions: show only the amount reduced (old - new)
+        $quantity = $order->previous_quantity - $order->quantity;
+        } else if ($order->change_type === 'removal') {
+        // For removals: show the full quantity that was removed
+        $quantity = $order->quantity;
+        }
+
+        return [
+        'type' => $order->change_type,
+        'menu_name' => $menuName,
+        'quantity' => $quantity,
+        'timestamp' => $order->change_timestamp ? $order->change_timestamp->format('h:i A') : '',
+        ];
+        });
       @endphp
 
-        @if($addedOrdersList)
-      <span class="text-green-600 font-semibold">{{ $addedOrdersList }}</span>
+        @if($recentChanges->count() > 0)
+        <div class="space-y-1">
+        @foreach($recentChanges as $change)
+        <div class="flex items-start justify-between text-sm">
+        <div class="flex items-start space-x-1">
+        @if($change['type'] === 'addition')
+        <span class="text-green-600 font-bold text-xs mt-0.5">+</span>
+        <div class="text-green-600 font-semibold">
+        {{ $change['quantity'] }}x {{ $change['menu_name'] }}
+        </div>
+        @elseif($change['type'] === 'reduction')
+        <span class="text-orange-600 font-bold text-xs mt-0.5">-</span>
+        <div class="text-orange-600 font-semibold">
+        {{ $change['quantity'] }}x {{ $change['menu_name'] }}
+        </div>
+        @elseif($change['type'] === 'removal')
+        <span class="text-red-600 font-bold text-xs mt-0.5">×</span>
+        <div class="text-red-600 font-semibold">
+        {{ $change['quantity'] }}x {{ $change['menu_name'] }}
+        </div>
+        @elseif($change['type'] === 'modification')
+        <span class="text-blue-600 font-bold text-xs mt-0.5">~</span>
+        <div class="text-blue-600 font-semibold">
+        Modified {{ $change['menu_name'] }}
+        </div>
+        @endif
+        </div>
+
+        @if($change['timestamp'])
+        <div class="text-xs text-gray-500 ml-2 flex-shrink-0">
+        {{ $change['timestamp'] }}
+        </div>
+        @endif
+        </div>
+      @endforeach
+        </div>
       @else
-      <span class="text-gray-400">-</span>
+        <div class="text-center"> 
+        <span class="text-gray-400 text-sm">No recent changes</span>
+        </div>
       @endif
-      </td>
-      </tr>
+        </td>
+        </tr>
       @endforeach
       </tbody>
       </table>

@@ -310,7 +310,7 @@
                     <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
                     <div>
                         <p><strong>Transaction Receipt</strong></p>
-                        <img id="paymentProof" src="" class="mb-2 w-full object-contain" style="display:none;">
+                        <img id="paymentProof" src="" class="mb-2 w-50 h-50 object-contain" style="display:none;">
                     </div>
                     <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
                     <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
@@ -370,88 +370,6 @@
             </div>
         </div>
 
-        <div id="invoice-modal" aria-hidden="true"
-            class="hidden fixed top-0 left-0 right-0 z-50 flex justify-center items-center w-full h-screen bg-black bg-opacity-50">
-            <div class="relative p-4 w-full max-w-lg">
-                <div class="bg-white rounded-lg shadow">
-                    <div class="flex justify-between items-center p-4 border-b">
-                        <h3 class="text-lg font-semibold text-gray-900">Invoice</h3>
-                        <button type="button"
-                            class="text-gray-500 hover:bg-gray-200 rounded-lg w-8 h-8 flex justify-center items-center"
-                            onclick="closeInvoiceModal()">✕</button>
-
-                    </div>
-
-                    <div class="p-4 space-y-4">
-                        <div>
-                            <p><strong>Date: </strong><span id="invoice_date"></span></p>
-                            <p><strong>Customer: </strong><span id="customer_name"></span></p>
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between font-semibold border-b pb-2">
-                                <span class="flex-1">Item</span>
-                                <span class="w-16 text-center">Qty</span>
-                                <span class="w-20 text-right">Price</span>
-                                <span class="w-24 text-right">Subtotal</span>
-                            </div>
-                            <div id="invoiceItemsList" class="space-y-1"></div>
-                        </div>
-
-                        <div class="flex justify-end font-bold text-lg border-t pt-2">
-                            <span>Total: </span>
-                            <input type="text" id="total_price" name="total_price"
-                                class="bg-gray-200 border border-gray-300 text-sm rounded-lg w-32 p-2.5 ml-4 text-right"
-                                readonly />
-                        </div>
-                        <div class="flex justify-center space-x-2">
-                            <button onclick="openPrintInvoice()"
-                                class="w-60 py-2.5 text-black font-bold bg-gray-200 hover:bg-gray-300 rounded-lg">
-                                Print Invoice
-                            </button>
-                            <button onclick="openPaymentModal()"
-                                class="w-60 py-2.5 text-white font-bold bg-blue-600 hover:bg-blue-700 rounded-lg">
-                                Payment
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="print_invoice" aria-hidden="true"
-            class="hidden fixed top-0 left-0 right-0 z-50 flex justify-center items-center w-full h-screen bg-black bg-opacity-50">
-            <div class="relative p-4 w-full max-w-lg">
-                <div class="bg-white rounded-lg shadow">
-                    <div class="flex justify-between items-center p-4 border-b">
-                        <h3 class="text-lg font-semibold text-gray-900">Invoice</h3>
-                    </div>
-
-                    <div class="p-4 space-y-4">
-                        <div>
-                            <p><strong>Date: </strong><span id="print_invoice_date"></span></p>
-                            <p><strong>Customer: </strong><span id="print_customer_name"></span></p>
-                        </div>
-
-                        <div>
-                            <div class="flex justify-between font-semibold border-b pb-2">
-                                <span class="flex-1">Item</span>
-                                <span class="w-16 text-center">Qty</span>
-                                <span class="w-20 text-right">Price</span>
-                                <span class="w-24 text-right">Subtotal</span>
-                            </div>
-                            <div id="print_invoiceItemsList" class="space-y-1"></div>
-                        </div>
-
-                        <div class="flex justify-end font-bold text-lg border-t pt-2">
-                            <span>Total: </span>
-                            <span id="print_total_price" class="ml-4 w-32 text-right"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div id="payment-modal" tabindex="-1" aria-hidden="true"
             class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto h-full bg-black bg-opacity-50 flex justify-center items-center">
             <div class="relative w-full max-w-3xl">
@@ -486,13 +404,12 @@
                         </div>
 
                         <div class="border rounded-lg p-4">
-                            <h4 class="text-lg font-semibold mb-3">Order Details</h4>
+                            <h4 class="text-lg font-semibold mb-3">Apply Discounts</h4>
                             <div class="flex justify-between font-semibold border-b pb-2 text-sm">
                                 <span class="flex-1">Item</span>
-                                <span class="w-16 text-center">Qty</span>
                                 <span class="w-20 text-right">Price</span>
-                                <span class="w-24 text-right">Subtotal</span>
-                                <span class="w-24 text-right">Discounts</span>
+                                <span class="w-40 text-center">Discount Type</span>
+                                <span class="w-24 text-right">Final Price</span>
                             </div>
                             <div id="paymentItemsList" class="space-y-1 text-sm mt-2"></div>
                         </div>
@@ -510,9 +427,9 @@
 
                     <!-- Modal Footer -->
                     <div class="flex justify-end gap-4 px-6 py-4 border-t border-gray-200">
-                        <button onclick="closePaymentModal()" type="button"
+                        <button onclick="printBill()" type="button"
                             class="px-6 py-2.5 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-sm">
-                            Cancel
+                            Print Bill
                         </button>
                         <button onclick="submitPayment()" type="button"
                             class="px-8 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">
@@ -523,931 +440,1279 @@
             </div>
         </div>
 
+        <div onclick="printBill()" class="hidden p-4 space-y-4">
+            <div>
+                <p><strong>Date: </strong><span id="invoice_date"></span></p>
+                <p><strong>Customer: </strong><span id="customer_name"></span></p>
+            </div>
+
+            <div>
+                <div class="flex justify-between font-semibold border-b pb-2">
+                    <span class="flex-1">Item</span>
+                    <span class="w-16 text-center">Price</span>
+                    <span class="w-20 text-right">Quantity</span>
+                    <span class="w-24 text-right">Total</span>
+                </div>
+                <div id="invoiceItemsList" class="space-y-1"></div>
+            </div>
+
+            <div class="flex justify-end font-bold text-lg border-t pt-2">
+                <span>Total: </span>
+                <input type="text" id="total_price" name="total_price"
+                    class="bg-gray-200 border border-gray-300 text-sm rounded-lg w-32 p-2.5 ml-4 text-right" readonly />
+            </div>
+        </div>
+
+
         <div id="toast"
             class="fixed top-5 right-5 z-50 hidden opacity-0 px-4 py-3 rounded-lg shadow-md bg-red-600 text-white text-sm font-medium transition-opacity duration-300 ease-in-out">
             <span id="toast-message">Something went wrong</span>
         </div>
-
+    </div>
 </body>
-
 <script>
-    let currentReservationData = null;
+    // Initialize menu data from backend
+    window.menuPriceData = @json($menuData);
+    window.menuPricesMap = {};
 
-    function initializeDropdown() {
-        const dropdownToggle = document.getElementById('userBtn');
-        const dropdownMenu = document.getElementById('userMenu');
-
-        if (!dropdownToggle || !dropdownMenu) {
-            console.error('Dropdown elements not found');
-            return;
-        }
-
-        dropdownToggle.addEventListener('click', function (event) {
-            event.stopPropagation();
-            dropdownMenu.classList.toggle('hidden');
-        });
-
-        document.addEventListener('click', function (event) {
-            if (!dropdownMenu.contains(event.target) && !dropdownToggle.contains(event.target)) {
-                dropdownMenu.classList.add('hidden');
+    // Build menu prices map
+    if (window.menuPriceData && Array.isArray(window.menuPriceData) && window.menuPriceData.length > 0) {
+        window.menuPriceData.forEach(item => {
+            if (item && item.menu_item) {
+                window.menuPricesMap[item.menu_item] = {
+                    regular: parseFloat(item.regular_price) || 0,
+                    student: item.student_price !== null && item.student_price !== undefined ? parseFloat(item.student_price) : null,
+                    govt_employee: item.govt_employee_price !== null && item.govt_employee_price !== undefined ? parseFloat(item.govt_employee_price) : null,
+                    has_discount: item.has_customer_discount === 1 || item.has_customer_discount === true
+                };
             }
         });
-
-        dropdownMenu.addEventListener('click', function (event) {
-            if (event.target.tagName === 'A') {
-                dropdownMenu.classList.add('hidden');
-            }
-        });
+    } else {
+        window.menuPricesMap = {};
     }
 
-    document.addEventListener("DOMContentLoaded", function () {
-        initializeDropdown();
-    });
+    class CashierApp {
+        constructor() {
+            this.elements = {};
+            this.currentReservationData = null;
+            this.currentModalType = null;
+            this.currentReservationId = null;
+            this.tempCustomerData = {};
+            this.init();
+        }
 
+        init() {
+            const initialize = () => {
+                this.initializeElements();
+                this.initializeEventListeners();
+                this.initializeNotifications();
+                this.setupTableClickEvents();
+                this.initializeCountdowns();
+            };
 
-    document.addEventListener("DOMContentLoaded", function () {
-        initializeDropdown();
-
-        const dineInContent = document.getElementById("dineInContent");
-        const tabLinks = document.querySelectorAll(".tab-link");
-        const invoiceModal = document.getElementById("invoice-modal");
-        const invoiceDateSpan = document.getElementById("invoice_date");
-        const customerNameSpan = document.getElementById("customer_name");
-        const invoiceItemsList = document.getElementById("invoiceItemsList");
-        const totalPriceInput = document.getElementById("total_price");
-        const printInvoiceDateSpan = document.getElementById("print_invoice_date");
-        const countdownElements = document.querySelectorAll(".countdown");
-
-        const now = new Date();
-        const formattedDate = now.toLocaleDateString('en-CA');
-        invoiceDateSpan.textContent = formattedDate;
-        printInvoiceDateSpan.textContent = formattedDate;
-
-        dineInContent.addEventListener("click", function (event) {
-            const table = event.target.closest(".table-link");
-            if (!table) return;
-
-            const reservationId = table.getAttribute("data-reservation-id");
-            const isOccupied = table.getAttribute("data-occupied") === "1";
-
-            if (isOccupied && reservationId) {
-                invoiceItemsList.innerHTML = '';
-                totalPriceInput.value = formatCurrency(0);
-
-                table.style.pointerEvents = "none";
-                setTimeout(() => { table.style.pointerEvents = "auto"; }, 1000);
-
-                fetch(`/orders/${reservationId}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (!data) return;
-
-                        currentReservationData = data;
-                        customerNameSpan.textContent = data.customer_name || "N/A";
-                        let total = 0;
-
-                        data.orders.forEach(order => {
-                            const price = parseFloat(order.price);
-                            const qty = parseInt(order.quantity);
-                            const subtotal = price * qty;
-                            total += subtotal;
-
-                            const orderLine = document.createElement("div");
-                            orderLine.classList.add("flex", "justify-between", "items-center", "py-1", "border-b", "border-gray-100");
-                            orderLine.innerHTML = `
-<span class="flex-1">${order.order_name}</span>
-<span class="w-16 text-center">${qty}</span>
-<span class="w-20 text-right">${formatCurrency(price)}</span>
-<span class="w-24 text-right">${formatCurrency(subtotal)}</span>
-`;
-                            invoiceItemsList.appendChild(orderLine);
-                        });
-
-                        totalPriceInput.value = formatCurrency(total);
-                        invoiceModal.classList.remove("hidden");
-                        invoiceModal.classList.add("flex");
-                    })
-                    .catch(() => { showToast("Failed to load invoice data."); });
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initialize);
             } else {
-                showToast("Table is not occupied.");
-            }
-        });
-
-        countdownElements.forEach(el => {
-            let seconds = parseInt(el.dataset.seconds);
-
-            function formatTime(s) {
-                const h = String(Math.floor(s / 3600)).padStart(2, '0');
-                const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-                const sec = String(s % 60).padStart(2, '0');
-                return `${h}:${m}:${sec} `;
-            }
-
-            function update() {
-                if (seconds <= 0) { el.textContent = "00:00:00"; return; }
-                el.textContent = formatTime(seconds--);
-                setTimeout(update, 1000);
-            }
-
-            update();
-        });
-    });
-
-    function formatCurrency(amount) { return `₱${amount.toFixed(2)} `; }
-
-    function showToast(message, type = "error", duration = 3000) {
-        const toast = document.getElementById("toast");
-        const toastMessage = document.getElementById("toast-message");
-
-        if (!toast || !toastMessage) {
-            console.error("Toast element not found in DOM.");
-            return;
-        }
-
-        toast.className = "fixed top-5 right-5 z-50 px-4 py-3 rounded-lg shadow-md text-white text-sm font-medium transition-opacity duration-300 ease-in-out hidden opacity-0";
-
-        toast.classList.add(
-            type === "success" ? "bg-green-600" :
-                type === "info" ? "bg-blue-600" : "bg-red-600"
-        );
-
-        toastMessage.textContent = message;
-
-        toast.classList.remove("hidden", "opacity-0");
-        toast.classList.add("opacity-100");
-
-        setTimeout(() => {
-            toast.classList.remove("opacity-100");
-            toast.classList.add("opacity-0");
-            setTimeout(() => { toast.classList.add("hidden"); }, 300);
-        }, duration);
-    }
-
-
-    function openPrintInvoice() {
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-
-        const invoiceDate = document.getElementById("invoice_date").textContent;
-        const customerName = document.getElementById("customer_name").textContent;
-        const totalPrice = document.getElementById("total_price").value;
-        const itemsHtml = document.getElementById("invoiceItemsList").innerHTML;
-
-        printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Invoice</title>
-            <style>
-                body { 
-                    font-family: Arial, sans-serif; 
-                    margin: 20px; 
-                    font-size: 12px;
-                }
-                .invoice-header { 
-                    text-align: center; 
-                    margin-bottom: 20px; 
-                    border-bottom: 2px solid #000;
-                    padding-bottom: 10px;
-                }
-                .invoice-items { 
-                    margin: 20px 0; 
-                    width: 100%;
-                }
-                
-                /* Table-like layout for items */
-                .item-header {
-                    display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr;
-                    gap: 10px;
-                    font-weight: bold;
-                    border-bottom: 1px solid #000;
-                    padding: 8px 0;
-                    margin-bottom: 5px;
-                }
-                
-                .item-row {
-                    display: grid;
-                    grid-template-columns: 2fr 1fr 1fr 1fr;
-                    gap: 10px;
-                    padding: 5px 0;
-                    border-bottom: 1px dotted #ccc;
-                }
-                
-                .item-name { text-align: left; }
-                .item-qty { text-align: center; }
-                .item-price { text-align: right; }
-                .item-subtotal { text-align: right; }
-                
-                .total-section { 
-                    margin-top: 20px; 
-                    padding-top: 10px; 
-                    border-top: 2px solid #000; 
-                    text-align: right;
-                }
-                
-                .total-row {
-                    display: grid;
-                    grid-template-columns: 3fr 1fr;
-                    gap: 10px;
-                    font-weight: bold;
-                    font-size: 14px;
-                }
-                
-                @media print {
-                    body { margin: 0; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="invoice-header">
-                <h2>Invoice</h2>
-                <p><strong>Date:</strong> ${invoiceDate}</p>
-                <p><strong>Customer:</strong> ${customerName}</p>
-            </div>
-            
-            <div class="invoice-items">
-                <div class="item-header">
-                    <span class="item-name">Item</span>
-                    <span class="item-qty">Qty</span>
-                    <span class="item-price">Price</span>
-                    <span class="item-subtotal">Subtotal</span>
-                </div>
-                <div id="items-container"></div>
-            </div>
-            
-            <div class="total-section">
-                <div class="total-row">
-                    <span>Total:</span>
-                    <span>${totalPrice}</span>
-                </div>
-            </div>
-        </body>
-        </html>
-    `);
-
-        printWindow.document.close();
-
-        const itemsContainer = printWindow.document.getElementById('items-container');
-        const originalItems = document.getElementById("invoiceItemsList").children;
-
-        Array.from(originalItems).forEach(item => {
-            const spans = item.querySelectorAll('span');
-            if (spans.length >= 4) {
-                const itemRow = printWindow.document.createElement('div');
-                itemRow.className = 'item-row';
-                itemRow.innerHTML = `
-                <span class="item-name">${spans[0].textContent}</span>
-                <span class="item-qty">${spans[1].textContent}</span>
-                <span class="item-price">${spans[2].textContent}</span>
-                <span class="item-subtotal">${spans[3].textContent}</span>
-            `;
-                itemsContainer.appendChild(itemRow);
-            }
-        });
-
-        printWindow.focus();
-
-        setTimeout(() => {
-            printWindow.print();
-            printWindow.close();
-        }, 500);
-    }
-
-    function openPaymentModal() {
-        if (!currentReservationData) { showToast("No reservation data available"); return; }
-        const modal = document.getElementById("payment-modal");
-        document.getElementById("payment_customer_name").value = currentReservationData.customer_name || "N/A";
-        document.getElementById("payment_pax").value = currentReservationData.pax || 0;
-        displayPaymentItems();
-        modal.classList.remove("hidden");
-        modal.classList.add("flex");
-    }
-
-    function closePaymentModal() {
-        document.getElementById('payment-modal').classList.add('hidden');
-        document.getElementById('payment-modal').classList.remove('flex');
-    }
-
-    function displayPaymentItems() {
-        if (!currentReservationData) return;
-
-        const paymentItemsList = document.getElementById("paymentItemsList");
-        let total = 0;
-        paymentItemsList.innerHTML = '';
-
-        currentReservationData.orders.forEach(order => {
-            const price = parseFloat(order.price);
-            const qty = parseInt(order.quantity);
-            const itemTotal = price * qty;
-            total += itemTotal;
-
-            const orderLine = document.createElement("div");
-            orderLine.classList.add("flex", "justify-between", "items-center", "py-1", "border-b", "border-gray-100");
-            orderLine.innerHTML = `
-            <span class="flex-1">${order.order_name}</span>
-            <span class="w-16 text-center">${qty}</span>
-            <span class="w-20 text-right">${formatCurrency(price)}</span>
-            <span class="w-24 text-right font-medium">${formatCurrency(itemTotal)}</span>
-            <span class="w-24 text-right">
-                <input type="number" 
-                       class="discount-input border border-gray-300 rounded px-1 py-1 w-16 text-sm" 
-                       min="0" 
-                       max="${qty}" 
-                       value="0" 
-                       data-price="${price}" 
-                       data-qty="${qty}" 
-                       data-item-total="${itemTotal}"
-                       data-item-name="${order.order_name}" />
-            </span>`;
-            paymentItemsList.appendChild(orderLine);
-        });
-
-        const discountInputs = document.querySelectorAll('.discount-input');
-        discountInputs.forEach(input => {
-            input.addEventListener('input', calculateDiscountedTotal);
-            input.addEventListener('change', calculateDiscountedTotal);
-        });
-
-        document.getElementById("payment_total").textContent = formatCurrency(total);
-
-        const summarySection = document.querySelector('#payment-modal .border.rounded-lg.p-4.bg-gray-50 .space-y-2');
-        if (!summarySection) return;
-
-        const existingDiscountSection = document.getElementById('discount_breakdown_section');
-        if (existingDiscountSection) {
-            existingDiscountSection.remove();
-        }
-
-        const discountSection = document.createElement('div');
-        discountSection.id = 'discount_breakdown_section';
-        discountSection.className = 'border-t pt-3 mt-2';
-        discountSection.style.display = 'none';
-        discountSection.innerHTML = `
-        <h5 class="font-semibold text-gray-700 mb-2">DISCOUNTED PERSON TO PAY:</h5>
-        <div id="discount_items_breakdown" class="space-y-1 mb-3"></div>
-        <div class="flex justify-between text-lg font-bold text-green-600 border-b pb-2">
-            <span>Discounts:</span>
-            <span id="discount_person_total" class="font-mono">₱0.00</span>
-        </div>
-    `;
-
-        const totalRow = summarySection.querySelector('.flex.justify-between.text-lg.font-bold.border-t.pt-2');
-        if (totalRow) {
-            summarySection.insertBefore(discountSection, totalRow);
-
-            totalRow.innerHTML = `
-            <span>Total Amount:</span>
-            <span id="payment_total" class="font-mono text-blue-600">${formatCurrency(total)}</span>
-        `;
-        } else {
-            summarySection.appendChild(discountSection);
-        }
-    }
-
-
-    function calculateTotalDiscount() {
-        const discountInputs = document.querySelectorAll('.discount-input');
-        let totalDiscount = 0;
-
-        discountInputs.forEach(input => {
-            const price = parseFloat(input.dataset.price);
-            const qty = parseInt(input.dataset.qty);
-            const itemTotal = parseFloat(input.dataset.itemTotal);
-            const eligiblePersons = parseInt(input.value) || 0;
-
-            if (eligiblePersons > 0) {
-                const perPersonCost = itemTotal / qty;
-
-                const discountPerPerson = perPersonCost * 0.20;
-                const totalDiscountForItem = discountPerPerson * eligiblePersons;
-                totalDiscount += totalDiscountForItem;
-            }
-        });
-
-        return totalDiscount;
-    }
-
-    function calculateDiscountedTotal() {
-        const discountInputs = document.querySelectorAll('.discount-input');
-        const discountBreakdown = document.getElementById('discount_items_breakdown');
-        const discountPersonTotal = document.getElementById('discount_person_total');
-        const paymentTotal = document.getElementById('payment_total');
-        const discountSection = document.getElementById('discount_breakdown_section');
-
-        if (!discountBreakdown || !discountPersonTotal || !paymentTotal) return;
-
-        let totalDiscountedPersonPay = 0;
-        let originalTotal = 0;
-
-        discountBreakdown.innerHTML = '';
-
-        discountInputs.forEach(input => {
-            const price = parseFloat(input.dataset.price);
-            const qty = parseInt(input.dataset.qty);
-            const itemTotal = parseFloat(input.dataset.itemTotal);
-            const itemName = input.dataset.itemName;
-            const eligiblePersons = parseInt(input.value) || 0;
-
-            originalTotal += itemTotal;
-
-            if (eligiblePersons > 0) {
-                const perPersonCost = itemTotal / qty;
-
-                const discountedPerPersonCost = perPersonCost * 0.80;
-
-                const discountedPersonsPayForItem = discountedPerPersonCost * eligiblePersons;
-                totalDiscountedPersonPay += discountedPersonsPayForItem;
-
-                const breakdownItem = document.createElement('div');
-                breakdownItem.className = 'flex justify-between items-center text-sm bg-green-50 px-2 py-1 rounded';
-                breakdownItem.innerHTML = `
-                <span class="flex-1">${itemName} (${eligiblePersons} person${eligiblePersons > 1 ? 's' : ''})</span>
-                <span class="text-gray-600">${formatCurrency(perPersonCost)} → ${formatCurrency(discountedPerPersonCost)} each</span>
-                <span class="font-semibold text-green-700 ml-2">${formatCurrency(discountedPersonsPayForItem)}</span>
-            `;
-                discountBreakdown.appendChild(breakdownItem);
-            }
-        });
-
-        discountPersonTotal.textContent = formatCurrency(totalDiscountedPersonPay);
-
-        const totalDiscount = calculateTotalDiscount();
-        const finalTotal = originalTotal - totalDiscount;
-        paymentTotal.textContent = formatCurrency(finalTotal);
-
-        if (discountSection) {
-            if (totalDiscountedPersonPay > 0) {
-                discountSection.style.display = 'block';
-            } else {
-                discountSection.style.display = 'none';
+                setTimeout(initialize, 0);
             }
         }
-    }
 
-    function closeInvoiceModal() {
-        const invoiceModal = document.getElementById("invoice-modal");
-        invoiceModal.classList.add("hidden");
-        invoiceModal.classList.remove("flex");
-    }
-
-    function submitPayment() {
-        if (!currentReservationData) {
-            showToast("No reservation data available", "error");
-            return;
+        initializeElements() {
+            this.elements = {
+                userBtn: document.getElementById('userBtn'),
+                userMenu: document.getElementById('userMenu'),
+                notifBtn: document.getElementById('notifBtn'),
+                notifModal: document.getElementById('notifModal'),
+                notifClose: document.getElementById('notifClose'),
+                notifList: document.getElementById('notifList'),
+                badgeProfile: document.getElementById('notifBadgeProfile'),
+                badgeLink: document.getElementById('notifBadgeLink'),
+                notificationPaymentModal: document.getElementById('paymentModal'),
+                notificationCloseBtn: document.getElementById('closePaymentBtn'),
+                acceptForm: document.getElementById('acceptForm'),
+                cancelReservationBtn: document.getElementById('cancelReservationBtn'),
+                tablePaymentModal: document.getElementById('payment-modal'),
+                submitPaymentBtn: document.getElementById('submitPaymentBtn'),
+            };
         }
 
-        const totalText = document.getElementById("payment_total").textContent;
-        const total = parseFloat(totalText.replace('₱', '').replace(',', ''));
+        initializeEventListeners() {
+            this.setupUserMenuEvents();
+            this.setupNotificationEvents();
+            this.setupModalEvents();
+            this.setupPaymentEvents();
+        }
 
-        const discountInputs = document.querySelectorAll('.discount-input');
-        const discountedPersons = {};
+        setupUserMenuEvents() {
+            if (this.elements.userBtn && this.elements.userMenu) {
+                this.elements.userBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.elements.userMenu.classList.toggle('hidden');
+                });
 
-        discountInputs.forEach((input, index) => {
-            const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
-            const discountValue = parseInt(input.value) || 0;
-
-            if (discountValue > 0 && orderDetailId) {
-                discountedPersons[orderDetailId] = discountValue;
+                this.elements.userMenu.addEventListener('click', (e) => e.stopPropagation());
+                document.addEventListener('click', () => this.elements.userMenu.classList.add('hidden'));
             }
-        });
+        }
 
-        const paymentData = {
-            reservation_id: currentReservationData.reservation_id,
-            customer_name: currentReservationData.customer_name,
-            total: total,
-            orders: currentReservationData.orders,
-            discounted_persons: discountedPersons
-        };
+        setupNotificationEvents() {
+            if (this.elements.notifBtn && this.elements.notifModal) {
+                this.elements.notifBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.elements.notifModal.classList.remove('hidden');
+                });
+            }
 
-        const submitBtn = event.target;
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Processing...";
+            if (this.elements.notifClose) {
+                this.elements.notifClose.addEventListener('click', () => {
+                    this.elements.notifModal.classList.add('hidden');
+                });
+            }
 
-        fetch('/process-payment', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            },
-            body: JSON.stringify(paymentData)
-        })
-            .then(response => {
-                if (!response.ok) {
-                    return response.text().then(text => {
-                        throw new Error(`HTTP ${response.status}: ${text}`);
-                    });
+            if (this.elements.notifModal) {
+                this.elements.notifModal.addEventListener('click', () => {
+                    this.elements.notifModal.classList.add('hidden');
+                });
+
+                const notifContent = this.elements.notifModal.querySelector('div');
+                if (notifContent) {
+                    notifContent.addEventListener('click', (e) => e.stopPropagation());
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    // Update table status immediately
-                    updateTableStatusAfterPayment(currentReservationData.reservation_id);
+            }
+        }
 
-                    showToast("Payment processed successfully!", "success");
-                    closePaymentModal();
-                    closeInvoiceModal();
+        setupModalEvents() {
+            if (this.elements.notificationPaymentModal) {
+                this.elements.notificationPaymentModal.addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) {
+                        this.closeNotificationModal();
+                    }
+                });
+            }
 
-                    // Shorter delay before reload to show immediate feedback
-                    setTimeout(() => { location.reload(); }, 800);
-                } else {
-                    showToast(data.message || "Payment processing failed", "error");
+            if (this.elements.tablePaymentModal) {
+                this.elements.tablePaymentModal.addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) {
+                        this.closeTablePaymentModal();
+                    }
+                });
+            }
+        }
+
+        setupPaymentEvents() {
+            if (this.elements.notificationCloseBtn) {
+                this.elements.notificationCloseBtn.addEventListener('click', () => {
+                    this.closeNotificationModal();
+                });
+            }
+
+            if (this.elements.cancelReservationBtn) {
+                this.elements.cancelReservationBtn.addEventListener('click', () => {
+                    this.closeNotificationModal();
+                });
+            }
+
+            document.addEventListener('click', (e) => {
+                if (e.target && (e.target.id === 'paymentButton' || e.target.classList.contains('payment-submit-btn'))) {
+                    e.preventDefault();
+                    this.submitPayment(e);
                 }
-            })
-            .catch(error => {
-                console.error('Payment error:', error);
-                showToast("Payment processing failed. Please try again.", "error");
-            })
-            .finally(() => {
-                submitBtn.disabled = false;
-                submitBtn.textContent = "Process Payment";
             });
-    }
 
-    function updateTableStatusAfterPayment(reservationId) {
-        const tableElement = document.querySelector(`[data-reservation-id="${reservationId}"]`);
-
-        if (tableElement) {
-            const tableCircle = tableElement.querySelector('.w-16.h-16.rounded-full');
-            const statusText = tableElement.querySelector('.text-red-600, .text-green-600');
-            const countdownElement = tableElement.querySelector('.countdown');
-
-            if (tableCircle) {
-                tableCircle.classList.remove('bg-red-600');
-                tableCircle.classList.add('bg-green-600');
+            const paymentBtn = document.getElementById('paymentButton');
+            if (paymentBtn) {
+                paymentBtn.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    this.submitPayment(event);
+                });
             }
-
-            if (statusText) {
-                statusText.textContent = 'Available';
-                statusText.classList.remove('text-red-600');
-                statusText.classList.add('text-green-600');
-            }
-
-            if (countdownElement && countdownElement.parentElement) {
-                countdownElement.parentElement.style.display = 'none';
-            }
-
-            tableElement.setAttribute('data-occupied', '0');
-            tableElement.setAttribute('data-reservation-id', '');
-
-            tableElement.classList.remove('table-occupied');
-            tableElement.classList.add('table-available');
         }
-    }
 
-    function updateTableClickHandler() {
-        const dineInContent = document.getElementById("dineInContent");
+        setupTableClickEvents() {
+            const tableLinks = document.querySelectorAll('.table-link');
 
-        dineInContent.addEventListener("click", function (event) {
-            const table = event.target.closest(".table-link");
-            if (!table) return;
+            tableLinks.forEach((tableLink) => {
+                tableLink.addEventListener('click', (e) => {
+                    e.preventDefault();
 
-            const reservationId = table.getAttribute("data-reservation-id");
-            const isOccupied = table.getAttribute("data-occupied") === "1";
+                    const isOccupied = tableLink.getAttribute('data-occupied') === '1';
+                    const tableNumber = tableLink.getAttribute('data-table-number');
+                    const reservationId = tableLink.getAttribute('data-reservation-id');
 
-            if (table.classList.contains('processing')) {
-                showToast("Please wait, table status is being updated...", "info");
+                    if (isOccupied && reservationId) {
+                        this.openTablePaymentModal(reservationId, tableNumber);
+                    } else {
+                        this.showToast('Table ' + tableNumber + ' is not occupied', 'info');
+                    }
+                });
+            });
+        }
+
+        initializeCountdowns() {
+            const countdownElements = document.querySelectorAll('.countdown');
+
+            countdownElements.forEach(el => {
+                let seconds = parseInt(el.dataset.seconds) || 0;
+
+                function formatTime(s) {
+                    const h = String(Math.floor(s / 3600)).padStart(2, '0');
+                    const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+                    const sec = String(s % 60).padStart(2, '0');
+                    return `${h}:${m}:${sec}`;
+                }
+
+                function update() {
+                    if (seconds <= 0) {
+                        el.textContent = "00:00:00";
+                        return;
+                    }
+                    el.textContent = formatTime(seconds);
+                    seconds--;
+                    setTimeout(update, 1000);
+                }
+
+                update();
+            });
+        }
+
+        initializeNotifications() {
+            this.fetchNotifications();
+            setInterval(() => this.fetchNotifications(), 3000);
+        }
+
+        fetchNotifications() {
+            fetch('/receptionist/notifications')
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    if (data && typeof data === 'object') {
+                        const notifications = data.notifications || [];
+                        const pendingCount = notifications.filter(n => n && n.status === "Pending").length;
+
+                        this.updateNotificationBadges(pendingCount);
+                        this.renderNotifications(notifications);
+                    }
+                })
+                .catch(err => {
+                    this.showToast('Failed to load notifications', 'error');
+                });
+        }
+
+        updateNotificationBadges(count) {
+            [this.elements.badgeProfile, this.elements.badgeLink].forEach(badge => {
+                if (badge) {
+                    badge.textContent = count;
+                    badge.style.display = count ? 'inline-flex' : 'none';
+                }
+            });
+        }
+
+        renderNotifications(notifications) {
+            if (!this.elements.notifList) return;
+
+            if (!notifications || !Array.isArray(notifications) || notifications.length === 0) {
+                this.elements.notifList.innerHTML =
+                    '<li class="no-notifs p-3 text-center text-gray-500">No notifications</li>';
                 return;
             }
 
-            if (isOccupied && reservationId) {
-                table.classList.add('processing');
+            this.elements.notifList.innerHTML = '';
 
-                setTimeout(() => {
-                    table.classList.remove('processing');
-                }, 3000);
+            notifications.sort((a, b) => {
+                const order = { "Pending": 1, "Accepted": 2, "Rejected": 3 };
+                const statusA = (a && a.status) ? a.status : 'Unknown';
+                const statusB = (b && b.status) ? b.status : 'Unknown';
+                return (order[statusA] || 4) - (order[statusB] || 4);
+            });
 
-                invoiceItemsList.innerHTML = '';
-                totalPriceInput.value = formatCurrency(0);
+            notifications.forEach(notification => {
+                if (notification) {
+                    this.renderNotificationItem(notification);
+                }
+            });
+        }
 
-                fetch(`/orders/${reservationId}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (!data) return;
+        renderNotificationItem(notification) {
+            if (!this.elements.notifList) return;
 
-                        currentReservationData = data;
-                        customerNameSpan.textContent = data.customer_name || "N/A";
-                        let total = 0;
+            const li = document.createElement('li');
+            li.className = 'p-3 bg-gray-100 rounded cursor-pointer mb-2';
+            li.dataset.reservationId = notification.reservation_id;
+            li.onclick = () => this.openNotificationModal(notification.reservation_id);
 
-                        data.orders.forEach(order => {
-                            const price = parseFloat(order.price);
-                            const qty = parseInt(order.quantity);
-                            const subtotal = price * qty;
-                            total += subtotal;
+            let badgeClass = "bg-gray-300 text-gray-700";
+            if (notification.status === "Accepted") badgeClass = "bg-green-100 text-green-700";
+            else if (notification.status === "Rejected") badgeClass = "bg-red-100 text-red-700";
+            else if (notification.status === "Paid") badgeClass = "bg-blue-100 text-blue-700";
 
-                            const orderLine = document.createElement("div");
-                            orderLine.classList.add("flex", "justify-between", "items-center", "py-1", "border-b", "border-gray-100");
-                            orderLine.innerHTML = `
-                            <span class="flex-1">${order.order_name}</span>
-                            <span class="w-16 text-center">${qty}</span>
-                            <span class="w-20 text-right">${formatCurrency(price)}</span>
-                            <span class="w-24 text-right">${formatCurrency(subtotal)}</span>
-                        `;
-                            invoiceItemsList.appendChild(orderLine);
-                        });
+            li.innerHTML =
+                '<div class="flex justify-between items-center">' +
+                '<div>' +
+                '<p class="text-sm font-medium">' + (notification.name || '') + '</p>' +
+                '<p class="text-xs text-gray-500">' + (notification.message || '') + '</p>' +
+                '<p class="text-xs text-gray-400 mt-1">' + (notification.time || '') + '</p>' +
+                '</div>' +
+                '<span class="px-2 py-1 text-xs font-semibold rounded-full ' + badgeClass + '">' +
+                (notification.status || '') +
+                '</span>' +
+                '</div>';
 
-                        totalPriceInput.value = formatCurrency(total);
-                        invoiceModal.classList.remove("hidden");
-                        invoiceModal.classList.add("flex");
-                    })
-                    .catch(() => {
-                        showToast("Failed to load invoice data.", "error");
-                        table.classList.remove('processing');
-                    });
+            this.elements.notifList.appendChild(li);
+        }
+
+        openNotificationModal(id) {
+            if (!id) return;
+
+            this.currentModalType = 'notification';
+            this.currentReservationId = id;
+
+            if (this.elements.notificationPaymentModal) {
+                this.elements.notificationPaymentModal.classList.remove('hidden');
+            }
+
+            if (this.elements.acceptForm) {
+                this.elements.acceptForm.action = '/receptionist/accept-reservation/' + id;
+            }
+
+            this.fetchPaymentDetails(id);
+        }
+
+        closeNotificationModal() {
+            if (this.elements.notificationPaymentModal) {
+                this.elements.notificationPaymentModal.classList.add('hidden');
+            }
+            this.currentModalType = null;
+            this.currentReservationId = null;
+        }
+
+        openTablePaymentModal(reservationId, tableNumber) {
+            this.currentModalType = 'table';
+            this.currentReservationId = reservationId;
+
+            if (this.elements.tablePaymentModal) {
+                this.elements.tablePaymentModal.classList.remove('hidden');
+                this.fetchReservationData(reservationId, tableNumber);
             } else {
-                showToast("Table is not occupied.", "info");
+                this.showToast('Payment modal not available', 'error');
             }
-        });
-    }
-
-    function displayPaymentItemsComplete() {
-        if (!currentReservationData) return;
-
-        const paymentItemsList = document.getElementById("paymentItemsList");
-        let total = 0;
-        paymentItemsList.innerHTML = '';
-
-        currentReservationData.orders.forEach((order, index) => {
-            const price = parseFloat(order.price);
-            const qty = parseInt(order.quantity);
-            const itemTotal = price * qty;
-            total += itemTotal;
-
-            const orderLine = document.createElement("div");
-            orderLine.classList.add("flex", "justify-between", "items-center", "py-1", "border-b", "border-gray-100");
-            orderLine.innerHTML = `
-            <span class="flex-1">${order.order_name}</span>
-            <span class="w-16 text-center">${qty}</span>
-            <span class="w-20 text-right">${formatCurrency(price)}</span>
-            <span class="w-24 text-right font-medium">${formatCurrency(itemTotal)}</span>
-            <span class="w-24 text-right">
-                <input type="number" 
-                       class="discount-input border border-gray-300 rounded px-1 py-1 w-16 text-sm" 
-                       min="0" 
-                       max="${qty}" 
-                       value="0" 
-                       data-price="${price}" 
-                       data-qty="${qty}" 
-                       data-item-total="${itemTotal}"
-                       data-item-name="${order.order_name}"
-                       data-order-detail-id="${order.order_detail_id || ''}"
-                       data-index="${index}" />
-            </span>`;
-            paymentItemsList.appendChild(orderLine);
-        });
-
-        const discountInputs = document.querySelectorAll('.discount-input');
-        discountInputs.forEach(input => {
-            input.addEventListener('input', calculateDiscountedTotal);
-            input.addEventListener('change', calculateDiscountedTotal);
-        });
-
-        document.getElementById("payment_total").textContent = formatCurrency(total);
-
-        const summarySection = document.querySelector('#payment-modal .border.rounded-lg.p-4.bg-gray-50 .space-y-2');
-        if (!summarySection) return;
-
-        const existingDiscountSection = document.getElementById('discount_breakdown_section');
-        if (existingDiscountSection) {
-            existingDiscountSection.remove();
         }
-        const discountSection = document.createElement('div');
-        discountSection.id = 'discount_breakdown_section';
-        discountSection.className = 'border-t pt-3 mt-2';
-        discountSection.style.display = 'none';
-        discountSection.innerHTML = `
-        <h5 class="font-semibold text-gray-700 mb-2">DISCOUNTED PERSON TO PAY:</h5>
-        <div id="discount_items_breakdown" class="space-y-1 mb-3"></div>
-        <div class="flex justify-between text-lg font-bold text-green-600 border-b pb-2">
-            <span>Discounts:</span>
-            <span id="discount_person_total" class="font-mono">₱0.00</span>
-        </div>
-    `;
 
-        const totalRow = summarySection.querySelector('.flex.justify-between.text-lg.font-bold.border-t.pt-2');
-        if (totalRow) {
-            summarySection.insertBefore(discountSection, totalRow);
-
-            totalRow.innerHTML = `
-            <span>Total Amount:</span>
-            <span id="payment_total" class="font-mono text-blue-600">${formatCurrency(total)}</span>
-        `;
-        } else {
-            summarySection.appendChild(discountSection);
-        }
-    }
-
-    const userBtn = document.getElementById('userBtn');
-    const userMenu = document.getElementById('userMenu');
-    const notifBtn = document.getElementById('notifBtn');
-    const notifModal = document.getElementById('notifModal');
-    const notifClose = document.getElementById('notifClose');
-
-    const badgeProfile = document.getElementById('notifBadgeProfile');
-    const badgeLink = document.getElementById('notifBadgeLink');
-    const notifList = document.getElementById('notifList');
-
-    userBtn.addEventListener('click', e => { e.stopPropagation(); userMenu.classList.toggle('hidden'); });
-    userMenu.addEventListener('click', e => e.stopPropagation());
-    document.addEventListener('click', () => userMenu.classList.add('hidden'));
-
-    notifBtn.addEventListener('click', e => { e.stopPropagation(); notifModal.classList.remove('hidden'); });
-    notifClose.addEventListener('click', () => notifModal.classList.add('hidden'));
-    notifModal.addEventListener('click', () => notifModal.classList.add('hidden'));
-    notifModal.querySelector('div').addEventListener('click', e => e.stopPropagation());
-
-
-    function fetchNotifications() {
-        fetch('/receptionist/notifications')
-            .then(res => res.json())
-            .then(data => {
-                let notifications = data.notifications ?? [];
-                const unreadCount = data.unread_count ?? 0;
-
-                const pendingCount = notifications.filter(n => n.status === "Pending").length;
-
-                [badgeProfile, badgeLink].forEach(b => {
-                    b.textContent = pendingCount;
-                    b.style.display = pendingCount ? 'inline-flex' : 'none';
-                });
-
-                if (!notifications.length) {
-                    notifList.innerHTML = `<li class="no-notifs p-3 text-center text-gray-500">No notifications</li>`;
-                    return;
-                }
-
-                notifList.innerHTML = '';
-
-                notifications.sort((a, b) => {
-                    const order = { "Pending": 1, "Accepted": 2, "Rejected": 3 };
-                    return (order[a.status] || 4) - (order[b.status] || 4);
-                });
-
-                notifications.forEach(n => {
-                    const li = document.createElement('li');
-                    li.className = 'p-3 bg-gray-100 rounded cursor-pointer mb-2';
-                    li.dataset.reservationId = n.reservation_id;
-                    li.onclick = () => openNotifModal(n.reservation_id);
-
-                    let badgeClass = "bg-gray-300 text-gray-700";
-                    if (n.status === "Accepted") badgeClass = "bg-green-100 text-green-700";
-                    else if (n.status === "Rejected") badgeClass = "bg-red-100 text-red-700";
-
-                    li.innerHTML = `
-          <div class="flex justify-between items-center">
-            <div>
-              <p class="text-sm font-medium">${n.name}</p>
-              <p class="text-xs text-gray-500">${n.message}</p>
-              <p class="text-xs text-gray-400 mt-1">${n.time}</p>
-            </div>
-            <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">
-              ${n.status}
-            </span>
-          </div>
-        `;
-
-                    notifList.appendChild(li);
-                });
-            })
-            .catch(err => console.error(err));
-    }
-
-    setInterval(fetchNotifications, 3000);
-    fetchNotifications();
-
-    const paymentModal = document.getElementById('paymentModal');
-    const acceptForm = document.getElementById('acceptForm');
-    let reservationId = null;
-
-    acceptForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (!reservationId) return;
-
-        fetch(acceptForm.action, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json'
+        closeTablePaymentModal() {
+            if (this.elements.tablePaymentModal) {
+                this.elements.tablePaymentModal.classList.add('hidden');
             }
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    paymentModal.classList.add('hidden');
+            this.currentModalType = null;
+            this.currentReservationId = null;
+            this.currentReservationData = null;
+            this.tempCustomerData = {};
+        }
 
-                    [badgeProfile, badgeLink].forEach(b => {
-                        b.textContent = data.unread_count;
-                        b.style.display = data.unread_count ? 'inline-flex' : 'none';
-                    });
-
-                    const li = notifList.querySelector(`[data-reservation-id="${data.reservationId}"]`);
-                    if (li) {
-                        li.querySelector('span').textContent = data.status;
-                        li.querySelector('span').className = `px-2 py-1 text-xs font-semibold rounded-full ${data.status === "Accepted" ? "bg-green-100 text-green-700" :
-                            data.status === "Rejected" ? "bg-red-100 text-red-700" : "bg-gray-300 text-gray-700"
-                            }`;
+        fetchPaymentDetails(id) {
+            fetch('/receptionist/payments/' + id)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error! status: ' + response.status);
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    this.updatePaymentModal(data);
+                    this.toggleActionButtons(data.payment ? data.payment.status : null);
+                })
+                .catch(error => {
+                    this.showToast('Failed to load payment details', 'error');
+                });
+        }
 
-                    reservationId = null;
-                } else {
-                    alert(data.message || 'Failed to accept reservation');
+        fetchReservationData(reservationId, tableNumber) {
+            fetch('/orders/' + reservationId)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('HTTP error! status: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.reservation_id) {
+                        this.populatePaymentModal(data, tableNumber);
+                    } else {
+                        this.showToast('Reservation not found or no orders available', 'error');
+                        this.populateBasicInfo(reservationId);
+                    }
+                })
+                .catch(error => {
+                    this.showToast('Failed to load reservation data', 'error');
+                    this.populateBasicInfo(reservationId);
+                });
+        }
+
+        populateBasicInfo(reservationId) {
+            const customerNameInput = document.getElementById('payment_customer_name');
+            const paxInput = document.getElementById('payment_pax');
+            const paymentItemsList = document.getElementById('paymentItemsList');
+            const paymentTotal = document.getElementById('payment_total');
+
+            if (customerNameInput) customerNameInput.value = 'Loading...';
+            if (paxInput) paxInput.value = 'Loading...';
+            if (paymentItemsList) {
+                paymentItemsList.innerHTML = '<div class="text-center text-gray-500 py-4">No orders placed yet</div>';
+            }
+            if (paymentTotal) paymentTotal.textContent = '₱0.00';
+        }
+
+        populatePaymentModal(reservationData, tableNumber) {
+            const customerNameInput = document.getElementById('payment_customer_name');
+            const paxInput = document.getElementById('payment_pax');
+
+            if (customerNameInput) {
+                customerNameInput.value = reservationData.customer_name || 'N/A';
+            }
+            if (paxInput) {
+                paxInput.value = reservationData.pax || 'N/A';
+            }
+
+            const paymentItemsList = document.getElementById('paymentItemsList');
+            const paymentTotal = document.getElementById('payment_total');
+
+            if (reservationData.orders && reservationData.orders.length > 0) {
+                this.currentReservationData = reservationData;
+                this.processPayment(reservationData);
+            } else {
+                if (paymentItemsList) {
+                    paymentItemsList.innerHTML = '<div class="text-center text-gray-500 py-4">No orders placed yet</div>';
                 }
-            })
-            .catch(err => { console.error(err); alert('Server error'); });
-    });
-
-    function openNotifModal(id) {
-        reservationId = id;
-        paymentModal.classList.remove('hidden');
-        acceptForm.action = `/receptionist/accept-reservation/${id}`;
-
-        fetch(`/receptionist/payments/${id}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                if (paymentTotal) {
+                    paymentTotal.textContent = '₱0.00';
                 }
-                return response.json();
-            })
-            .then(data => {
-                const paymentProof = document.getElementById('paymentProof');
-                if (data.payment?.proof_path) {
-                    paymentProof.src = `/file-serve/${data.payment.proof_path}`;
+                this.updatePaymentSummaryBreakdown();
+            }
+        }
+
+        updatePaymentModal(data) {
+            const paymentProof = document.getElementById('paymentProof');
+            this.updateElementText('tableNumber', data.table_id || 'N/A');
+            this.updateElementText('requiredAmount', data.advance_payment || 'N/A');
+            this.updateElementText('paxCount', data.pax || 'N/A');
+            this.updateElementText('paymentStatus', (data.payment && data.payment.status) ? data.payment.status : 'N/A');
+
+            if (paymentProof) {
+                if (data.payment && data.payment.proof_path) {
+                    paymentProof.src = '/file-serve/' + data.payment.proof_path;
                     paymentProof.style.display = 'block';
                 } else {
                     paymentProof.style.display = 'none';
                 }
-
-                const tableNumberElement = document.getElementById('tableNumber');
-                if (tableNumberElement) {
-                    tableNumberElement.textContent = data.table_id || 'N/A';
-                }
-
-                const requiredAmount = document.getElementById('requiredAmount');
-                if (requiredAmount) {
-                    requiredAmount.textContent = data.advance_payment || 'N/A';
-                }
-
-                const paxElement = document.getElementById('paxCount');
-                if (paxElement) {
-                    paxElement.textContent = data.pax || 'N/A';
-                }
-
-                const paymentStatus = document.getElementById('paymentStatus');
-                if (paymentStatus) {
-                    paymentStatus.textContent = data.payment?.status || 'N/A';
-                }
-
-                const actionButtons = document.getElementById('actionButtons');
-                const reservationStatus = data.reservation?.status;
-                if (reservationStatus === "Accepted" || reservationStatus === "Rejected") {
-                    actionButtons.style.display = "none";
-                } else {
-                    actionButtons.style.display = "flex";
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching payment details:', error);
-                alert('Failed to load payment details: ' + error.message);
-            });
-    }
-
-    closePaymentBtn.addEventListener('click', () => {
-        paymentModal.classList.add('hidden');
-    });
-
-    const cancelReservationBtn = document.getElementById('cancelReservationBtn');
-
-    cancelReservationBtn.addEventListener('click', () => {
-        if (!reservationId) return;
-
-        fetch(`/receptionist/cancel-reservation/${reservationId}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json'
             }
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    paymentModal.classList.add('hidden');
+        }
 
-                    const li = notifList.querySelector(`[data-reservation-id="${reservationId}"]`);
-                    if (li) {
-                        li.classList.add("text-red-600", "font-semibold");
-                        li.innerHTML += `<p class="text-xs">Cancelled</p>`;
+        updateElementText(elementId, text) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = text;
+            }
+        }
+
+        processPayment(currentReservationData) {
+            if (!currentReservationData?.orders) return;
+
+            const paymentItemsList = document.getElementById("paymentItemsList");
+            const paymentTotal = document.getElementById("payment_total");
+
+            if (!paymentItemsList) return;
+
+            let subtotal = 0;
+            let itemCounter = 0;
+            paymentItemsList.innerHTML = '';
+
+            currentReservationData.orders.forEach(order => {
+                const itemName = order.order_name;
+                const menuItemData = window.menuPricesMap?.[itemName] || {};
+                const price = parseFloat(order.regular_price || order.calculated_price || order.unit_price || 0);
+                const qty = parseInt(order.quantity) || 1;
+
+                for (let i = 0; i < qty; i++) {
+                    subtotal += price;
+
+                    const orderLine = document.createElement("div");
+                    const showDiscountSelect = this.isMainCategoryItemWithDiscount(itemName, menuItemData);
+
+                    if (showDiscountSelect) {
+                        orderLine.className = "flex justify-between items-center py-2 border-b border-gray-100";
+                        orderLine.innerHTML = `
+                        <div class="flex-1">
+                            <div class="font-medium">${itemName}</div>
+                        </div>
+                        <span class="w-20 text-right">₱${price.toFixed(2)}</span>
+                        <div class="w-40 text-right">
+                            <select class="discount-type-select border border-gray-300 rounded px-1 py-1 text-sm w-50" 
+                                    data-item-price="${price}" 
+                                    data-item-name="${itemName}" 
+                                    id="discount-select-${itemCounter}">
+                                ${this.getDiscountOptions(menuItemData)}
+                            </select>
+                        </div>
+                        <span class="w-24 text-right font-medium item-total">₱${price.toFixed(2)}</span>
+                    `;
+                        paymentItemsList.appendChild(orderLine);
+                    } else {
+                        orderLine.className = "hidden";
+                        orderLine.innerHTML = `<span class="item-total">₱${price.toFixed(2)}</span>`;
+                        paymentItemsList.appendChild(orderLine);
                     }
 
-                    reservationId = null;
-                } else {
-                    alert(data.message || "Failed to cancel reservation");
+                    itemCounter++;
                 }
-            })
-            .catch(err => {
-                console.error(err);
-                alert("Server error while cancelling reservation.");
             });
-    });
+
+            document.querySelectorAll('.discount-type-select').forEach(select => {
+                select.addEventListener('change', (e) => {
+                    this.calculateSingleItemDiscount(e.target);
+                    this.updateTotalAfterDiscounts();
+                });
+            });
+
+            if (paymentTotal) paymentTotal.textContent = '₱' + subtotal.toFixed(2);
+            this.setupDiscountBreakdownSection();
+        }
+
+        isMainCategoryItemWithDiscount(itemName, menuItemData) {
+            const mainItems = ['Unlimited Samgyupsal', 'HotPot', 'Fusion'];
+            return mainItems.includes(itemName) && menuItemData.has_discount;
+        }
+
+        getDiscountOptions(menuData) {
+            let options = '<option value="none">No Discount</option>';
+            if (menuData.student > 0) options += '<option value="student">SD</option>';
+            if (menuData.govt_employee > 0) options += '<option value="govt_employee">GED</option>';
+            if (menuData.has_discount) options += '<option value="pwd_senior">PWD/SR</option>';
+            return options;
+        }
+
+        calculateSingleItemDiscount(selectElement) {
+            const itemPrice = parseFloat(selectElement.dataset.itemPrice);
+            const discountType = selectElement.value;
+            const itemName = selectElement.dataset.itemName;
+            const menuItemData = window.menuPricesMap[itemName] || {};
+
+            let discountedPrice = itemPrice;
+
+            switch (discountType) {
+                case 'student':
+                    if (menuItemData.student !== null && menuItemData.student !== undefined) {
+                        discountedPrice = parseFloat(menuItemData.student);
+                    }
+                    break;
+                case 'govt_employee':
+                    if (menuItemData.govt_employee !== null && menuItemData.govt_employee !== undefined) {
+                        discountedPrice = parseFloat(menuItemData.govt_employee);
+                    }
+                    break;
+                case 'pwd_senior':
+                    discountedPrice = itemPrice * 0.8;
+                    break;
+                case 'none':
+                default:
+                    discountedPrice = itemPrice;
+            }
+
+            const parentElement = selectElement.closest('.flex');
+            if (parentElement) {
+                const itemTotalElement = parentElement.querySelector('.item-total');
+                if (itemTotalElement) {
+                    itemTotalElement.textContent = '₱' + discountedPrice.toFixed(2);
+                }
+            }
+        }
+
+        updateTotalAfterDiscounts() {
+            const itemTotals = document.querySelectorAll('.item-total');
+
+            let newTotal = 0;
+            itemTotals.forEach(el => {
+                newTotal += parseFloat(el.textContent.replace('₱', ''));
+            });
+
+            document.getElementById('payment_total').textContent = '₱' + newTotal.toFixed(2);
+            this.updatePaymentSummaryBreakdown();
+        }
+
+        updatePaymentSummaryBreakdown() {
+            const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
+
+            if (!paymentSummaryDiv) return;
+
+            if (!this.currentReservationData?.orders || this.currentReservationData.orders.length === 0) {
+                paymentSummaryDiv.innerHTML = `
+                <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
+                    <span class="flex-1">Item</span>
+                    <span class="w-24 text-right">Total Price</span>
+                </div>
+                <div class="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>Total Amount:</span>
+                    <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
+                </div>
+            `;
+                return;
+            }
+
+            let totalAmount = 0;
+            let breakdownHtml = '';
+
+            const mainMenuItems = ['Unlimited Samgyupsal', 'HotPot', 'Fusion'];
+            const itemGroups = {};
+            const mainMenuEntries = [];
+            let itemCounter = 0;
+
+            this.currentReservationData.orders.forEach((order, orderIndex) => {
+                const itemName = order.order_name;
+                const price = parseFloat(order.regular_price || order.calculated_price || order.unit_price || 0);
+                const qty = parseInt(order.quantity) || 1;
+
+                for (let i = 0; i < qty; i++) {
+                    let currentIndex = 0;
+                    for (let prevOrderIndex = 0; prevOrderIndex < orderIndex; prevOrderIndex++) {
+                        const prevOrder = this.currentReservationData.orders[prevOrderIndex];
+                        currentIndex += parseInt(prevOrder.quantity) || 1;
+                    }
+                    currentIndex += i;
+
+                    const itemTotalElements = document.querySelectorAll('.item-total');
+                    const discountSelects = document.querySelectorAll('.discount-type-select');
+
+                    let finalPrice = price;
+                    let discountInfo = '';
+
+                    if (currentIndex < itemTotalElements.length) {
+                        finalPrice = parseFloat(itemTotalElements[currentIndex].textContent.replace('₱', ''));
+                    }
+
+                    let discountType = 'none';
+                    if (currentIndex < discountSelects.length) {
+                        const select = discountSelects[currentIndex];
+                        if (select) {
+                            discountType = select.value;
+                            if (discountType !== 'none') {
+                                const labels = {
+                                    student: ' (Student Discount)',
+                                    govt_employee: ' (Govt Employee Discount)',
+                                    pwd_senior: ' (PWD/Senior Discount)'
+                                };
+                                discountInfo = labels[discountType] || '';
+                            }
+                        }
+                    }
+
+                    totalAmount += finalPrice;
+
+                    if (mainMenuItems.includes(itemName)) {
+                        mainMenuEntries.push({
+                            name: itemName + discountInfo,
+                            price: finalPrice,
+                            hasDiscount: discountInfo !== '',
+                            discountType,
+                            index: itemCounter
+                        });
+                    } else {
+                        const groupKey = itemName + discountInfo;
+                        if (!itemGroups[groupKey]) {
+                            itemGroups[groupKey] = {
+                                count: 0,
+                                totalPrice: 0,
+                                unitPrice: finalPrice,
+                                hasDiscount: discountInfo !== '',
+                                index: itemCounter
+                            };
+                        }
+                        itemGroups[groupKey].count++;
+                        itemGroups[groupKey].totalPrice += finalPrice;
+                    }
+
+                    itemCounter++;
+                }
+            });
+
+            let displayItemCounter = 0;
+
+            mainMenuEntries.forEach(entry => {
+                const hasDiscount = entry.hasDiscount;
+                const baseItemName = entry.name.split(' (')[0];
+                const discountType = entry.discountType || 'none';
+
+                breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
+                <span class="flex-1 pr-2">${entry.name}</span>
+                <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
+                <div class="w-12 flex justify-center ml-2">
+                    ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
+                                     class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                     Info
+                                     </button>` : ''}
+                </div>
+            </div>`;
+                displayItemCounter++;
+            });
+
+            Object.keys(itemGroups).forEach(groupKey => {
+                const group = itemGroups[groupKey];
+                const displayName = group.count > 1 ? `${groupKey} x${group.count}` : groupKey;
+                const hasDiscount = group.hasDiscount;
+                const baseItemName = groupKey.split(' (')[0];
+                const discountType = group.discountType || 'none';
+
+                breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
+                <span class="flex-1 pr-2">${displayName}</span>
+                <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
+                <div class="w-12 flex justify-center ml-2">
+                    ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
+                                     class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                     Info
+                                     </button>` : ''}
+                </div>
+            </div>`;
+                displayItemCounter++;
+            });
+
+            paymentSummaryDiv.innerHTML = `
+            <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
+                <span class="flex-1">Item</span>
+                <span class="w-20 text-right">Total Price</span>
+                <span class="w-12 text-center ml-2"></span>
+            </div>
+            ${breakdownHtml}
+            <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
+                <span>Total Amount:</span>
+                <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
+            </div>
+        `;
+        }
+
+        setupDiscountBreakdownSection() {
+            this.updatePaymentSummaryBreakdown();
+        }
+
+        openCustomerInfoModal(itemName, itemIndex, discountType = null) {
+            let idTypeValue = '';
+            switch (discountType) {
+                case 'student':
+                    idTypeValue = "Student ID";
+                    break;
+                case 'govt_employee':
+                    idTypeValue = "Government ID";
+                    break;
+                case 'pwd_senior':
+                    idTypeValue = "Senior Citizen ID / PWD ID";
+                    break;
+                default:
+                    idTypeValue = "N/A";
+            }
+
+            // Check if we already have saved data for this item
+            const key = `${itemName}_${itemIndex}`;
+            const savedData = this.tempCustomerData[key];
+            const savedName = savedData ? savedData.name : '';
+
+            const modalHtml = `
+<div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg p-6 w-96 max-w-sm mx-4">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Customer Information</h3>
+            <button id="closeCustomerInfoModal" class="text-gray-400 hover:text-gray-600">X</button>
+        </div>
+        
+        <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+            <p class="text-sm text-blue-800">
+                <strong>Item:</strong> ${itemName}
+            </p>
+            <p class="text-xs text-blue-600 mt-1">
+                Customer information is required for this discount
+            </p>
+        </div>
+        
+        <form id="customerInfoForm" class="space-y-4">
+            <input type="hidden" name="item_name" value="${itemName}">
+            <input type="hidden" name="item_index" value="${itemIndex}">
+            <input type="hidden" name="customer_type" value="${discountType}">
+            
+            <div>
+                <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
+                    Customer Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="customerName" name="name" required value="${savedName}"
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                       placeholder="Enter customer name">
+                <div id="nameError" class="text-red-500 text-xs mt-1 hidden">Customer name is required</div>
+            </div>
+
+            <div>
+                <label for="customerIdType" class="block text-sm font-medium text-gray-700 mb-1">
+                    ID Type <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="customerIdType" name="id_type" value="${savedData ? savedData.id_type || idTypeValue : idTypeValue}" readonly
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed">
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" id="cancelCustomerInfo" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md">
+                    Close
+                </button>
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
+                    Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+`;
+
+            // Remove existing modal if open
+            const existingModal = document.getElementById('customerInfoModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            this.setupCustomerInfoModalEvents();
+        }
+
+        setupCustomerInfoModalEvents() {
+            const modal = document.getElementById('customerInfoModal');
+            const closeBtn = document.getElementById('closeCustomerInfoModal');
+            const cancelBtn = document.getElementById('cancelCustomerInfo');
+            const form = document.getElementById('customerInfoForm');
+
+            const closeModal = () => {
+                if (modal) {
+                    modal.remove();
+                }
+            };
+
+            if (closeBtn) closeBtn.addEventListener('click', closeModal);
+            if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+
+            if (modal) {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        closeModal();
+                    }
+                });
+            }
+
+            if (form) {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+
+                    const formData = new FormData(form);
+                    const customerName = formData.get('name');
+                    const idType = formData.get('id_type');
+
+                    const nameError = document.getElementById('nameError');
+                    let hasError = false;
+
+
+                    // ABSOLUTE BLOCKING - NO EMPTY NAMES ALLOWED AT ALL
+                    if (!customerName ||
+                        customerName === '' ||
+                        customerName === null ||
+                        customerName === undefined ||
+                        customerName.trim() === '' ||
+                        customerName.trim().length === 0) {
+
+                        nameError.textContent = 'Customer name is required and cannot be empty';
+                        nameError.classList.remove('hidden');
+                        hasError = true;
+                    }
+                    else if (customerName.trim().length < 2) {
+                        nameError.textContent = 'Customer name must be at least 2 characters';
+                        nameError.classList.remove('hidden');
+                        hasError = true;
+                    }
+                    else {
+                        nameError.classList.add('hidden');
+                    }
+
+                    // CRITICAL: If ANY error exists, STOP COMPLETELY - DO NOT SAVE ANYTHING
+                    if (hasError) {
+                        this.showToast('Please enter a valid customer name before saving', 'error');
+                        return; // ABSOLUTELY DO NOT PROCEED
+                    }
+
+                    const trimmedName = customerName.trim();
+
+                    // FINAL SAFETY CHECK - ABSOLUTELY NO EMPTY NAMES
+                    if (!trimmedName || trimmedName === '' || trimmedName.length === 0) {
+                        this.showToast('Customer name cannot be empty', 'error');
+                        return;
+                    }
+
+                    const customerData = {
+                        name: trimmedName,
+                        id_type: idType,
+                        item_name: formData.get('item_name'),
+                        item_index: formData.get('item_index'),
+                        customer_type: formData.get('customer_type')
+                    };
+
+
+                    if (this.saveCustomerInfoTemporarily(customerData)) {
+                        closeModal();
+                    }
+                });
+            }
+        }
+
+        saveCustomerInfoTemporarily(customerData) {
+            // ABSOLUTE BLOCKING - DO NOT SAVE EMPTY NAMES
+            if (!customerData ||
+                !customerData.name ||
+                customerData.name === '' ||
+                customerData.name === null ||
+                customerData.name === undefined ||
+                customerData.name.trim() === '' ||
+                customerData.name.trim().length === 0) {
+
+                this.showToast('Cannot save empty customer name', 'error');
+                return false; // Return false to indicate failure
+            }
+
+            const key = `${customerData.item_name}_${customerData.item_index}`;
+            this.tempCustomerData[key] = {
+                name: customerData.name.trim(),
+                id_type: customerData.id_type,
+                item_name: customerData.item_name,
+                item_index: parseInt(customerData.item_index),
+                customer_type: customerData.customer_type
+            };
+
+            return true; // Return true to indicate success
+        }
+
+        submitPayment(event) {
+            const currentReservationData = this.currentReservationData;
+
+            if (!currentReservationData) {
+                this.showToast("No reservation data available", "error");
+                return;
+            }
+
+            const totalText = document.getElementById("payment_total").textContent;
+            const total = parseFloat(totalText.replace('₱', '').replace(',', ''));
+
+            const discountSelects = document.querySelectorAll('.discount-type-select');
+            let discountedItems = [];
+            let hasActiveDiscounts = false;
+
+
+            // Collect all items that have discounts applied
+            discountSelects.forEach((select, index) => {
+                if (select.value !== 'none') {
+                    hasActiveDiscounts = true;
+
+                    // FIXED: Get item name from the select's data attribute or from the DOM structure
+                    let itemName = '';
+
+                    // Method 1: Get from data attribute (most reliable)
+                    itemName = select.dataset.itemName || select.getAttribute('data-item-name') || '';
+
+                    // Method 2: If no data attribute, traverse the DOM correctly
+                    if (!itemName) {
+                        // Find the parent container (the flex div)
+                        const parentDiv = select.closest('.flex');
+                        if (parentDiv) {
+                            // Look for the item name in the first div with font-medium class
+                            const itemNameDiv = parentDiv.querySelector('.font-medium');
+                            if (itemNameDiv) {
+                                itemName = itemNameDiv.textContent?.trim() || '';
+                            }
+                        }
+                    }
+
+                    // Method 3: Fallback to reservation data
+                    if (!itemName && currentReservationData.orders[index]) {
+                        itemName = currentReservationData.orders[index].order_name || '';
+                    }
+
+
+                    if (itemName) {
+                        discountedItems.push({
+                            index: index,
+                            itemName: itemName,
+                            discountType: select.value
+                        });
+                    } else {
+                        console.error(`Could not determine item name for select index ${index}`);
+                    }
+                }
+            });
+
+
+            // IRON CURTAIN VALIDATION - EVERY DISCOUNTED ITEM MUST HAVE CUSTOMER NAME
+            if (hasActiveDiscounts) {
+                let itemsWithoutValidNames = [];
+
+                discountedItems.forEach(item => {
+                    const key = `${item.itemName}_${item.index}`;
+                    const customerData = this.tempCustomerData[key];
+
+
+                    // ULTRA STRICT - CHECK EVERY POSSIBLE WAY NAME CAN BE EMPTY
+                    let hasValidName = false;
+
+                    if (customerData &&
+                        customerData.name &&
+                        customerData.name !== '' &&
+                        customerData.name !== null &&
+                        customerData.name !== undefined &&
+                        customerData.name.trim() !== '' &&
+                        customerData.name.trim().length > 0) {
+                        hasValidName = true;
+                    }
+
+                    if (!hasValidName) {
+                        itemsWithoutValidNames.push(item.itemName);
+                    }
+                });
+
+
+                // IF ANY ITEM LACKS A VALID NAME, BLOCK PAYMENT COMPLETELY
+                if (itemsWithoutValidNames.length > 0) {
+                    const itemsList = itemsWithoutValidNames.join(', ');
+                    this.showToast(`Customer name is required for discounted items.`, "error");
+                    return;
+                }
+            }
+
+            // Build customer data array - only include items with valid names
+            const allCustomerData = [];
+            if (hasActiveDiscounts) {
+                discountedItems.forEach(item => {
+                    const key = `${item.itemName}_${item.index}`;
+                    const customerInfo = this.tempCustomerData[key];
+
+                    if (customerInfo &&
+                        customerInfo.name &&
+                        customerInfo.name.trim() !== '' &&
+                        customerInfo.name.trim().length > 0) {
+                        allCustomerData.push({
+                            name: customerInfo.name.trim(),
+                            id_type: customerInfo.id_type,
+                            item_name: customerInfo.item_name,
+                            item_index: parseInt(customerInfo.item_index),
+                            customer_type: customerInfo.customer_type
+                        });
+                    }
+                });
+
+                // FINAL SAFETY CHECK - COUNT MUST MATCH
+                if (allCustomerData.length !== discountedItems.length) {
+                    this.showToast(`PAYMENT BLOCKED: Need customer names for all ${discountedItems.length} discounted items. Only ${allCustomerData.length} valid names provided.`, "error");
+                    return;
+                }
+            }
+
+
+            const discountInputs = document.querySelectorAll('.discount-input');
+            const discountedPersons = {};
+
+            discountInputs.forEach((input, index) => {
+                const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
+                const discountValue = parseInt(input.value) || 0;
+
+                if (discountValue > 0 && orderDetailId) {
+                    discountedPersons[orderDetailId] = discountValue;
+                }
+            });
+
+            const ordersData = currentReservationData.orders.map(order => {
+                return {
+                    order_detail_id: order.order_detail_id,
+                    order_name: order.order_name,
+                    quantity: parseInt(order.quantity) || 1,
+                    price: parseFloat(order.regular_price || order.calculated_price || order.unit_price || 0)
+                };
+            });
+
+            const paymentData = {
+                reservation_id: currentReservationData.reservation_id,
+                customer_name: currentReservationData.customer_name,
+                total: total,
+                orders: ordersData,
+                discounted_persons: discountedPersons,
+                customer_data: allCustomerData
+            };
+
+
+            const submitBtn = event.target;
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Processing...";
+
+            fetch('/process-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(paymentData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || `HTTP ${response.status}: Error occurred`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        this.updateTableStatusAfterPayment(currentReservationData.reservation_id);
+                        this.showToast("Payment processed successfully!", "success");
+
+                        this.tempCustomerData = {};
+                        this.currentReservationData = null;
+
+                        setTimeout(() => { location.reload(); }, 800);
+                    } else {
+                        this.showToast(data.message || "Payment processing failed", "error");
+                    }
+                })
+                .catch(error => {
+                    if (error.message.includes('Session expired') || error.message.includes('expired')) {
+                        this.showToast("Your session has expired. Please refresh the page and try again.", "error");
+                    } else if (error.message.includes('endpoint not found')) {
+                        this.showToast("Payment system is currently unavailable. Please contact support.", "error");
+                    } else if (error.message.includes('Server error')) {
+                        this.showToast("Server error occurred. Please try again in a few moments.", "error");
+                    } else if (error.message.includes('already exists')) {
+                        this.showToast("Customer ID number already exists. Please use a different ID number.", "error");
+                    } else if (error.message.includes('Database error')) {
+                        this.showToast("Database error occurred. Please try again.", "error");
+                    } else if (error.message.includes('Unexpected token')) {
+                        this.showToast("Server returned invalid response. Please refresh the page and try again.", "error");
+                    } else {
+                        this.showToast(error.message || "Payment processing failed. Please try again.", "error");
+                    }
+                })
+                .finally(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = "Process Payment";
+                });
+        }
+
+        updateTableStatusAfterPayment(reservationId) {
+            const tableElement = document.querySelector(`[data-reservation-id="${reservationId}"]`);
+
+            if (tableElement) {
+                const tableCircle = tableElement.querySelector('.w-16.h-16.rounded-full');
+                const statusText = tableElement.querySelector('.text-red-600, .text-green-600');
+                const countdownElement = tableElement.querySelector('.countdown');
+
+                if (tableCircle) {
+                    tableCircle.classList.remove('bg-red-600');
+                    tableCircle.classList.add('bg-green-600');
+                }
+
+                if (statusText) {
+                    statusText.textContent = 'Available';
+                    statusText.classList.remove('text-red-600');
+                    statusText.classList.add('text-green-600');
+                }
+
+                if (countdownElement && countdownElement.parentElement) {
+                    countdownElement.parentElement.style.display = 'none';
+                }
+
+                tableElement.setAttribute('data-occupied', '0');
+                tableElement.setAttribute('data-reservation-id', '');
+                tableElement.classList.remove('table-occupied');
+                tableElement.classList.add('table-available');
+            }
+        }
+
+        printBill() {
+            const reservationId = this.currentReservationId;
+
+            if (!reservationId) {
+                this.showToast("No active reservation found.", "error");
+                return;
+            }
+
+            // Call the print API or functionality here
+            this.showToast("Printing bill...", "info");
+        }
+
+        
+        showToast(message, type = 'info') {
+            if (typeof window.showToast === 'function') {
+                window.showToast(message, type);
+                return;
+            }
+
+            const toastContainer = document.getElementById('toast-container') || this.createToastContainer();
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type} fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300`;
+
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-black',
+                info: 'bg-blue-500 text-white'
+            };
+
+            toast.className += ` ${colors[type] || colors.info}`;
+            toast.textContent = message;
+
+            toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'fixed top-4 right-4 z-50 space-y-2';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        toggleActionButtons(paymentStatus) {
+            // Add implementation if needed
+        }
+    }
+
+    // Initialize the app
+    const app = new CashierApp();
+    window.app = app;
+
+    // Global functions for backward compatibility
+    function closePaymentModal() {
+        if (window.app) {
+            window.app.closeTablePaymentModal();
+        }
+    }
+
+    function submitPayment(event) {
+        if (!event && typeof window.event !== 'undefined') {
+            event = window.event;
+        }
+
+        if (window.app && window.app.submitPayment) {
+            window.app.submitPayment(event);
+        }
+    }
 </script>
 
 </body>

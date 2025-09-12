@@ -9,14 +9,17 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::create('menu', function (Blueprint $menu) {
-            $menu->id();
-            $menu->string('menu_item');
-            $menu->decimal('price', 10, 2);
-            $menu->string('image')->nullable();
-            $menu->string('category')->nullable();
-            $menu->timestamps();
-            $menu->softDeletes();
+        Schema::create('menu', function (Blueprint $table) {
+            $table->id();
+            $table->string('menu_item');
+            $table->decimal('regular_price', 10, 2); 
+            $table->decimal('student_price', 10, 2)->nullable(); 
+            $table->decimal('govt_employee_price', 10, 2)->nullable(); 
+            $table->string('image')->nullable();
+            $table->string('category');
+            $table->boolean('has_customer_discount')->default(false); 
+            $table->timestamps();
+            $table->softDeletes();
         });
     }
 

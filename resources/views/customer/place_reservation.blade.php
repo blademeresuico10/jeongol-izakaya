@@ -393,11 +393,15 @@
   </div>
 
   <div id="tableModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl max-h-screen overflow-y-auto">
-      <div class="p-6">
-        <span id="closeModal" class="close-modal text-end text-lg cursor-pointer block">&times;</span>
-        <h3 class="mb-4 text-lg text-center font-bold">Please Enter Reservation Details</h3>
-
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] overflow-y-auto">
+      <div class="p-3">
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <div></div>
+            <h3 class="text-lg font-bold">Please Enter Reservation Details</h3>
+            <span id="closeModal" class="close-modal text-3xl cursor-pointer">&times;</span>
+          </div>
+        </div>
         <form id="reservationForm" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -493,8 +497,7 @@
   </div>
 
   <div id="paymentModal" class="fixed inset-0 z-[1100] hidden items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
-
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-xs p-3 relative">
       <button id="closePaymentModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700">✕</button>
       <h2 class="text-xl font-semibold text-center mb-4">Payment</h2>
 
@@ -548,7 +551,7 @@
         this.selectedOrders = {};
         this.selectedTableNumber = 0;
         this.elements = {};
-
+        this.submissionInProgress = false;
         this.init();
       }
 
@@ -1128,6 +1131,11 @@
       }
 
       async submitReservation() {
+
+        if (this.submissionInProgress) {
+          this.showMessageBox('Please wait, processing your reservation...', 'warning');
+          return;
+        }
         if (!this.validateInputs()) {
           this.showMessageBox('Please complete all required fields.', 'error');
           return;
@@ -1138,6 +1146,8 @@
 
         submitBtn.disabled = true;
         submitBtn.textContent = "Submitting...";
+
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
 
         try {
           const response = await fetch("/customer/reserve", {
@@ -1164,9 +1174,13 @@
             this.hideModal(this.elements.tableModal);
             this.hideModal(this.elements.paymentModal);
           } else {
-            const errors = json.errors || {};
-            const messages = Object.values(errors).flat().join("\n");
-            this.showMessageBox(messages || json.message || "Reservation failed", "error");
+            if (response.status === 409) {
+              this.showMessageBox("Sorry! This time slot was just reserved by another customer. Please select a different time.", "error");
+            } else {
+              const errors = json.errors || {};
+              const messages = Object.values(errors).flat().join("\n");
+              this.showMessageBox(messages || json.message || "Reservation failed", "error");
+            }
           }
         } catch (error) {
           this.showMessageBox("Network error: " + error.message, "error");
@@ -1279,15 +1293,18 @@
         const colors = {
           success: '#4CAF50',
           error: '#f44336',
-          warning: '#ff9800'
+          warning: '#ff9800',
+          info: '#2196F3'
         };
 
         box.style.background = colors[type] || colors.success;
         box.style.display = 'block';
 
+        const timeout = (type === 'error' || type === 'warning') ? 5000 : 3000;
+
         setTimeout(() => {
           box.style.display = 'none';
-        }, 3000);
+        }, timeout);
       }
     }
 

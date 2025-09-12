@@ -6,22 +6,19 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
+
     public function up(): void
     {
-        Schema::create('customers', function (Blueprint $customers) {
-            $customers->id();
-            $customers->string('name');
-            $customers->string('contact_number')->nullable(); 
-            $customers->integer('id_type')->nullable();        
-            $customers->timestamps(); 
+        Schema::create('customers', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('contact_number')->nullable();
+            $table->string('id_type')->nullable();   
+            $table->timestamps();
         });
     }
-
-   
     public function down(): void
     {
         Schema::dropIfExists('customers');
     }
 };
-

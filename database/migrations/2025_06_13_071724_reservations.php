@@ -17,8 +17,11 @@ return new class extends Migration
             $reservations->foreignId('table_id')->constrained('tables')->onDelete('cascade');
             $reservations->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('cascade');
             $reservations->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
-            $reservations->enum('status', ['Pending', 'Accepted', 'Rejected'])->default('Pending');
+            $reservations->enum('status', ['Pending', 'Accepted', 'Rejected', 'Completed'])->default('Pending');
             $reservations->timestamps();
+            $reservations->index(['table_id', 'reservation_time']);
+            $reservations->index(['status', 'reservation_time']);
+            $reservations->unique(['table_id', 'reservation_time', 'status'], 'unique_table_time_status');
         });
     }
 

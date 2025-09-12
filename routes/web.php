@@ -38,7 +38,23 @@ Route::get('/file-serve/{path}', function ($path) {
 })->where('path', '.*');
 
 
+
+
+
+
 Route::middleware(['auth'])->group(function () {
+
+    Route::get('/api/menu-prices', function () {
+        $menuItems = \App\Models\Menu::select([
+            'menu_item',
+            'regular_price',
+            'student_price',
+            'govt_employee_price',
+            'has_customer_discount'
+        ])->get();
+
+        return response()->json($menuItems);
+    });
 
     // Admin Routes
     Route::get('/home', [AdminController::class, 'index'])->name('admin.home');
@@ -126,4 +142,5 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cashier/payments/{id}', [CashierController::class, 'showPayment'])->name('cashier.showPayment');
     Route::get('/cashier/notifications', [CashierController::class, 'getNotifications'])->name('cashier.notifications');
     Route::post('/cashier/cancel-reservation/{id}', [CashierController::class, 'cancelReservation'])->name('cashier.cancel-reservation');
+    Route::get('/check-customer/{idNumber}', [CashierController::class, 'checkCustomer']);
 });

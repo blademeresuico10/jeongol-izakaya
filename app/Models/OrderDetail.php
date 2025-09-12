@@ -3,19 +3,35 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class OrderDetail extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
-        'order_price',
-        'quantity',
-        'notes',
+        'reservation_id',
         'customer_id',
         'user_id',
         'menu_id',
+        'quantity',
+        'order_price',
+        'notes',
+        'status',
         'is_added_order',
-        'reservation_id',
-        'status'
+        'change_type',
+        'previous_quantity',
+        'previous_price',
+        'change_timestamp',
+    ];
+
+    protected $casts = [
+        'order_price' => 'decimal:2',
+        'previous_price' => 'decimal:2',
+        'change_timestamp' => 'datetime',
+        'is_added_order' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
     public function menu()
     {

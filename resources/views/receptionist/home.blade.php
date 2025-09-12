@@ -361,7 +361,6 @@
           this.setupModalEvents();
           this.setupFormEvents();
           this.setupTableEvents();
-          this.setupOrderEvents();
         }
 
         setupUserMenuEvents() {
@@ -529,10 +528,6 @@
               });
             }
           });
-        }
-
-        setupOrderEvents() {
-          // Order-related event setup can be added here
         }
 
         initializeNotifications() {

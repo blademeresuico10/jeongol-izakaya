@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\customers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -11,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\reservation;
 use Illuminate\Notifications\DatabaseNotification;
 use App\Models\User;
+use App\Models\menu;
 
 class CashierController extends Controller
 {
@@ -60,25 +62,27 @@ class CashierController extends Controller
 
         $menuPricesMap = [];
         foreach ($menuItems as $item) {
-            $baseName = str_replace([' Lunch', ' Dinner'], '', $item->menu_item);
-            if (!isset($menuPricesMap[$baseName])) {
-                $menuPricesMap[$baseName] = ['lunch' => null, 'dinner' => null];
-            }
+            $baseName = $item->menu_item;
 
-            if (str_contains($item->menu_item, 'Lunch')) {
-                $menuPricesMap[$baseName]['lunch'] = $item->price;
-            } elseif (str_contains($item->menu_item, 'Dinner')) {
-                $menuPricesMap[$baseName]['dinner'] = $item->price;
-            } else {
-                $menuPricesMap[$baseName]['lunch'] = $item->price;
-                $menuPricesMap[$baseName]['dinner'] = $item->price;
-            }
+            $menuPricesMap[$baseName] = [
+                'regular' => $item->regular_price,
+                'student' => $item->student_price,
+                'govt_employee' => $item->govt_employee_price,
+                'has_discount' => $item->has_customer_discount
+            ];
         }
 
         $groupedMenu = [];
         foreach ($menuItems as $item) {
             $groupedMenu[$item->category][] = $item;
         }
+        $menuData = menu::select([
+            'menu_item',
+            'regular_price',
+            'student_price',
+            'govt_employee_price',
+            'has_customer_discount'
+        ])->get();
 
         return view('cashier.home', compact(
             'tables',
@@ -86,7 +90,8 @@ class CashierController extends Controller
             'reservations',
             'menuPricesMap',
             'groupedMenu',
-            'occupiedTables'
+            'occupiedTables',
+            'menuData'
         ));
     }
 
@@ -97,14 +102,17 @@ class CashierController extends Controller
             ->where('reservations.id', $reservationId)
             ->select(
                 'reservations.id as reservation_id',
+                'reservations.reservation_time',
                 'customers.name as customer_name',
+                'customers.contact_number',
+                'customers.id_type',
                 'reservations.pax',
                 'reservations.customer_id'
             )
             ->first();
 
         if (!$reservation) {
-            return response()->json(null);
+            return response()->json(['message' => 'Reservation not found'], 404);
         }
 
         $orders = DB::table('order_details')
@@ -112,32 +120,77 @@ class CashierController extends Controller
             ->where('order_details.reservation_id', $reservationId)
             ->select(
                 'order_details.id as order_detail_id',
-                'menu.menu_item as order_name',
+                'order_details.order_price',
                 'order_details.quantity',
-                'menu.price as price'
+                'menu.menu_item as order_name',
+                'menu.regular_price',
+                'menu.has_customer_discount'
             )
-            ->get();
+            ->get()
+            ->map(function ($order) {
+                if (!$order->order_price || !$order->quantity) {
+                    return null;
+                }
+
+                $order->unit_price = $order->order_price / $order->quantity;
+                return $order;
+            })
+            ->filter();
 
         return response()->json([
-            'reservation_id' => $reservation->reservation_id,
-            'customer_name' => $reservation->customer_name,
-            'customer_id' => $reservation->customer_id,
-            'pax' => $reservation->pax,
-            'orders' => $orders
+            'reservation_id'   => $reservation->reservation_id,
+            'customer_name'    => $reservation->customer_name,
+            'contact_number'   => $reservation->contact_number,
+            'id_type'          => $reservation->id_type,
+            'customer_id'      => $reservation->customer_id,
+            'pax'              => $reservation->pax,
+            'reservation_time' => $reservation->reservation_time,
+            'orders'           => $orders
         ]);
+    }
+
+
+    private function calculateMenuPrice($menuItem, $customerType = null)
+    {
+        if (!$menuItem->has_customer_discount) {
+            return $menuItem->regular_price;
+        }
+
+        switch ($customerType) {
+            case 'student':
+                return $menuItem->student_price ?? $menuItem->regular_price;
+            case 'government':
+            case 'govt_employee':
+                return $menuItem->govt_employee_price ?? $menuItem->regular_price;
+            case 'pwd_senior':
+                return $menuItem->regular_price * 0.8;
+            default:
+                return $menuItem->regular_price;
+        }
     }
 
     public function processPayment(Request $request)
     {
+        Log::info('Payment processing started', [
+            'reservation_id' => $request->reservation_id,
+            'customer_data_count' => $request->has('customer_data') ? count($request->customer_data) : 0,
+            'orders_count' => $request->has('orders') ? count($request->orders) : 0
+        ]);
+
         $request->validate([
             'reservation_id' => 'required|integer|exists:reservations,id',
-            'customer_name' => 'required|string',
             'total' => 'required|numeric|min:0',
             'orders' => 'required|array|min:1',
             'orders.*.order_detail_id' => 'required|integer',
             'orders.*.order_name' => 'required|string',
             'orders.*.quantity' => 'required|integer|min:1',
             'orders.*.price' => 'required|numeric|min:0',
+            'customer_data' => 'nullable|array',
+            'customer_data.*.name' => 'required_with:customer_data|string',
+            'customer_data.*.id_type' => 'nullable|string',
+            'customer_data.*.customer_type' => 'nullable|string|in:student,govt_employee,pwd_senior,regular',
+            'customer_data.*.item_index' => 'required_with:customer_data|integer',
+            'discounted_persons' => 'nullable|array',
         ]);
 
         try {
@@ -146,53 +199,92 @@ class CashierController extends Controller
             $reservation = DB::table('reservations')
                 ->join('customers', 'reservations.customer_id', '=', 'customers.id')
                 ->where('reservations.id', $request->reservation_id)
-                ->select(
-                    'reservations.id as reservation_id',
-                    'reservations.customer_id',
-                    'reservations.table_id',
-                    'customers.name as customer_name'
-                )
+                ->select('reservations.id as reservation_id', 'reservations.customer_id')
                 ->first();
 
             if (!$reservation) {
                 throw new Exception('Reservation not found');
             }
 
-            $subtotal = 0;
+            $customerMap = [];
+            if ($request->has('customer_data')) {
+                foreach ($request->customer_data as $customerInfo) {
+                    Log::info('Creating customer with data:', $customerInfo);
+
+                    $customer = customers::create([
+                        'name' => $customerInfo['name'],
+                        'id_type' => $customerInfo['id_type'] ?? null,
+                    ]);
+
+                    Log::info('Customer created:', [
+                        'id' => $customer->id,
+                        'name' => $customer->name,
+                        'id_type' => $customer->id_type
+                    ]);
+
+                    $customerMap[$customerInfo['item_index']] = [
+                        'customer' => $customer,
+                        'customer_type' => $customerInfo['customer_type'] ?? 'regular'
+                    ];
+                }
+            }
+
+            $mainCustomer = customers::find($reservation->customer_id) ??
+                customers::create([
+                    'name' => 'Walk-in Customer',
+                    'id_type' => null,
+                ]);
+
+            DB::table('reservations')->where('id', $request->reservation_id)
+                ->update(['customer_id' => $mainCustomer->id, 'updated_at' => now()]);
+
+            $subtotal = 0; 
             $totalDiscountAmount = 0;
             $processedOrders = [];
+            $itemIndex = 0;
 
             foreach ($request->orders as $orderData) {
-                $itemSubtotal = $orderData['price'] * $orderData['quantity'];
-                $subtotal += $itemSubtotal;
-
-                $discountedPersons = $request->input("discounted_persons.{$orderData['order_detail_id']}", 0);
-                $discountPerPerson = 0;
-                $itemDiscountTotal = 0;
-
-                if ($discountedPersons > 0) {
-                    $perPersonCost = $itemSubtotal / $orderData['quantity'];
-                    $discountPerPerson = $perPersonCost * 0.20;
-                    $itemDiscountTotal = $discountPerPerson * $discountedPersons;
-                    $totalDiscountAmount += $itemDiscountTotal;
+                $orderDetail = DB::table('order_details')->find($orderData['order_detail_id']);
+                if (!$orderDetail) {
+                    throw new Exception("Order detail not found: {$orderData['order_detail_id']}");
                 }
 
-                $processedOrders[] = [
-                    'order_detail_id' => $orderData['order_detail_id'],
-                    'item_name' => $orderData['order_name'],
-                    'quantity' => $orderData['quantity'],
-                    'unit_price' => $orderData['price'],
-                    'item_subtotal' => $itemSubtotal,
-                    'discounted_persons' => $discountedPersons,
-                    'discount_per_person' => $discountPerPerson,
-                    'item_discount_total' => $itemDiscountTotal,
-                    'total_amount' => $itemSubtotal - $itemDiscountTotal
-                ];
+                $menuItem = DB::table('menu')->find($orderDetail->menu_id);
+                if (!$menuItem) {
+                    throw new Exception("Menu item not found for order detail: {$orderData['order_detail_id']}");
+                }
+
+                for ($i = 0; $i < $orderData['quantity']; $i++) {
+                    $linkedCustomer = $mainCustomer;
+                    $customerType = 'regular';
+
+                    if (isset($customerMap[$itemIndex])) {
+                        $linkedCustomer = $customerMap[$itemIndex]['customer'];
+                        $customerType = $customerMap[$itemIndex]['customer_type'];
+                    }
+
+                    $regularPrice = $menuItem->regular_price;
+                    $discountedPrice = $this->calculateMenuPrice($menuItem, $customerType);
+                    $discount = $regularPrice - $discountedPrice;
+
+                    $subtotal += $regularPrice;
+                    $totalDiscountAmount += $discount;
+
+                    $processedOrders[] = [
+                        'order_detail_id' => $orderData['order_detail_id'],
+                        'item_name' => $orderData['order_name'],
+                        'quantity' => 1,
+                        'discount_amount' => $discount,
+                        'customer_id' => $linkedCustomer->id,
+                    ];
+
+                    $itemIndex++;
+                }
             }
 
             $finalTotal = $subtotal - $totalDiscountAmount;
 
-            $transactionNo = 'TXN-' . date('Ymd') . '-' . str_pad(
+            $transactionNo = date('Ymd') . '-' . str_pad(
                 DB::table('transactions')->whereDate('created_at', today())->count() + 1,
                 4,
                 '0',
@@ -200,13 +292,14 @@ class CashierController extends Controller
             );
 
             $transactionId = DB::table('transactions')->insertGetId([
-                'subtotal' => $subtotal,
-                'discount_amount' => $totalDiscountAmount,
-                'total_amount' => $finalTotal,
-                'payment_method' => 'cash',
-                'status' => 'completed',
+                'transaction_no' => $transactionNo,
+                'subtotal' => $subtotal, 
+                'discount_total' => $totalDiscountAmount, 
+                'total' => $finalTotal, 
+                'payment_method' => 'Cash',
+                'status' => 'Completed',
                 'reservation_id' => $request->reservation_id,
-                'customer_id' => $reservation->customer_id,
+                'customer_id' => $mainCustomer->id,
                 'cashier_id' => Auth::id(),
                 'created_at' => now(),
                 'updated_at' => now()
@@ -216,33 +309,21 @@ class CashierController extends Controller
                 DB::table('transaction_details')->insert([
                     'transaction_id' => $transactionId,
                     'order_detail_id' => $order['order_detail_id'],
+                    'customer_id' => $order['customer_id'],
                     'item_name' => $order['item_name'],
                     'quantity' => $order['quantity'],
-                    'unit_price' => $order['unit_price'],
-                    'item_subtotal' => $order['item_subtotal'],
-                    'discounted_persons' => $order['discounted_persons'],
-                    'discount_per_person' => $order['discount_per_person'],
-                    'item_discount_total' => $order['item_discount_total'],
-                    'total_amount' => $order['total_amount'],
+                    'discount_amount' => $order['discount_amount'],
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
             }
 
-            DB::table('reservations')
-                ->where('id', $request->reservation_id)
-                ->update([
-                    'status' => 'Accepted',
-                    'updated_at' => now()
-                ]);
+            DB::table('reservations')->where('id', $request->reservation_id)
+                ->update(['status' => 'Completed', 'updated_at' => now()]);
 
-            DB::table('order_details')
-                ->where('reservation_id', $request->reservation_id)
+            DB::table('order_details')->where('reservation_id', $request->reservation_id)
                 ->where('status', 'Pending')
-                ->update([
-                    'status' => 'Served',
-                    'updated_at' => now()
-                ]);
+                ->update(['status' => 'Served', 'updated_at' => now()]);
 
             DB::commit();
 
@@ -251,19 +332,63 @@ class CashierController extends Controller
                 'message' => 'Payment processed successfully',
                 'transaction_no' => $transactionNo,
                 'transaction_id' => $transactionId,
-                'total_amount' => $finalTotal,
-                'reservation_status' => 'Accepted'
+                'subtotal' => $subtotal,
+                'discount_total' => $totalDiscountAmount,
+                'total' => $finalTotal,
+                'processed_items' => count($processedOrders),
+                'discounted_customers' => count($customerMap)
             ]);
         } catch (Exception $e) {
-            DB::rollback();
-            Log::error('Payment processing failed: ' . $e->getMessage(), [
-                'reservation_id' => $request->reservation_id,
-                'error' => $e->getTraceAsString()
+            DB::rollBack();
+            Log::error('Payment failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Payment processing failed: ' . $e->getMessage()
+                'message' => 'Payment failed: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function checkCustomer($idNumber)
+    {
+        try {
+            $exists = \App\Models\customers::where('id_type', $idNumber)->exists();
+            return response()->json(['exists' => $exists]);
+        } catch (Exception $e) {
+            Log::error('Error checking customer: ' . $e->getMessage());
+            return response()->json(['exists' => false, 'error' => 'Unable to check customer']);
+        }
+    }
+
+    public function getTransactionDetails($transactionId)
+    {
+        try {
+            $transaction = DB::table('transactions')
+                ->join('customers', 'transactions.customer_id', '=', 'customers.id')
+                ->where('transactions.id', $transactionId)
+                ->select('transactions.*', 'customers.name as customer_name', 'customers.id_number')
+                ->first();
+
+            $details = DB::table('transaction_details as td')
+                ->leftJoin('customers as c', 'td.customer_id', '=', 'c.id')
+                ->where('td.transaction_id', $transactionId)
+                ->select('td.*', 'c.name as discount_customer_name', 'c.id_number as discount_customer_id')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'transaction' => $transaction,
+                'details' => $details
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error fetching transaction details: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to fetch transaction details'
             ], 500);
         }
     }

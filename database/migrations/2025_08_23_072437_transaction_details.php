@@ -6,21 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
+
     public function up(): void
     {
         Schema::create('transaction_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('transaction_id')->constrained('transactions')->onDelete('cascade');
             $table->foreignId('order_detail_id')->constrained('order_details')->onDelete('cascade');
+            $table->foreignId('customer_id')->nullable()->constrained('customers')->onDelete('set null');
             $table->string('item_name', 255);
             $table->integer('quantity');
-            $table->decimal('unit_price', 8, 2)->default(0);
-            $table->decimal('item_subtotal', 10, 2)->default(0);
-            $table->integer('discounted_persons')->default(0)->nullable();
-            $table->decimal('discount_per_person', 8, 2)->default(0)->nullable();
-            $table->decimal('item_discount_total', 8, 2)->default(0)->nullable();
-            $table->decimal('total_amount', 10, 2)->default(0);
+            $table->decimal('discount_amount', 10, 2)->default(0);
             $table->timestamps();
         });
     }
