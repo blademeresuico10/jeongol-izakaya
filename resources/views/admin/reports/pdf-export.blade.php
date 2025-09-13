@@ -168,20 +168,15 @@
                 <div class="summary-label">Transactions</div>
                 <div class="summary-value">{{ number_format($transactionCount) }}</div>
             </div>
-            <div class="summary-card">
-                <div class="summary-label">Avg. Order Value</div>
-                <div class="summary-value currency">{{ number_format($averageOrderValue, 2) }}</div>
-            </div>
         </div>
 
         <div style="text-align: center; margin-top: 15px;">
             <div style="display: inline-block; margin: 0 20px;">
-                <div class="summary-label">Total Discounts Given</div>
+                <div class="summary-label">Total Discounts Applied</div>
                 <div class="summary-value currency">{{ number_format($totalDiscounts, 2) }}</div>
             </div>
         </div>
     </div>
-
 
     <!-- Sales Transactions Section -->
     <div class="section-title">Transaction Details</div>

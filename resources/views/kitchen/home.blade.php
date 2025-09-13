@@ -125,19 +125,17 @@
         <td class="border border-gray-300 px-4 py-2">
         {{ \Carbon\Carbon::parse($group->first()->reservation_time)->format('h:i A') }}
         </td>
-        <!-- Replace the existing "Added Order" column in your table -->
         <td class="border border-gray-300 px-4 py-2">
         @php
       $reservationId = $group->first()->reservation_id;
 
-      // Get recent changes from order_details table
       $recentChanges = \App\Models\OrderDetail::where('reservation_id', $reservationId)
         ->whereNotNull('change_type')
         ->orderBy('change_timestamp', 'desc')
         ->limit(5)
         ->get()
         ->map(function ($order) {
-        $menu = \App\Models\Menu::find($order->menu_id);
+        $menu = \App\Models\menu::find($order->menu_id);
         $menuName = $menu ? str_replace([' Lunch', ' Dinner'], '', $menu->menu_item) : 'Unknown Item';
 
         // Calculate quantity based on change type
