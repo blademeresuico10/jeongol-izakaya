@@ -12,52 +12,83 @@ use Carbon\Carbon;
 use App\Models\customers;
 use App\Models\stock;
 use App\Models\reservation;
+use Barryvdh\DomPDF\Facade\pdf;
 
 
 class AdminController extends Controller
 {
     public function index()
     {
-        $todayRevenue = transaction::whereDate('created_at', Carbon::today())
-            ->sum('total_amount');
+        $todayRevenue = DB::table('transactions')
+            ->whereDate('created_at', Carbon::today())
+            ->where('status', '!=', 'Refunded')
+            ->sum('total');
 
-        $todayCustomers = reservation::whereDate('created_at', Carbon::today())
+        $todayCustomers = DB::table('reservations')
+            ->whereDate('reservation_time', Carbon::today())
+            ->whereIn('status', ['Accepted', 'Completed'])
             ->sum('pax');
 
-        $stocks = Stock::all();
-
+        $stocks = DB::table('stock')->whereNull('deleted_at')->get();
         $totalStock = $stocks->sum('stock_quantity');
 
         $stockChartData = $stocks->map(function ($stock) use ($totalStock) {
             return [
-                'name' => $stock->stock_name,
-                'quantity' => $stock->stock_quantity,
-                'percentage' => $totalStock > 0 ? ($stock->stock_quantity / $totalStock) * 100 : 0
+                'name'       => $stock->stock_name,
+                'quantity'   => $stock->stock_quantity,
+                'percentage' => $totalStock > 0 ? ($stock->stock_quantity / $totalStock) * 100 : 0,
             ];
         });
 
-        $transactions = Transaction::with('cashier')
-            ->whereDate('created_at', Carbon::today())
-            ->latest()
-            ->get();
+        $transactions = DB::table('transactions')
+            ->join('users', 'transactions.cashier_id', '=', 'users.id')
+            ->select(
+                'transactions.*',
+                'users.firstname',
+                'users.lastname'
+            )
+            ->whereDate('transactions.created_at', Carbon::today())
+            ->where('transactions.status', '!=', 'Refunded')
+            ->orderBy('transactions.created_at', 'desc')
+            ->get()
+            ->map(function ($transaction) {
+                return (object)[
+                    'id' => $transaction->id,
+                    'total' => $transaction->total,
+                    'advance_payment' => $transaction->advance_payment ?? 0,
+                    'cashier' => (object)[
+                        'firstname' => $transaction->firstname,
+                        'lastname' => $transaction->lastname,
+                    ]
+                ];
+            });
 
-        $weeklyRevenue = Transaction::whereBetween('created_at', [
-            Carbon::now()->startOfWeek(),
-            Carbon::now()->endOfWeek()
-        ])
+        // Weekly revenue
+        $weeklyRevenue = DB::table('transactions')
+            ->whereBetween('created_at', [
+                Carbon::now()->startOfWeek(),
+                Carbon::now()->endOfWeek()
+            ])
+            ->where('status', '!=', 'Refunded')
             ->get()
             ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('D'))
-            ->map(fn($day) => $day->sum('total_amount'));
+            ->map(fn($day) => $day->sum('total'));
 
-        $monthlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+        // Monthly revenue
+        $monthlyRevenue = DB::table('transactions')
+            ->whereYear('created_at', Carbon::now()->year)
+            ->where('status', '!=', 'Refunded')
             ->get()
             ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('M'))
-            ->map(fn($month) => $month->sum('total_amount'));
+            ->map(fn($month) => $month->sum('total'));
 
-        $quarterlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+        // Quarterly revenue
+        $quarterlyRevenue = DB::table('transactions')
+            ->whereYear('created_at', Carbon::now()->year)
+            ->where('status', '!=', 'Refunded')
             ->get()
             ->groupBy(fn($t) => 'Q' . ceil(Carbon::parse($t->created_at)->month / 3))
-            ->map(fn($q) => $q->sum('total_amount'));
+            ->map(fn($q) => $q->sum('total'));
 
         return view('admin.home', compact(
             'todayRevenue',
@@ -71,44 +102,113 @@ class AdminController extends Controller
         ));
     }
 
+    // Updated dashboardData method with better debugging
     public function dashboardData()
     {
-        $todayRevenue = transaction::whereDate('created_at', Carbon::today())->sum('total_amount');
-        $todayCustomers = reservation::whereDate('created_at', Carbon::today())
-            ->sum('pax');
-        $stocks = Stock::all();
+        // Today's revenue: total from transactions (don't double-count advance_payment)
+        $todayRevenue = DB::table('transactions')
+            ->whereDate('created_at', Carbon::today())
+            ->where('status', '!=', 'Refunded')
+            ->sum('total');
 
-        $totalStock = $stocks->sum('stock_quantity');
-        $stockChartData = $stocks->map(fn($s) => [
-            'name' => $s->stock_name,
-            'quantity' => $s->stock_quantity,
-            'percentage' => $totalStock > 0 ? ($s->stock_quantity / $totalStock) * 100 : 0
-        ]);
+        // Today's customers: sum of pax from reservations  
+        $todayCustomers = DB::table('reservations')
+            ->whereDate('reservation_time', Carbon::today())
+            ->whereIn('status', ['Accepted', 'Completed'])
+            ->sum('pax');
+
+        // Recent transactions with cashier info
+        $transactions = DB::table('transactions')
+            ->join('users', 'transactions.cashier_id', '=', 'users.id')
+            ->select(
+                'transactions.id',
+                'transactions.total',
+                'transactions.advance_payment',
+                'transactions.created_at',
+                'users.firstname',
+                'users.lastname'
+            )
+            ->where('transactions.status', '!=', 'Refunded')
+            ->when(
+                DB::table('transactions')
+                    ->whereDate('created_at', Carbon::today())
+                    ->where('status', '!=', 'Refunded')
+                    ->exists(),
+                function ($query) {
+                    return $query->whereDate('transactions.created_at', Carbon::today());
+                },
+                function ($query) {
+                    // If no transactions today, show recent ones
+                    return $query->where('transactions.created_at', '>=', Carbon::now()->subDays(7));
+                }
+            )
+            ->orderBy('transactions.created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'cashier' => [
+                        'firstname' => $t->firstname,
+                        'lastname' => $t->lastname,
+                    ],
+                    'total_amount' => $t->total,
+                    'created_at' => $t->created_at,
+                    'is_today' => Carbon::parse($t->created_at)->isToday(),
+                ];
+            });
+
+        // Stock data
+        $stockData = DB::table('stock')
+            ->whereNull('deleted_at')
+            ->select('stock_name as name', 'stock_quantity as quantity')
+            ->get();
 
         return response()->json([
-            'revenue' => $todayRevenue,
+            'revenue' => number_format($todayRevenue, 2),
             'customers' => $todayCustomers,
-            'stock' => $stockChartData
+            'transactions' => $transactions,
+            'stock' => $stockData,
+            'debug' => [
+                'today_date' => Carbon::today()->toDateString(),
+                'transaction_count_today' => DB::table('transactions')
+                    ->whereDate('created_at', Carbon::today())
+                    ->where('status', '!=', 'Refunded')
+                    ->count(),
+                'transaction_count_total' => DB::table('transactions')->count(),
+                'showing_recent_instead' => $transactions->where('is_today', false)->count() > 0,
+            ]
         ]);
     }
+
     public function salesData()
     {
-        $weeklyRevenue = Transaction::whereBetween('created_at', [
-            Carbon::now()->startOfWeek(),
-            Carbon::now()->endOfWeek()
-        ])->get()->groupBy(function ($t) {
-            return Carbon::parse($t->created_at)->format('D');
-        })->map(fn($day) => $day->sum('total_amount'));
+        // Weekly revenue
+        $weeklyRevenue = DB::table('transactions')
+            ->whereBetween('created_at', [
+                Carbon::now()->startOfWeek(),
+                Carbon::now()->endOfWeek()
+            ])
+            ->where('status', '!=', 'Refunded')
+            ->get()
+            ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('D'))
+            ->map(fn($day) => $day->sum('total'));
 
-        $monthlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+        // Monthly revenue
+        $monthlyRevenue = DB::table('transactions')
+            ->whereYear('created_at', Carbon::now()->year)
+            ->where('status', '!=', 'Refunded')
             ->get()
             ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('M'))
-            ->map(fn($month) => $month->sum('total_amount'));
+            ->map(fn($month) => $month->sum('total'));
 
-        $quarterlyRevenue = Transaction::whereYear('created_at', Carbon::now()->year)
+        // Quarterly revenue
+        $quarterlyRevenue = DB::table('transactions')
+            ->whereYear('created_at', Carbon::now()->year)
+            ->where('status', '!=', 'Refunded')
             ->get()
             ->groupBy(fn($t) => 'Q' . ceil(Carbon::parse($t->created_at)->month / 3))
-            ->map(fn($q) => $q->sum('total_amount'));
+            ->map(fn($q) => $q->sum('total'));
 
         return response()->json([
             'weekly' => $weeklyRevenue,
@@ -172,6 +272,7 @@ class AdminController extends Controller
         return redirect()->route('admin.users')->with('success', 'User updated successfully!');
     }
 
+
     public function menu_management(Request $request)
     {
         $showDeleted = $request->has('show_deleted');
@@ -189,51 +290,141 @@ class AdminController extends Controller
         return view('admin.menu_management', compact('menu'));
     }
 
-    public function addmenu()
-    {
-        return view('admin.addmenu');
-    }
-
     public function storeMenu(Request $request)
     {
-        $request->validate([
-            'menu_item' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-        ]);
+        try {
+            $request->validate([
+                'menu_item' => 'required|string|max:255|unique:menu,menu_item,NULL,id,deleted_at,NULL',
+                'category' => 'required|in:main,add_ons',
+                'regular_price' => 'required|numeric|min:0',
+                'student_price' => 'nullable|numeric|min:0',
+                'govt_employee_price' => 'nullable|numeric|min:0',
+            ]);
 
-        DB::table('menu')->insert([
-            'menu_item' => $request->menu_item,
-            'price' => $request->price,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            $existingMenu = DB::table('menu')
+                ->where('menu_item', $request->menu_item)
+                ->whereNull('deleted_at')
+                ->first();
 
-        return redirect()->route('admin.menu_management')->with('success', 'Menu item added successfully!');
+            if ($existingMenu) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['menu_item' => 'This menu item already exists in the active menu list.']);
+            }
+
+            DB::table('menu')->insert([
+                'menu_item' => $request->menu_item,
+                'category' => $request->category,
+                'regular_price' => $request->regular_price,
+                'student_price' => $request->student_price,
+                'govt_employee_price' => $request->govt_employee_price,
+                'has_customer_discount' => false,
+                'image' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return redirect()->route('admin.menu_management')
+                ->with('success', 'Menu item added successfully!');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'An error occurred while adding the menu item. Please try again.');
+        }
     }
 
     public function editMenu($id)
     {
         $menuItem = DB::table('menu')->where('id', $id)->whereNull('deleted_at')->first();
+
         if (!$menuItem) {
             return redirect()->route('admin.menu_management')->with('error', 'Menu item not found!');
         }
+
         return view('admin.editmenu', compact('menuItem'));
     }
 
     public function updateMenu(Request $request, $id)
     {
-        $request->validate([
-            'menu_item' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-        ]);
+        try {
+            $request->validate([
+                'menu_item' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    'unique:menu,menu_item,' . $id . ',id,deleted_at,NULL'
+                ],
+                'regular_price' => 'required|numeric|min:0',
+                'student_price' => 'nullable|numeric|min:0',
+                'govt_employee_price' => 'nullable|numeric|min:0',
+                'category' => 'required|string|max:255',
+                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ], [
+                'menu_item.required' => 'Menu item name is required.',
+                'menu_item.unique' => 'This menu item name is already taken by another item.',
+                'menu_item.max' => 'Menu item name cannot exceed 255 characters.',
+                'regular_price.required' => 'Regular price is required.',
+                'regular_price.numeric' => 'Regular price must be a valid number.',
+                'regular_price.min' => 'Regular price cannot be negative.',
+                'student_price.numeric' => 'Student price must be a valid number.',
+                'student_price.min' => 'Student price cannot be negative.',
+                'govt_employee_price.numeric' => 'Government employee price must be a valid number.',
+                'govt_employee_price.min' => 'Government employee price cannot be negative.',
+                'category.required' => 'Category is required.',
+                'category.max' => 'Category cannot exceed 255 characters.',
+                'image.image' => 'The uploaded file must be an image.',
+                'image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
+                'image.max' => 'Image size cannot exceed 2MB.',
+            ]);
 
-        DB::table('menu')->where('id', $id)->update([
-            'menu_item' => $request->menu_item,
-            'price' => $request->price,
-            'updated_at' => now(),
-        ]);
+            // Prepare update data
+            $updateData = [
+                'menu_item' => $request->menu_item,
+                'regular_price' => $request->regular_price,
+                'student_price' => $request->student_price,
+                'govt_employee_price' => $request->govt_employee_price,
+                'category' => $request->category,
+                'updated_at' => now(),
+            ];
 
-        return redirect()->route('admin.menu_management')->with('success', 'Menu item updated successfully!');
+            // Update has_customer_discount based on discount prices
+            $updateData['has_customer_discount'] = !empty($request->student_price) || !empty($request->govt_employee_price);
+
+            // Handle image upload if provided
+            if ($request->hasFile('image')) {
+                // Get the current menu item to delete old image
+                $currentMenu = DB::table('menu')->where('id', $id)->first();
+
+                // Delete old image if it exists
+                if ($currentMenu && $currentMenu->image) {
+                    $oldImagePath = public_path('assets/jeongol-menu/' . $currentMenu->image);
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+
+                // Upload new image
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $image->move(public_path('assets/jeongol-menu'), $imageName);
+                $updateData['image'] = $imageName;
+            }
+
+            // Update the menu item
+            DB::table('menu')->where('id', $id)->update($updateData);
+
+            return redirect()->route('admin.menu_management')
+                ->with('success', 'Menu item updated successfully!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->validator)
+                ->withInput()
+                ->with('error', 'Please check the form for errors.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'An error occurred while updating the menu item: ' . $e->getMessage());
+        }
     }
 
     public function deleteMenu($id)
@@ -252,13 +443,21 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Menu item deleted successfully!');
     }
 
-
     public function restoreMenu($id)
     {
         $menuItem = DB::table('menu')->where('id', $id)->whereNotNull('deleted_at')->first();
 
         if (!$menuItem) {
             return redirect()->back()->with('error', 'Menu item not found or not deleted!');
+        }
+
+        $conflictingItem = DB::table('menu')
+            ->where('menu_item', $menuItem->menu_item)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if ($conflictingItem) {
+            return redirect()->back()->with('error', 'Cannot restore: A menu item with this name already exists in the active list!');
         }
 
         DB::table('menu')->where('id', $id)->update([
@@ -268,7 +467,6 @@ class AdminController extends Controller
 
         return redirect()->back()->with('success', 'Menu item restored successfully!');
     }
-
 
     public function forceDeleteMenu($id)
     {
@@ -414,19 +612,52 @@ class AdminController extends Controller
 
     public function storeStock(Request $request)
     {
-        $request->validate([
-            'stock_name' => 'required|string|max:255',
-            'stock_quantity' => 'required|numeric|min:0',
-        ]);
+        try {
+            $request->validate([
+                'stock_name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    'unique:stock,stock_name,NULL,id,deleted_at,NULL'
+                ],
+                'stock_quantity' => 'required|numeric|min:0',
+            ], [
+                'stock_name.required' => 'Stock name is required.',
+                'stock_name.unique' => 'This stock item already exists in the active stock list.',
+                'stock_name.max' => 'Stock name cannot exceed 255 characters.',
+                'stock_quantity.required' => 'Stock quantity is required.',
+                'stock_quantity.numeric' => 'Stock quantity must be a valid number.',
+                'stock_quantity.min' => 'Stock quantity cannot be negative.',
+            ]);
 
-        DB::table('stock')->insert([
-            'stock_name' => $request->stock_name,
-            'stock_quantity' => $request->stock_quantity,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            // Check for existing stock item
+            $existingStock = DB::table('stock')
+                ->where('stock_name', $request->stock_name)
+                ->whereNull('deleted_at')
+                ->first();
 
-        return redirect()->route('admin.stock_management')->with('success', 'Stock item added successfully!');
+            if ($existingStock) {
+                return redirect()->back()
+                    ->withInput()
+                    ->withErrors(['stock_name' => 'This stock item already exists in the active stock list.']);
+            }
+
+            DB::table('stock')->insert([
+                'stock_name' => $request->stock_name,
+                'stock_quantity' => $request->stock_quantity,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return redirect()->route('admin.stock_management')
+                ->with('success', 'Stock item added successfully!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'An error occurred while adding the stock item. Please try again.');
+        }
     }
 
     public function editStock($id)
@@ -442,18 +673,37 @@ class AdminController extends Controller
 
     public function updateStock(Request $request, $id)
     {
-        $request->validate([
-            'stock_name' => 'required|string|max:255',
-            'stock_quantity' => 'required|numeric|min:0',
-        ]);
+        try {
+            $request->validate([
+                'stock_name' => [
+                    'required',
+                    'string',
+                    'max:255',
+                    'unique:stock,stock_name,' . $id . ',id,deleted_at,NULL'
+                ],
+                'stock_quantity' => 'required|numeric|min:0',
+            ], [
+                'stock_name.required' => 'Stock name is required.',
+                'stock_name.unique' => 'This stock name is already taken by another item.',
+                'stock_name.max' => 'Stock name cannot exceed 255 characters.',
+                'stock_quantity.required' => 'Stock quantity is required.',
+                'stock_quantity.numeric' => 'Stock quantity must be a valid number.',
+                'stock_quantity.min' => 'Stock quantity cannot be negative.',
+            ]);
 
-        DB::table('stock')->where('id', $id)->update([
-            'stock_name' => $request->stock_name,
-            'stock_quantity' => $request->stock_quantity,
-            'updated_at' => now(),
-        ]);
+            DB::table('stock')->where('id', $id)->update([
+                'stock_name' => $request->stock_name,
+                'stock_quantity' => $request->stock_quantity,
+                'updated_at' => now(),
+            ]);
 
-        return redirect()->route('admin.stock_management')->with('success', 'Stock item updated successfully!');
+            return redirect()->route('admin.stock_management')
+                ->with('success', 'Stock item updated successfully!');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'An error occurred while updating the stock item.');
+        }
     }
 
     public function deleteStock($id)
@@ -478,6 +728,16 @@ class AdminController extends Controller
 
         if (!$stockItem) {
             return redirect()->back()->with('error', 'Stock item not found or not deleted!');
+        }
+
+        // Check if stock name conflicts with existing active items
+        $conflictingStock = DB::table('stock')
+            ->where('stock_name', $stockItem->stock_name)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if ($conflictingStock) {
+            return redirect()->back()->with('error', 'Cannot restore: A stock item with this name already exists in the active list!');
         }
 
         DB::table('stock')->where('id', $id)->update([
@@ -510,57 +770,92 @@ class AdminController extends Controller
         $dateFrom = $fromInput ? Carbon::parse($fromInput)->startOfDay() : Carbon::now()->startOfDay();
         $dateTo   = $toInput   ? Carbon::parse($toInput)->endOfDay()     : Carbon::now()->endOfDay();
 
+        // Fixed: Filter out refunded transactions and handle null timestamps
         $totalSales = DB::table('transactions')
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->sum('total_amount') ?? 0;
+            ->sum('total') ?? 0;
 
+        // Fixed: Use completed reservations instead of just accepted
         $totalPax = DB::table('reservations')
-            ->where('status', 'Accepted')
+            ->whereIn('status', ['Accepted', 'Completed'])
             ->whereBetween('reservation_time', [$dateFrom, $dateTo])
             ->sum('pax') ?? 0;
 
+        // Fixed: Use discount_total column from transactions table
         $totalDiscounts = DB::table('transactions')
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->sum('discount_amount') ?? 0;
+            ->sum('discount_total') ?? 0;
 
-        $productConsumption = DB::table('order_details')
+        // Fixed: Get product consumption from transaction_details instead of order_details
+        $productConsumption = DB::table('transaction_details')
+            ->join('transactions', 'transaction_details.transaction_id', '=', 'transactions.id')
+            ->join('order_details', 'transaction_details.order_detail_id', '=', 'order_details.id')
             ->join('menu', 'order_details.menu_id', '=', 'menu.id')
-            ->whereBetween('order_details.created_at', [$dateFrom, $dateTo])
+            ->whereNotNull('transactions.created_at')
+            ->where('transactions.status', '!=', 'Refunded')
+            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
             ->select(
                 'menu.menu_item',
                 'menu.category',
-                DB::raw('SUM(order_details.quantity) as total_quantity'),
-                DB::raw('SUM(COALESCE(order_details.order_price, menu.price * order_details.quantity)) as total_revenue')
+                DB::raw('SUM(transaction_details.quantity) as total_quantity'),
+                DB::raw('SUM((menu.regular_price - COALESCE(transaction_details.discount_amount, 0)) * transaction_details.quantity) as total_revenue')
             )
             ->groupBy('menu.id', 'menu.menu_item', 'menu.category')
             ->orderByDesc('total_quantity')
             ->get();
 
-
+        // Fixed: Added proper column references and null handling
         $sales = DB::table('transactions')
             ->join('reservations', 'transactions.reservation_id', '=', 'reservations.id')
             ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
             ->leftJoin('customers', 'transactions.customer_id', '=', 'customers.id')
+            ->whereNotNull('transactions.created_at')
+            ->where('transactions.status', '!=', 'Refunded')
             ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
             ->select(
                 'transactions.id as id',
+                'transactions.transaction_no',
                 DB::raw('DATE(transactions.created_at) as date'),
+                DB::raw('TIME(transactions.created_at) as time'),
                 DB::raw('COALESCE(tables.table_number, "N/A") as table_number'),
                 DB::raw('COALESCE(customers.name, "Walk-in") as customer_name'),
                 'reservations.pax',
                 'transactions.subtotal',
-                'transactions.discount_amount',
-                'transactions.total_amount'
+                'transactions.discount_total',
+                'transactions.total',
+                'transactions.payment_method'
             )
             ->orderBy('transactions.created_at', 'desc')
             ->get();
 
+        // Fixed: Handle null timestamps
         $salesTrend = DB::table('transactions')
-            ->select(DB::raw('DATE(created_at) as date'), DB::raw('SUM(total_amount) as total'))
+            ->select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('SUM(total) as total'),
+                DB::raw('COUNT(*) as transaction_count')
+            )
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
+
+        // Additional metrics for better reporting
+        $transactionCount = DB::table('transactions')
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->count();
+
+        $averageOrderValue = $transactionCount > 0 ? $totalSales / $transactionCount : 0;
+
+        $topSellingItems = $productConsumption->take(10);
 
         return view('admin.reports', compact(
             'dateFrom',
@@ -570,7 +865,10 @@ class AdminController extends Controller
             'totalDiscounts',
             'productConsumption',
             'sales',
-            'salesTrend'
+            'salesTrend',
+            'transactionCount',
+            'averageOrderValue',
+            'topSellingItems'
         ));
     }
 
@@ -583,26 +881,34 @@ class AdminController extends Controller
         $dateTo   = $toInput   ? Carbon::parse($toInput)->endOfDay()     : Carbon::now()->endOfDay();
 
         $totalSales = DB::table('transactions')
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->sum('total_amount') ?? 0;
+            ->sum('total') ?? 0;
 
         $totalPax = DB::table('reservations')
-            ->where('status', 'Accepted')
+            ->whereIn('status', ['Accepted', 'Completed'])
             ->whereBetween('reservation_time', [$dateFrom, $dateTo])
             ->sum('pax') ?? 0;
 
         $totalDiscounts = DB::table('transactions')
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
             ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->sum('discount_amount') ?? 0;
+            ->sum('discount_total') ?? 0;
 
-        $productConsumption = DB::table('order_details')
+        $productConsumption = DB::table('transaction_details')
+            ->join('transactions', 'transaction_details.transaction_id', '=', 'transactions.id')
+            ->join('order_details', 'transaction_details.order_detail_id', '=', 'order_details.id')
             ->join('menu', 'order_details.menu_id', '=', 'menu.id')
-            ->whereBetween('order_details.created_at', [$dateFrom, $dateTo])
+            ->whereNotNull('transactions.created_at')
+            ->where('transactions.status', '!=', 'Refunded')
+            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
             ->select(
                 'menu.menu_item',
                 'menu.category',
-                DB::raw('SUM(order_details.quantity) as total_quantity'),
-                DB::raw('SUM(COALESCE(order_details.order_price, menu.price * order_details.quantity)) as total_revenue')
+                DB::raw('SUM(transaction_details.quantity) as total_quantity'),
+                DB::raw('SUM((menu.regular_price - COALESCE(transaction_details.discount_amount, 0)) * transaction_details.quantity) as total_revenue')
             )
             ->groupBy('menu.id', 'menu.menu_item', 'menu.category')
             ->orderByDesc('total_quantity')
@@ -612,15 +918,107 @@ class AdminController extends Controller
             ->join('reservations', 'transactions.reservation_id', '=', 'reservations.id')
             ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
             ->leftJoin('customers', 'transactions.customer_id', '=', 'customers.id')
+            ->whereNotNull('transactions.created_at')
+            ->where('transactions.status', '!=', 'Refunded')
             ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
             ->select(
+                'transactions.transaction_no',
+                DB::raw('DATE(transactions.created_at) as date'),
+                DB::raw('TIME(transactions.created_at) as time'),
+                DB::raw('COALESCE(tables.table_number, "N/A") as table_number'),
+                DB::raw('COALESCE(customers.name, "Walk-in") as customer_name'),
+                'reservations.pax',
+                'transactions.subtotal',
+                'transactions.discount_total',
+                'transactions.total',
+                'transactions.payment_method'
+            )
+            ->orderBy('transactions.created_at', 'desc')
+            ->get();
+
+        $transactionCount = $sales->count();
+        $averageOrderValue = $transactionCount > 0 ? $totalSales / $transactionCount : 0;
+
+        $data = [
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'totalSales' => $totalSales,
+            'totalPax' => $totalPax,
+            'totalDiscounts' => $totalDiscounts,
+            'transactionCount' => $transactionCount,
+            'averageOrderValue' => $averageOrderValue,
+            'productConsumption' => $productConsumption,
+            'sales' => $sales,
+            'generatedAt' => now(),
+        ];
+
+        $pdf = Pdf::loadView('admin.reports.pdf-export', $data);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        $filename = 'sales-report-' . $dateFrom->format('Y-m-d') . '-to-' . $dateTo->format('Y-m-d') . '.pdf';
+
+        return $pdf->download($filename);
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $fromInput = $request->input('from_date');
+        $toInput   = $request->input('to_date');
+
+        $dateFrom = $fromInput ? Carbon::parse($fromInput)->startOfDay() : Carbon::now()->startOfDay();
+        $dateTo   = $toInput   ? Carbon::parse($toInput)->endOfDay()     : Carbon::now()->endOfDay();
+
+        $totalSales = DB::table('transactions')
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->sum('total') ?? 0;
+
+        $totalPax = DB::table('reservations')
+            ->whereIn('status', ['Accepted', 'Completed'])
+            ->whereBetween('reservation_time', [$dateFrom, $dateTo])
+            ->sum('pax') ?? 0;
+
+        $totalDiscounts = DB::table('transactions')
+            ->whereNotNull('created_at')
+            ->where('status', '!=', 'Refunded')
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->sum('discount_total') ?? 0;
+
+        $productConsumption = DB::table('transaction_details')
+            ->join('transactions', 'transaction_details.transaction_id', '=', 'transactions.id')
+            ->join('order_details', 'transaction_details.order_detail_id', '=', 'order_details.id')
+            ->join('menu', 'order_details.menu_id', '=', 'menu.id')
+            ->whereNotNull('transactions.created_at')
+            ->where('transactions.status', '!=', 'Refunded')
+            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
+            ->select(
+                'menu.menu_item',
+                'menu.category',
+                DB::raw('SUM(transaction_details.quantity) as total_quantity'),
+                DB::raw('SUM((menu.regular_price - COALESCE(transaction_details.discount_amount, 0)) * transaction_details.quantity) as total_revenue')
+            )
+            ->groupBy('menu.id', 'menu.menu_item', 'menu.category')
+            ->orderByDesc('total_quantity')
+            ->get();
+
+        $sales = DB::table('transactions')
+            ->join('reservations', 'transactions.reservation_id', '=', 'reservations.id')
+            ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
+            ->leftJoin('customers', 'transactions.customer_id', '=', 'customers.id')
+            ->whereNotNull('transactions.created_at')
+            ->where('transactions.status', '!=', 'Refunded')
+            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
+            ->select(
+                'transactions.transaction_no',
                 DB::raw('DATE(transactions.created_at) as date'),
                 DB::raw('COALESCE(tables.table_number, "N/A") as table_number'),
                 DB::raw('COALESCE(customers.name, "Walk-in") as customer_name'),
                 'reservations.pax',
                 'transactions.subtotal',
-                'transactions.discount_amount',
-                'transactions.total_amount'
+                'transactions.discount_total',
+                'transactions.total'
             )
             ->orderBy('transactions.created_at', 'desc')
             ->get();
@@ -642,9 +1040,9 @@ class AdminController extends Controller
 
             fputcsv($file, ['SUMMARY']);
             fputcsv($file, ['Metric', 'Value']);
-            fputcsv($file, ['Total Sales', number_format($totalSales, 2)]);
+            fputcsv($file, ['Total Sales', '₱' . number_format($totalSales, 2)]);
             fputcsv($file, ['Total Pax', $totalPax]);
-            fputcsv($file, ['Total Discounts', number_format($totalDiscounts, 2)]);
+            fputcsv($file, ['Total Discounts', '₱' . number_format($totalDiscounts, 2)]);
             fputcsv($file, []);
 
             fputcsv($file, ['PRODUCT CONSUMPTION']);
@@ -654,22 +1052,23 @@ class AdminController extends Controller
                     $product->menu_item,
                     ucfirst($product->category),
                     $product->total_quantity,
-                    number_format($product->total_revenue, 2)
+                    '₱' . number_format($product->total_revenue, 2)
                 ]);
             }
             fputcsv($file, []);
 
             fputcsv($file, ['SALES BREAKDOWN']);
-            fputcsv($file, ['Date', 'Table', 'Customer', 'Pax', 'Subtotal', 'Discount', 'Total']);
+            fputcsv($file, ['Transaction #', 'Date', 'Table', 'Customer', 'Pax', 'Subtotal', 'Discount', 'Total']);
             foreach ($sales as $sale) {
                 fputcsv($file, [
+                    $sale->transaction_no ?? '#' . $sale->id,
                     $sale->date,
                     $sale->table_number,
                     $sale->customer_name,
                     $sale->pax,
-                    number_format($sale->subtotal, 2),
-                    number_format($sale->discount_amount, 2),
-                    number_format($sale->total_amount, 2)
+                    '₱' . number_format($sale->subtotal, 2),
+                    '₱' . number_format($sale->discount_total ?? 0, 2),
+                    '₱' . number_format($sale->total, 2)
                 ]);
             }
 

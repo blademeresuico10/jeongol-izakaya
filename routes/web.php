@@ -37,11 +37,6 @@ Route::get('/file-serve/{path}', function ($path) {
     abort(404);
 })->where('path', '.*');
 
-
-
-
-
-
 Route::middleware(['auth'])->group(function () {
 
     Route::get('/api/menu-prices', function () {
@@ -58,9 +53,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Admin Routes
     Route::get('/home', [AdminController::class, 'index'])->name('admin.home');
-    Route::get('/home/dashboard/sales-data', [AdminController::class, 'salesData'])->name('home.dashboard.sales-data');
     Route::get('/home/dashboard-data', [AdminController::class, 'dashboardData'])->name('home.dashboard.data');
-
+    Route::get('/home/sales-data', [AdminController::class, 'salesData'])->name('home.sales.data');
+    Route::get('/debug/data', [AdminController::class, 'debugData'])->name('debug.data');
 
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/adduser', [AdminController::class, 'adduser'])->name('admin.adduser');
@@ -114,6 +109,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Export routes
     Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');
+    Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('admin.reports.export-csv');
 
     // Receptionist Routes
     Route::get('/receptionist/home', [ReceptionistController::class, 'home'])->name('receptionist.home');
@@ -143,4 +139,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/cashier/notifications', [CashierController::class, 'getNotifications'])->name('cashier.notifications');
     Route::post('/cashier/cancel-reservation/{id}', [CashierController::class, 'cancelReservation'])->name('cashier.cancel-reservation');
     Route::get('/check-customer/{idNumber}', [CashierController::class, 'checkCustomer']);
+    Route::post('/print-receipt', [CashierController::class, 'printReceipt']);
+    Route::post('/test-printer', [CashierController::class, 'testPrinter']); // Optional for testing
 });

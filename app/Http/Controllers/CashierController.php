@@ -13,6 +13,10 @@ use App\Models\reservation;
 use Illuminate\Notifications\DatabaseNotification;
 use App\Models\User;
 use App\Models\menu;
+use Mike42\Escpos\Printer;
+use Mike42\Escpos\PrintConnectors\WindowsPrintConnector;
+use Mike42\Escpos\PrintConnectors\FilePrintConnector;
+use Mike42\Escpos\PrintConnectors\NetworkPrintConnector;
 
 class CashierController extends Controller
 {
@@ -103,6 +107,7 @@ class CashierController extends Controller
             ->select(
                 'reservations.id as reservation_id',
                 'reservations.reservation_time',
+                'reservations.advance_payment', // Add this line
                 'customers.name as customer_name',
                 'customers.contact_number',
                 'customers.id_type',
@@ -145,205 +150,247 @@ class CashierController extends Controller
             'customer_id'      => $reservation->customer_id,
             'pax'              => $reservation->pax,
             'reservation_time' => $reservation->reservation_time,
+            'advance_payment'  => floatval($reservation->advance_payment ?? 0), // Add this line
             'orders'           => $orders
         ]);
     }
 
 
-    private function calculateMenuPrice($menuItem, $customerType = null)
+    private function calculateMenuPrice($menuItem, $customerType)
     {
-        if (!$menuItem->has_customer_discount) {
-            return $menuItem->regular_price;
-        }
-
         switch ($customerType) {
             case 'student':
                 return $menuItem->student_price ?? $menuItem->regular_price;
-            case 'government':
             case 'govt_employee':
                 return $menuItem->govt_employee_price ?? $menuItem->regular_price;
             case 'pwd_senior':
-                return $menuItem->regular_price * 0.8;
+                return $menuItem->pwd_senior_price ?? $menuItem->regular_price;
             default:
                 return $menuItem->regular_price;
         }
     }
 
+
     public function processPayment(Request $request)
     {
         Log::info('Payment processing started', [
-            'reservation_id' => $request->reservation_id,
-            'customer_data_count' => $request->has('customer_data') ? count($request->customer_data) : 0,
-            'orders_count' => $request->has('orders') ? count($request->orders) : 0
+            'reservation_id'   => $request->reservation_id,
+            'advance_payment'  => $request->advance_payment ?? 0
         ]);
 
-        $request->validate([
-            'reservation_id' => 'required|integer|exists:reservations,id',
-            'total' => 'required|numeric|min:0',
-            'orders' => 'required|array|min:1',
-            'orders.*.order_detail_id' => 'required|integer',
-            'orders.*.order_name' => 'required|string',
-            'orders.*.quantity' => 'required|integer|min:1',
-            'orders.*.price' => 'required|numeric|min:0',
-            'customer_data' => 'nullable|array',
-            'customer_data.*.name' => 'required_with:customer_data|string',
-            'customer_data.*.id_type' => 'nullable|string',
-            'customer_data.*.customer_type' => 'nullable|string|in:student,govt_employee,pwd_senior,regular',
-            'customer_data.*.item_index' => 'required_with:customer_data|integer',
-            'discounted_persons' => 'nullable|array',
-        ]);
+        // Step 1: Validation
+        try {
+            $validated = $request->validate([
+                'reservation_id'               => 'required|integer|exists:reservations,id',
+                'subtotal'                     => 'nullable|numeric|min:0',
+                'advance_payment'              => 'nullable|numeric|min:0',
+                'total'                        => 'required|numeric|min:0',
+                'orders'                       => 'required|array|min:1',
+                'orders.*.order_detail_id'     => 'required|integer',
+                'orders.*.order_name'          => 'required|string',
+                'orders.*.quantity'            => 'required|integer|min:1',
+                'orders.*.price'               => 'required|numeric|min:0',
+                'customer_data'                => 'nullable|array',
+                'customer_data.*.name'         => 'required_with:customer_data|string|max:255',
+                'customer_data.*.id_type'      => 'nullable|string|max:255',
+                'customer_data.*.customer_type' => 'nullable|string|in:student,govt_employee,pwd_senior,regular',
+                'customer_data.*.item_index'   => 'required_with:customer_data|integer',
+                'discounted_persons'           => 'nullable|array',
+                'cash_received'                => 'nullable|numeric|min:0',
+                'change'                       => 'nullable|numeric|min:0',
+            ]);
 
+            Log::info('Validation passed');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation failed', ['errors' => $e->errors()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed'
+            ], 422);
+        }
+
+        // Step 2: Main payment logic
         try {
             DB::beginTransaction();
 
-            $reservation = DB::table('reservations')
-                ->join('customers', 'reservations.customer_id', '=', 'customers.id')
-                ->where('reservations.id', $request->reservation_id)
-                ->select('reservations.id as reservation_id', 'reservations.customer_id')
-                ->first();
-
+            // Find reservation with customer
+            $reservation = Reservation::with('customer')->find($request->reservation_id);
             if (!$reservation) {
                 throw new Exception('Reservation not found');
             }
 
-            $customerMap = [];
-            if ($request->has('customer_data')) {
-                foreach ($request->customer_data as $customerInfo) {
-                    Log::info('Creating customer with data:', $customerInfo);
+            Log::info('Reservation found', [
+                'id'             => $reservation->id,
+                'advance_payment' => $reservation->advance_payment ?? 0,
+                'customer_id'    => $reservation->customer_id
+            ]);
 
-                    $customer = customers::create([
-                        'name' => $customerInfo['name'],
+            // Handle discount customers
+            $customerMap = [];
+            if (!empty($request->customer_data)) {
+                foreach ($request->customer_data as $customerInfo) {
+                    $customer = Customers::create([
+                        'name'    => trim($customerInfo['name']),
                         'id_type' => $customerInfo['id_type'] ?? null,
                     ]);
 
-                    Log::info('Customer created:', [
-                        'id' => $customer->id,
-                        'name' => $customer->name,
-                        'id_type' => $customer->id_type
-                    ]);
-
                     $customerMap[$customerInfo['item_index']] = [
-                        'customer' => $customer,
+                        'customer'      => $customer,
                         'customer_type' => $customerInfo['customer_type'] ?? 'regular'
                     ];
                 }
             }
 
-            $mainCustomer = customers::find($reservation->customer_id) ??
-                customers::create([
+            // Ensure main customer exists
+            $mainCustomer = $reservation->customer;
+            if (!$mainCustomer) {
+                $mainCustomer = Customers::create([
                     'name' => 'Walk-in Customer',
-                    'id_type' => null,
                 ]);
+                $reservation->update(['customer_id' => $mainCustomer->id]);
+            }
 
-            DB::table('reservations')->where('id', $request->reservation_id)
-                ->update(['customer_id' => $mainCustomer->id, 'updated_at' => now()]);
-
-            $subtotal = 0; 
+            // Process orders
+            $subtotal            = 0;
             $totalDiscountAmount = 0;
-            $processedOrders = [];
-            $itemIndex = 0;
+            $processedOrders     = [];
+            $itemIndex           = 0;
 
             foreach ($request->orders as $orderData) {
-                $orderDetail = DB::table('order_details')->find($orderData['order_detail_id']);
+                $orderDetail = DB::table('order_details')
+                    ->join('menu', 'order_details.menu_id', '=', 'menu.id')
+                    ->where('order_details.id', $orderData['order_detail_id'])
+                    ->select('order_details.*', 'menu.*')
+                    ->first();
+
                 if (!$orderDetail) {
                     throw new Exception("Order detail not found: {$orderData['order_detail_id']}");
                 }
 
-                $menuItem = DB::table('menu')->find($orderDetail->menu_id);
-                if (!$menuItem) {
-                    throw new Exception("Menu item not found for order detail: {$orderData['order_detail_id']}");
-                }
-
                 for ($i = 0; $i < $orderData['quantity']; $i++) {
                     $linkedCustomer = $mainCustomer;
-                    $customerType = 'regular';
+                    $customerType   = 'regular';
 
                     if (isset($customerMap[$itemIndex])) {
                         $linkedCustomer = $customerMap[$itemIndex]['customer'];
-                        $customerType = $customerMap[$itemIndex]['customer_type'];
+                        $customerType   = $customerMap[$itemIndex]['customer_type'];
                     }
 
-                    $regularPrice = $menuItem->regular_price;
-                    $discountedPrice = $this->calculateMenuPrice($menuItem, $customerType);
-                    $discount = $regularPrice - $discountedPrice;
+                    $regularPrice    = $orderDetail->regular_price;
+                    $discountedPrice = $this->calculateMenuPrice($orderDetail, $customerType);
+                    $discount        = $regularPrice - $discountedPrice;
 
-                    $subtotal += $regularPrice;
+                    $subtotal            += $regularPrice;
                     $totalDiscountAmount += $discount;
 
                     $processedOrders[] = [
                         'order_detail_id' => $orderData['order_detail_id'],
-                        'item_name' => $orderData['order_name'],
-                        'quantity' => 1,
+                        'item_name'       => $orderData['order_name'],
+                        'quantity'        => 1,
                         'discount_amount' => $discount,
-                        'customer_id' => $linkedCustomer->id,
+                        'customer_id'     => $linkedCustomer->id,
                     ];
 
                     $itemIndex++;
                 }
             }
 
-            $finalTotal = $subtotal - $totalDiscountAmount;
+            // Totals
+            $advancePayment  = floatval($request->advance_payment ?? $reservation->advance_payment ?? 0);
+            $orderSubtotal   = $subtotal - $totalDiscountAmount;
+            $finalAmountDue  = max(0, $orderSubtotal - $advancePayment);
 
-            $transactionNo = date('Ymd') . '-' . str_pad(
-                DB::table('transactions')->whereDate('created_at', today())->count() + 1,
-                4,
-                '0',
-                STR_PAD_LEFT
-            );
-
-            $transactionId = DB::table('transactions')->insertGetId([
-                'transaction_no' => $transactionNo,
-                'subtotal' => $subtotal, 
-                'discount_total' => $totalDiscountAmount, 
-                'total' => $finalTotal, 
+            // Transaction creation - FIXED: Added timestamps
+            $transactionData = [
+                'transaction_no' => 'TEMP',
+                'subtotal'       => $subtotal,
+                'discount_total' => $totalDiscountAmount,
+                'total'          => $finalAmountDue,
                 'payment_method' => 'Cash',
-                'status' => 'Completed',
-                'reservation_id' => $request->reservation_id,
-                'customer_id' => $mainCustomer->id,
-                'cashier_id' => Auth::id(),
-                'created_at' => now(),
-                'updated_at' => now()
+                'status'         => 'Completed',
+                'reservation_id' => $reservation->id,
+                'customer_id'    => $mainCustomer->id,
+                'cashier_id'     => Auth::id(),
+                'created_at'     => now(), // FIXED: Added timestamp
+                'updated_at'     => now(), // FIXED: Added timestamp
+            ];
+
+            // Add optional columns if exist
+            $transactionColumns = DB::getSchemaBuilder()->getColumnListing('transactions');
+            if (in_array('advance_payment', $transactionColumns)) {
+                $transactionData['advance_payment'] = $advancePayment;
+            }
+            if (in_array('cash_received', $transactionColumns)) {
+                $transactionData['cash_received'] = floatval($request->cash_received ?? 0);
+            }
+            if (in_array('change', $transactionColumns)) {
+                $transactionData['change'] = floatval($request->change ?? 0);
+            }
+
+            // Insert transaction & generate unique transaction_no based on ID
+            $transactionId = DB::table('transactions')->insertGetId($transactionData);
+            $transactionNo = date('Ymd') . '-' . str_pad($transactionId, 6, '0', STR_PAD_LEFT);
+
+            // FIXED: Update with timestamp
+            DB::table('transactions')->where('id', $transactionId)->update([
+                'transaction_no' => $transactionNo,
+                'updated_at'     => now(), // FIXED: Added timestamp
             ]);
 
+            // Insert transaction details
             foreach ($processedOrders as $order) {
                 DB::table('transaction_details')->insert([
-                    'transaction_id' => $transactionId,
+                    'transaction_id'  => $transactionId,
                     'order_detail_id' => $order['order_detail_id'],
-                    'customer_id' => $order['customer_id'],
-                    'item_name' => $order['item_name'],
-                    'quantity' => $order['quantity'],
+                    'customer_id'     => $order['customer_id'],
+                    'item_name'       => $order['item_name'],
+                    'quantity'        => $order['quantity'],
                     'discount_amount' => $order['discount_amount'],
-                    'created_at' => now(),
-                    'updated_at' => now()
+                    'created_at'      => now(),
+                    'updated_at'      => now()
                 ]);
             }
 
-            DB::table('reservations')->where('id', $request->reservation_id)
-                ->update(['status' => 'Completed', 'updated_at' => now()]);
-
-            DB::table('order_details')->where('reservation_id', $request->reservation_id)
+            // Update reservation & orders
+            $reservation->update(['status' => 'Completed']);
+            DB::table('order_details')
+                ->where('reservation_id', $reservation->id)
                 ->where('status', 'Pending')
-                ->update(['status' => 'Served', 'updated_at' => now()]);
+                ->update([
+                    'status'     => 'Served',
+                    'updated_at' => now()
+                ]);
 
             DB::commit();
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Payment processed successfully',
-                'transaction_no' => $transactionNo,
+            Log::info('Payment processed successfully', [
                 'transaction_id' => $transactionId,
-                'subtotal' => $subtotal,
-                'discount_total' => $totalDiscountAmount,
-                'total' => $finalTotal,
-                'processed_items' => count($processedOrders),
-                'discounted_customers' => count($customerMap)
+                'transaction_no' => $transactionNo,
+                'total' => $finalAmountDue,
+            ]);
+
+            return response()->json([
+                'success'                  => true,
+                'message'                  => 'Payment processed successfully',
+                'transaction_no'           => $transactionNo,
+                'transaction_id'           => $transactionId,
+                'original_subtotal'        => $subtotal,
+                'discount_total'           => $totalDiscountAmount,
+                'subtotal_after_discounts' => $orderSubtotal,
+                'advance_payment'          => $advancePayment,
+                'final_amount_due'         => $finalAmountDue,
+                'cash_received'            => floatval($request->cash_received ?? 0),
+                'change'                   => floatval($request->change ?? 0),
+                'processed_items'          => count($processedOrders),
+                'discounted_customers'     => count($customerMap)
             ]);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Payment failed', [
+
+            Log::error('Payment processing failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine()
             ]);
 
             return response()->json([
@@ -352,7 +399,6 @@ class CashierController extends Controller
             ], 500);
         }
     }
-
     public function checkCustomer($idNumber)
     {
         try {
@@ -530,4 +576,203 @@ class CashierController extends Controller
             'unread_count' => $unreadCount
         ]);
     }
+
+    public function printReceipt(Request $request)
+    {
+        try {
+            Log::info('Receipt printing requested', [
+                'customer' => $request->customer_name,
+                'total' => $request->total,
+                'orders_count' => count($request->orders ?? [])
+            ]);
+
+            $request->validate([
+                'customer_name' => 'required|string',
+                'total' => 'required|numeric|min:0',
+                'cash_received' => 'required|numeric|min:0',
+                'change' => 'required|numeric|min:0',
+                'orders' => 'required|array|min:1',
+                'orders.*.order_name' => 'required|string',
+                'orders.*.quantity' => 'required|integer|min:1',
+                'orders.*.price' => 'required|numeric|min:0',
+            ]);
+
+            $printer = $this->initializePrinter();
+
+            if (!$printer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Receipt printer not available'
+                ]);
+            }
+
+            $this->printReceiptContent($printer, $request->all());
+
+            $printer->close();
+
+            Log::info('Receipt printed successfully');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Receipt printed successfully'
+            ]);
+        } catch (Exception $e) {
+            Log::error('Receipt printing failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Printing failed: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    private function initializePrinter()
+    {
+        try {
+            $connector = new WindowsPrintConnector("POS-80");
+            return new Printer($connector);
+        } catch (Exception $e) {
+            Log::warning('Windows printer connection failed, trying alternatives', [
+                'error' => $e->getMessage()
+            ]);
+
+            try {
+                $connector = new NetworkPrintConnector("192.168.1.100", 9100);
+                return new Printer($connector);
+            } catch (Exception $e2) {
+                Log::warning('Network printer connection failed, trying USB', [
+                    'error' => $e2->getMessage()
+                ]);
+
+                try {
+                    $connector = new FilePrintConnector("LPT1");
+                    return new Printer($connector);
+                } catch (Exception $e3) {
+                    Log::error('All printer connection methods failed', [
+                        'windows_error' => $e->getMessage(),
+                        'network_error' => $e2->getMessage(),
+                        'usb_error' => $e3->getMessage()
+                    ]);
+                    return null;
+                }
+            }
+        }
+    }
+
+    private function printReceiptContent($printer, $data)
+    {
+        try {
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->selectPrintMode(Printer::MODE_DOUBLE_WIDTH);
+            $printer->text("RESTAURANT RECEIPT\n");
+            $printer->selectPrintMode();
+
+            $printer->text(date('Y-m-d H:i:s A') . "\n");
+            $printer->text(str_repeat("-", 32) . "\n");
+
+            $printer->setJustification(Printer::JUSTIFY_LEFT);
+            $printer->text("Customer: " . substr($data['customer_name'], 0, 25) . "\n");
+            $printer->text(str_repeat("-", 32) . "\n");
+
+            $printer->text("ITEMS:\n");
+            $printer->text(str_repeat("-", 32) . "\n");
+
+            $totalItems = 0;
+            foreach ($data['orders'] as $order) {
+                $itemName = substr($order['order_name'], 0, 20);
+                $qty = $order['quantity'];
+                $price = $order['price'];
+                $total = $qty * $price;
+                $totalItems += $qty;
+
+                $printer->text($itemName . "\n");
+
+                $qtyPrice = sprintf("%d x P%.2f", $qty, $price);
+                $totalStr = sprintf("P%.2f", $total);
+                $spaces = 32 - strlen($qtyPrice) - strlen($totalStr);
+                $spaces = max(1, $spaces);
+                $printer->text($qtyPrice . str_repeat(" ", $spaces) . $totalStr . "\n");
+            }
+
+            $printer->text(str_repeat("-", 32) . "\n");
+
+            $total = $data['total'];
+            $cash = $data['cash_received'];
+            $change = $data['change'];
+
+            $this->printLine($printer, "TOTAL ITEMS:", (string)$totalItems);
+            $printer->text(str_repeat("=", 32) . "\n");
+            $this->printLine($printer, "TOTAL:", sprintf("P%.2f", $total));
+            $this->printLine($printer, "CASH:", sprintf("P%.2f", $cash));
+            $this->printLine($printer, "CHANGE:", sprintf("P%.2f", $change));
+
+            $printer->text(str_repeat("=", 32) . "\n");
+
+            // Footer
+            $printer->setJustification(Printer::JUSTIFY_CENTER);
+            $printer->text("\nThank you for dining with us!\n");
+            $printer->text("Please come again\n");
+
+            $printer->text("\n\n");
+
+            try {
+                $printer->cut();
+            } catch (Exception $e) {
+                $printer->text("\n\n\n");
+            }
+
+            try {
+                $printer->pulse();
+            } catch (Exception $e) {
+            }
+        } catch (Exception $e) {
+            Log::error('Error printing receipt content', [
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    private function printLine($printer, $left, $right)
+    {
+        $left = substr($left, 0, 20);
+        $right = substr($right, 0, 10);
+        $spaces = 32 - strlen($left) - strlen($right);
+        $spaces = max(1, $spaces);
+        $printer->text($left . str_repeat(" ", $spaces) . $right . "\n");
+    }
+
+
+    /*public function testPrinter()
+    {
+        try {
+            $printer = $this->initializePrinter();
+
+            if (!$printer) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot connect to printer'
+                ]);
+            }
+
+            $printer->text("Printer test successful!\n");
+            $printer->text(date('Y-m-d H:i:s') . "\n");
+            $printer->text("Connection working properly.\n\n");
+            $printer->cut();
+            $printer->close();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Test receipt printed successfully'
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Test failed: ' . $e->getMessage()
+            ]);
+        }
+    }*/
 }

@@ -11,7 +11,7 @@ return new class extends Migration
     {
         Schema::create('stock', function (Blueprint $stock) {
             $stock->id();
-            $stock->string('stock_name');
+            $stock->string('stock_name')->unique();
             $stock->decimal('stock_quantity');
             $stock->timestamps();
             $stock->softDeletes();

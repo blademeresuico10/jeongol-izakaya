@@ -11,7 +11,7 @@ return new class extends Migration
     {
         Schema::create('menu', function (Blueprint $table) {
             $table->id();
-            $table->string('menu_item');
+            $table->string('menu_item')->unique();
             $table->decimal('regular_price', 10, 2); 
             $table->decimal('student_price', 10, 2)->nullable(); 
             $table->decimal('govt_employee_price', 10, 2)->nullable(); 

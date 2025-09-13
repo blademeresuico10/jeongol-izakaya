@@ -11,8 +11,7 @@ class customers extends Model
         'name',
         'contact_number',
         'id_type',
-        'id_number',
-        'customer_type',
+       
     ];
 
     public function orders()
@@ -20,18 +19,18 @@ class customers extends Model
         return $this->hasMany(OrderDetail::class);
     }
 
-    public function reservations()
+    public function reservation()
     {
-        return $this->hasMany(Reservation::class);
+        return $this->hasMany(reservation::class);
     }
 
     public function feedbacks()
     {
-        return $this->hasMany(Feedback::class);
+        return $this->hasMany(feedback::class);
     }
 
-    public function transactions()
+    public function transaction()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasMany(transaction::class);
     }
 }

@@ -83,30 +83,49 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="addStockModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <form action="{{ route('admin.storeStock') }}" method="POST" id="addStockForm">
-                        @csrf
-                        <div class="modal-content">
-                            <div class="modal-header bg-success text-white">
-                                <h5 class="modal-title">Add New Stock Item</h5>
-                                <button type="button" class="close text-white"
-                                    data-dismiss="modal"><span>&times;</span></button>
-                            </div>
+            <!-- Replace your addStockModal with this enhanced version -->
+            <div class="modal fade" id="addStockModal" tabindex="-1" role="dialog" aria-labelledby="addStockModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title" id="addStockModalLabel">
+                                <i class="fas fa-plus"></i> Add New Stock Item
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form action="{{ route('admin.storeStock') }}" method="POST" id="addStockForm">
+                            @csrf
                             <div class="modal-body">
-                                <label>Stock Name</label>
-                                <input type="text" name="stock_name" class="form-control" required>
+                                <div class="form-group">
+                                    <label for="stock_name">Stock Name</label>
+                                    <input type="text" name="stock_name" id="stock_name" class="form-control" required
+                                        value="{{ old('stock_name') }}">
+                                    @error('stock_name')
+                                        <small class="text-danger">{{ $message }}</small>
+                                    @enderror
+                                </div>
 
-                                <label class="mt-2">Quantity (KG)</label>
-                                <input type="number" name="stock_quantity" class="form-control" step="0.01" min="0"
-                                    required>
+                                <div class="form-group">
+                                    <label for="stock_quantity">Quantity (KG)</label>
+                                    <input type="number" name="stock_quantity" id="stock_quantity" class="form-control"
+                                        step="0.01" min="0" required value="{{ old('stock_quantity') }}">
+                                    @error('stock_quantity')
+                                        <small class="text-danger">{{ $message }}</small>
+                                    @enderror
+                                    <small class="form-text text-muted">Enter quantity in kilograms</small>
+                                </div>
                             </div>
                             <div class="modal-footer">
-                                <button type="submit" class="btn btn-primary">Add</button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Add Stock Item
+                                </button>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                             </div>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 </div>
             </div>
 
@@ -188,30 +207,31 @@
             </div>
 
             <div class="modal fade" id="forceDeleteConfirmModal" tabindex="-1">
-                <div class="modal-dialog">
+                <div class="modal-dialog" role="document">
                     <div class="modal-content border-danger">
                         <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> Permanent Delete Warning
+                            <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> CRITICAL WARNING
                             </h5>
                             <button type="button" class="close text-white"
                                 data-dismiss="modal"><span>&times;</span></button>
                         </div>
                         <div class="modal-body bg-light">
                             <div class="alert alert-danger border-danger">
-                                <h6 class="text-danger"><strong>⚠️ CRITICAL WARNING</strong></h6>
                                 <p class="text-center">Are you sure you want to <strong class="text-danger">permanently
-                                        delete</strong>
+                                        delete table </strong>
                                     <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
                                 </p>
                             </div>
 
                         </div>
-                        <div class="modal-footer bg-danger">
-                            <form id="forceDeleteForm" method="POST">@csrf @method('DELETE')
-                                <button type="submit" class="btn btn-light text-danger border-danger"><i
-                                        class="fas fa-trash"></i> Delete Permanently</button>
+                        <div class="modal-footer">
+                            <form id="forceDeleteForm" method="POST">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="btn btn-danger text-white border-danger">Delete
+                                    Permanently</button>
                             </form>
-                            <button type="button" class="btn btn-outline-light" data-dismiss="modal">Cancel</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -225,49 +245,228 @@
 
 <script>
     $(document).ready(function () {
+
+        // Function to safely show modals with proper error handling
         window.showDeleteModal = function (id, itemName) {
-            $('#deleteItemName').text(itemName);
-            $('#deleteForm').attr('action', "{{ url('deletestock') }}/" + id);
-            $('#deleteConfirmModal').modal('show');
+            try {
+                const deleteItemNameElement = document.getElementById('deleteItemName');
+                const deleteFormElement = document.getElementById('deleteForm');
+
+                if (deleteItemNameElement && deleteFormElement) {
+                    deleteItemNameElement.textContent = itemName;
+                    deleteFormElement.action = "{{ url('deletestock') }}/" + id;
+                    $('#deleteConfirmModal').modal('show');
+                } else {
+                    console.error('Delete modal elements not found');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Unable to show delete confirmation. Please refresh the page.',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (error) {
+                console.error('Error showing delete modal:', error);
+            }
         };
 
         window.showRestoreModal = function (id, itemName) {
-            $('#restoreItemName').text(itemName);
-            $('#restoreForm').attr('action', "{{ url('restorestock') }}/" + id);
-            $('#restoreConfirmModal').modal('show');
+            try {
+                const restoreItemNameElement = document.getElementById('restoreItemName');
+                const restoreFormElement = document.getElementById('restoreForm');
+
+                if (restoreItemNameElement && restoreFormElement) {
+                    restoreItemNameElement.textContent = itemName;
+                    restoreFormElement.action = "{{ url('restorestock') }}/" + id;
+                    $('#restoreConfirmModal').modal('show');
+                } else {
+                    console.error('Restore modal elements not found');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Unable to show restore confirmation. Please refresh the page.',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (error) {
+                console.error('Error showing restore modal:', error);
+            }
         };
 
         window.showForceDeleteModal = function (id, itemName) {
-            $('#forceDeleteItemName').text(itemName);
-            $('#forceDeleteForm').attr('action', "{{ url('forcedeletestock') }}/" + id);
-            $('#forceDeleteConfirmModal').modal('show');
+            try {
+                const forceDeleteItemNameElement = document.getElementById('forceDeleteItemName');
+                const forceDeleteFormElement = document.getElementById('forceDeleteForm');
+
+                if (forceDeleteItemNameElement && forceDeleteFormElement) {
+                    forceDeleteItemNameElement.textContent = itemName;
+                    forceDeleteFormElement.action = "{{ url('forcedeletestock') }}/" + id;
+                    $('#forceDeleteConfirmModal').modal('show');
+                } else {
+                    console.error('Force delete modal elements not found');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Unable to show permanent delete confirmation. Please refresh the page.',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+                }
+            } catch (error) {
+                console.error('Error showing force delete modal:', error);
+            }
         };
 
-        @if(session('success'))
-            $('#successMessage').text("{{ session('success') }}");
-            $('#successModal').modal('show');
+        // If there are validation errors, reopen the add modal
+        @if ($errors->any())
+            $('#addStockModal').modal('show');
         @endif
-});
 
-    @if(session('success'))
-        Swal.fire({
-            icon: 'success',
-            title: "{{ session('success') }}",
-            toast: true,
-            position: 'top',
-            timer: 2000,
-            showConfirmButton: false
+        // Clear form when add modal is hidden
+        $('#addStockModal').on('hidden.bs.modal', function () {
+            try {
+                $(this).find('form')[0].reset();
+            } catch (error) {
+                console.error('Error resetting form:', error);
+            }
         });
-    @endif
 
-    @if(session('error'))
-        Swal.fire({
-            icon: 'error',
-            title: "{{ session('error') }}",
-            toast: true,
-            position: 'top',
-            timer: 2000,
-            showConfirmButton: false
+        // Handle success messages with SweetAlert2
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: {!! json_encode(session('success')) !!},
+                toast: true,
+                position: 'top',
+                timer: 3000,
+                showConfirmButton: false,
+                background: '#d4edda',
+                color: '#155724'
+            });
+        @endif
+
+        // Handle general error messages
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: {!! json_encode(session('error')) !!},
+                toast: true,
+                position: 'top',
+                timer: 4000,
+                showConfirmButton: false,
+                background: '#f8d7da',
+                color: '#721c24'
+            });
+        @endif
+
+        // Handle specific validation errors for duplicate stock names
+        @if($errors->has('stock_name'))
+            Swal.fire({
+                icon: 'error',
+                title: 'Duplicate Stock Item',
+                text: {!! json_encode($errors->first('stock_name')) !!},
+                toast: true,
+                position: 'top',
+                timer: 5000,
+                showConfirmButton: false,
+                background: '#f8d7da',
+                color: '#721c24'
+            });
+        @endif
+
+            // Handle other validation errors
+            @if($errors->any() && !$errors->has('stock_name'))
+                let errorMessages = [];
+                @foreach($errors->all() as $error)
+                    errorMessages.push({!! json_encode($error) !!});
+                @endforeach
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Validation Errors',
+                    html: errorMessages.join('<br>'),
+                    toast: true,
+                    position: 'top',
+                    timer: 5000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
+            @endif
+
+        // Form submission confirmation for add stock
+        $('form[action="{{ route('admin.storeStock') }}"]').on('submit', function (e) {
+            const submitButton = $(this).find('button[type="submit"]');
+            submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
+
+            // Re-enable button after 3 seconds in case of issues
+            setTimeout(function () {
+                submitButton.prop('disabled', false).html('<i class="fas fa-save"></i> Add');
+            }, 3000);
         });
-    @endif
+
+        // Form submission confirmation for update stock
+        $('form[action*="updateStock"]').on('submit', function (e) {
+            const submitButton = $(this).find('button[type="submit"]');
+            submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+
+            // Re-enable button after 3 seconds in case of issues
+            setTimeout(function () {
+                submitButton.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
+            }, 3000);
+        });
+
+        // Auto-focus on stock name input when add modal opens
+        $('#addStockModal').on('shown.bs.modal', function () {
+            $('input[name="stock_name"]').focus();
+        });
+
+        // Format quantity inputs to 2 decimal places on blur
+        $('input[name="stock_quantity"]').on('blur', function () {
+            if (this.value && !isNaN(this.value)) {
+                this.value = parseFloat(this.value).toFixed(2);
+            }
+        });
+
+        // Prevent negative values in quantity inputs
+        $('input[name="stock_quantity"]').on('input', function () {
+            if (this.value < 0) {
+                this.value = 0;
+            }
+        });
+
+        // Validate unusually high quantities (over 10000 KG)
+        $('input[name="stock_quantity"]').on('blur', function () {
+            if (this.value && parseFloat(this.value) > 10000) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'High Quantity Alert',
+                    text: 'You entered ' + this.value + ' KG. Are you sure this quantity is correct?',
+                    toast: true,
+                    position: 'top',
+                    timer: 4000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
+            }
+        });
+
+        // Capitalize first letter of stock name
+        $('input[name="stock_name"]').on('blur', function () {
+            if (this.value) {
+                this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
+            }
+        });
+
+    });
 </script>
