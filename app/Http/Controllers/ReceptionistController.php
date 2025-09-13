@@ -215,9 +215,27 @@ class ReceptionistController extends Controller
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
         $menuItems = DB::table('menu')->select('menu_item', 'regular_price as price')->get();
 
+        // First, get reservations that don't have completed transactions
+        $validReservations = DB::table('reservations')
+            ->leftJoin('transactions', 'transactions.reservation_id', '=', 'reservations.id')
+            ->whereDate('reservations.reservation_time', $targetDate)
+            ->where('reservations.status', 'Accepted')
+            ->where(function ($query) {
+                $query->whereNull('transactions.id')
+                    ->orWhere('transactions.status', '!=', 'Completed');
+            })
+            ->pluck('reservations.id');
+
+        // Then get order details for those valid reservations
         $order_details = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
-            ->leftJoin('order_details', 'order_details.reservation_id', '=', 'reservations.id')
+            ->leftJoin('order_details', function ($join) {
+                $join->on('order_details.reservation_id', '=', 'reservations.id')
+                    ->where(function ($query) {
+                        $query->whereNull('order_details.status')
+                            ->orWhere('order_details.status', '!=', 'Cancelled');
+                    });
+            })
             ->leftJoin('menu', 'menu.id', '=', 'order_details.menu_id')
             ->leftJoin('tables', 'tables.id', '=', 'reservations.table_id')
             ->leftJoin('transactions', 'transactions.reservation_id', '=', 'reservations.id')
@@ -231,18 +249,11 @@ class ReceptionistController extends Controller
                 'order_details.id as order_id',
                 'order_details.quantity',
                 'order_details.notes as order_notes',
-                'menu.menu_item'
+                'order_details.status as order_status',
+                'menu.menu_item',
+                'transactions.status as transaction_status'
             )
-            ->whereDate('reservations.reservation_time', $targetDate)
-            ->where('reservations.status', 'Accepted')
-            ->where(function ($query) {
-                $query->whereNull('transactions.status')
-                    ->orWhere('transactions.status', '!=', 'completed');
-            })
-            ->where(function ($query) {
-                $query->whereNull('order_details.status')
-                    ->orWhere('order_details.status', '!=', 'Cancelled');
-            })
+            ->whereIn('reservations.id', $validReservations)
             ->orderBy('reservations.reservation_time')
             ->get();
 
@@ -275,6 +286,7 @@ class ReceptionistController extends Controller
 
         return view('receptionist.modify_orders', compact('groupedOrders', 'menuItems'));
     }
+    
     public function updateOrder(Request $request)
     {
         $request->validate([

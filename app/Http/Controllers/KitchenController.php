@@ -13,10 +13,21 @@ class KitchenController extends Controller
         $stock = DB::table('stock')->get();
         $today = Carbon::today()->toDateString();
 
+        // First get valid reservations (not completed)
+        $validReservations = DB::table('reservations')
+            ->leftJoin('transactions', 'reservations.id', '=', 'transactions.reservation_id')
+            ->whereDate('reservations.reservation_time', $today)
+            ->where(function ($query) {
+                $query->whereNull('transactions.id')
+                    ->orWhere('transactions.status', '!=', 'Completed');
+            })
+            ->pluck('reservations.id');
+
         $reservations = DB::table('order_details')
             ->join('customers', 'order_details.customer_id', '=', 'customers.id')
             ->join('reservations', 'order_details.reservation_id', '=', 'reservations.id')
             ->join('menu', 'order_details.menu_id', '=', 'menu.id')
+            ->leftJoin('transactions', 'reservations.id', '=', 'transactions.reservation_id')
             ->select(
                 'order_details.id as order_id',
                 'order_details.quantity',
@@ -27,10 +38,11 @@ class KitchenController extends Controller
                 'reservations.table_id',
                 'reservations.pax',
                 'reservations.reservation_time',
-                'menu.menu_item'
+                'menu.menu_item',
+                'transactions.status as transaction_status'
             )
             ->where('order_details.status', 'Pending')
-            ->whereDate('reservations.reservation_time', $today)
+            ->whereIn('reservations.id', $validReservations)
             ->orderBy('order_details.created_at', 'desc')
             ->get();
 
