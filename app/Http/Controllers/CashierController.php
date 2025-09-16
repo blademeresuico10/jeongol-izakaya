@@ -107,7 +107,7 @@ class CashierController extends Controller
             ->select(
                 'reservations.id as reservation_id',
                 'reservations.reservation_time',
-                'reservations.advance_payment', // Add this line
+                'reservations.advance_payment', 
                 'customers.name as customer_name',
                 'customers.contact_number',
                 'customers.id_type',
@@ -150,7 +150,7 @@ class CashierController extends Controller
             'customer_id'      => $reservation->customer_id,
             'pax'              => $reservation->pax,
             'reservation_time' => $reservation->reservation_time,
-            'advance_payment'  => floatval($reservation->advance_payment ?? 0), // Add this line
+            'advance_payment'  => floatval($reservation->advance_payment ?? 0), 
             'orders'           => $orders
         ]);
     }
@@ -178,7 +178,6 @@ class CashierController extends Controller
             'advance_payment'  => $request->advance_payment ?? 0
         ]);
 
-        // Step 1: Validation
         try {
             $validated = $request->validate([
                 'reservation_id'               => 'required|integer|exists:reservations,id',
@@ -209,11 +208,9 @@ class CashierController extends Controller
             ], 422);
         }
 
-        // Step 2: Main payment logic
         try {
             DB::beginTransaction();
 
-            // Find reservation with customer
             $reservation = Reservation::with('customer')->find($request->reservation_id);
             if (!$reservation) {
                 throw new Exception('Reservation not found');
@@ -225,7 +222,6 @@ class CashierController extends Controller
                 'customer_id'    => $reservation->customer_id
             ]);
 
-            // Handle discount customers
             $customerMap = [];
             if (!empty($request->customer_data)) {
                 foreach ($request->customer_data as $customerInfo) {
@@ -241,7 +237,6 @@ class CashierController extends Controller
                 }
             }
 
-            // Ensure main customer exists
             $mainCustomer = $reservation->customer;
             if (!$mainCustomer) {
                 $mainCustomer = Customers::create([
@@ -250,7 +245,6 @@ class CashierController extends Controller
                 $reservation->update(['customer_id' => $mainCustomer->id]);
             }
 
-            // Process orders
             $subtotal            = 0;
             $totalDiscountAmount = 0;
             $processedOrders     = [];
@@ -295,12 +289,10 @@ class CashierController extends Controller
                 }
             }
 
-            // Totals
             $advancePayment  = floatval($request->advance_payment ?? $reservation->advance_payment ?? 0);
             $orderSubtotal   = $subtotal - $totalDiscountAmount;
             $finalAmountDue  = max(0, $orderSubtotal - $advancePayment);
 
-            // Transaction creation - FIXED: Added timestamps
             $transactionData = [
                 'transaction_no' => 'TEMP',
                 'subtotal'       => $subtotal,
@@ -311,11 +303,10 @@ class CashierController extends Controller
                 'reservation_id' => $reservation->id,
                 'customer_id'    => $mainCustomer->id,
                 'cashier_id'     => Auth::id(),
-                'created_at'     => now(), // FIXED: Added timestamp
-                'updated_at'     => now(), // FIXED: Added timestamp
+                'created_at'     => now(), 
+                'updated_at'     => now(), 
             ];
 
-            // Add optional columns if exist
             $transactionColumns = DB::getSchemaBuilder()->getColumnListing('transactions');
             if (in_array('advance_payment', $transactionColumns)) {
                 $transactionData['advance_payment'] = $advancePayment;
@@ -327,17 +318,14 @@ class CashierController extends Controller
                 $transactionData['change'] = floatval($request->change ?? 0);
             }
 
-            // Insert transaction & generate unique transaction_no based on ID
             $transactionId = DB::table('transactions')->insertGetId($transactionData);
             $transactionNo = date('Ymd') . '-' . str_pad($transactionId, 6, '0', STR_PAD_LEFT);
 
-            // FIXED: Update with timestamp
             DB::table('transactions')->where('id', $transactionId)->update([
                 'transaction_no' => $transactionNo,
-                'updated_at'     => now(), // FIXED: Added timestamp
+                'updated_at'     => now(), 
             ]);
 
-            // Insert transaction details
             foreach ($processedOrders as $order) {
                 DB::table('transaction_details')->insert([
                     'transaction_id'  => $transactionId,
@@ -351,7 +339,6 @@ class CashierController extends Controller
                 ]);
             }
 
-            // Update reservation & orders
             $reservation->update(['status' => 'Completed']);
             DB::table('order_details')
                 ->where('reservation_id', $reservation->id)
@@ -711,7 +698,6 @@ class CashierController extends Controller
 
             $printer->text(str_repeat("=", 32) . "\n");
 
-            // Footer
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->text("\nThank you for dining with us!\n");
             $printer->text("Please come again\n");

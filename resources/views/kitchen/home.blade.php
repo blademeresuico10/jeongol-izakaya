@@ -138,16 +138,12 @@
         $menu = \App\Models\menu::find($order->menu_id);
         $menuName = $menu ? str_replace([' Lunch', ' Dinner'], '', $menu->menu_item) : 'Unknown Item';
 
-        // Calculate quantity based on change type
         $quantity = $order->quantity;
         if ($order->change_type === 'addition' && $order->previous_quantity) {
-        // For additions: show only the amount added (new - old)
         $quantity = $order->quantity - $order->previous_quantity;
         } else if ($order->change_type === 'reduction' && $order->previous_quantity) {
-        // For reductions: show only the amount reduced (old - new)
         $quantity = $order->previous_quantity - $order->quantity;
         } else if ($order->change_type === 'removal') {
-        // For removals: show the full quantity that was removed
         $quantity = $order->quantity;
         }
 

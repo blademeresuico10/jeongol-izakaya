@@ -310,7 +310,7 @@
                     <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
                     <div>
                         <p><strong>Transaction Receipt</strong></p>
-                        <img id="paymentProof" src="" class="mb-2 w-50 h-50 object-contain" style="display:none;">
+                        <img id="paymentProof" src="" class="mb-2 w-24 h-24 object-contain" style="display:none;">
                     </div>
                     <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
                     <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
@@ -324,6 +324,19 @@
                     </div>
                 </div>
             </div>
+            <!-- Receipt Zoom Modal -->
+            <div id="receiptModal"
+                class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+                <div class="relative max-w-4xl w-full p-4">
+                    <!-- Close button -->
+                    <button id="closeReceipt"
+                        class="absolute top-2 right-2 text-white hover:text-gray-300 text-3xl font-bold">&times;</button>
+                    <!-- Enlarged image -->
+                    <img id="receiptImageLarge" src=""
+                        class="w-full h-auto max-h-[90vh] object-contain rounded-lg shadow-lg">
+                </div>
+            </div>
+
         </div>
 
         <!-- Tables -->
@@ -474,6 +487,7 @@
     // Initialize menu data from backend
     window.menuPriceData = @json($menuData);
     window.menuPricesMap = {};
+    const CASHIER_NAME = @json(auth()->user()->firstname . ' ' . auth()->user()->lastname);
 
     // Build menu prices map
     if (window.menuPriceData && Array.isArray(window.menuPriceData) && window.menuPriceData.length > 0) {
@@ -545,6 +559,7 @@
             this.setupNotificationEvents();
             this.setupModalEvents();
             this.setupPaymentEvents();
+            this.initializeImagePopup();
         }
 
         setupUserMenuEvents() {
@@ -895,6 +910,33 @@
                 this.updatePaymentSummaryBreakdown();
             }
         }
+        
+        initializeImagePopup() {
+            const img = document.getElementById("paymentProof");
+            if (!img) return;
+
+            img.addEventListener("click", () => {
+                if (!img.src || img.style.display === "none") return;
+
+                // overlay
+                const overlay = document.createElement("div");
+                overlay.className = "fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50";
+                overlay.style.cursor = "zoom-out";
+
+                // preview image (smaller, fixed size)
+                const bigImg = document.createElement("img");
+                bigImg.src = img.src;
+                bigImg.className =
+                    "w-[300px] h-[300px] object-contain rounded-lg shadow-lg border-4 border-white";
+
+                overlay.appendChild(bigImg);
+                document.body.appendChild(overlay);
+
+                // close on click
+                overlay.addEventListener("click", () => overlay.remove());
+            });
+        }
+
 
         updatePaymentModal(data) {
             const paymentProof = document.getElementById('paymentProof');
@@ -1824,6 +1866,9 @@
         }
 
         printBill() {
+
+            const cashierName = CASHIER_NAME;
+
             const customerName = document.getElementById('payment_customer_name')?.value || 'Walk-in Customer';
 
             const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
@@ -1897,7 +1942,7 @@
             <div class="header">
                 <h1>RESTAURANT BILL</h1>
             </div>
-            
+            <p><strong>Cashier:</strong> ${cashierName}</p>
             <p><strong>Date:</strong> ${date}</p>
             <p><strong>Customer:</strong> ${customerName}</p>
             

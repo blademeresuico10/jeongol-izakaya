@@ -6,23 +6,26 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
+
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('firstname');
             $table->string('lastname');
-            $table->string('role');
+            $table->enum('role',[ 'Admin', 'Receptionist', 'Cashier', 'Kitchen Staff']);
             $table->string('contact_number');
+            $table->string('email')->nullable();
             $table->string('username')->unique();
             $table->string('password');
-            $table->string('status')->default('Active'); 
-            $table->timestamps(); 
+            $table->enum('status', ['Active', 'Inactive', 'Deleted'])->default('Active');
+            $table->string('profile_picture')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
         });
     }
 
-    
+
     public function down(): void
     {
         Schema::dropIfExists('users');

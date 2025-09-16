@@ -7,6 +7,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ReceptionistController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ReportsController;
 use App\Models\reservation;
 use App\Notifications\ReservationPaid;
 
@@ -51,17 +52,26 @@ Route::middleware(['auth'])->group(function () {
         return response()->json($menuItems);
     });
 
+    //Admin Profile
+    Route::get('/myprofile', [AdminController::class, 'profile'])->name('admin.profile');
+    Route::put('/updateprofile/{id}', [AdminController::class, 'updateProfile'])->name('admin.updateprofile');
+    Route::put('/changepassword/{id}', [AdminController::class, 'changePassword'])->name('admin.changepassword');
+
     // Admin Routes
     Route::get('/home', [AdminController::class, 'index'])->name('admin.home');
     Route::get('/home/dashboard-data', [AdminController::class, 'dashboardData'])->name('home.dashboard.data');
     Route::get('/home/sales-data', [AdminController::class, 'salesData'])->name('home.sales.data');
     Route::get('/debug/data', [AdminController::class, 'debugData'])->name('debug.data');
 
+    //Admin user management
     Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
     Route::get('/adduser', [AdminController::class, 'adduser'])->name('admin.adduser');
     Route::post('/users/storeUser', [AdminController::class, 'storeUser'])->name('storeUser');
     Route::get('/edituser/{id}', [AdminController::class, 'edit'])->name('admin.edituser');
     Route::put('/updateuser/{id}', [AdminController::class, 'update'])->name('admin.updateuser');
+    Route::delete('/users/{id}', [AdminController::class, 'destroy'])->name('admin.destroyuser');
+    Route::patch('/restoreuser/{id}', [AdminController::class, 'restore'])->name('admin.restoreuser');
+    Route::delete('/forcedeleteuser/{id}', [AdminController::class, 'forceDelete'])->name('admin.forcedeleteuser');
 
     // Admin menu management
     Route::get('/menu_management', [AdminController::class, 'menu_management'])->name('admin.menu_management');
@@ -104,8 +114,15 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
 
 
-    // Reports view
-    Route::get('/reports', [AdminController::class, 'reports'])->name('admin.reports');
+    // Reports routes
+    Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
+    Route::get('/reports/sales', [ReportsController::class, 'salesReport'])->name('reports.sales');
+    Route::get('/reports/revenue', [ReportsController::class, 'revenueReport'])->name('reports.revenue');
+    Route::get('/reports/reservations', [ReportsController::class, 'reservationReport'])->name('reports.reservations');
+    Route::get('/reports/staff', [ReportsController::class, 'staffReport'])->name('reports.staff');
+    Route::get('/reports/stock', [ReportsController::class, 'stockReport'])->name('reports.stock');
+
+
 
     // Export routes
     Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');

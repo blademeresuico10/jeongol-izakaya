@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;  
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;  
 
     protected $fillable = [
         'firstname',
@@ -16,8 +17,10 @@ class User extends Authenticatable
         'role',
         'contact_number',
         'username',
+        'email',
         'password',
         'status',
+        'profile_picture',
     ];
 
     protected $hidden = [
@@ -25,8 +28,10 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    protected $dates = ['deleted_at'];  
+
     public function transactions()
     {
-        return $this->hasMany(Transaction::class, 'cashier_id');
+        return $this->hasMany(transaction::class, 'cashier_id');
     }
 }

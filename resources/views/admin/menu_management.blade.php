@@ -32,14 +32,26 @@
                     <table class="table table-bordered table-sm text-start">
                         <thead class="thead-light">
                             <tr>
+                                <th>Menu Image</th>
                                 <th>Menu Item</th>
                                 <th>Price</th>
+                                <th>Status</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($menu as $item)
                                 <tr>
+                                    <td>
+                                        <div class="mb-3 text-center">
+                                            @if($item->image)
+                                                <img src="{{ asset('storage/jeongol_menu/' . $item->image) }}" alt="No Picture"
+                                                    width="100" height="100" style="object-fit: cover; border-radius: 80%;">
+                                            @else
+                                                <span class="text-muted">No Picture</span>
+                                            @endif
+                                        </div>
+                                    </td>
                                     <td>{{ $item->menu_item }}</td>
                                     <td>
                                         Regular: ₱{{ number_format($item->regular_price, 2) }} <br>
@@ -50,6 +62,7 @@
                                             Gov’t Employee: ₱{{ number_format($item->govt_employee_price, 2) }}
                                         @endif
                                     </td>
+                                    <td>{{$item->status}}</td>
 
                                     <td>
                                         @if($item->deleted_at)
@@ -91,7 +104,6 @@
                 </div>
             </div>
 
-            <!-- Replace your addMenuModal with this simple version -->
             <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel"
                 aria-hidden="true">
                 <div class="modal-dialog" role="document">
@@ -104,7 +116,7 @@
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
-                        <form action="{{ route('storeMenu') }}" method="POST">
+                        <form action="{{ route('storeMenu') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="modal-body">
                                 <div class="form-group">
@@ -126,6 +138,16 @@
                                             Add-ons</option>
                                     </select>
                                     @error('category')
+                                        <small class="text-danger">{{ $message }}</small>
+                                    @enderror
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="image">Menu Item Image <span class="text-danger">*</span></label>
+                                    <input type="file" name="image" id="image" class="form-control-file" required
+                                        accept="image/jpeg,image/png,image/jpg,image/gif">
+
+                                    @error('image')
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
@@ -168,9 +190,6 @@
                     </div>
                 </div>
             </div>
-
-            {{-- Reopen modal if validation fails --}}
-
 
             <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
@@ -326,6 +345,13 @@
                                             <small class="form-text text-muted">Whether this item is eligible for
                                                 student/government discounts</small>
                                         </div>
+                                        <label>Status</label>
+                                        <select name="status" class="form-control" required>
+                                            <option value="Active" {{ $item->status == 'Active' ? 'selected' : '' }}>Active
+                                            </option>
+                                            <option value="Blocked" {{ $item->status == 'Blocked' ? 'selected' : '' }}>Block
+                                            </option>
+                                        </select>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="submit" class="btn btn-primary">

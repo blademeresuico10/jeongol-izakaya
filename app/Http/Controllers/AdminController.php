@@ -12,13 +12,16 @@ use Carbon\Carbon;
 use App\Models\customers;
 use App\Models\stock;
 use App\Models\reservation;
-use Barryvdh\DomPDF\Facade\pdf;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 
 class AdminController extends Controller
 {
     public function index()
     {
+
         $todayRevenue = DB::table('transactions')
             ->whereDate('created_at', Carbon::today())
             ->where('status', '!=', 'Refunded')
@@ -63,7 +66,6 @@ class AdminController extends Controller
                 ];
             });
 
-        // Weekly revenue
         $weeklyRevenue = DB::table('transactions')
             ->whereBetween('created_at', [
                 Carbon::now()->startOfWeek(),
@@ -74,7 +76,6 @@ class AdminController extends Controller
             ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('D'))
             ->map(fn($day) => $day->sum('total'));
 
-        // Monthly revenue
         $monthlyRevenue = DB::table('transactions')
             ->whereYear('created_at', Carbon::now()->year)
             ->where('status', '!=', 'Refunded')
@@ -82,7 +83,6 @@ class AdminController extends Controller
             ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('M'))
             ->map(fn($month) => $month->sum('total'));
 
-        // Quarterly revenue
         $quarterlyRevenue = DB::table('transactions')
             ->whereYear('created_at', Carbon::now()->year)
             ->where('status', '!=', 'Refunded')
@@ -102,22 +102,135 @@ class AdminController extends Controller
         ));
     }
 
-    // Updated dashboardData method with better debugging
+    public function profile()
+    {
+        $user = Auth::user();
+        return view('admin.myprofile', compact('user'));
+    }
+
+    public function updateProfile(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'firstname' => 'required|string|max:255',
+                'lastname' => 'required|string|max:255',
+                'contact_number' => 'required|string|max:20',
+                'email' => 'required|email|unique:users,email,' . $id,
+                'username' => 'required|string|unique:users,username,' . $id,
+                'password' => 'nullable|string|min:6',
+                'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        }
+
+        try {
+            $user = User::findOrFail($id);
+
+            $user->firstname = $request->firstname;
+            $user->lastname = $request->lastname;
+            $user->contact_number = $request->contact_number;
+            $user->email = $request->email;
+            $user->username = $request->username;
+
+            if ($request->hasFile('profile_picture')) {
+                if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
+                    Storage::disk('public')->delete($user->profile_picture);
+                }
+                $user->profile_picture = $request->file('profile_picture')->store('profile_pictures', 'public');
+            }
+
+            if ($request->filled('password')) {
+                $user->password = Hash::make($request->password);
+            }
+
+            $user->save();
+
+            if ($request->ajax()) {
+                return response()->json(['success' => true, 'message' => 'Profile updated successfully']);
+            }
+
+            return redirect()->route('admin.profile')->with('success', 'Profile updated successfully!');
+        } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while updating profile'
+                ], 500);
+            }
+
+            return redirect()->back()->with('error', 'Failed to update profile');
+        }
+    }
+
+    public function changePassword(Request $request, $id)
+    {
+        try {
+            $request->validate([
+                'current_password' => 'required',
+                'new_password' => 'required|min:6|confirmed',
+            ]);
+
+            $user = User::findOrFail($id);
+
+            if (!Hash::check($request->current_password, $user->password)) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Current password is incorrect'
+                    ], 400);
+                }
+                return redirect()->back()->with('error', 'Current password is incorrect');
+            }
+
+            $user->password = Hash::make($request->new_password);
+            $user->save();
+
+            if ($request->ajax()) {
+                return response()->json(['success' => true]);
+            }
+
+            return redirect()->route('admin.profile');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $e->errors()
+                ], 422);
+            }
+            throw $e;
+        } catch (\Exception $e) {
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while changing password'
+                ], 500);
+            }
+            return redirect()->back()->with('error', 'Failed to change password');
+        }
+    }
+
+
     public function dashboardData()
     {
-        // Today's revenue: total from transactions (don't double-count advance_payment)
         $todayRevenue = DB::table('transactions')
             ->whereDate('created_at', Carbon::today())
             ->where('status', '!=', 'Refunded')
             ->sum('total');
 
-        // Today's customers: sum of pax from reservations  
         $todayCustomers = DB::table('reservations')
             ->whereDate('reservation_time', Carbon::today())
             ->whereIn('status', ['Accepted', 'Completed'])
             ->sum('pax');
 
-        // Recent transactions with cashier info
         $transactions = DB::table('transactions')
             ->join('users', 'transactions.cashier_id', '=', 'users.id')
             ->select(
@@ -138,7 +251,6 @@ class AdminController extends Controller
                     return $query->whereDate('transactions.created_at', Carbon::today());
                 },
                 function ($query) {
-                    // If no transactions today, show recent ones
                     return $query->where('transactions.created_at', '>=', Carbon::now()->subDays(7));
                 }
             )
@@ -158,7 +270,6 @@ class AdminController extends Controller
                 ];
             });
 
-        // Stock data
         $stockData = DB::table('stock')
             ->whereNull('deleted_at')
             ->select('stock_name as name', 'stock_quantity as quantity')
@@ -183,7 +294,6 @@ class AdminController extends Controller
 
     public function salesData()
     {
-        // Weekly revenue
         $weeklyRevenue = DB::table('transactions')
             ->whereBetween('created_at', [
                 Carbon::now()->startOfWeek(),
@@ -194,7 +304,6 @@ class AdminController extends Controller
             ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('D'))
             ->map(fn($day) => $day->sum('total'));
 
-        // Monthly revenue
         $monthlyRevenue = DB::table('transactions')
             ->whereYear('created_at', Carbon::now()->year)
             ->where('status', '!=', 'Refunded')
@@ -202,7 +311,6 @@ class AdminController extends Controller
             ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('M'))
             ->map(fn($month) => $month->sum('total'));
 
-        // Quarterly revenue
         $quarterlyRevenue = DB::table('transactions')
             ->whereYear('created_at', Carbon::now()->year)
             ->where('status', '!=', 'Refunded')
@@ -219,13 +327,13 @@ class AdminController extends Controller
 
     public function users()
     {
-        $users = User::all();
-        return view('admin.users', compact('users'));
-    }
+        if (request()->has('show_deleted')) {
+            $users = User::onlyTrashed()->where('role', '!=', 'Admin')->get();
+        } else {
+            $users = User::where('role', '!=', 'Admin')->get();
+        }
 
-    public function adduser()
-    {
-        return view('admin.adduser');
+        return view('admin.users', compact('users'));
     }
 
     public function storeUser(Request $request)
@@ -234,44 +342,119 @@ class AdminController extends Controller
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
             'role' => 'required|string',
-            'contact' => 'required|string|max:20',
+            'contact_number' => 'required|string|max:20',
             'username' => 'required|string|unique:users,username',
+            'email' => 'nullable|email|unique:users,email',
             'password' => 'required|string|min:6|confirmed',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         User::create([
             'firstname' => $request->firstname,
             'lastname' => $request->lastname,
             'role' => $request->role,
-            'contact_number' => $request->contact,
+            'contact_number' => $request->contact_number,
             'username' => $request->username,
+            'email' => $request->email,
             'password' => Hash::make($request->password),
+            'profile_picture' => $request->hasFile('profile_picture') ? $request->file('profile_picture')->store('profile_pictures', 'public') : null,
+            'status' => $request->has('status') ? 'Active' : 'Inactive',
         ]);
 
-        return redirect()->route('admin.users')->with('success', 'User added successfully!');
+        return view('admin.myprofile', compact('admin'));
     }
 
     public function update(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'firstname' => 'required|string|max:255',
+            'lastname' => 'required|string|max:255',
             'role' => 'required|string',
+            'contact_number' => 'required|string|max:20',
+            'email' => 'required|email|unique:users,email,' . $id,
+            'username' => 'required|string|unique:users,username,' . $id,
+            'password' => 'nullable|string|min:6',
+            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $user = User::findOrFail($id);
 
-        $nameParts = explode(' ', $request->name, 2);
-        $user->firstname = $nameParts[0];
-        $user->lastname = $nameParts[1] ?? '';
+        $user->firstname = $request->firstname;
+        $user->lastname = $request->lastname;
         $user->role = $request->role;
-        $user->status = $request->has('status') ? 1 : 0;
+        $user->contact_number = $request->contact_number;
+        $user->email = $request->email;
+        $user->username = $request->username;
+        $user->status = $request->has('status') ? 'Active' : 'Inactive';
+        if ($request->hasFile('profile_picture')) {
+            if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
+                Storage::disk('public')->delete($user->profile_picture);
+            }
 
+            $user->profile_picture = $request->file('profile_picture')->store('profile_pictures', 'public');
+        }
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
 
         $user->save();
+
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Profile updated successfully']);
+        }
 
         return redirect()->route('admin.users')->with('success', 'User updated successfully!');
     }
 
+    public function destroy($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+
+            if ($user->role === 'admin') {
+                return redirect()->route('admin.users')->with('error', 'Cannot delete admin user!');
+            }
+
+            $user->delete();
+
+            $user->status = 'Deleted';
+            $user->save();
+
+            return redirect()->route('admin.users')->with('success', 'User deleted successfully!');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.users')->with('error', 'Error deleting user: ' . $e->getMessage());
+        }
+    }
+
+    public function restore($id)
+    {
+        try {
+            $user = User::onlyTrashed()->findOrFail($id);
+            $user->restore();
+
+            return redirect()->route('admin.users')->with('success', 'User restored successfully!');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.users')->with('error', 'Error restoring user: ' . $e->getMessage());
+        }
+    }
+
+    public function forceDelete($id)
+    {
+        try {
+            $user = User::onlyTrashed()->findOrFail($id);
+
+            if ($user->role === 'admin') {
+                return redirect()->route('admin.users')->with('error', 'Cannot permanently delete admin user!');
+            }
+
+            $user->forceDelete();
+
+            return redirect()->route('admin.users', ['show_deleted' => true])->with('success', 'User permanently deleted!');
+        } catch (\Exception $e) {
+            return redirect()->route('admin.users')->with('error', 'Error permanently deleting user: ' . $e->getMessage());
+        }
+    }
 
     public function menu_management(Request $request)
     {
@@ -293,23 +476,41 @@ class AdminController extends Controller
     public function storeMenu(Request $request)
     {
         try {
-            $request->validate([
-                'menu_item' => 'required|string|max:255|unique:menu,menu_item,NULL,id,deleted_at,NULL',
-                'category' => 'required|in:main,add_ons',
-                'regular_price' => 'required|numeric|min:0',
-                'student_price' => 'nullable|numeric|min:0',
-                'govt_employee_price' => 'nullable|numeric|min:0',
-            ]);
+            $request->validate(
+                [
+                    'menu_item' => 'required|string|max:255|unique:menu,menu_item,NULL,id,deleted_at,NULL',
+                    'category' => 'required|in:main,add_ons',
+                    'regular_price' => 'required|numeric|min:0',
+                    'student_price' => 'nullable|numeric|min:0',
+                    'govt_employee_price' => 'nullable|numeric|min:0',
+                    'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+                ],
+                [
+                    'menu_item.required' => 'Menu item name is required.',
+                    'menu_item.unique' => 'The menu is existing.',
+                    'menu_item.max' => 'Menu item name cannot exceed 255 characters.',
+                    'category.required' => 'Category is required.',
+                    'category.in' => 'Category must be either Main or Add-ons.',
+                    'regular_price.required' => 'Regular price is required.',
+                    'regular_price.numeric' => 'Regular price must be a valid number.',
+                    'regular_price.min' => 'Regular price cannot be negative.',
+                    'student_price.numeric' => 'Student price must be a valid number.',
+                    'student_price.min' => 'Student price cannot be negative.',
+                    'govt_employee_price.numeric' => 'Government employee price must be a valid number.',
+                    'govt_employee_price.min' => 'Government employee price cannot be negative.',
+                    'image.required' => 'Menu item image is required.',
+                    'image.image' => 'The uploaded file must be an image.',
+                    'image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
+                    'image.max' => 'Image size cannot exceed 2MB.',
 
-            $existingMenu = DB::table('menu')
-                ->where('menu_item', $request->menu_item)
-                ->whereNull('deleted_at')
-                ->first();
+                ]
+            );
 
-            if ($existingMenu) {
-                return redirect()->back()
-                    ->withInput()
-                    ->withErrors(['menu_item' => 'This menu item already exists in the active menu list.']);
+            $imageName = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $image->move(public_path('storage/jeongol_menu'), $imageName);
             }
 
             DB::table('menu')->insert([
@@ -319,13 +520,18 @@ class AdminController extends Controller
                 'student_price' => $request->student_price,
                 'govt_employee_price' => $request->govt_employee_price,
                 'has_customer_discount' => false,
-                'image' => null,
+                'status' => 'Active',
+                'image' => $imageName,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
 
             return redirect()->route('admin.menu_management')
                 ->with('success', 'Menu item added successfully!');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withInput()
+                ->withErrors($e->validator);
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
@@ -347,55 +553,59 @@ class AdminController extends Controller
     public function updateMenu(Request $request, $id)
     {
         try {
-            $request->validate([
-                'menu_item' => [
-                    'required',
-                    'string',
-                    'max:255',
-                    'unique:menu,menu_item,' . $id . ',id,deleted_at,NULL'
+            $request->validate(
+                [
+                    'menu_item' => [
+                        'required',
+                        'string',
+                        'max:255',
+                        'unique:menu,menu_item,' . $id . ',id,deleted_at,NULL'
+                    ],
+                    'regular_price' => 'required|numeric|min:0',
+                    'student_price' => 'nullable|numeric|min:0',
+                    'govt_employee_price' => 'nullable|numeric|min:0',
+                    'status' => 'required|in:Active,Blocked',
+                    'category' => 'required|string|max:255',
+                    'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 ],
-                'regular_price' => 'required|numeric|min:0',
-                'student_price' => 'nullable|numeric|min:0',
-                'govt_employee_price' => 'nullable|numeric|min:0',
-                'category' => 'required|string|max:255',
-                'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            ], [
-                'menu_item.required' => 'Menu item name is required.',
-                'menu_item.unique' => 'This menu item name is already taken by another item.',
-                'menu_item.max' => 'Menu item name cannot exceed 255 characters.',
-                'regular_price.required' => 'Regular price is required.',
-                'regular_price.numeric' => 'Regular price must be a valid number.',
-                'regular_price.min' => 'Regular price cannot be negative.',
-                'student_price.numeric' => 'Student price must be a valid number.',
-                'student_price.min' => 'Student price cannot be negative.',
-                'govt_employee_price.numeric' => 'Government employee price must be a valid number.',
-                'govt_employee_price.min' => 'Government employee price cannot be negative.',
-                'category.required' => 'Category is required.',
-                'category.max' => 'Category cannot exceed 255 characters.',
-                'image.image' => 'The uploaded file must be an image.',
-                'image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
-                'image.max' => 'Image size cannot exceed 2MB.',
-            ]);
+                [
+                    'status.required' => 'Status is required.',
+                    'status.in' => 'Status must be Active or Blocked.',
+                ],
+                [
+                    'menu_item.required' => 'Menu item name is required.',
+                    'menu_item.unique' => 'This menu item name is already taken by another item.',
+                    'menu_item.max' => 'Menu item name cannot exceed 255 characters.',
+                    'regular_price.required' => 'Regular price is required.',
+                    'regular_price.numeric' => 'Regular price must be a valid number.',
+                    'regular_price.min' => 'Regular price cannot be negative.',
+                    'student_price.numeric' => 'Student price must be a valid number.',
+                    'student_price.min' => 'Student price cannot be negative.',
+                    'govt_employee_price.numeric' => 'Government employee price must be a valid number.',
+                    'govt_employee_price.min' => 'Government employee price cannot be negative.',
+                    'category.required' => 'Category is required.',
+                    'category.max' => 'Category cannot exceed 255 characters.',
+                    'image.image' => 'The uploaded file must be an image.',
+                    'image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
+                    'image.max' => 'Image size cannot exceed 2MB.',
+                ]
+            );
 
-            // Prepare update data
             $updateData = [
                 'menu_item' => $request->menu_item,
                 'regular_price' => $request->regular_price,
                 'student_price' => $request->student_price,
                 'govt_employee_price' => $request->govt_employee_price,
                 'category' => $request->category,
+                'status' => $request->status,
                 'updated_at' => now(),
             ];
 
-            // Update has_customer_discount based on discount prices
             $updateData['has_customer_discount'] = !empty($request->student_price) || !empty($request->govt_employee_price);
 
-            // Handle image upload if provided
             if ($request->hasFile('image')) {
-                // Get the current menu item to delete old image
                 $currentMenu = DB::table('menu')->where('id', $id)->first();
 
-                // Delete old image if it exists
                 if ($currentMenu && $currentMenu->image) {
                     $oldImagePath = public_path('assets/jeongol-menu/' . $currentMenu->image);
                     if (file_exists($oldImagePath)) {
@@ -403,14 +613,12 @@ class AdminController extends Controller
                     }
                 }
 
-                // Upload new image
                 $image = $request->file('image');
                 $imageName = time() . '_' . $image->getClientOriginalName();
                 $image->move(public_path('assets/jeongol-menu'), $imageName);
                 $updateData['image'] = $imageName;
             }
 
-            // Update the menu item
             DB::table('menu')->where('id', $id)->update($updateData);
 
             return redirect()->route('admin.menu_management')
@@ -630,7 +838,6 @@ class AdminController extends Controller
                 'stock_quantity.min' => 'Stock quantity cannot be negative.',
             ]);
 
-            // Check for existing stock item
             $existingStock = DB::table('stock')
                 ->where('stock_name', $request->stock_name)
                 ->whereNull('deleted_at')
@@ -730,7 +937,6 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'Stock item not found or not deleted!');
         }
 
-        // Check if stock name conflicts with existing active items
         $conflictingStock = DB::table('stock')
             ->where('stock_name', $stockItem->stock_name)
             ->whereNull('deleted_at')
@@ -759,117 +965,6 @@ class AdminController extends Controller
         DB::table('stock')->where('id', $id)->delete();
 
         return redirect()->back()->with('success', 'Stock item permanently deleted!');
-    }
-
-
-    public function reports(Request $request)
-    {
-        $fromInput = $request->input('date_from') ?? $request->input('from_date');
-        $toInput   = $request->input('date_to')   ?? $request->input('to_date');
-
-        $dateFrom = $fromInput ? Carbon::parse($fromInput)->startOfDay() : Carbon::now()->startOfDay();
-        $dateTo   = $toInput   ? Carbon::parse($toInput)->endOfDay()     : Carbon::now()->endOfDay();
-
-        // Fixed: Filter out refunded transactions and handle null timestamps
-        $totalSales = DB::table('transactions')
-            ->whereNotNull('created_at')
-            ->where('status', '!=', 'Refunded')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->sum('total') ?? 0;
-
-        // Fixed: Use completed reservations instead of just accepted
-        $totalPax = DB::table('reservations')
-            ->whereIn('status', ['Accepted', 'Completed'])
-            ->whereBetween('reservation_time', [$dateFrom, $dateTo])
-            ->sum('pax') ?? 0;
-
-        // Fixed: Use discount_total column from transactions table
-        $totalDiscounts = DB::table('transactions')
-            ->whereNotNull('created_at')
-            ->where('status', '!=', 'Refunded')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->sum('discount_total') ?? 0;
-
-        // Fixed: Get product consumption from transaction_details instead of order_details
-        $productConsumption = DB::table('transaction_details')
-            ->join('transactions', 'transaction_details.transaction_id', '=', 'transactions.id')
-            ->join('order_details', 'transaction_details.order_detail_id', '=', 'order_details.id')
-            ->join('menu', 'order_details.menu_id', '=', 'menu.id')
-            ->whereNotNull('transactions.created_at')
-            ->where('transactions.status', '!=', 'Refunded')
-            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
-            ->select(
-                'menu.menu_item',
-                'menu.category',
-                DB::raw('SUM(transaction_details.quantity) as total_quantity'),
-                DB::raw('SUM((menu.regular_price - COALESCE(transaction_details.discount_amount, 0)) * transaction_details.quantity) as total_revenue')
-            )
-            ->groupBy('menu.id', 'menu.menu_item', 'menu.category')
-            ->orderByDesc('total_quantity')
-            ->get();
-
-        // Fixed: Added proper column references and null handling
-        $sales = DB::table('transactions')
-            ->join('reservations', 'transactions.reservation_id', '=', 'reservations.id')
-            ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
-            ->leftJoin('customers', 'transactions.customer_id', '=', 'customers.id')
-            ->whereNotNull('transactions.created_at')
-            ->where('transactions.status', '!=', 'Refunded')
-            ->whereBetween('transactions.created_at', [$dateFrom, $dateTo])
-            ->select(
-                'transactions.id as id',
-                'transactions.transaction_no',
-                DB::raw('DATE(transactions.created_at) as date'),
-                DB::raw('TIME(transactions.created_at) as time'),
-                DB::raw('COALESCE(tables.table_number, "N/A") as table_number'),
-                DB::raw('COALESCE(customers.name, "Walk-in") as customer_name'),
-                'reservations.pax',
-                'transactions.subtotal',
-                'transactions.discount_total',
-                'transactions.total',
-                'transactions.payment_method'
-            )
-            ->orderBy('transactions.created_at', 'desc')
-            ->get();
-
-        // Fixed: Handle null timestamps
-        $salesTrend = DB::table('transactions')
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('SUM(total) as total'),
-                DB::raw('COUNT(*) as transaction_count')
-            )
-            ->whereNotNull('created_at')
-            ->where('status', '!=', 'Refunded')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-
-        // Additional metrics for better reporting
-        $transactionCount = DB::table('transactions')
-            ->whereNotNull('created_at')
-            ->where('status', '!=', 'Refunded')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->count();
-
-        $averageOrderValue = $transactionCount > 0 ? $totalSales / $transactionCount : 0;
-
-        $topSellingItems = $productConsumption->take(10);
-
-        return view('admin.reports', compact(
-            'dateFrom',
-            'dateTo',
-            'totalSales',
-            'totalPax',
-            'totalDiscounts',
-            'productConsumption',
-            'sales',
-            'salesTrend',
-            'transactionCount',
-            'averageOrderValue',
-            'topSellingItems'
-        ));
     }
 
     public function export(Request $request)

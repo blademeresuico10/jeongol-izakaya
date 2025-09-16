@@ -7,8 +7,8 @@
             <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Profile" style="width: 35px; height: 35px;">
         </div>
         <div class="ml-2">
-            <p class="mb-0" style="font-size: 10px;">
-                {{ Auth::user()->firstname }} {{ Auth::user()->lastname }}
+            <p class="mb-0" style="font-size: 14px;">
+                Jeongol Izakaya
             </p>
         </div>
     </a>
@@ -24,7 +24,7 @@
 
     <li @class(['nav-item', 'active' => request()->is('users*')])>
         <a class="nav-link" href="{{ url('users') }}">
-            <i class="fas fa-fw fa-user"></i>
+            <i class="fas fa-fw fa-users"></i>
             <span>Users</span>
         </a>
     </li>
@@ -81,4 +81,14 @@
         </form>
     </li>
     <hr class="sidebar-divider d-none d-md-block">
+
+    <li @class(['nav-item', 'active' => request()->is('myprofile*')]) style="position: relative;">
+        <!-- My Profile button -->
+        <a class="nav-link" href="{{ route('admin.profile') }}">
+            <i class="fas fa-fw fa-user-alt"></i>
+            <span>My Profile</span>
+        </a>
+    </li>
+
+
 </ul>

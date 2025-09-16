@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('image')->nullable();
             $table->string('category');
             $table->boolean('has_customer_discount')->default(false); 
+            $table->enum('status',['Active', 'Blocked'])->default('Active');
             $table->timestamps();
             $table->softDeletes();
         });

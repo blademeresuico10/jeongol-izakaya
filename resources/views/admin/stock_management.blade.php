@@ -246,7 +246,6 @@
 <script>
     $(document).ready(function () {
 
-        // Function to safely show modals with proper error handling
         window.showDeleteModal = function (id, itemName) {
             try {
                 const deleteItemNameElement = document.getElementById('deleteItemName');

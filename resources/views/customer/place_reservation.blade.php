@@ -452,8 +452,8 @@
             </select>
           </div>
 
-          <div class="modal-section">
-            @foreach(['main' => 'Main Menu'] as $key => $label)
+          <div class="modal-section flex flex-col gap-6 w-full">
+            @foreach(['main' => 'Main Menu', 'add_ons' => 'Add-ons', 'drinks' => 'Drinks', 'rice' => 'Rice'] as $key => $label)
             @if(isset($groupedMenu[$key]))
           <x-menu-category-grid :key="$key" :label="$label" :items="$groupedMenu[$key]" />
           @endif
@@ -564,7 +564,6 @@
           this.initializeContactValidation();
           this.initializeEventListeners();
           this.handleArrivalTimeChange();
-          this.updateTimeBasedMenuPricing();
           this.updateOrderSummary();
         });
       }
@@ -690,95 +689,6 @@
         this.elements.dateInput.max = maxDate.toISOString().split('T')[0];
       }
 
-      handleArrivalTimeChange() {
-        const { timeInput } = this.elements;
-
-        if (!timeInput) {
-          console.error('Arrival time input not found!');
-          return;
-        }
-
-        ['input', 'change'].forEach(eventType => {
-          timeInput.addEventListener(eventType, () => {
-            this.updateTimeBasedMenuPricing();
-          });
-        });
-      }
-
-      isLunchTime(arrivalTime) {
-        if (!arrivalTime) return true;
-
-        const [hours, minutes] = arrivalTime.split(':').map(Number);
-        const timeInHours = hours + (minutes / 60);
-
-        return timeInHours >= 11 && timeInHours < 17;
-      }
-
-      updateTimeBasedMenuPricing() {
-        const arrivalTime = this.elements.timeInput?.value;
-
-        if (!arrivalTime) return;
-
-        const isLunch = this.isLunchTime(arrivalTime);
-        const period = isLunch ? 'Lunch' : 'Dinner';
-
-        document.querySelectorAll('[data-is-time-based="true"]').forEach(card => {
-          const lunchPrice = parseFloat(card.dataset.lunchPrice);
-          const dinnerPrice = parseFloat(card.dataset.dinnerPrice);
-
-          if (lunchPrice && dinnerPrice) {
-            const currentPrice = isLunch ? lunchPrice : dinnerPrice;
-            const oldPrice = parseFloat(card.dataset.price);
-
-            card.dataset.price = currentPrice;
-
-            const priceElement = card.querySelector('.menu-price');
-            if (priceElement) {
-              priceElement.style.transition = 'all 0.3s ease';
-              priceElement.innerHTML = `₱${currentPrice.toFixed(2)}`;
-
-              if (oldPrice !== currentPrice) {
-                priceElement.style.backgroundColor = '#FEF3C7';
-                setTimeout(() => {
-                  priceElement.style.backgroundColor = '';
-                }, 1500);
-              }
-            }
-          }
-        });
-
-        this.updateExistingTimeBasedOrders(isLunch);
-      }
-
-      updateExistingTimeBasedOrders(isLunch) {
-        let hasUpdates = false;
-
-        Object.keys(this.selectedOrders).forEach(id => {
-          const order = this.selectedOrders[id];
-
-          if (order.isTimeBased) {
-            const menuCard = document.querySelector(`[data-id="${id}"]`);
-            if (menuCard) {
-              const lunchPrice = parseFloat(menuCard.dataset.lunchPrice);
-              const dinnerPrice = parseFloat(menuCard.dataset.dinnerPrice);
-
-              if (lunchPrice && dinnerPrice) {
-                const newPrice = isLunch ? lunchPrice : dinnerPrice;
-
-                if (order.price !== newPrice) {
-                  order.price = newPrice;
-                  order.total = order.quantity * newPrice;
-                  hasUpdates = true;
-                }
-              }
-            }
-          }
-        });
-
-        if (hasUpdates) {
-          this.updateOrderSummary();
-        }
-      }
 
       selectMenuItem(card) {
         const img = card.querySelector('img');
@@ -789,7 +699,6 @@
         const id = card.dataset.id;
         const name = card.dataset.name;
         const category = card.dataset.category;
-        const isTimeBased = card.dataset.isTimeBased === 'true';
         const price = parseFloat(card.dataset.price);
 
         if (!this.selectedOrders[id]) {
@@ -797,7 +706,6 @@
             id, name, category, price,
             quantity: 1,
             total: price,
-            isTimeBased: isTimeBased
           };
         } else {
           this.selectedOrders[id].quantity += 1;
@@ -1319,12 +1227,6 @@
       reservationSystem.selectMenuItem(card);
     };
 
-    window.testTimeLogic = function (timeString) {
-      console.log('=== TESTING TIME:', timeString, '===');
-      const result = reservationSystem.isLunchTime(timeString);
-      console.log('Result:', result ? 'LUNCH' : 'DINNER');
-      return result;
-    };
   </script>
 </body>
 

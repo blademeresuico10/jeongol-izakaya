@@ -28,20 +28,20 @@ class LoginController extends Controller
         Auth::login($user); 
         $request->session()->regenerate(); 
             
-            if ($user->role === 'admin') {
+            if ($user->role === 'Admin') {
                 return redirect()->route('admin.home');
             } 
 
-            else if ($user->role === 'receptionist') {
+            else if ($user->role === 'Receptionist') {
                 
                 return redirect()->route('receptionist.home'); 
             }
 
-            else if ($user->role === 'kitchen-staff') {
+            else if ($user->role === 'Kitchen Staff') {
                 return redirect()->route('kitchen.home');
             }
 
-            else if ($user->role === 'cashier') {
+            else if ($user->role === 'Cashier') {
                 return redirect()->route('cashier.home');
             }
 
