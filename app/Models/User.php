@@ -34,4 +34,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(transaction::class, 'cashier_id');
     }
+
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed', 
+    ];
 }

@@ -68,18 +68,18 @@
                                     <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-sm">
                                         <div class="flex items-center space-x-3">
                                             <div class="w-6 h-2 rounded-sm" style="background-color:
-                                                                                                @if($stock['quantity'] >= 60) green
-                                                                                                @elseif($stock['quantity'] >= 30) orange
-                                                                                                @else red
-                                                                                                @endif;"></div>
+                                                                                                            @if($stock['quantity'] >= 60) green
+                                                                                                            @elseif($stock['quantity'] >= 30) orange
+                                                                                                            @else red
+                                                                                                            @endif;"></div>
                                             <span class="text-gray-800 font-medium">{{ $stock['name'] }}</span>
                                         </div>
                                         <div>
                                             <span class="text-sm font-semibold
-                                                                                                @if($stock['quantity'] >= 60) text-green-600
-                                                                                                @elseif($stock['quantity'] >= 30) text-orange-500
-                                                                                                @else text-red-600
-                                                                                                @endif">
+                                                                                                            @if($stock['quantity'] >= 60) text-green-600
+                                                                                                            @elseif($stock['quantity'] >= 30) text-orange-500
+                                                                                                            @else text-red-600
+                                                                                                            @endif">
                                                 @if($stock['quantity'] >= 60) Sufficient
                                                 @elseif($stock['quantity'] >= 30) Low
                                                 @else Critical
@@ -107,12 +107,13 @@
                                 <div class="flex items-center space-x-3">
                                     <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                                         <span class="text-white text-sm font-medium">
-                                            {{ strtoupper(substr($transaction->cashier->firstname, 0, 1)) }}
-                                            {{ strtoupper(substr($transaction->cashier->lastname, 0, 1)) }}
+                                            {{ strtoupper(substr($transaction->user->firstname ?? 'U', 0, 1)) }}
+                                            {{ strtoupper(substr($transaction->user->lastname ?? 'N', 0, 1)) }}
                                         </span>
                                     </div>
                                     <span class="text-gray-800 font-medium">
-                                        {{ $transaction->cashier->firstname }} {{ $transaction->cashier->lastname }}
+                                        {{ $transaction->user->firstname ?? 'Unknown' }}
+                                        {{ $transaction->user->lastname ?? '' }}
                                     </span>
                                 </div>
                                 <span class="text-gray-900 font-semibold">

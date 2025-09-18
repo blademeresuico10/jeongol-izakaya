@@ -44,17 +44,17 @@
 
     <div class="flex ml-4">
       @foreach ($stock as $item)
-        @php
-        $qty = $item->stock_quantity;
-        $statusColor = $qty >= 60 ? 'bg-success' :
-        ($qty >= 30 ? 'bg-warning' : 'bg-danger');
-      @endphp
-        <div class="flex flex-col items-center mx-3">
-        <div class="progress-vertical mb-1">
-          <div class="progress-bar-vertical {{ $statusColor }}" style="height: {{ $qty }}%;"></div>
-        </div>
-        <div class="font-medium">{{ $item->stock_name }}</div>
-        </div>
+      @php
+      $qty = $item->stock_quantity;
+      $statusColor = $qty >= 60 ? 'bg-success' :
+      ($qty >= 30 ? 'bg-warning' : 'bg-danger');
+    @endphp
+      <div class="flex flex-col items-center mx-3">
+      <div class="progress-vertical mb-1">
+        <div class="progress-bar-vertical {{ $statusColor }}" style="height: {{ $qty }}%;"></div>
+      </div>
+      <div class="font-medium">{{ $item->stock_name }}</div>
+      </div>
     @endforeach
     </div>
 
@@ -102,103 +102,103 @@
       </thead>
       <tbody class="align-middle">
         @foreach ($reservationGroups as $reservationId => $group)
-        <tr>
-        <td class="border border-gray-300 px-4 py-2">{{ $group->first()->table_id }}</td>
-        <td class="border border-gray-300 px-4 py-2">{{ $group->first()->pax }}</td>
-        <td class="border border-gray-300 px-4 py-2">
+      <tr>
+      <td class="border border-gray-300 px-4 py-2">{{ $group->first()->table_id }}</td>
+      <td class="border border-gray-300 px-4 py-2">{{ $group->first()->pax }}</td>
+      <td class="border border-gray-300 px-4 py-2">
         @php
       $orders = $group->map(function ($r) {
-        if (!$r->menu_item)
-        return null;
-        $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
-        return $r->quantity . 'x ' . $cleanName;
+      if (!$r->menu_item)
+      return null;
+      $cleanName = str_replace([' Lunch', ' Dinner'], '', $r->menu_item);
+      return $r->quantity . 'x ' . $cleanName;
       })->filter()->implode(', ');
       @endphp
         {{ $orders ?: 'No orders' }}
-        </td>
-        <td class="border border-gray-300 px-4 py-2">
+      </td>
+      <td class="border border-gray-300 px-4 py-2">
         @php
       $notes = $group->pluck('order_notes')->filter()->unique()->implode(', ');
       @endphp
         {{ $notes ?: 'None' }}
-        </td>
-        <td class="border border-gray-300 px-4 py-2">
+      </td>
+      <td class="border border-gray-300 px-4 py-2">
         {{ \Carbon\Carbon::parse($group->first()->reservation_time)->format('h:i A') }}
-        </td>
-        <td class="border border-gray-300 px-4 py-2">
+      </td>
+      <td class="border border-gray-300 px-4 py-2">
         @php
       $reservationId = $group->first()->reservation_id;
 
       $recentChanges = \App\Models\OrderDetail::where('reservation_id', $reservationId)
-        ->whereNotNull('change_type')
-        ->orderBy('change_timestamp', 'desc')
-        ->limit(5)
-        ->get()
-        ->map(function ($order) {
-        $menu = \App\Models\menu::find($order->menu_id);
-        $menuName = $menu ? str_replace([' Lunch', ' Dinner'], '', $menu->menu_item) : 'Unknown Item';
+      ->whereNotNull('change_type')
+      ->orderBy('change_timestamp', 'desc')
+      ->limit(5)
+      ->get()
+      ->map(function ($order) {
+      $menu = \App\Models\menu::find($order->menu_id);
+      $menuName = $menu ? str_replace([' Lunch', ' Dinner'], '', $menu->menu_item) : 'Unknown Item';
 
-        $quantity = $order->quantity;
-        if ($order->change_type === 'addition' && $order->previous_quantity) {
-        $quantity = $order->quantity - $order->previous_quantity;
-        } else if ($order->change_type === 'reduction' && $order->previous_quantity) {
-        $quantity = $order->previous_quantity - $order->quantity;
-        } else if ($order->change_type === 'removal') {
-        $quantity = $order->quantity;
-        }
+      $quantity = $order->quantity;
+      if ($order->change_type === 'addition' && $order->previous_quantity) {
+      $quantity = $order->quantity - $order->previous_quantity;
+      } else if ($order->change_type === 'reduction' && $order->previous_quantity) {
+      $quantity = $order->previous_quantity - $order->quantity;
+      } else if ($order->change_type === 'removal') {
+      $quantity = $order->quantity;
+      }
 
-        return [
-        'type' => $order->change_type,
-        'menu_name' => $menuName,
-        'quantity' => $quantity,
-        'timestamp' => $order->change_timestamp ? $order->change_timestamp->format('h:i A') : '',
-        ];
-        });
+      return [
+      'type' => $order->change_type,
+      'menu_name' => $menuName,
+      'quantity' => $quantity,
+      'timestamp' => $order->change_timestamp ? $order->change_timestamp->format('h:i A') : '',
+      ];
+      });
       @endphp
 
         @if($recentChanges->count() > 0)
-        <div class="space-y-1">
-        @foreach($recentChanges as $change)
-        <div class="flex items-start justify-between text-sm">
-        <div class="flex items-start space-x-1">
-        @if($change['type'] === 'addition')
-        <span class="text-green-600 font-bold text-xs mt-0.5">+</span>
-        <div class="text-green-600 font-semibold">
-        {{ $change['quantity'] }}x {{ $change['menu_name'] }}
-        </div>
-        @elseif($change['type'] === 'reduction')
-        <span class="text-orange-600 font-bold text-xs mt-0.5">-</span>
-        <div class="text-orange-600 font-semibold">
-        {{ $change['quantity'] }}x {{ $change['menu_name'] }}
-        </div>
-        @elseif($change['type'] === 'removal')
-        <span class="text-red-600 font-bold text-xs mt-0.5">×</span>
-        <div class="text-red-600 font-semibold">
-        {{ $change['quantity'] }}x {{ $change['menu_name'] }}
-        </div>
-        @elseif($change['type'] === 'modification')
-        <span class="text-blue-600 font-bold text-xs mt-0.5">~</span>
-        <div class="text-blue-600 font-semibold">
-        Modified {{ $change['menu_name'] }}
-        </div>
-        @endif
-        </div>
-
-        @if($change['timestamp'])
-        <div class="text-xs text-gray-500 ml-2 flex-shrink-0">
-        {{ $change['timestamp'] }}
-        </div>
-        @endif
-        </div>
-      @endforeach
-        </div>
-      @else
-        <div class="text-center"> 
-        <span class="text-gray-400 text-sm">No recent changes</span>
-        </div>
+      <div class="space-y-1">
+      @foreach($recentChanges as $change)
+      <div class="flex items-start justify-between text-sm">
+      <div class="flex items-start space-x-1">
+      @if($change['type'] === 'addition')
+      <span class="text-green-600 font-bold text-xs mt-0.5">+</span>
+      <div class="text-green-600 font-semibold">
+      {{ $change['quantity'] }}x {{ $change['menu_name'] }}
+      </div>
+      @elseif($change['type'] === 'reduction')
+      <span class="text-orange-600 font-bold text-xs mt-0.5">-</span>
+      <div class="text-orange-600 font-semibold">
+      {{ $change['quantity'] }}x {{ $change['menu_name'] }}
+      </div>
+      @elseif($change['type'] === 'removal')
+      <span class="text-red-600 font-bold text-xs mt-0.5">×</span>
+      <div class="text-red-600 font-semibold">
+      {{ $change['quantity'] }}x {{ $change['menu_name'] }}
+      </div>
+      @elseif($change['type'] === 'modification')
+      <span class="text-blue-600 font-bold text-xs mt-0.5">~</span>
+      <div class="text-blue-600 font-semibold">
+      Modified {{ $change['menu_name'] }}
+      </div>
       @endif
-        </td>
-        </tr>
+      </div>
+
+      @if($change['timestamp'])
+      <div class="text-xs text-gray-500 ml-2 flex-shrink-0">
+      {{ $change['timestamp'] }}
+      </div>
+      @endif
+      </div>
+      @endforeach
+      </div>
+      @else
+      <div class="text-center">
+      <span class="text-gray-400 text-sm">No recent changes</span>
+      </div>
+      @endif
+      </td>
+      </tr>
       @endforeach
       </tbody>
       </table>
@@ -245,7 +245,7 @@
             $qty = $item->stock_quantity;
             $statusColor = $qty >= 60 ? 'bg-success' :
             ($qty >= 30 ? 'bg-warning' : 'bg-danger');
-          @endphp
+            @endphp
                 <tr>
                 <td class="border border-gray-300 px-4 py-2">{{ $item->stock_name }}</td>
                 <td class="border border-gray-300 px-4 py-2">
@@ -317,6 +317,12 @@
         });
       });
     });
+
+    window.onload = function () {
+      setInterval(function () {
+        location.reload();
+      }, 5000);
+    };
   </script>
 
 </body>

@@ -13,15 +13,20 @@ return new class extends Migration
             $table->id();
             $table->string('firstname');
             $table->string('lastname');
-            $table->enum('role',[ 'Admin', 'Receptionist', 'Cashier', 'Kitchen Staff']);
+            $table->enum('role', ['Admin', 'Receptionist', 'Cashier', 'Kitchen Staff']);
             $table->string('contact_number');
-            $table->string('email')->nullable();
+            $table->string('email')->nullable()->unique(); 
             $table->string('username')->unique();
+            $table->timestamp('email_verified_at')->nullable(); 
             $table->string('password');
             $table->enum('status', ['Active', 'Inactive', 'Deleted'])->default('Active');
             $table->string('profile_picture')->nullable();
+            $table->rememberToken(); 
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index(['email', 'role']); 
+            $table->index('status'); 
         });
     }
 

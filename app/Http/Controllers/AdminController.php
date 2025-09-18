@@ -341,13 +341,20 @@ class AdminController extends Controller
         $request->validate([
             'firstname' => 'required|string|max:255',
             'lastname' => 'required|string|max:255',
-            'role' => 'required|string',
-            'contact_number' => 'required|string|max:20',
+            'role' => 'required|string|in:Admin,Receptionist,Cashier,Kitchen Staff',
+            'contact_number' => 'required|string|max:11',
             'username' => 'required|string|unique:users,username',
             'email' => 'nullable|email|unique:users,email',
-            'password' => 'required|string|min:6|confirmed',
+            'password' => 'required|string|min:8|confirmed',
             'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        $imageName = null;
+            if ($request->hasFile('image')) {
+                $image = $request->file('image');
+                $imageName = time() . '_' . $image->getClientOriginalName();
+                $image->move(public_path('storage/jeongol_menu'), $imageName);
+            }
 
         User::create([
             'firstname' => $request->firstname,
@@ -361,7 +368,7 @@ class AdminController extends Controller
             'status' => $request->has('status') ? 'Active' : 'Inactive',
         ]);
 
-        return view('admin.myprofile', compact('admin'));
+        return redirect()->route('admin.users')->with('success', 'User added successfully!');
     }
 
     public function update(Request $request, $id)

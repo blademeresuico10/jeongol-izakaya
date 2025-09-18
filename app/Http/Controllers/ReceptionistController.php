@@ -87,7 +87,6 @@ class ReceptionistController extends Controller
                 return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
 
-            // ✅ Conflict check that ignores completed reservations
             $conflict = DB::table('reservations')
                 ->where('table_id', $validated['table_id'])
                 ->where(function ($query) use ($reservedDateTime, $endDateTime) {
@@ -286,7 +285,7 @@ class ReceptionistController extends Controller
 
         return view('receptionist.modify_orders', compact('groupedOrders', 'menuItems'));
     }
-    
+
     public function updateOrder(Request $request)
     {
         $request->validate([
@@ -556,9 +555,10 @@ class ReceptionistController extends Controller
     public function showPayment($id)
     {
         try {
-            $reservation = Reservation::with('payment')->findOrFail($id);
+            $reservation = Reservation::with('payment', 'customer')->findOrFail($id);
 
             return response()->json([
+                'name' => optional($reservation->customer)->name ?? 'Unknown',
                 'table_id' => $reservation->table_id,
                 'advance_payment' => $reservation->advance_payment,
                 'payment' => $reservation->payment,
@@ -600,10 +600,12 @@ class ReceptionistController extends Controller
 
             $reservation = \App\Models\reservation::find($data['reservation_id'] ?? null);
 
+
+
             $notifications[] = [
                 'id'             => $n->id,
                 'reservation_id' => $data['reservation_id'] ?? null,
-                'name'           => $data['customer_name']
+                'name'           => $data['name']
                     ?? $reservation?->customer?->name
                     ?? 'Unknown',
                 'message'        => $data['message'] ?? '',

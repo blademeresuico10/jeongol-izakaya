@@ -95,10 +95,13 @@
             <button id="closePaymentBtn"
               class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 font-bold text-xl">×</button>
             <h2 class="text-lg font-bold mb-4">Payment Details</h2>
+            <p><strong>Name</strong> <span id="customername">N/A</span></p>
             <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
             <div>
               <p><strong>Transaction Receipt</strong></p>
-              <img id="paymentProof" src="" class="mb-2 w-full object-contain" style="display:none;">
+              <img id="paymentProof"
+                class="mb-2 w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                style="display:none;" onclick="openImageModal(this.src)">
             </div>
             <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
             <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
@@ -633,13 +636,14 @@
           const paymentProof = document.getElementById('paymentProof');
           if (paymentProof) {
             if (data.payment?.proof_path) {
-              paymentProof.src = `/file-serve/${data.payment.proof_path}`;
+              paymentProof.src = `/storage/${data.payment.proof_path}`;
               paymentProof.style.display = 'block';
             } else {
               paymentProof.style.display = 'none';
             }
           }
 
+          this.updateElementText('customername', data.name || 'N/A')
           this.updateElementText('tableNumber', data.table_id || 'N/A');
           this.updateElementText('requiredAmount', data.advance_payment || 'N/A');
           this.updateElementText('paxCount', data.pax || 'N/A');
@@ -651,6 +655,8 @@
             const shouldHideButtons = reservationStatus === "Accepted" || reservationStatus === "Rejected";
             actionButtons.style.display = shouldHideButtons ? "none" : "flex";
           }
+          console.log("Payment modal data:", data);
+
         }
 
         updateElementText(elementId, text) {
@@ -1206,6 +1212,34 @@
           });
         }
       }
+
+      function openImageModal(imageSrc) {
+        let modal = document.getElementById('imageModal');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'imageModal';
+          modal.innerHTML = `
+            <div class="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50" onclick="closeImageModal()">
+                <div class="relative max-w-4xl max-h-[90vh] p-4">
+                    <button onclick="closeImageModal()" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70">×</button>
+                    <img id="modalImage" src="" class="max-w-full max-h-full object-contain rounded border shadow-lg bg-white p-4">
+                </div>
+            </div>
+        `;
+          document.body.appendChild(modal);
+        }
+
+        document.getElementById('modalImage').src = imageSrc;
+        modal.style.display = 'block';
+      }
+
+      function closeImageModal() {
+        const modal = document.getElementById('imageModal');
+        if (modal) {
+          modal.style.display = 'none';
+        }
+      }
+
 
       const dashboard = new ReceptionistDashboard();
 

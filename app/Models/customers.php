@@ -33,4 +33,5 @@ class customers extends Model
     {
         return $this->hasMany(transaction::class);
     }
+    
 }

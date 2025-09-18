@@ -104,7 +104,7 @@
                     <!-- Sales Reports -->
                     <div class="flex items-center justify-between bg-white p-4 rounded shadow">
                         <button data-open="sales"
-                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded hover:bg-blue-600 hover:text-white transition">
+                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded ">
                             <i class="fas fa-chart-line"></i>
                             <span>Sales Reports</span>
                         </button>
@@ -123,7 +123,7 @@
                     <!-- Revenue Report -->
                     <div class="flex items-center justify-between bg-white p-4 rounded shadow">
                         <button data-open="revenue"
-                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded hover:bg-green-600 hover:text-white transition">
+                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded ">
                             <i class="fas fa-file-invoice-dollar"></i>
                             <span>Revenue Reports</span>
                         </button>
@@ -142,7 +142,7 @@
                     <!-- Reservation Reports -->
                     <div class="flex items-center justify-between bg-white p-4 rounded shadow">
                         <button data-open="reservation"
-                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded hover:bg-yellow-600 hover:text-white transition">
+                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded ">
                             <i class="fas fa-book"></i>
                             <span>Reservation Reports</span>
                         </button>
@@ -161,9 +161,9 @@
                     <!-- Staff Reports -->
                     <div class="flex items-center justify-between bg-white p-4 rounded shadow">
                         <button data-open="staff"
-                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded hover:bg-purple-600 hover:text-white transition">
+                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded ">
                             <i class="fas fa-user-tie"></i>
-                            <span>Cashier Reports</span>
+                            <span>Transaction Reports</span>
                         </button>
                         <div class="flex items-center space-x-2">
                             <label class="text-sm font-medium text-gray-700">Filter:</label>
@@ -180,7 +180,7 @@
                     <!-- Stock Reports -->
                     <div class="flex items-center justify-between bg-white p-4 rounded shadow">
                         <button data-open="stock"
-                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded hover:bg-red-600 hover:text-white transition">
+                            class="flex items-center space-x-4 bg-transparent text-blue-600 py-2 px-3 rounded">
                             <i class="fas fa-box"></i>
                             <span>Stock Reports</span>
                         </button>

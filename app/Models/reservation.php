@@ -40,5 +40,8 @@ class Reservation extends Model
     {
         return $this->belongsTo(\App\Models\table::class);
     }
-
+    public function transactions()
+    {
+        return $this->hasMany(transaction::class);
+    }
 }

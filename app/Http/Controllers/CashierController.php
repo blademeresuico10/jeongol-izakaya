@@ -107,7 +107,7 @@ class CashierController extends Controller
             ->select(
                 'reservations.id as reservation_id',
                 'reservations.reservation_time',
-                'reservations.advance_payment', 
+                'reservations.advance_payment',
                 'customers.name as customer_name',
                 'customers.contact_number',
                 'customers.id_type',
@@ -150,7 +150,7 @@ class CashierController extends Controller
             'customer_id'      => $reservation->customer_id,
             'pax'              => $reservation->pax,
             'reservation_time' => $reservation->reservation_time,
-            'advance_payment'  => floatval($reservation->advance_payment ?? 0), 
+            'advance_payment'  => floatval($reservation->advance_payment ?? 0),
             'orders'           => $orders
         ]);
     }
@@ -303,8 +303,8 @@ class CashierController extends Controller
                 'reservation_id' => $reservation->id,
                 'customer_id'    => $mainCustomer->id,
                 'cashier_id'     => Auth::id(),
-                'created_at'     => now(), 
-                'updated_at'     => now(), 
+                'created_at'     => now(),
+                'updated_at'     => now(),
             ];
 
             $transactionColumns = DB::getSchemaBuilder()->getColumnListing('transactions');
@@ -323,7 +323,7 @@ class CashierController extends Controller
 
             DB::table('transactions')->where('id', $transactionId)->update([
                 'transaction_no' => $transactionNo,
-                'updated_at'     => now(), 
+                'updated_at'     => now(),
             ]);
 
             foreach ($processedOrders as $order) {
@@ -614,6 +614,28 @@ class CashierController extends Controller
                 'message' => 'Printing failed: ' . $e->getMessage()
             ]);
         }
+    }
+
+    public function updateAdvance(Request $request, $id)
+    {
+        $request->validate([
+            'advance_payment' => 'required|numeric|min:0',
+        ]);
+
+        $reservation = \App\Models\Reservation::with('payment')->findOrFail($id);
+
+        $reservation->advance_payment = $request->advance_payment;
+        $reservation->save();
+
+        if ($reservation->payment) {
+            $reservation->payment->amount = $request->advance_payment;
+            $reservation->payment->save();
+        }
+
+        return response()->json([
+            'success' => true,
+            'newAmountDue' => $reservation->total - $reservation->advance_payment,
+        ]);
     }
 
     private function initializePrinter()

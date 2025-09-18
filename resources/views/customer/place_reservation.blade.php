@@ -391,9 +391,8 @@
     </div>
   @endforeach
   </div>
-
   <div id="tableModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-lg max-h-[80vh] overflow-y-auto">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
       <div class="p-3">
         <div>
           <div class="flex items-center justify-between mb-4">
@@ -446,11 +445,12 @@
           </div>
 
           <div>
-            <label for="reservedTime">Reserved Time</label>
-            <select id="reservedTime" name="reserved_time" required class="w-full border rounded p-2">
-              <option value="">Select time slot</option>
+            <label for="unavailableTime">Unavailable Time</label>
+            <select id="unavailableTime" name="unavailable_time" required class="w-full border rounded p-2">
+              <option value="">Select unavailable time</option>
             </select>
           </div>
+
 
           <div class="modal-section flex flex-col gap-6 w-full">
             @foreach(['main' => 'Main Menu', 'add_ons' => 'Add-ons', 'drinks' => 'Drinks', 'rice' => 'Rice'] as $key => $label)
@@ -563,8 +563,9 @@
           this.initializeDateTimeInputs();
           this.initializeContactValidation();
           this.initializeEventListeners();
-          this.handleArrivalTimeChange();
           this.updateOrderSummary();
+          this.loadUnavailableTimes();
+
         });
       }
 
@@ -670,6 +671,34 @@
             document.getElementById(`tab-${tabName}`)?.classList.remove('hidden');
           });
         });
+      }
+
+      async loadUnavailableTimes() {
+        try {
+          const response = await fetch('/reservations/unavailable-times');
+          if (!response.ok) throw new Error("Failed to fetch unavailable times");
+
+          const reservations = await response.json();
+          const select = document.getElementById('unavailableTime');
+
+          select.innerHTML = '<option value="">Select unavailable time</option>';
+
+          reservations.forEach(r => {
+            const option = document.createElement('option');
+            const start = new Date(r.reservation_time);
+            const end = new Date(r.reservation_end_time);
+
+            const startTime = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            const endTime = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+            option.value = r.id;
+            option.textContent = `${startTime} - ${endTime}`;
+
+            select.appendChild(option);
+          });
+        } catch (err) {
+          console.error("Error loading unavailable times:", err);
+        }
       }
 
       initializeDateTimeInputs() {

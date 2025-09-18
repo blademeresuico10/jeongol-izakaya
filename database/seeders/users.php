@@ -17,7 +17,7 @@ class users extends Seeder
                 'role' => 'Admin',
                 'contact_number' => '09171234567',
                 'username' => 'keith',
-                'email' => 'johncanon@gmail.com',
+                'email' => 'emsoyalarcon@gmail.com',
                 'password' => Hash::make('q12345'),
                 'status' => 'Active',
             ],

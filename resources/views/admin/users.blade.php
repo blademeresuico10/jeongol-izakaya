@@ -44,15 +44,15 @@
                                         @forelse ($users as $user)
                                             <tr>
                                                 <td>
-                                                    @if($user->profile_picture)
-                                                        <img src="{{ asset('storage/' . $user->profile_picture) }}" 
-                                                            alt="Profile Picture" 
-                                                            width="130" height="130" 
-                                                            style="object-fit: cover; border-radius: 10px;">
-                                                        @else
-                                                        <span class="text-muted">No Picture</span>
-                                                    @endif
-                                                </td>
+                                                @if($user->profile_picture)
+                                                    <img src="{{ asset('storage/' . $user->profile_picture) }}" 
+                                                        alt="Profile Picture" 
+                                                        width="130" height="130" 
+                                                        style="object-fit: cover; border-radius: 10px;">
+                                                @else
+                                                    <span class="text-muted">No Picture</span>
+                                                @endif
+                                            </td>
 
                                                 <td>{{ $user->firstname }} {{ $user->lastname }}</td>
                                                 <td>
@@ -141,10 +141,10 @@
                                                     <label>Role</label>
                                                     <select name="role" class="form-control" required>
                                                         <option value="">Select Role</option>
-                                                        <option value="manager">Manager</option>
-                                                        <option value="receptionist">Receptionist</option>
-                                                        <option value="cashier">Cashier</option>
-                                                        <option value="kitchen-staff">Kitchen Staff</option>
+                                                        <option value="Manager">Manager</option>
+                                                        <option value="Receptionist">Receptionist</option>
+                                                        <option value="Cashier">Cashier</option>
+                                                        <option value="Kitchen Staff">Kitchen Staff</option>
                                                     </select>
                                                 </div>
                                                 <div class="col-md-6">
@@ -210,7 +210,7 @@
                                 
                                 <div class="mb-3 text-center">
                                     @if($user->profile_picture)
-                                        <img src="{{ asset('storage/' . $user->profile_picture) }}" 
+                                        <img src="{{ asset('public/storage/' . $user->profile_pictures) }}" 
                                             alt="Profile Picture"
                                             width="100" height="100"
                                             style="object-fit: cover; border-radius: 50%;">

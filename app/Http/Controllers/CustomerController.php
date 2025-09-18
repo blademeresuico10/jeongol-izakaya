@@ -185,7 +185,7 @@ class CustomerController extends Controller
                     ]);
                 }
 
-                foreach (\App\Models\User::whereIn('role', ['receptionist', 'cashier'])->get() as $user) {
+                foreach (\App\Models\User::whereIn('role', ['receptionist'])->get() as $user) {
                     $user->notify(new \App\Notifications\ReservationPaid($reservation));
                 }
 
@@ -216,6 +216,16 @@ class CustomerController extends Controller
                 ], 500);
             }
         });
+    }
+
+    public function getUnavailableTimes()
+    {
+        $reservations = \App\Models\reservation::select('id', 'reservation_time', 'reservation_end_time')
+            ->whereIn('status', ['Pending', 'Accepted']) 
+            ->orderBy('reservation_time', 'asc')
+            ->get();
+
+        return response()->json($reservations);
     }
 
 

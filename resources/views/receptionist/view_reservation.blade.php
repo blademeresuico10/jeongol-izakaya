@@ -6,7 +6,9 @@
   <title>Reservations</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
+  @vite('resources/css/app.css')
 </head>
+
 
 <body class="bg-gray-100 min-h-screen">
   <div class="reservation-section">
@@ -16,21 +18,21 @@
 
     @php
     $reservationGroups = $reservations->groupBy('reservation_id');
-    @endphp
+  @endphp
 
     <div class="flex justify-center mb-6 px-4">
       <div class="w-full max-w-4xl">
         <div class="flex bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <button onclick="showTab('pending')" id="pending-tab" 
-                  class="tab-button flex-1 py-3 px-6 text-center font-semibold bg-blue-600 text-white">
+          <button onclick="showTab('pending')" id="pending-tab"
+            class="tab-button flex-1 py-3 px-6 text-center font-semibold bg-blue-600 text-white">
             Pending
           </button>
-          <button onclick="showTab('finished')" id="finished-tab" 
-                  class="tab-button flex-1 py-3 px-6 text-center font-semibold bg-gray-200 text-gray-700">
+          <button onclick="showTab('finished')" id="finished-tab"
+            class="tab-button flex-1 py-3 px-6 text-center font-semibold bg-gray-200 text-gray-700">
             Finished
           </button>
-          <button onclick="showTab('cancelled')" id="cancelled-tab" 
-                  class="tab-button flex-1 py-3 px-6 text-center font-semibold bg-gray-200 text-gray-700">
+          <button onclick="showTab('cancelled')" id="cancelled-tab"
+            class="tab-button flex-1 py-3 px-6 text-center font-semibold bg-gray-200 text-gray-700">
             Cancelled
           </button>
         </div>
@@ -54,30 +56,30 @@
         $orderTime = \Carbon\Carbon::parse($first->reservation_time)->format('h:i A');
 
         if ($first->status === 'Rejected') {
-          $statusText = 'Cancelled';
-          $statusClasses = 'bg-red-100 text-red-700';
-          $tabClass = 'cancelled-item';
+        $statusText = 'Cancelled';
+        $statusClasses = 'bg-red-100 text-red-700';
+        $tabClass = 'cancelled-item';
         } elseif ($first->status === 'Pending') {
-          $statusText = 'Pending';
-          $statusClasses = 'bg-yellow-100 text-yellow-700';
-          $tabClass = 'pending-item';
-        } elseif ($first->status === 'Accepted') {
-          $isFinished = $servedTransactions->contains($first->reservation_id);
-          if ($isFinished) {
-            $statusText = 'Finished';
-            $statusClasses = 'bg-green-100 text-green-700';
-            $tabClass = 'finished-item';
-          } else {
-            $statusText = 'Active';
-            $statusClasses = 'bg-orange-100 text-orange-700';
-            $tabClass = 'pending-item';
-          }
+        $statusText = 'Pending';
+        $statusClasses = 'bg-yellow-100 text-yellow-700';
+        $tabClass = 'pending-item';
+        } elseif ($first->status === 'Completed') {
+        $isFinished = $servedTransactions->contains($first->reservation_id);
+        if ($isFinished) {
+          $statusText = 'Finished';
+          $statusClasses = 'bg-green-100 text-green-700';
+          $tabClass = 'finished-item';
         } else {
-          $statusText = 'Unknown';
-          $statusClasses = 'bg-gray-100 text-gray-700';
+          $statusText = 'Active';
+          $statusClasses = 'bg-orange-100 text-orange-700';
           $tabClass = 'pending-item';
         }
-        @endphp
+        } else {
+        $statusText = 'Unknown';
+        $statusClasses = 'bg-gray-100 text-gray-700';
+        $tabClass = 'pending-item';
+        }
+      @endphp
 
         <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden {{ $tabClass }}">
           <div class="reservation-header cursor-pointer p-4 hover:bg-gray-50 transition-colors duration-200"
@@ -201,7 +203,6 @@
         </path>
         </svg>
         <h3 class="text-lg font-semibold text-gray-600 mb-2">No Reservations</h3>
-        <p class="text-gray-500">There are no reservations to display at the moment.</p>
       </div>
     @endif
       </div>
@@ -224,19 +225,19 @@
       document.querySelectorAll('.tab-button').forEach(button => {
         button.className = 'tab-button flex-1 py-3 px-6 text-center font-semibold bg-gray-200 text-gray-700';
       });
-      
+
       document.getElementById(tabName + '-tab').className = 'tab-button flex-1 py-3 px-6 text-center font-semibold bg-blue-600 text-white';
-      
+
       document.querySelectorAll('.pending-item, .finished-item, .cancelled-item').forEach(item => {
         item.style.display = 'none';
       });
-      
+
       document.querySelectorAll('.' + tabName + '-item').forEach(item => {
         item.style.display = 'block';
       });
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
       showTab('pending');
     });
 
