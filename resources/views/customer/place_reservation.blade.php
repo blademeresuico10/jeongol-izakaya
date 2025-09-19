@@ -445,9 +445,9 @@
           </div>
 
           <div>
-            <label for="unavailableTime">Unavailable Time</label>
+            <label for="unavailableTime">Occupied Time</label>
             <select id="unavailableTime" name="unavailable_time" required class="w-full border rounded p-2">
-              <option value="">Select unavailable time</option>
+              <option value="" selected>View Occupied Time</option>
             </select>
           </div>
 
