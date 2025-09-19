@@ -21,11 +21,7 @@ class LoginController extends Controller
             return $this->redirectBasedOnRole(Auth::user());
         }
 
-        return response()
-            ->view('staff_login')
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+        return view('staff_login');
     }
 
     public function login(Request $request)
@@ -75,18 +71,14 @@ class LoginController extends Controller
     public function adminLogin()
     {
         if (Auth::check() && Auth::user()->role === 'Admin') {
-            return redirect()->route('admin.home');
+            return redirect()->route('home');
         }
 
         if (Auth::check()) {
             Auth::logout();
         }
 
-        return response()
-            ->view('admin_login')
-            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-            ->header('Pragma', 'no-cache')
-            ->header('Expires', '0');
+        return view('admin_login');
     }
 
     public function adminLoginSubmit(Request $request)
@@ -95,7 +87,7 @@ class LoginController extends Controller
 
         $key = $this->throttleKey($request, 'admin');
 
-        if (RateLimiter::tooManyAttempts($key, 3)) {
+        if (RateLimiter::tooManyAttempts($key, 3)) { // Stricter for admin
             $seconds = RateLimiter::availableIn($key);
             throw ValidationException::withMessages([
                 'username' => "Too many admin login attempts. Please try again in {$seconds} seconds.",
@@ -108,18 +100,18 @@ class LoginController extends Controller
 
         if ($user && Hash::check($request->password, $user->password)) {
             if ($user->role !== 'Admin') {
-                RateLimiter::hit($key, 300);
+                RateLimiter::hit($key, 300); // Lock for 5 minutes
                 return back()->withErrors([
                     'username' => 'Only Admin users can login here. Please use the staff login page.',
                 ])->withInput($request->only('username'));
             }
 
             if ($user->status === 'Inactive') {
-                return back()->withErrors(['username' => 'Your account has been deactivated. Please contact support for assistance.']);
+                return back()->withErrors(['username' => 'Your admin account has been deactivated. Please contact support for assistance.']);
             }
 
             if ($user->status === 'Deleted') {
-                return back()->withErrors(['username' => 'This account no longer exists. Please contact support if you believe this is an error.']);
+                return back()->withErrors(['username' => 'This admin account no longer exists. Please contact support if you believe this is an error.']);
             }
 
             Auth::login($user, $request->boolean('remember'));
@@ -128,44 +120,11 @@ class LoginController extends Controller
 
             return redirect()->intended(route('admin.home'));
         } else {
-            RateLimiter::hit($key, 300);
+            RateLimiter::hit($key, 300); // Lock for 5 minutes
             return back()->withErrors([
-                'username' => 'Wrong credentials.',
+                'username' => 'The provided credentials do not match our records.',
             ])->withInput($request->only('username'));
         }
-    }
-
-    // Authentication check for JavaScript
-    public function checkAuth()
-    {
-        if (Auth::check()) {
-            $user = Auth::user();
-            $redirectUrl = '';
-            
-            switch ($user->role) {
-                case 'Admin':
-                    $redirectUrl = route('admin.home');
-                    break;
-                case 'Receptionist':
-                    $redirectUrl = route('receptionist.home');
-                    break;
-                case 'Kitchen Staff':
-                    $redirectUrl = route('kitchen.home');
-                    break;
-                case 'Cashier':
-                    $redirectUrl = route('cashier.home');
-                    break;
-                default:
-                    $redirectUrl = route('login');
-            }
-            
-            return response()->json([
-                'authenticated' => true,
-                'redirect_url' => $redirectUrl
-            ]);
-        }
-        
-        return response()->json(['authenticated' => false]);
     }
 
     public function showAdminForgotPasswordForm()
@@ -292,6 +251,12 @@ class LoginController extends Controller
             ->first();
 
         if (!$resetRecord || !Hash::check($request->token, $resetRecord->token)) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid reset token.'
+                ]);
+            }
             return back()->withErrors(['email' => 'Invalid reset token.']);
         }
 
@@ -302,6 +267,12 @@ class LoginController extends Controller
             ->first();
 
         if (!$admin) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Admin account not found.'
+                ]);
+            }
             return back()->withErrors(['email' => 'Admin account not found.']);
         }
 
@@ -311,8 +282,15 @@ class LoginController extends Controller
         // Clean up
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Password reset successfully!'
+            ]);
+        }
+
         return redirect()->route('admin.login')
-            ->with('status', 'Password reset successfully! You can now login.');
+            ->with('status', 'Password reset successfully!');
     }
 
     public function logout(Request $request)
@@ -338,10 +316,12 @@ class LoginController extends Controller
         ]);
     }
 
+
     protected function throttleKey(Request $request, $prefix = 'login')
     {
         return strtolower($prefix . '|' . $request->input('username') . '|' . $request->ip());
     }
+
 
     protected function redirectBasedOnRole($user)
     {

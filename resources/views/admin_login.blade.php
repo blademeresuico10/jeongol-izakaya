@@ -459,7 +459,6 @@
                 } catch (e) { }
             }
 
-            // Form Navigation
             hideAllForms() {
                 document.getElementById('loginForm').classList.add('hidden');
                 document.getElementById('forgotPasswordForm').classList.add('hidden');
@@ -529,7 +528,6 @@
                 }
             }
 
-            // Utility Methods
             addCSRFToken() {
                 if (!document.querySelector('meta[name="csrf-token"]')) {
                     const csrfMeta = document.createElement('meta');
@@ -540,7 +538,7 @@
             }
 
             startCountdown() {
-                let timeLeft = 15 * 60; // 15 minutes
+                let timeLeft = 5 * 60; 
                 const countdownElement = document.getElementById('countdown');
                 if (!countdownElement) return;
 
@@ -558,27 +556,22 @@
                 }, 1000);
             }
 
-            // Event Listeners
             setupEventListeners() {
-                // Forgot Password Form
                 const forgotForm = document.querySelector('#forgotPasswordForm form');
                 if (forgotForm) {
                     forgotForm.addEventListener('submit', (e) => this.handleForgotPassword(e));
                 }
 
-                // Code Verification Form
                 const codeForm = document.getElementById('verifyCodeForm');
                 if (codeForm) {
                     codeForm.addEventListener('submit', (e) => this.handleCodeVerification(e));
                 }
 
-                // New Password Form
                 const newPasswordForm = document.getElementById('newPasswordFormElement');
                 if (newPasswordForm) {
                     newPasswordForm.addEventListener('submit', (e) => this.handleNewPassword(e));
                 }
 
-                // Browser back/forward
                 window.addEventListener('popstate', () => this.initializeFormState());
             }
 
@@ -687,27 +680,27 @@
                         body: formData,
                         headers: {
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                            'Accept': 'application/json'
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
 
                     const data = await response.json();
 
-                    if (data.success || response.ok) {
-                        document.getElementById('passwordSuccess').textContent = 'Password reset successfully! Redirecting to login...';
+                    if (data.success) {
+                        document.getElementById('passwordSuccess').textContent = 'Password reset successfully!';
                         document.getElementById('passwordSuccess').style.display = 'block';
 
+                        sessionStorage.removeItem('currentForm');
                         this.clearFormData('new-password');
                         this.clearFormData('code-verification');
                         this.clearFormData('forgot-password');
 
-                        setTimeout(() => {
-                            this.showLogin();
-                            document.getElementById('new_password').value = '';
-                            document.getElementById('confirm_password').value = '';
-                            this.passwordChecker.reset();
-                        }, 2000);
+                        history.replaceState(null, null, window.location.pathname);
 
+                        setTimeout(() => {
+                            window.location.href = '/login/admin';
+                        }, 2000);
                     } else {
                         let errorMessage = 'Password reset failed. Please try again.';
                         if (data.errors && data.errors.password) {
@@ -727,6 +720,8 @@
                     this.passwordChecker.validate();
                 }
             }
+
+
         }
 
         class PasswordChecker {
@@ -757,7 +752,6 @@
                     match: password === confirm && password.length > 0
                 };
 
-                // Update UI
                 this.updateCheck('length-req', checks.length);
                 this.updateCheck('uppercase-req', checks.uppercase);
                 this.updateCheck('lowercase-req', checks.lowercase);
@@ -765,11 +759,9 @@
                 this.updateCheck('special-req', checks.special);
                 this.updateCheck('password-match', checks.match);
 
-                // Update input styles
                 this.updateInputStyle(this.passwordInput, Object.values(checks).slice(0, 5).every(c => c));
                 this.updateInputStyle(this.confirmInput, checks.match);
 
-                // Update button
                 const allValid = Object.values(checks).every(c => c);
                 this.submitButton.disabled = !allValid;
 
@@ -815,13 +807,6 @@
             adminAuth = new AdminAuth();
         });
 
-        document.addEventListener('DOMContentLoaded', function () {
-            history.pushState(null, null, location.href);
-
-            window.onpopstate = function (event) {
-                history.go(1);
-            };
-        });
     </script>
 
 </body>
