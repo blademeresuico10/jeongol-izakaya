@@ -524,7 +524,6 @@
             const initialize = () => {
                 this.initializeElements();
                 this.initializeEventListeners();
-                this.initializeNotifications();
                 this.setupTableClickEvents();
                 this.initializeCountdowns();
 
@@ -697,119 +696,6 @@
             });
         }
 
-        initializeNotifications() {
-            this.fetchNotifications();
-            setInterval(() => this.fetchNotifications(), 3000);
-        }
-
-        fetchNotifications() {
-            fetch('/receptionist/notifications')
-                .then(res => {
-                    if (!res.ok) {
-                        throw new Error(`HTTP error! status: ${res.status}`);
-                    }
-                    return res.json();
-                })
-                .then(data => {
-                    if (data && typeof data === 'object') {
-                        const notifications = data.notifications || [];
-                        const pendingCount = notifications.filter(n => n && n.status === "Pending").length;
-
-                        this.updateNotificationBadges(pendingCount);
-                        this.renderNotifications(notifications);
-                    }
-                })
-                .catch(err => {
-                    this.showToast('Failed to load notifications', 'error');
-                });
-        }
-
-        updateNotificationBadges(count) {
-            [this.elements.badgeProfile, this.elements.badgeLink].forEach(badge => {
-                if (badge) {
-                    badge.textContent = count;
-                    badge.style.display = count ? 'inline-flex' : 'none';
-                }
-            });
-        }
-
-        renderNotifications(notifications) {
-            if (!this.elements.notifList) return;
-
-            if (!notifications || !Array.isArray(notifications) || notifications.length === 0) {
-                this.elements.notifList.innerHTML =
-                    '<li class="no-notifs p-3 text-center text-gray-500">No notifications</li>';
-                return;
-            }
-
-            this.elements.notifList.innerHTML = '';
-
-            notifications.sort((a, b) => {
-                const order = { "Pending": 1, "Accepted": 2, "Rejected": 3 };
-                const statusA = (a && a.status) ? a.status : 'Unknown';
-                const statusB = (b && b.status) ? b.status : 'Unknown';
-                return (order[statusA] || 4) - (order[statusB] || 4);
-            });
-
-            notifications.forEach(notification => {
-                if (notification) {
-                    this.renderNotificationItem(notification);
-                }
-            });
-        }
-
-        renderNotificationItem(notification) {
-            if (!this.elements.notifList) return;
-
-            const li = document.createElement('li');
-            li.className = 'p-3 bg-gray-100 rounded cursor-pointer mb-2';
-            li.dataset.reservationId = notification.reservation_id;
-            li.onclick = () => this.openNotificationModal(notification.reservation_id);
-
-            let badgeClass = "bg-gray-300 text-gray-700";
-            if (notification.status === "Accepted") badgeClass = "bg-green-100 text-green-700";
-            else if (notification.status === "Rejected") badgeClass = "bg-red-100 text-red-700";
-            else if (notification.status === "Paid") badgeClass = "bg-blue-100 text-blue-700";
-
-            li.innerHTML =
-                '<div class="flex justify-between items-center">' +
-                '<div>' +
-                '<p class="text-sm font-medium">' + (notification.name || '') + '</p>' +
-                '<p class="text-xs text-gray-500">' + (notification.message || '') + '</p>' +
-                '<p class="text-xs text-gray-400 mt-1">' + (notification.time || '') + '</p>' +
-                '</div>' +
-                '<span class="px-2 py-1 text-xs font-semibold rounded-full ' + badgeClass + '">' +
-                (notification.status || '') +
-                '</span>' +
-                '</div>';
-
-            this.elements.notifList.appendChild(li);
-        }
-
-        openNotificationModal(id) {
-            if (!id) return;
-
-            this.currentModalType = 'notification';
-            this.currentReservationId = id;
-
-            if (this.elements.notificationPaymentModal) {
-                this.elements.notificationPaymentModal.classList.remove('hidden');
-            }
-
-            if (this.elements.acceptForm) {
-                this.elements.acceptForm.action = '/receptionist/accept-reservation/' + id;
-            }
-
-            this.fetchPaymentDetails(id);
-        }
-
-        closeNotificationModal() {
-            if (this.elements.notificationPaymentModal) {
-                this.elements.notificationPaymentModal.classList.add('hidden');
-            }
-            this.currentModalType = null;
-            this.currentReservationId = null;
-        }
 
         openTablePaymentModal(reservationId, tableNumber) {
             this.currentModalType = 'table';
@@ -1828,9 +1714,9 @@
                 customer_name: currentReservationData.customer_name,
                 subtotal: subtotal,
                 advance_payment: advancePayment,
-                total: finalTotal, // Amount due after advance payment
+                total: finalTotal,
                 cash_received: cashReceived,
-                change_given: change,
+                change: change,
                 orders: currentReservationData.orders.map(order => ({
                     order_name: order.order_name,
                     quantity: parseInt(order.quantity) || 1,
@@ -1859,6 +1745,35 @@
                     console.error('Printer connection error:', error);
                     this.printCashReceiptBrowser(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
                 });
+        }
+        printCashReceiptBrowser(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData) {
+            // Create a printable receipt for browser printing
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+        <html>
+        <head>
+            <title>Receipt</title>
+            <style>
+                body { font-family: monospace; width: 300px; }
+                .center { text-align: center; }
+                .line { border-bottom: 1px dashed #000; margin: 5px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="center"><strong>RESTAURANT RECEIPT</strong></div>
+            <div class="center">${new Date().toLocaleString()}</div>
+            <div class="line"></div>
+            <div>Customer: ${currentReservationData.customer_name}</div>
+            <!-- Add more receipt content here -->
+            <div class="line"></div>
+            <div>Total: ₱${finalTotal.toFixed(2)}</div>
+            <div>Cash: ₱${cashReceived.toFixed(2)}</div>
+            <div>Change: ₱${change.toFixed(2)}</div>
+        </body>
+        </html>
+    `);
+            printWindow.document.close();
+            printWindow.print();
         }
 
         updateTableStatusAfterPayment(reservationId) {
@@ -2074,7 +1989,7 @@
             window.app.submitPayment(event);
         }
     }
-   
+
 
 </script>
 

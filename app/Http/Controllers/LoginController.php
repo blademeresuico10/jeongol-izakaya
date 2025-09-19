@@ -12,15 +12,12 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 
 class LoginController extends Controller
 {
     public function index()
     {
-        if (Auth::check()) {
-            return $this->redirectBasedOnRole(Auth::user());
-        }
-
         return view('staff_login');
     }
 
@@ -70,60 +67,67 @@ class LoginController extends Controller
 
     public function adminLogin()
     {
-        if (Auth::check() && Auth::user()->role === 'Admin') {
-            return redirect()->route('home');
-        }
-
-        if (Auth::check()) {
-            Auth::logout();
-        }
-
         return view('admin_login');
     }
 
     public function adminLoginSubmit(Request $request)
     {
-        $this->validateLogin($request);
+        try {
+            Log::info('Admin login attempt started', ['username' => $request->username]);
 
-        $key = $this->throttleKey($request, 'admin');
+            $this->validateLogin($request);
+            Log::info('Validation passed');
 
-        if (RateLimiter::tooManyAttempts($key, 3)) { // Stricter for admin
-            $seconds = RateLimiter::availableIn($key);
-            throw ValidationException::withMessages([
-                'username' => "Too many admin login attempts. Please try again in {$seconds} seconds.",
-            ]);
-        }
+            $key = $this->throttleKey($request, 'admin');
 
-        $user = User::where('username', $request->username)
-            ->where('status', '!=', 'Deleted')
-            ->first();
+            if (RateLimiter::tooManyAttempts($key, 3)) {
+                $seconds = RateLimiter::availableIn($key);
+                throw ValidationException::withMessages([
+                    'username' => "Too many admin login attempts. Please try again in {$seconds} seconds.",
+                ]);
+            }
 
-        if ($user && Hash::check($request->password, $user->password)) {
-            if ($user->role !== 'Admin') {
-                RateLimiter::hit($key, 300); // Lock for 5 minutes
+            $user = User::where('username', $request->username)
+                ->where('status', '!=', 'Deleted')
+                ->first();
+
+            Log::info('User query executed', ['user_found' => $user ? 'yes' : 'no']);
+
+            if ($user && Hash::check($request->password, $user->password)) {
+                Log::info('Password check passed', ['user_role' => $user->role]);
+
+                if ($user->role !== 'Admin') {
+                    RateLimiter::hit($key, 300);
+                    return back()->withErrors([
+                        'username' => 'Only Admin users can login here. Please use the staff login page.',
+                    ])->withInput($request->only('username'));
+                }
+
+                if ($user->status === 'Inactive') {
+                    return back()->withErrors(['username' => 'Your admin account has been deactivated. Please contact support for assistance.']);
+                }
+
+                if ($user->status === 'Deleted') {
+                    return back()->withErrors(['username' => 'This admin account no longer exists. Please contact support if you believe this is an error.']);
+                }
+
+
+                Auth::login($user, $request->boolean('remember'));
+                $request->session()->regenerate();
+                RateLimiter::clear($key);
+
+
+                return redirect()->route('admin.dashboard');
+            } else {
+                Log::info('Login failed - invalid credentials');
+                RateLimiter::hit($key, 300);
                 return back()->withErrors([
-                    'username' => 'Only Admin users can login here. Please use the staff login page.',
+                    'username' => 'The provided credentials do not match our records.',
                 ])->withInput($request->only('username'));
             }
-
-            if ($user->status === 'Inactive') {
-                return back()->withErrors(['username' => 'Your admin account has been deactivated. Please contact support for assistance.']);
-            }
-
-            if ($user->status === 'Deleted') {
-                return back()->withErrors(['username' => 'This admin account no longer exists. Please contact support if you believe this is an error.']);
-            }
-
-            Auth::login($user, $request->boolean('remember'));
-            $request->session()->regenerate();
-            RateLimiter::clear($key);
-
-            return redirect()->intended(route('admin.home'));
-        } else {
-            RateLimiter::hit($key, 300); // Lock for 5 minutes
-            return back()->withErrors([
-                'username' => 'The provided credentials do not match our records.',
-            ])->withInput($request->only('username'));
+        } catch (\Exception $e) {
+            Log::error('Admin login error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+            return back()->withErrors(['username' => 'Login failed. Please try again.']);
         }
     }
 
@@ -304,7 +308,7 @@ class LoginController extends Controller
         if ($userRole === 'Admin') {
             return redirect()->route('admin.login');
         } else {
-            return redirect()->route('login');
+            return redirect()->route('login'); 
         }
     }
 

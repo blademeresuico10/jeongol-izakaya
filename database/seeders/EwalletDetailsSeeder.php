@@ -16,16 +16,16 @@ class EwalletDetailsSeeder extends Seeder
         DB::table('ewallet_details')->insert([
             [
                 'payment_method' => 'gcash',
-                'wallet_name' => 'GreyC M.',
-                'wallet_number' => '09123456789',
+                'wallet_name' => 'BL******E S.',
+                'wallet_number' => '09388899134',
                 'is_active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
             [
                 'payment_method' => 'maya',
-                'wallet_name' => 'GreyC M.',
-                'wallet_number' => '09987654321',
+                'wallet_name' => 'Blademere Suico',
+                'wallet_number' => '09388899134',
                 'is_active' => true,
                 'created_at' => now(),
                 'updated_at' => now(),

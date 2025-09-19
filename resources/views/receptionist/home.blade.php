@@ -636,13 +636,11 @@
           const paymentProof = document.getElementById('paymentProof');
           if (paymentProof) {
             if (data.payment?.proof_path) {
-              // Directly point to the public storage folder
-              paymentProof.src = `/storage/payment_proofs/${data.payment.proof_path}`;
+              paymentProof.src = `/storage/${data.payment.proof_path}`;
               paymentProof.style.display = 'block';
             } else {
               paymentProof.style.display = 'none';
             }
-
           }
 
           this.updateElementText('customername', data.name || 'N/A')
@@ -657,7 +655,6 @@
             const shouldHideButtons = reservationStatus === "Accepted" || reservationStatus === "Rejected";
             actionButtons.style.display = shouldHideButtons ? "none" : "flex";
           }
-          console.log("Payment modal data:", data);
 
         }
 

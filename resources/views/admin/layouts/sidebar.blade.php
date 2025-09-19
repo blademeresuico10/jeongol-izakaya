@@ -15,8 +15,8 @@
     <!-- Divider -->
     <hr class="sidebar-divider my-0">
 
-    <li @class(['nav-item', 'active' => request()->is('home')])>
-        <a class="nav-link" href="{{ route('admin.home') }}">
+    <li @class(['nav-item', 'active' => request()->is(patterns: 'home*')])>
+        <a class="nav-link" href="{{ url('dashboard') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
             <span>Dashboard</span>
         </a>

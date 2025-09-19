@@ -1,6 +1,7 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
 <div id="content-wrapper" class="d-flex flex-column">
@@ -9,124 +10,163 @@
             <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
         </nav>
 
-        <div class="p-6 space-y-6">
+        <div class="p-3 space-y-6">
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @php
-                    $cards = [
-                        [
-                            'title' => 'Revenue',
-                            'subtitle' => 'Total Revenue today',
-                            'value' => "₱" . number_format($todayRevenue, 2),
-                            'icon' => 'fas fa-chart-line',
-                            'bgColor' => 'bg-blue-100',
-                            'textColor' => 'text-blue-600',
-                            'id' => 'revenueValue'
-                        ],
-                        [
-                            'title' => 'Customers',
-                            'subtitle' => "Today's total",
-                            'value' => $todayCustomers,
-                            'icon' => 'fas fa-users',
-                            'bgColor' => 'bg-purple-100',
-                            'textColor' => 'text-purple-600',
-                            'id' => 'customersValue'
-                        ],
-                        [
-                            'title' => 'Stock',
-                            'subtitle' => 'Stock Monitoring',
-                            'value' => '',
-                            'icon' => 'fas fa-boxes',
-                            'bgColor' => 'bg-green-100',
-                            'textColor' => 'text-green-600',
-                            'id' => 'stockContainer'
-                        ]
-                    ];
-                @endphp
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 grid grid-cols-2 gap-4">
+                    @php
+                        $smallCards = [
+                            [
+                                'title' => 'Revenue',
+                                'subtitle' => 'Today',
+                                'value' => "₱" . number_format($todayRevenue, 2),
+                                'icon' => 'fas fa-chart-line',
+                                'bgColor' => 'bg-blue-100',
+                                'textColor' => 'text-blue-600',
+                                'id' => 'revenueValue'
+                            ],
+                            [
+                                'title' => 'Customers',
+                                'subtitle' => 'Today',
+                                'value' => $todayCustomers,
+                                'icon' => 'fas fa-users',
+                                'bgColor' => 'bg-purple-100',
+                                'textColor' => 'text-purple-600',
+                                'id' => 'customersValue'
+                            ]
+                        ];
+                    @endphp
 
-                @foreach($cards as $card)
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                    <!-- Revenue Card -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="p-2 {{ $smallCards[0]['bgColor'] }} rounded-lg">
+                                <i class="{{ $smallCards[0]['icon'] }} {{ $smallCards[0]['textColor'] }} text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-800">{{ $smallCards[0]['title'] }}</h3>
+                                <p class="text-xs text-gray-500">{{ $smallCards[0]['subtitle'] }}</p>
+                            </div>
+                        </div>
+                        <h2 id="{{ $smallCards[0]['id'] }}" class="text-xl font-bold text-gray-900">
+                            {{ $smallCards[0]['value'] }}
+                        </h2>
+                    </div>
+
+                    <!-- Customers Card -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="p-2 {{ $smallCards[1]['bgColor'] }} rounded-lg">
+                                <i class="{{ $smallCards[1]['icon'] }} {{ $smallCards[1]['textColor'] }} text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-800">{{ $smallCards[1]['title'] }}</h3>
+                                <p class="text-xs text-gray-500">{{ $smallCards[1]['subtitle'] }}</p>
+                            </div>
+                        </div>
+                        <h2 id="{{ $smallCards[1]['id'] }}" class="text-xl font-bold text-gray-900">
+                            {{ $smallCards[1]['value'] }}
+                        </h2>
+                    </div>
+
+                    <!-- Transaction History Card -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="p-2 bg-orange-100 rounded-lg">
+                                <i class="fas fa-receipt text-orange-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-800">Transactions</h3>
+                                <p class="text-xs text-gray-500">Recent</p>
+                            </div>
+                        </div>
+                        <div id="transactionHistory" class="space-y-2 max-h-24 overflow-y-auto">
+                            @foreach($transactions->take(2) as $transaction)
+                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-xs">
+                                    <span class="text-gray-700 truncate">
+                                        {{ substr($transaction->cashier->firstname, 0, 1) }}.{{ substr($transaction->cashier->lastname, 0, 8) }}
+                                    </span>
+                                    <span class="text-gray-900 font-semibold">
+                                        ₱{{ number_format($transaction->total + $transaction->advance_payment, 0) }}
+                                    </span>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Orders Card -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3 mb-3">
+                            <div class="p-2 bg-yellow-100 rounded-lg">
+                                <i class="fas fa-utensils text-yellow-600 text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-800">Orders</h3>
+                                <p class="text-xs text-gray-500">Popular items</p>
+                            </div>
+                        </div>
+                        <div id="ordersContainer" class="space-y-2 max-h-24 overflow-y-auto">
+                            @forelse($popularMenus ?? [] as $menu)
+                                <div class="flex justify-between items-center p-2 bg-gray-50 rounded text-xs">
+                                    <span class="text-gray-700 truncate">
+                                        {{ Str::limit($menu->menu_item, 10, '') }}
+                                    </span>
+                                    <span class="text-gray-900 font-semibold">
+                                        {{ $menu->total_quantity }}
+                                    </span>
+                                </div>
+                            @empty
+                                <div class="text-gray-500 text-xs p-2">No orders today</div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow h-full">
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center space-x-3">
-                                <div class="p-3 {{ $card['bgColor'] }} rounded-lg">
-                                    <i class="{{ $card['icon'] }} {{ $card['textColor'] }} text-xl"></i>
+                                <div class="p-3 bg-green-100 rounded-lg">
+                                    <i class="fas fa-boxes text-green-600 text-xl"></i>
                                 </div>
                                 <div>
-                                    <h3 class="text-lg font-semibold text-gray-800">{{ $card['title'] }}</h3>
-                                    <p class="text-sm text-gray-500">{{ $card['subtitle'] }}</p>
+                                    <h3 class="text-lg font-semibold text-gray-800">Stock</h3>
+                                    <p class="text-sm text-gray-500">Stock Monitoring</p>
                                 </div>
                             </div>
                         </div>
-
-                        @if($card['title'] !== 'Stock')
-                            <h2 id="{{ $card['id'] }}" class="text-5xl md:text-6xl font-bold text-gray-900">
-                                {{ $card['value'] }}
-                            </h2>
-                        @else
-                            <div id="stockContainer" class="grid grid-cols-1 gap-2">
-                                @foreach($stockChartData as $stock)
-                                    <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-sm">
-                                        <div class="flex items-center space-x-3">
-                                            <div class="w-6 h-2 rounded-sm" style="background-color:
-                                                                                                            @if($stock['quantity'] >= 60) green
-                                                                                                            @elseif($stock['quantity'] >= 30) orange
-                                                                                                            @else red
-                                                                                                            @endif;"></div>
-                                            <span class="text-gray-800 font-medium">{{ $stock['name'] }}</span>
-                                        </div>
-                                        <div>
-                                            <span class="text-sm font-semibold
-                                                                                                            @if($stock['quantity'] >= 60) text-green-600
-                                                                                                            @elseif($stock['quantity'] >= 30) text-orange-500
-                                                                                                            @else text-red-600
-                                                                                                            @endif">
-                                                @if($stock['quantity'] >= 60) Sufficient
-                                                @elseif($stock['quantity'] >= 30) Low
-                                                @else Critical
-                                                @endif
-                                            </span>
-                                        </div>
+                        <div id="stockContainer" class="grid grid-cols-1 gap-2">
+                            @foreach($stockChartData as $stock)
+                                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg shadow-sm">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-6 h-2 rounded-sm" style="background-color:
+                                                                                            @if($stock['quantity'] >= 60) green
+                                                                                            @elseif($stock['quantity'] >= 30) orange
+                                                                                            @else red
+                                                                                            @endif;"></div>
+                                        <span class="text-gray-800 font-medium">{{ $stock['name'] }}</span>
                                     </div>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
-                @endforeach
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-
-                <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h4 class="text-lg font-semibold text-gray-800">Transaction History</h4>
-                        <i class="fas fa-receipt text-gray-400"></i>
-                    </div>
-                    <div id="transactionHistory" class="space-y-4 max-h-80 overflow-y-auto">
-                        @foreach($transactions as $transaction)
-                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                        <span class="text-white text-sm font-medium">
-                                            {{ strtoupper(substr($transaction->user->firstname ?? 'U', 0, 1)) }}
-                                            {{ strtoupper(substr($transaction->user->lastname ?? 'N', 0, 1)) }}
+                                    <div>
+                                        <span class="text-sm font-semibold
+                                                                                            @if($stock['quantity'] >= 60) text-green-600
+                                                                                            @elseif($stock['quantity'] >= 30) text-orange-500
+                                                                                            @else text-red-600
+                                                                                            @endif">
+                                            @if($stock['quantity'] >= 60) Sufficient
+                                            @elseif($stock['quantity'] >= 30) Low
+                                            @else Critical
+                                            @endif
                                         </span>
                                     </div>
-                                    <span class="text-gray-800 font-medium">
-                                        {{ $transaction->user->firstname ?? 'Unknown' }}
-                                        {{ $transaction->user->lastname ?? '' }}
-                                    </span>
                                 </div>
-                                <span class="text-gray-900 font-semibold">
-                                    ₱ {{ number_format($transaction->total + $transaction->advance_payment, 2) }}
-                                </span>
-                            </div>
-                        @endforeach
+                            @endforeach
+                        </div>
                     </div>
-
-
                 </div>
+            </div>
 
-                <div class="lg:col-span-3 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div class="grid grid-cols-1 gap-6">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                     <div class="flex items-center justify-between mb-4">
                         <h4 class="text-lg font-semibold text-gray-800">Sales Overview</h4>
                         <i class="fas fa-chart-area text-gray-400"></i>

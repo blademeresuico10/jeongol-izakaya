@@ -644,27 +644,14 @@ class CashierController extends Controller
             $connector = new WindowsPrintConnector("POS-80");
             return new Printer($connector);
         } catch (Exception $e) {
-            Log::warning('Windows printer connection failed, trying alternatives', [
-                'error' => $e->getMessage()
-            ]);
-
             try {
                 $connector = new NetworkPrintConnector("192.168.1.100", 9100);
                 return new Printer($connector);
             } catch (Exception $e2) {
-                Log::warning('Network printer connection failed, trying USB', [
-                    'error' => $e2->getMessage()
-                ]);
-
                 try {
                     $connector = new FilePrintConnector("LPT1");
                     return new Printer($connector);
                 } catch (Exception $e3) {
-                    Log::error('All printer connection methods failed', [
-                        'windows_error' => $e->getMessage(),
-                        'network_error' => $e2->getMessage(),
-                        'usb_error' => $e3->getMessage()
-                    ]);
                     return null;
                 }
             }
@@ -754,7 +741,7 @@ class CashierController extends Controller
     }
 
 
-    /*public function testPrinter()
+    public function testPrinter()
     {
         try {
             $printer = $this->initializePrinter();
@@ -782,5 +769,5 @@ class CashierController extends Controller
                 'message' => 'Test failed: ' . $e->getMessage()
             ]);
         }
-    }*/
+    }
 }

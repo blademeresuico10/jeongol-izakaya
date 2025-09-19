@@ -4,8 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
     <title>Admin Login - Jeongol</title>
+    
 
     <style>
         * {
@@ -211,7 +213,6 @@
             font-size: 0.9rem;
         }
 
-        /* Password Requirements */
         .password-requirements {
             margin-top: 0.5rem;
             font-size: 0.8rem;

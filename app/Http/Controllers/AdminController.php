@@ -21,7 +21,6 @@ class AdminController extends Controller
 {
     public function index()
     {
-
         $todayRevenue = DB::table('transactions')
             ->whereDate('created_at', Carbon::today())
             ->where('status', '!=', 'Refunded')
@@ -66,6 +65,25 @@ class AdminController extends Controller
                 ];
             });
 
+        // Add popular menus query
+        $popularMenus = DB::table('menu')
+            ->leftJoin('order_details', function ($join) {
+                $join->on('menu.id', '=', 'order_details.menu_id')
+                    ->where('order_details.status', '!=', 'Cancelled')
+                    ->whereDate('order_details.created_at', Carbon::today()); // Today's orders only
+            })
+            ->select(
+                'menu.id',
+                'menu.menu_item',
+                DB::raw('COALESCE(SUM(order_details.quantity), 0) as total_quantity')
+            )
+            ->where('menu.status', 'Active')
+            ->whereNull('menu.deleted_at')
+            ->groupBy('menu.id', 'menu.menu_item')
+            ->orderByDesc('total_quantity')
+            ->limit(3) // Show top 3 popular items
+            ->get();
+
         $weeklyRevenue = DB::table('transactions')
             ->whereBetween('created_at', [
                 Carbon::now()->startOfWeek(),
@@ -96,6 +114,7 @@ class AdminController extends Controller
             'totalStock',
             'stockChartData',
             'transactions',
+            'popularMenus', // Add this line
             'weeklyRevenue',
             'monthlyRevenue',
             'quarterlyRevenue'
@@ -350,11 +369,11 @@ class AdminController extends Controller
         ]);
 
         $imageName = null;
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imageName = time() . '_' . $image->getClientOriginalName();
-                $image->move(public_path('storage/jeongol_menu'), $imageName);
-            }
+        if ($request->hasFile('image')) {
+            $image = $request->file('image');
+            $imageName = time() . '_' . $image->getClientOriginalName();
+            $image->move(public_path('storage/jeongol_menu'), $imageName);
+        }
 
         User::create([
             'firstname' => $request->firstname,
