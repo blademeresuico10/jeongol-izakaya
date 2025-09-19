@@ -9,29 +9,31 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Route;
 
+// DIRECT LOGIN ROUTES - NO MIDDLEWARE
+Route::get('/login', [LoginController::class, 'index'])->name('login');
+Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+
+Route::get('/login/admin', [LoginController::class, 'adminLogin'])->name('admin.login');
+Route::post('/login/admin', [LoginController::class, 'adminLoginSubmit'])->name('admin.login.submit');
+
+// Customer Routes
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
 Route::post('/customer/reserve', [CustomerController::class, 'storeReservation'])->name('customer.reserve');
 Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])->name('customer.feedback');
 
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [LoginController::class, 'index'])->name('login');
-    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+// Password Reset Routes
+Route::post('verify-code', [LoginController::class, 'verifyResetCode'])->name('admin.password.verify');
+Route::get('/login/admin/forgot-password', [LoginController::class, 'showAdminForgotPasswordForm'])->name('admin.password.request');
+Route::post('/login/admin/forgot-password', [LoginController::class, 'sendAdminResetLinkEmail'])->name('admin.password.email');
+Route::get('/login/admin/reset-password/{token}', [LoginController::class, 'showAdminResetForm'])->name('admin.password.reset');
+Route::post('/login/admin/reset-password', [LoginController::class, 'resetAdminPassword'])->name('admin.password.update');
 
-    Route::get('/login/admin', [LoginController::class, 'adminLogin'])->name('admin.login');
-    Route::post('/login/admin', [LoginController::class, 'adminLoginSubmit'])->name('admin.login.submit');
-
-    Route::post('verify-code', [LoginController::class, 'verifyResetCode'])->name('admin.password.verify');
-    Route::get('/login/admin/forgot-password', [LoginController::class, 'showAdminForgotPasswordForm'])->name('admin.password.request');
-    Route::post('/login/admin/forgot-password', [LoginController::class, 'sendAdminResetLinkEmail'])->name('admin.password.email');
-    Route::get('/login/admin/reset-password/{token}', [LoginController::class, 'showAdminResetForm'])->name('admin.password.reset');
-    Route::post('/login/admin/reset-password', [LoginController::class, 'resetAdminPassword'])->name('admin.password.update');
-});
-
+// Authenticated Routes
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-
+    // Admin Routes
     Route::middleware('role:Admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'home'])->name('home');
 
@@ -92,6 +94,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('reports.export-csv');
     });
 
+    // Receptionist Routes
     Route::middleware('role:Receptionist')->prefix('receptionist')->name('receptionist.')->group(function () {
         Route::get('/dashboard', [ReceptionistController::class, 'home'])->name('home');
         Route::post('/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('storeReservation');
@@ -106,12 +109,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/cancel-reservation/{id}', [ReceptionistController::class, 'cancelReservation'])->name('cancel-reservation');
     });
 
+    // Kitchen Routes
     Route::middleware('role:Kitchen Staff')->prefix('kitchen')->name('kitchen.')->group(function () {
         Route::get('/dashboard', [KitchenController::class, 'home'])->name('home');
         Route::post('/update-stock', [KitchenController::class, 'updateStock'])->name('updateStock');
         Route::post('/complete-order', [KitchenController::class, 'storeCompletedOrders'])->name('completeOrder');
     });
 
+    // Cashier Routes
     Route::middleware('role:Cashier')->prefix('cashier')->name('cashier.')->group(function () {
         Route::get('/dashboard', [CashierController::class, 'home'])->name('home');
         Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
@@ -123,14 +128,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/cancel-reservation/{id}', [CashierController::class, 'cancelReservation'])->name('cancel-reservation');
         Route::get('/check-customer/{idNumber}', [CashierController::class, 'checkCustomer']);
         Route::post('/print-receipt', [CashierController::class, 'printReceipt']);
-        Route::post('/test-printer', [CashierController::class, 'testPrinter']); // Optional for testing
+        Route::post('/test-printer', [CashierController::class, 'testPrinter']);
     });
 });
-
-Route::fallback(function () {
-    return redirect()->route('login');
-});
-
 
 Route::get('/file-serve/{path}', function ($path) {
     $possiblePaths = [
@@ -147,4 +147,3 @@ Route::get('/file-serve/{path}', function ($path) {
 
     abort(404);
 })->where('path', '.*');
-
