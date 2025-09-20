@@ -364,9 +364,6 @@ class LoginController extends Controller
         return redirect()->route('login');
     }
 
-    /**
-     * Session validation endpoint for AJAX calls
-     */
     public function validateSession(Request $request)
     {
         $user = Auth::user();

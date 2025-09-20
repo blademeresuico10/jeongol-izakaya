@@ -352,7 +352,7 @@
             </form>
 
             <p style="text-align: center; margin-top: 15px; font-size: 0.9rem; color: #6c757d;">
-                Code expires in <span id="countdown">15:00</span>
+                Code expires in <span id="countdown">5:00</span>
             </p>
 
             <div style="text-align: center; margin-top: 10px;">
