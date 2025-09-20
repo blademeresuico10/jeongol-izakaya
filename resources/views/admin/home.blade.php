@@ -48,7 +48,7 @@
                                 <p class="text-xs text-gray-500">{{ $smallCards[0]['subtitle'] }}</p>
                             </div>
                         </div>
-                        <h2 id="{{ $smallCards[0]['id'] }}" class="text-xl font-bold text-gray-900">
+                        <h2 id="{{ $smallCards[0]['id'] }}" class="text-3xl font-bold text-gray-900">
                             {{ $smallCards[0]['value'] }}
                         </h2>
                     </div>
@@ -64,7 +64,7 @@
                                 <p class="text-xs text-gray-500">{{ $smallCards[1]['subtitle'] }}</p>
                             </div>
                         </div>
-                        <h2 id="{{ $smallCards[1]['id'] }}" class="text-xl font-bold text-gray-900">
+                        <h2 id="{{ $smallCards[1]['id'] }}" class="text-3xl font-bold text-gray-900">
                             {{ $smallCards[1]['value'] }}
                         </h2>
                     </div>

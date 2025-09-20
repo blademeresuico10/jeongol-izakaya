@@ -99,7 +99,7 @@
           <a href="#" class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition transform hover:scale-105">
             <i class="fab fa-twitter text-lg"></i>
           </a>
-          <a href="mailto:info@jeongolizakaya.com"
+          <a href="#"
             class="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition transform hover:scale-105">
             <i class="fas fa-envelope text-lg"></i>
           </a>

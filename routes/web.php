@@ -18,16 +18,17 @@ Route::post('/customer/reserve', [CustomerController::class, 'storeReservation']
 Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])->name('customer.feedback');
 
 Route::middleware('guest')->group(function () {
-    // Staff Login Routes
+
     Route::get('/login', [LoginController::class, 'index'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 
-    // Admin Login Routes - Updated paths
     Route::get('/login/admin', [LoginController::class, 'adminLogin'])->name('admin.login');
     Route::post('/login/admin', [LoginController::class, 'adminLoginSubmit'])->name('admin.login.submit');
 
+    Route::post('/force-logout', [LoginController::class, 'forceLogout'])->name('force.logout');
+    Route::get('/validate-session', [LoginController::class, 'validateSession'])->name('validate.session');
 
-Route::post('verify-code', [LoginController::class, 'verifyResetCode'])->name('admin.password.verify');    // Admin Password Reset Routes - Updated paths
+    Route::post('verify-code', [LoginController::class, 'verifyResetCode'])->name('admin.password.verify');    // Admin Password Reset Routes - Updated paths
     Route::get('/login/admin/forgot-password', [LoginController::class, 'showAdminForgotPasswordForm'])->name('admin.password.request');
     Route::post('/login/admin/forgot-password', [LoginController::class, 'sendAdminResetLinkEmail'])->name('admin.password.email');
     Route::get('/login/admin/reset-password/{token}', [LoginController::class, 'showAdminResetForm'])->name('admin.password.reset');
@@ -191,5 +192,5 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/cashier/cancel-reservation/{id}', [CashierController::class, 'cancelReservation'])->name('cashier.cancel-reservation');
     Route::get('/check-customer/{idNumber}', [CashierController::class, 'checkCustomer']);
     Route::post('/print-receipt', [CashierController::class, 'printReceipt']);
-    Route::post('/test-printer', [CashierController::class, 'testPrinter']); 
+    Route::post('/test-printer', [CashierController::class, 'testPrinter']);
 });

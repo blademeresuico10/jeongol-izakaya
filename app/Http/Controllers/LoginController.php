@@ -14,6 +14,7 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 
+
 class LoginController extends Controller
 {
     public function index()
@@ -52,8 +53,20 @@ class LoginController extends Controller
                 return back()->withErrors(['login' => 'This account no longer exists. Please contact support if you believe this is an error.'])->withInput();
             }
 
+            // Check if another user with same role is already logged in
+            if (User::isRoleActive($user->role, $user->id)) {
+                return back()->withErrors([
+                    'login' => "Another {$user->role} is already logged in. Only one {$user->role} can be active at a time."
+                ])->withInput();
+            }
+
+            // Generate session token and mark user as logged in
+            $sessionToken = Str::random(60);
+            $user->markAsLoggedIn($sessionToken);
+
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
+            $request->session()->put('user_session_token', $sessionToken);
 
             RateLimiter::clear($key);
 
@@ -111,11 +124,22 @@ class LoginController extends Controller
                     return back()->withErrors(['username' => 'This admin account no longer exists. Please contact support if you believe this is an error.']);
                 }
 
+                // Check if another admin is already logged in
+                if (User::isRoleActive('Admin', $user->id)) {
+                    return back()->withErrors([
+                        'username' => 'Another Admin is already logged in. Only one Admin can be active at a time.'
+                    ])->withInput($request->only('username'));
+                }
+
+                // Generate session token and mark user as logged in
+                $sessionToken = Str::random(60);
+                $user->markAsLoggedIn($sessionToken);
 
                 Auth::login($user, $request->boolean('remember'));
                 $request->session()->regenerate();
+                $request->session()->put('user_session_token', $sessionToken);
+                
                 RateLimiter::clear($key);
-
 
                 return redirect()->route('admin.dashboard');
             } else {
@@ -299,7 +323,13 @@ class LoginController extends Controller
 
     public function logout(Request $request)
     {
-        $userRole = Auth::user()->role ?? null;
+        $user = Auth::user();
+        $userRole = $user->role ?? null;
+
+        // Mark user as logged out in database
+        if ($user) {
+            $user->markAsLoggedOut();
+        }
 
         Auth::logout();
         $request->session()->invalidate();
@@ -312,6 +342,50 @@ class LoginController extends Controller
         }
     }
 
+    /**
+     * Force logout endpoint for AJAX/API calls
+     */
+    public function forceLogout(Request $request)
+    {
+        $user = Auth::user();
+        
+        if ($user) {
+            $user->markAsLoggedOut();
+        }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+
+        return redirect()->route('login');
+    }
+
+    /**
+     * Session validation endpoint for AJAX calls
+     */
+    public function validateSession(Request $request)
+    {
+        $user = Auth::user();
+        $sessionToken = $request->session()->get('user_session_token');
+
+        if (!$user || !$sessionToken || !$user->isSessionValid($sessionToken)) {
+            return response()->json(['valid' => false], 401);
+        }
+
+        $activeUser = User::getActiveUserByRole($user->role);
+        if (!$activeUser || $activeUser->id !== $user->id) {
+            $user->markAsLoggedOut();
+            Auth::logout();
+            return response()->json(['valid' => false], 401);
+        }
+
+        return response()->json(['valid' => true]);
+    }
+
     protected function validateLogin(Request $request)
     {
         $request->validate([
@@ -320,12 +394,10 @@ class LoginController extends Controller
         ]);
     }
 
-
     protected function throttleKey(Request $request, $prefix = 'login')
     {
         return strtolower($prefix . '|' . $request->input('username') . '|' . $request->ip());
     }
-
 
     protected function redirectBasedOnRole($user)
     {

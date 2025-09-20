@@ -18,7 +18,8 @@ class Menu extends Model
         'govt_employee_price',
         'image',
         'category',
-        'has_customer_discount'
+        'has_customer_discount',
+        'status' 
     ];
 
     protected $casts = [
@@ -27,4 +28,20 @@ class Menu extends Model
         'govt_employee_price' => 'decimal:2',
         'has_customer_discount' => 'boolean'
     ];
+
+    
+    public function orderDetails()
+    {
+        return $this->hasMany(\App\Models\OrderDetail::class, 'menu_id');
+    }
+
+   
+    public function hasActiveOrders()
+    {
+        return $this->orderDetails()
+            ->whereHas('reservation', function($query) {
+                $query->whereIn('status', ['pending', 'confirmed', 'in_progress']); 
+            })
+            ->exists();
+    }
 }

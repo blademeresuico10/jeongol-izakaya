@@ -45,7 +45,7 @@
                                             <tr>
                                                 <td>
                                                 @if($user->profile_picture)
-                                                    <img src="{{ asset('storage/' . $user->profile_picture) }}" 
+<img src="{{ url('file-serve/' . $user->profile_picture) }}" alt="Profile Picture"
                                                         alt="Profile Picture" 
                                                         width="130" height="130" 
                                                         style="object-fit: cover; border-radius: 10px;">

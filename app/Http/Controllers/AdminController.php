@@ -15,6 +15,8 @@ use App\Models\reservation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Models\menu;
+use App\Models\OrderDetail;
 
 
 class AdminController extends Controller
@@ -357,16 +359,23 @@ class AdminController extends Controller
 
     public function storeUser(Request $request)
     {
-        $request->validate([
-            'firstname' => 'required|string|max:255',
-            'lastname' => 'required|string|max:255',
-            'role' => 'required|string|in:Admin,Receptionist,Cashier,Kitchen Staff',
-            'contact_number' => 'required|string|max:11',
-            'username' => 'required|string|unique:users,username',
-            'email' => 'nullable|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
+        try {
+            $request->validate([
+                'firstname' => 'required|string|max:255',
+                'lastname' => 'required|string|max:255',
+                'role' => 'required|string|in:Admin,Receptionist,Cashier,Kitchen Staff',
+                'contact_number' => 'required|string|max:11',
+                'username' => 'required|string|unique:users,username',
+                'email' => 'nullable|email|unique:users,email',
+                'password' => 'required|string|min:8|confirmed',
+                'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+            }
+            throw $e;
+        }
 
         $imageName = null;
         if ($request->hasFile('image')) {
@@ -387,21 +396,32 @@ class AdminController extends Controller
             'status' => $request->has('status') ? 'Active' : 'Inactive',
         ]);
 
+        if ($request->ajax()) {
+            return response()->json(['success' => true, 'message' => 'User added successfully!']);
+        }
+
         return redirect()->route('admin.users')->with('success', 'User added successfully!');
     }
 
     public function update(Request $request, $id)
     {
-        $request->validate([
-            'firstname' => 'required|string|max:255',
-            'lastname' => 'required|string|max:255',
-            'role' => 'required|string',
-            'contact_number' => 'required|string|max:20',
-            'email' => 'required|email|unique:users,email,' . $id,
-            'username' => 'required|string|unique:users,username,' . $id,
-            'password' => 'nullable|string|min:6',
-            'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-        ]);
+        try {
+            $request->validate([
+                'firstname' => 'required|string|max:255',
+                'lastname' => 'required|string|max:255',
+                'role' => 'required|string',
+                'contact_number' => 'required|string|max:20',
+                'email' => 'required|email|unique:users,email,' . $id,
+                'username' => 'required|string|unique:users,username,' . $id,
+                'password' => 'nullable|string|min:6',
+                'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'errors' => $e->errors()], 422);
+            }
+            throw $e;
+        }
 
         $user = User::findOrFail($id);
 
@@ -412,11 +432,11 @@ class AdminController extends Controller
         $user->email = $request->email;
         $user->username = $request->username;
         $user->status = $request->has('status') ? 'Active' : 'Inactive';
+
         if ($request->hasFile('profile_picture')) {
             if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
                 Storage::disk('public')->delete($user->profile_picture);
             }
-
             $user->profile_picture = $request->file('profile_picture')->store('profile_pictures', 'public');
         }
 
@@ -427,7 +447,7 @@ class AdminController extends Controller
         $user->save();
 
         if ($request->ajax()) {
-            return response()->json(['success' => true, 'message' => 'Profile updated successfully']);
+            return response()->json(['success' => true, 'message' => 'User updated successfully!']);
         }
 
         return redirect()->route('admin.users')->with('success', 'User updated successfully!');
@@ -616,6 +636,28 @@ class AdminController extends Controller
                     'image.max' => 'Image size cannot exceed 2MB.',
                 ]
             );
+
+            $menu = menu::findOrFail($id);
+
+            if ($request->status === 'Blocked' && $menu->status !== 'Blocked') {
+                $hasActiveOrders = OrderDetail::where('menu_id', $id)
+                    ->whereHas('reservation', function ($query) {
+                        $query->whereIn('status', ['pending', 'confirmed', 'in_progress']); 
+                    })
+                    ->exists();
+
+                if ($hasActiveOrders) {
+                    if ($request->ajax()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'This Menu Item has active orders and cannot be blocked.',
+                            'type' => 'order_conflict'
+                        ], 409);
+                    }
+
+                    return redirect()->back()->with('error', 'This Menu Item has active orders and cannot be blocked.');
+                }
+            }
 
             $updateData = [
                 'menu_item' => $request->menu_item,
