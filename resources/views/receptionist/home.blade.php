@@ -644,7 +644,7 @@
               paymentProof.style.display = 'block';
             } else {
               paymentProof.style.display = 'none';
-            }
+            }}
 
             this.updateElementText('customername', data.name || 'N/A')
             this.updateElementText('tableNumber', data.table_id || 'N/A');
