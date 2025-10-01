@@ -123,7 +123,6 @@
         discounts: @json($discounts),
     };
 
-    // Revenue Trend Chart - Only showing Net Revenue
     const revenueCtx = document.getElementById('revenueChart').getContext('2d');
     const revenueChart = new Chart(revenueCtx, {
         type: 'line',
@@ -196,7 +195,6 @@
         }
     });
 
-    // Revenue Breakdown - Net Revenue vs Discounts
     const totalNet = analyticsData.netRevenue.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
     const totalDiscounts = analyticsData.discounts.reduce((a, b) => parseFloat(a) + parseFloat(b), 0);
 
