@@ -95,7 +95,6 @@
                             <h6 class="m-0 font-weight-bold text-primary">Top Selling Items</h6>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted text-center mt-5">Chart will be added here</p>
                         </div>
                     </div>
                 </div>
@@ -106,7 +105,6 @@
                             <h6 class="m-0 font-weight-bold text-primary">Payment Methods Distribution</h6>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted text-center mt-5">Chart will be added here</p>
                         </div>
                     </div>
                 </div>
