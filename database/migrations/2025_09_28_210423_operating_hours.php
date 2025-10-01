@@ -6,21 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-
+    
     public function up(): void
     {
-        Schema::create('stock', function (Blueprint $stock) {
-            $stock->id();
-            $stock->string('stock_name')->unique();
-            $stock->decimal('stock_quantity');
-            $stock->timestamps();
-            $stock->softDeletes();
+        Schema::create('operating_hours', function (Blueprint $table) {
+            $table->id();
+            $table->string('day_of_week');
+            $table->time('open_time');
+            $table->time('close_time');
+            $table->timestamps();
         });
     }
 
-
+    
     public function down(): void
     {
-        //
+
     }
 };

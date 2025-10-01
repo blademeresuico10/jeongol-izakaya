@@ -51,7 +51,6 @@
                 });
         };
 
-        // Open modal
         if (staffButton) {
             staffButton.addEventListener("click", () => {
                 staffModal.classList.remove("hidden");
@@ -60,7 +59,6 @@
             });
         }
 
-        // Filter change
         if (staffFilter) {
             staffFilter.addEventListener("change", (e) => {
                 if (!staffModal.classList.contains("hidden")) {
@@ -69,7 +67,6 @@
             });
         }
 
-        // Close modal
         document.querySelectorAll('[data-close="staff"]').forEach(btn => {
             btn.addEventListener("click", () => {
                 staffModal.classList.add("hidden");

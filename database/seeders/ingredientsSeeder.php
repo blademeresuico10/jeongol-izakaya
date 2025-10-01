@@ -1,0 +1,43 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
+class ingredientsSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $now = Carbon::now();
+
+        $ingredients = [
+            ['name' => 'Beef',      'category' => 'meat',     'unit' => 'grams',  'stocks' => 50000],
+            ['name' => 'Pork',      'category' => 'meat',     'unit' => 'grams',  'stocks' => 50000],
+            ['name' => 'Chicken',   'category' => 'meat',     'unit' => 'grams',  'stocks' => 50000],
+            ['name' => 'Shrimp',    'category' => 'meat',     'unit' => 'grams',  'stocks' => 50000],
+            ['name' => 'Lettuce',       'category' => 'vegetables',  'unit' => 'grams',  'stocks' => 20000],
+            ['name' => 'Mushroom',      'category' => 'vegetables',  'unit' => 'grams',  'stocks' => 20000],
+            ['name' => 'Sweet Carrots', 'category' => 'vegetables',  'unit' => 'grams',  'stocks' => 20000],
+            ['name' => 'Potatoes',      'category' => 'vegetables',  'unit' => 'grams',  'stocks' => 20000],
+            ['name' => 'Cabbage',       'category' => 'vegetables',  'unit' => 'grams',  'stocks' => 20000],
+            ['name' => 'Hotpot Balls',  'category' => 'soupbase','unit' => 'grams',  'stocks' => 20000],
+            ['name' => 'Noodles',       'category' => 'soupbase','unit' => 'grams',  'stocks' => 20000],
+            ['name' => 'Coke',      'category' => 'beverage','unit' => 'pieces', 'stocks' => 100],
+            ['name' => 'Coke Zero', 'category' => 'beverage','unit' => 'pieces', 'stocks' => 100],
+            ['name' => 'Water',     'category' => 'beverage','unit' => 'pieces', 'stocks' => 100],
+            ['name' => 'Soju',     'category' => 'beverage','unit' => 'pieces', 'stocks' => 100],
+            ['name' => 'Ice Talk',  'category' => 'beverage','unit' => 'pieces', 'stocks' => 100],
+        ];
+
+        $ingredients = array_map(function ($item) use ($now) {
+            return array_merge($item, [
+                'created_at' => $now,
+                'updated_at' => $now
+            ]);
+        }, $ingredients);
+
+        DB::table('ingredients')->insert($ingredients);
+    }
+}

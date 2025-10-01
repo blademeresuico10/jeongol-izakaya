@@ -6,7 +6,6 @@
         </div>
 
         <div class="p-6 space-y-6 print-area" id="revenueReportContent">
-            <!-- Revenue Summary Table -->
             <table class="w-full border text-sm">
                 <thead class="bg-gray-100">
                     <tr>
@@ -30,7 +29,6 @@
                 </tbody>
             </table>
 
-            <!-- Revenue by Category -->
             <table class="w-full border text-sm">
                 <thead class="bg-gray-100">
                     <tr>

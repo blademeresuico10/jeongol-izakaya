@@ -6,7 +6,6 @@
         </div>
 
         <div class="p-6 space-y-6 print-area" id="salesReportContent">
-            <!-- Sales Summary Table -->
             <table class="w-full border text-sm">
                 <thead class="bg-gray-100">
                     <tr>
@@ -30,7 +29,6 @@
                 </tbody>
             </table>
 
-            <!-- Top Selling Items Table -->
             <table class="w-full border text-sm">
                 <thead class="bg-gray-100">
                     <tr>
@@ -53,7 +51,6 @@
 document.addEventListener("DOMContentLoaded", () => {
 
     function loadSalesData(filterValue) {
-    // Show loading
     const totalSalesTd = document.getElementById("totalSales");
     const transactionCountTd = document.getElementById("transactionCount");
     const averageOrderValueTd = document.getElementById("averageOrderValue");

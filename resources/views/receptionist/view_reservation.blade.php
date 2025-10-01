@@ -57,11 +57,15 @@
 
         if ($first->status === 'Rejected') {
         $statusText = 'Cancelled';
-        $statusClasses = 'bg-red-100 text-red-700';
+        $statusClasses = 'bg-red-600 text-white';
         $tabClass = 'cancelled-item';
         } elseif ($first->status === 'Pending') {
         $statusText = 'Pending';
         $statusClasses = 'bg-yellow-100 text-yellow-700';
+        $tabClass = 'pending-item';
+        } elseif ($first->status === 'Accepted') {
+        $statusText = 'Active';
+        $statusClasses = 'bg-orange-600 text-white';
         $tabClass = 'pending-item';
         } elseif ($first->status === 'Completed') {
         $isFinished = $servedTransactions->contains($first->reservation_id);
@@ -71,7 +75,7 @@
           $tabClass = 'finished-item';
         } else {
           $statusText = 'Active';
-          $statusClasses = 'bg-orange-100 text-orange-700';
+          $statusClasses = 'bg-orange-400 text-white';
           $tabClass = 'pending-item';
         }
         } else {
@@ -79,7 +83,7 @@
         $statusClasses = 'bg-gray-100 text-gray-700';
         $tabClass = 'pending-item';
         }
-      @endphp
+        @endphp
 
         <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden {{ $tabClass }}">
           <div class="reservation-header cursor-pointer p-4 hover:bg-gray-50 transition-colors duration-200"

@@ -1,7 +1,7 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
 
-<div id="content-wrapper" class="d-flex flex-column">
+<div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">Menu Management</h1>
@@ -22,12 +22,21 @@
 
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Menu {{ request()->has('show_deleted') ? '(Deleted Items)' : '' }}</h5>
+                    <h5 class="mb-0">
+                        Menu {{ request()->has('show_deleted') ? '(Deleted Items)' : '' }}
+                    </h5>
                     @if(!request()->has('show_deleted'))
-                        <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addMenuModal">Add
-                            Menu</button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addMenuModal">
+                                Add Menu
+                            </button>
+                            <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#menuIngredientsModal">
+                                Menu Ingredients
+                            </button>
+                        </div>
                     @endif
                 </div>
+
                 <div class="card-body">
                     <table class="table table-bordered table-sm text-start">
                         <thead class="thead-light">
@@ -183,6 +192,67 @@
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-save"></i> Add Menu Item
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="menuIngredientsModal" tabindex="-1" role="dialog"
+                aria-labelledby="menuIngredientsLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title" id="menuIngredientsLabel">
+                                <i class="fas fa-utensils"></i> Menu Ingredients
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                            <div id="ingredientsContent"></div>
+                        </div>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                            <button type="button" class="btn btn-success" id="saveIngredientsBtn">Save Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add Ingredient Modal -->
+            <div class="modal fade" id="addIngredientModal" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-plus"></i> Add Ingredient to <span id="menuNameLabel"></span>
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form id="addIngredientForm">
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Ingredient</label>
+                                    <select id="ingredientSelect" class="form-control" required>
+                                        <option value="">Select an ingredient</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="font-weight-bold">Quantity <span id="unitLabel"
+                                            class="text-muted"></span></label>
+                                    <input type="number" id="ingredientQty" class="form-control" min="1" step="any"
+                                        placeholder="Enter quantity" required>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save"></i> Add
                                 </button>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                             </div>
@@ -373,190 +443,457 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     $(document).ready(function () {
+        let currentMenuId = null; // Store the current menu ID globally
 
-        window.showDeleteModal = function (id, itemName) {
-            try {
-                const deleteItemNameElement = document.getElementById('deleteItemName');
-                const deleteFormElement = document.getElementById('deleteForm');
+        // Menu Ingredients Modal - Load and Display
+        $('#menuIngredientsModal').on('show.bs.modal', function () {
+            const content = document.getElementById('ingredientsContent');
+            content.innerHTML = `
+            <div class="text-center py-3">
+                <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                <p class="mt-2">Loading ingredients...</p>
+            </div>
+        `;
 
-                if (deleteItemNameElement && deleteFormElement) {
-                    deleteItemNameElement.textContent = itemName;
-                    deleteFormElement.action = "{{ route('admin.deleteMenu', ':id') }}".replace(':id', id);
-                    $('#deleteConfirmModal').modal('show');
-                } else {
-                    console.error('Delete modal elements not found');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Unable to show delete confirmation. Please refresh the page.',
-                        toast: true,
-                        position: 'top',
-                        timer: 3000,
-                        showConfirmButton: false
+            fetch("{{ route('admin.menu_ingredients') }}")
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.menus.length) {
+                        content.innerHTML = `<p class="text-center text-muted">No menus found.</p>`;
+                        return;
+                    }
+
+                    let html = '';
+                    data.menus.forEach(menu => {
+                        html += `
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
+                            </div>
+                            <div class="card-body p-0">
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="thead-light">
+                                        <tr>
+                                            <th>Ingredient</th>
+                                            <th width="150">Quantity</th>
+                                            <th width="80">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+
+                        const ingList = data.ingredients[menu.id] || [];
+
+                        if (ingList.length === 0) {
+                            html += `
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-2">
+                                    No ingredients added yet
+                                </td>
+                            </tr>
+                        `;
+                        } else {
+                            ingList.forEach(ing => {
+                                html += `
+                                <tr>
+                                    <td class="align-middle">${ing.ingredient_name}</td>
+                                    <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm ingredient-qty"
+                                               data-id="${ing.id}" 
+                                               value="${ing.quantity}"
+                                               min="0.01"
+                                               step="any">
+                                    </td>
+                                    <td class="align-middle">
+                                        <button type="button" 
+                                                class="btn btn-sm btn-danger removeIngredientBtn" 
+                                                data-id="${ing.id}"
+                                                title="Remove">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                            });
+                        }
+
+                        html += `
+                                    </tbody>
+                                </table>
+                                <div class="card-footer bg-light">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-success addIngredientBtn" 
+                                            data-menu-id="${menu.id}"
+                                            data-menu-name="${menu.menu_item}">
+                                        <i class="fas fa-plus"></i> Add Ingredient
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                     });
-                }
-            } catch (error) {
-                console.error('Error showing delete modal:', error);
-            }
-        };
 
-        window.showRestoreModal = function (id, itemName) {
-            try {
-                const restoreItemNameElement = document.getElementById('restoreItemName');
-                const restoreFormElement = document.getElementById('restoreForm');
-
-                if (restoreItemNameElement && restoreFormElement) {
-                    restoreItemNameElement.textContent = itemName;
-                    restoreFormElement.action = "{{ url('restoremenu') }}/" + id;
-                    $('#restoreConfirmModal').modal('show');
-                } else {
-                    console.error('Restore modal elements not found');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Unable to show restore confirmation. Please refresh the page.',
-                        toast: true,
-                        position: 'top',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            } catch (error) {
-                console.error('Error showing restore modal:', error);
-            }
-        };
-
-        window.showForceDeleteModal = function (id, itemName) {
-            try {
-                const forceDeleteItemNameElement = document.getElementById('forceDeleteItemName');
-                const forceDeleteFormElement = document.getElementById('forceDeleteForm');
-
-                if (forceDeleteItemNameElement && forceDeleteFormElement) {
-                    forceDeleteItemNameElement.textContent = itemName;
-                    forceDeleteFormElement.action = "{{ url('forcedeletemenu') }}/" + id;
-                    $('#forceDeleteConfirmModal').modal('show');
-                } else {
-                    console.error('Force delete modal elements not found');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Unable to show permanent delete confirmation. Please refresh the page.',
-                        toast: true,
-                        position: 'top',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            } catch (error) {
-                console.error('Error showing force delete modal:', error);
-            }
-        };
-
-        @if ($errors->any())
-            $('#addMenuModal').modal('show');
-        @endif
-
-        $('#addMenuModal').on('hidden.bs.modal', function () {
-            try {
-                $(this).find('form')[0].reset();
-            } catch (error) {
-                console.error('Error resetting form:', error);
-            }
-        });
-
-        @if(session('success'))
-            Swal.fire({
-                icon: 'success',
-                title: {!! json_encode(session('success')) !!},
-                toast: true,
-                position: 'top',
-                timer: 3000,
-                showConfirmButton: false,
-                background: '#d4edda',
-                color: '#155724'
-            });
-        @endif
-
-        @if(session('error'))
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: {!! json_encode(session('error')) !!},
-                toast: true,
-                position: 'top',
-                timer: 4000,
-                showConfirmButton: false,
-                background: '#f8d7da',
-                color: '#721c24'
-            });
-        @endif
-
-        @if($errors->has('menu_item'))
-            Swal.fire({
-                icon: 'error',
-                title: 'Duplicate Menu Item',
-                text: {!! json_encode($errors->first('menu_item')) !!},
-                toast: true,
-                position: 'top',
-                timer: 5000,
-                showConfirmButton: false,
-                background: '#f8d7da',
-                color: '#721c24'
-            });
-        @endif
-
-            @if($errors->any() && !$errors->has('menu_item'))
-                let errorMessages = [];
-                @foreach($errors->all() as $error)
-                    errorMessages.push({!! json_encode($error) !!});
-                @endforeach
-
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Validation Errors',
-                    html: errorMessages.join('<br>'),
-                    toast: true,
-                    position: 'top',
-                    timer: 5000,
-                    showConfirmButton: false,
-                    background: '#fff3cd',
-                    color: '#856404'
+                    content.innerHTML = html;
+                })
+                .catch(err => {
+                    console.error('Error fetching ingredients:', err);
+                    content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i> 
+                        Failed to load menu ingredients. Please try again.
+                    </div>
+                `;
                 });
-            @endif
-
-        $('form[action="{{ route('storeMenu') }}"]').on('submit', function (e) {
-            const submitButton = $(this).find('button[type="submit"]');
-            submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
-
-            setTimeout(function () {
-                submitButton.prop('disabled', false).html('<i class="fas fa-save"></i> Add Menu Item');
-            }, 3000);
         });
 
-        $('form[action*="updatemenu"]').on('submit', function (e) {
-            const submitButton = $(this).find('button[type="submit"]');
-            submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+        // Save Ingredients Changes
+        $('#saveIngredientsBtn').on('click', function () {
+            const updates = [];
+            let hasError = false;
 
-            setTimeout(function () {
-                submitButton.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
-            }, 3000);
-        });
+            document.querySelectorAll('.ingredient-qty').forEach(input => {
+                const value = parseFloat(input.value);
+                if (isNaN(value) || value <= 0) {
+                    hasError = true;
+                    input.classList.add('is-invalid');
+                } else {
+                    input.classList.remove('is-invalid');
+                    updates.push({
+                        id: input.dataset.id,
+                        quantity: value
+                    });
+                }
+            });
 
-        $('#addMenuModal').on('shown.bs.modal', function () {
-            $('#menu_item').focus();
-        });
-
-        $('input[type="number"][step="0.01"]').on('blur', function () {
-            if (this.value && !isNaN(this.value)) {
-                this.value = parseFloat(this.value).toFixed(2);
+            if (hasError) {
+                Swal.fire('Invalid Input', 'Please enter valid quantities (greater than 0)', 'warning');
+                return;
             }
-        });
 
-        $('input[type="number"][min="0"]').on('input', function () {
-            if (this.value < 0) {
-                this.value = 0;
+            if (updates.length === 0) {
+                Swal.fire('Warning', 'No ingredients to update', 'warning');
+                return;
             }
+
+            Swal.fire({
+                title: 'Saving...',
+                didOpen: () => Swal.showLoading(),
+                allowOutsideClick: false
+            });
+
+            fetch('/menu_ingredients/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ updates })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Ingredients updated successfully',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            $('#menuIngredientsModal').modal('hide');
+                        });
+                    } else {
+                        Swal.fire('Error', data.message || 'Failed to update', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Error', 'Failed to update ingredients', 'error');
+                });
         });
 
+        // Remove Ingredient
+        $(document).on('click', '.removeIngredientBtn', function () {
+            const ingredientId = $(this).data('id');
+            const row = $(this).closest('tr');
+
+            Swal.fire({
+                title: 'Remove Ingredient?',
+                text: "This ingredient will be removed from the menu",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, remove it'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(`/menu_ingredients/${ingredientId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                row.fadeOut(300, function () {
+                                    $(this).remove();
+                                    const tbody = row.closest('tbody');
+                                    if (tbody.find('tr').length === 0) {
+                                        tbody.html(`
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-2">
+                                            No ingredients added yet
+                                        </td>
+                                    </tr>
+                                `);
+                                    }
+                                });
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Removed',
+                                    text: 'Ingredient removed successfully',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
+                            } else {
+                                Swal.fire('Error', data.message || 'Failed to remove', 'error');
+                            }
+                        })
+                        .catch(err => {
+                            console.error(err);
+                            Swal.fire('Error', 'Failed to remove ingredient', 'error');
+                        });
+                }
+            });
+        });
+
+        // Add Ingredient Button Click
+        $(document).on('click', '.addIngredientBtn', function () {
+            currentMenuId = $(this).data('menu-id');
+            const menuName = $(this).data('menu-name');
+
+            $('#menuNameLabel').text(menuName);
+            $('#ingredientQty').val('');
+
+            Swal.fire({
+                title: 'Loading ingredients...',
+                didOpen: () => Swal.showLoading(),
+                allowOutsideClick: false
+            });
+
+            fetch("{{ route('ingredients.list') }}")
+                .then(res => res.json())
+                .then(data => {
+                    Swal.close();
+
+                    if (!data.ingredients || data.ingredients.length === 0) {
+                        Swal.fire('No Ingredients', 'No ingredients available', 'info');
+                        return;
+                    }
+
+                    // Group ingredients by category
+                    const grouped = data.ingredients.reduce((acc, ing) => {
+                        if (!acc[ing.category]) acc[ing.category] = [];
+                        acc[ing.category].push(ing);
+                        return acc;
+                    }, {});
+
+                    let options = '<option value="">Select an ingredient</option>';
+                    Object.keys(grouped).forEach(category => {
+                        options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
+                        grouped[category].forEach(ing => {
+                            options += `<option value="${ing.id}" data-unit="${ing.unit}">
+                            ${ing.name} (Stock: ${ing.stocks} ${ing.unit})
+                        </option>`;
+                        });
+                        options += '</optgroup>';
+                    });
+
+                    $('#ingredientSelect').html(options);
+                    $('#addIngredientModal').modal('show');
+                })
+                .catch(err => {
+                    console.error('Error loading ingredients:', err);
+                    Swal.fire('Error', 'Failed to load ingredients', 'error');
+                });
+        });
+
+        // Update unit label when ingredient is selected
+        $(document).on('change', '#ingredientSelect', function () {
+            const selected = $(this).find('option:selected');
+            const unit = selected.data('unit');
+            $('#unitLabel').text(unit ? `(${unit})` : '');
+        });
+
+        // Add Ingredient Form Submit
+        $('#addIngredientForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const ingredientId = $('#ingredientSelect').val();
+            const quantity = $('#ingredientQty').val();
+
+            if (!ingredientId) {
+                Swal.fire('Error', 'Please select an ingredient', 'warning');
+                return;
+            }
+
+            if (!quantity || parseFloat(quantity) <= 0) {
+                Swal.fire('Error', 'Please enter a valid quantity', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: 'Adding ingredient...',
+                didOpen: () => Swal.showLoading(),
+                allowOutsideClick: false
+            });
+
+            fetch(`/menu/${currentMenuId}/add-ingredient`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    ingredient_id: ingredientId,
+                    quantity: parseFloat(quantity)
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // Close the add ingredient modal
+                        $('#addIngredientForm')[0].reset();
+                        $('#unitLabel').text('');
+                        $('#addIngredientModal').modal('hide');
+
+                        // Show success message
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: 'Ingredient added successfully',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+
+                        // Reload only the ingredients content (not the whole page)
+                        const content = document.getElementById('ingredientsContent');
+                        content.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                        <p class="mt-2">Refreshing...</p>
+                    </div>
+                `;
+
+                        fetch("{{ route('admin.menu_ingredients') }}")
+                            .then(res => res.json())
+                            .then(data => {
+                                let html = '';
+                                data.menus.forEach(menu => {
+                                    html += `
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>Ingredient</th>
+                                                    <th width="150">Quantity</th>
+                                                    <th width="80">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                            `;
+
+                                    const ingList = data.ingredients[menu.id] || [];
+
+                                    if (ingList.length === 0) {
+                                        html += `
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted py-2">
+                                            No ingredients added yet
+                                        </td>
+                                    </tr>
+                                `;
+                                    } else {
+                                        ingList.forEach(ing => {
+                                            html += `
+                                        <tr>
+                                            <td class="align-middle">${ing.ingredient_name}</td>
+                                            <td>
+                                                <input type="number" 
+                                                       class="form-control form-control-sm ingredient-qty"
+                                                       data-id="${ing.id}" 
+                                                       value="${ing.quantity}"
+                                                       min="0.01"
+                                                       step="any">
+                                            </td>
+                                            <td class="align-middle">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-danger removeIngredientBtn" 
+                                                        data-id="${ing.id}"
+                                                        title="Remove">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                        });
+                                    }
+
+                                    html += `
+                                            </tbody>
+                                        </table>
+                                        <div class="card-footer bg-light">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-success addIngredientBtn" 
+                                                    data-menu-id="${menu.id}"
+                                                    data-menu-name="${menu.menu_item}">
+                                                <i class="fas fa-plus"></i> Add Ingredient
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                                });
+                                content.innerHTML = html;
+                            });
+                    } else {
+                        Swal.fire('Error', data.message || 'Failed to add ingredient', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error adding ingredient:', err);
+                    Swal.fire('Error', 'Failed to add ingredient', 'error');
+                });
+        });
+
+        // Reset form when modal is hidden
+        $('#addIngredientModal').on('hidden.bs.modal', function () {
+            $('#addIngredientForm')[0].reset();
+            $('#unitLabel').text('');
+        });
     });
+
+    // CSS to hide spinner arrows
+    const style = document.createElement('style');
+    style.textContent = `
+    input[type="number"].ingredient-qty::-webkit-outer-spin-button,
+    input[type="number"].ingredient-qty::-webkit-inner-spin-button,
+    #ingredientQty::-webkit-outer-spin-button,
+    #ingredientQty::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    input[type="number"].ingredient-qty,
+    #ingredientQty {
+        -moz-appearance: textfield;
+    }
+`;
+    document.head.appendChild(style);
 </script>

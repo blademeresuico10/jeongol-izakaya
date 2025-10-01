@@ -54,17 +54,39 @@
     flex: 0 calc(15% - 10px);
     text-decoration: none;
   }
-
   .table {
     width: 100%;
     aspect-ratio: 1 / 1;
     display: flex;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-
     color: white;
     font-weight: bold;
     border-radius: 20px;
     background-color: #28a745;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .table.available {
+    background-color: #28a745;
+  }
+
+  .table.occupied {
+    background-color: #dd0000;
+  }
+
+  .status-indicator {
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: white;
+    margin-top: 8px;
+    padding: 4px 8px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
   }
 
   @media (max-width: 1024px) {

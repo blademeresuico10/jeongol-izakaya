@@ -9,19 +9,25 @@ class reservationPayment extends Model
 {
     use HasFactory;
 
-     protected $fillable = [
+    protected $table = 'reservation_payment_details';
+
+    protected $fillable = [
         'reservation_id',
-        'registered_name',
-        'number',         
-        'amount',
-        'method',         
-        'ref_no',
-        'proof_path',
-        'status',
+        'name',             
+        'contact',           
+        'advance_payment',   
+        'payment_method',    
+        'payment_proof',     
+        'ewallet_number',   
     ];
 
     public function reservation()
     {
         return $this->belongsTo(\App\Models\reservation::class, 'reservation_id', 'id');
+    }
+
+    public function ewalletDetail()
+    {
+        return $this->belongsTo(\App\Models\EwalletDetail::class, 'ewallet_number', 'id');
     }
 }

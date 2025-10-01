@@ -23,5 +23,6 @@ class AppServiceProvider extends ServiceProvider
         Fortify::loginView(function () {
             return view('staff_login');
         });
+    
     }
 }

@@ -187,65 +187,51 @@ class ReportsController extends Controller
 
 
     public function staffReport(Request $request)
-{
-    try {
-        $filter = $request->get('filter', 'daily'); // default to daily
-        $query = Transaction::query();
+    {
+        try {
+            $filter = $request->get('filter', 'daily');
 
-        // Apply date filter
-        switch ($filter) {
-            case 'daily':
-                $query->whereDate('created_at', Carbon::today());
-                break;
-            case 'weekly':
-                $query->whereBetween('created_at', [
-                    Carbon::now()->startOfWeek(),
-                    Carbon::now()->endOfWeek()
-                ]);
-                break;
-            case 'monthly':
-                $query->whereYear('created_at', Carbon::now()->year)
-                      ->whereMonth('created_at', Carbon::now()->month);
-                break;
-            case 'yearly':
-                $query->whereYear('created_at', Carbon::now()->year);
-                break;
+            $query = DB::table('transactions')
+                ->join('users', 'transactions.cashier_id', '=', 'users.id')
+                ->select(
+                    DB::raw("CONCAT(users.firstname, ' ', users.lastname) as cashier_name"),
+                    DB::raw('COUNT(transactions.id) as transactions'),
+                    DB::raw('SUM(transactions.total) as total_sales')
+                )
+                ->groupBy('transactions.cashier_id', 'users.firstname', 'users.lastname');
+
+            switch ($filter) {
+                case 'daily':
+                    $query->whereDate('transactions.created_at', now());
+                    break;
+                case 'weekly':
+                    $query->whereBetween('transactions.created_at', [now()->startOfWeek(), now()->endOfWeek()]);
+                    break;
+                case 'monthly':
+                    $query->whereYear('transactions.created_at', now()->year)
+                        ->whereMonth('transactions.created_at', now()->month);
+                    break;
+                case 'yearly':
+                    $query->whereYear('transactions.created_at', now()->year);
+                    break;
+            }
+
+            $cashiers = $query->get()->map(function ($row) {
+                return [
+                    'cashier_name'    => $row->cashier_name,
+                    'transactions'    => $row->transactions,
+                    'total_sales'     => $row->total_sales,
+                    'avg_transaction' => $row->transactions > 0
+                        ? round($row->total_sales / $row->transactions, 2)
+                        : 0,
+                ];
+            });
+
+            return response()->json(['cashierPerformance' => $cashiers]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Failed to generate staff report'], 500);
         }
-
-        // Aggregate transactions by cashier
-        $transactions = $query->select(
-            'cashier_id',
-            DB::raw('COUNT(*) as transactions'),
-            DB::raw('SUM(total) as total_sales')
-        )
-        ->groupBy('cashier_id')
-        ->get();
-
-        // Map cashier names
-        $cashierIds = $transactions->pluck('cashier_id')->toArray();
-        $cashiersMap = User::whereIn('id', $cashierIds)
-            ->select('id', DB::raw("CONCAT(firstname, ' ', lastname) as full_name"))
-            ->pluck('full_name', 'id')
-            ->toArray();
-
-        $cashiers = $transactions->map(function ($row) use ($cashiersMap) {
-            return [
-                'cashier_name'   => $cashiersMap[$row->cashier_id] ?? 'N/A',
-                'transactions'   => $row->transactions,
-                'total_sales'    => $row->total_sales,
-                'avg_transaction' => $row->transactions > 0
-                    ? round($row->total_sales / $row->transactions, 2)
-                    : 0,
-            ];
-        });
-
-        return response()->json(['cashierPerformance' => $cashiers]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'error' => 'Failed to generate staff report'
-        ], 500);
     }
-}
 
 
     public function stockReport()

@@ -1,7 +1,7 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
 
-<div id="content-wrapper" class="d-flex flex-column">
+<div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">Table Management</h1>
@@ -407,7 +407,7 @@
 
         $('input[type="number"]').on('input', function () {
             if (this.name === 'table_number' || this.name === 'capacity') {
-                this.value = this.value.replace(/\D/g, ''); 
+                this.value = this.value.replace(/\D/g, '');
             }
 
             if (this.value && parseInt(this.value) < 1) {

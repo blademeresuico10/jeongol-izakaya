@@ -46,21 +46,23 @@ class LoginController extends Controller
             }
 
             if ($user->status === 'Inactive') {
-                return back()->withErrors(['login' => 'Your account has been deactivated. Please contact support for assistance.'])->withInput();
+                return back()->withErrors([
+                    'login' => 'Your account has been blocked. Please contact your manager for account activation.'
+                ])->withInput();
             }
-
+            
             if ($user->status === 'Deleted') {
-                return back()->withErrors(['login' => 'This account no longer exists. Please contact support if you believe this is an error.'])->withInput();
+                return back()->withErrors([
+                    'login' => 'Your account has been blocked. Please contact your manager for account activation.'
+                ])->withInput();
             }
 
-            // Check if another user with same role is already logged in
             if (User::isRoleActive($user->role, $user->id)) {
                 return back()->withErrors([
                     'login' => "Another {$user->role} is already logged in. Only one {$user->role} can be active at a time."
                 ])->withInput();
             }
 
-            // Generate session token and mark user as logged in
             $sessionToken = Str::random(60);
             $user->markAsLoggedIn($sessionToken);
 
@@ -86,10 +88,8 @@ class LoginController extends Controller
     public function adminLoginSubmit(Request $request)
     {
         try {
-            Log::info('Admin login attempt started', ['username' => $request->username]);
 
             $this->validateLogin($request);
-            Log::info('Validation passed');
 
             $key = $this->throttleKey($request, 'admin');
 
@@ -104,10 +104,8 @@ class LoginController extends Controller
                 ->where('status', '!=', 'Deleted')
                 ->first();
 
-            Log::info('User query executed', ['user_found' => $user ? 'yes' : 'no']);
 
             if ($user && Hash::check($request->password, $user->password)) {
-                Log::info('Password check passed', ['user_role' => $user->role]);
 
                 if ($user->role !== 'Admin') {
                     RateLimiter::hit($key, 300);
@@ -138,19 +136,17 @@ class LoginController extends Controller
                 Auth::login($user, $request->boolean('remember'));
                 $request->session()->regenerate();
                 $request->session()->put('user_session_token', $sessionToken);
-                
+
                 RateLimiter::clear($key);
 
                 return redirect()->route('admin.dashboard');
             } else {
-                Log::info('Login failed - invalid credentials');
                 RateLimiter::hit($key, 300);
                 return back()->withErrors([
-                    'username' => 'The provided credentials do not match our records.',
+                    'username' => 'Wrong username or password!',
                 ])->withInput($request->only('username'));
             }
         } catch (\Exception $e) {
-            Log::error('Admin login error: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
             return back()->withErrors(['username' => 'Login failed. Please try again.']);
         }
     }
@@ -338,7 +334,7 @@ class LoginController extends Controller
         if ($userRole === 'Admin') {
             return redirect()->route('admin.login');
         } else {
-            return redirect()->route('login'); 
+            return redirect()->route('login');
         }
     }
 
@@ -348,7 +344,7 @@ class LoginController extends Controller
     public function forceLogout(Request $request)
     {
         $user = Auth::user();
-        
+
         if ($user) {
             $user->markAsLoggedOut();
         }

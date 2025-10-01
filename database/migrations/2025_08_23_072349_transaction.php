@@ -12,11 +12,12 @@ return new class extends Migration
         Schema::create('transactions', function (Blueprint $table) {
             $table->id();
             $table->string('transaction_no', 50)->nullable()->unique();
-            $table->decimal('subtotal', 10, 2);
             $table->decimal('discount_total', 10, 2)->default(0);
             $table->decimal('advance_payment', 10, 2)->default(0.00);
-            $table->decimal('total', 10, 2);
+            $table->decimal('to_pay', 10, 2);
             $table->decimal('cash_received', 10, 2)->nullable();
+            $table->decimal('orders_total', 10, 2);
+            $table->decimal('grand_total', 10, 2);
             $table->decimal('change', 10, 2)->nullable();
             $table->enum('payment_method', ['Cash', 'GCash', 'PayMaya'])->default('Cash');
             $table->enum('status', ['Pending', 'Completed', 'Refunded'])->default('Completed');

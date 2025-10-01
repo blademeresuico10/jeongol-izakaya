@@ -56,14 +56,12 @@
                 document.getElementById("reservationsTotal").textContent = data.totalReservations;
                 document.getElementById("reservationsPax").textContent = data.totalPax;
 
-                // Show Rejected and Cancelled if exists
                 const rejectedInfo = document.getElementById("rejectedReservations");
                 if (rejectedInfo) rejectedInfo.textContent = data.rejectedReservations;
 
                 const cancelledInfo = document.getElementById("cancelledReservations");
                 if (cancelledInfo) cancelledInfo.textContent = data.cancelledReservations;
 
-                // Populate status table
                 let statusRows = data.statusCounts.map(row => `
                     <tr>
                         <td class="border px-3 py-1">${row.status}</td>

@@ -2,7 +2,7 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
 
-<div id="content-wrapper" class="d-flex flex-column">
+<div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
 
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 shadow">

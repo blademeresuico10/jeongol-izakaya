@@ -91,8 +91,8 @@
     @include('admin.reports.stafftemplate')
     @include('admin.reports.stocktemplate')
 
-    <div id="content-wrapper" class="flex flex-col min-h-screen bg-gray-50">
-        <div id="content" class="flex-1">
+    <div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
+        <div id="content">
 
             <nav class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <h1 class="text-2xl font-semibold text-gray-800">Reports</h1>

@@ -10,7 +10,7 @@ class KitchenController extends Controller
 {
     public function home()
     {
-        $stock = DB::table('stock')->get();
+        
         $today = Carbon::today()->toDateString();
 
         // First get valid reservations (not completed)
@@ -48,16 +48,7 @@ class KitchenController extends Controller
 
         $reservationGroups = $reservations->groupBy('reservation_id');
 
-        return view('kitchen.home', compact('stock', 'reservations', 'reservationGroups'));
+        return view('kitchen.home', compact( 'reservations', 'reservationGroups'));
     }
-    public function updateStock(Request $request)
-    {
-        foreach ($request->stocks as $id => $quantity) {
-            DB::table('stock')
-                ->where('id', $id)
-                ->update(['stock_quantity' => $quantity]);
-        }
-
-        return redirect()->route('kitchen.home')->with('success', 'Stock levels updated successfully.');
-    }
+  
 }

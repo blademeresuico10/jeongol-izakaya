@@ -18,7 +18,28 @@ class ReceptionistController extends Controller
 
     public function home()
     {
-        $tables = DB::table('tables')->get();
+        $currentTime = now();
+
+        $tables = DB::table('tables')
+            ->leftJoin('reservations', function ($join) use ($currentTime) {
+                $join->on('tables.id', '=', 'reservations.table_id')
+                    ->where('reservations.status', '=', 'Accepted')
+                    ->where('reservations.reservation_time', '<=', $currentTime)
+                    ->where('reservations.reservation_end_time', '>=', $currentTime);
+            })
+            ->select(
+                'tables.*',
+                'reservations.id as reservation_id',
+                'reservations.status as reservation_status',
+                'reservations.reservation_time',
+                'reservations.reservation_end_time'
+            )
+            ->get()
+            ->map(function ($table) {
+                $table->is_occupied = !is_null($table->reservation_id);
+                return $table;
+            });
+
         $reservations = DB::table('reservations')
             ->whereDate('reservation_time', Carbon::now()->toDateString())
             ->get();
@@ -26,7 +47,6 @@ class ReceptionistController extends Controller
         $menuItems = DB::table('menu')->get()->map(function ($item) {
             $processedItem = clone $item;
             $processedItem->price = $item->regular_price;
-
             return $processedItem;
         });
 
@@ -130,17 +150,16 @@ class ReceptionistController extends Controller
             ]);
 
             if (isset($validated['payment_method']) && $validated['advance_payment'] > 0) {
-                DB::table('reservation_payments')->insert([
-                    'reservation_id'  => $reservation->id,
-                    'registered_name' => $validated['customer_name'],
-                    'number'         => $validated['contact_number'],
-                    'amount'         => $validated['advance_payment'],
-                    'method'         => $validated['payment_method'],
-                    'ref_no'         => null,
-                    'proof_path'     => null,
-                    'status'         => 'Paid',
-                    'created_at'     => now(),
-                    'updated_at'     => now(),
+                DB::table('reservation_payment_details')->insert([
+                    'reservation_id'    => $reservation->id,
+                    'name'             => $validated['customer_name'],
+                    'contact'          => $validated['contact_number'],
+                    'advance_payment'  => $validated['advance_payment'],
+                    'payment_method'   => $validated['payment_method'],
+                    'payment_proof'    => null,
+                    'ewallet_number'   => $validated['ewallet_number_id'],
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
                 ]);
             }
 
@@ -214,7 +233,6 @@ class ReceptionistController extends Controller
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
         $menuItems = DB::table('menu')->select('menu_item', 'regular_price as price')->get();
 
-        // First, get reservations that don't have completed transactions
         $validReservations = DB::table('reservations')
             ->leftJoin('transactions', 'transactions.reservation_id', '=', 'reservations.id')
             ->whereDate('reservations.reservation_time', $targetDate)
@@ -225,7 +243,6 @@ class ReceptionistController extends Controller
             })
             ->pluck('reservations.id');
 
-        // Then get order details for those valid reservations
         $order_details = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('order_details', function ($join) {
@@ -490,134 +507,195 @@ class ReceptionistController extends Controller
         return view('receptionist.view_kitchen', compact('stock', 'reservations'));
     }
 
+    // REPLACE THESE METHODS IN ReceptionistController:
+
     public function acceptReservation(Request $request, $id)
     {
-        $reservation = Reservation::findOrFail($id);
-        $reservation->status = 'Accepted';
-        $reservation->save();
+        return DB::transaction(function () use ($request, $id) {
+            $reservation = Reservation::findOrFail($id);
+            $reservation->status = 'Accepted';
+            $reservation->save();
 
-        if ($reservation->payment) {
-            $reservation->payment->status = 'Paid';
-            $reservation->payment->save();
-        }
+            // Create notification for the customer (if they have a user account)
+            if ($reservation->user_id) {
+                $this->createNotification(
+                    $reservation->user_id,
+                    $reservation->id,
+                    'Your reservation has been accepted and confirmed.'
+                );
+            }
 
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success'       => true,
-                'status'        => $reservation->status,
-                'reservationId' => $reservation->id,
-                'unread_count'  => DB::table('notifications')
-                    ->where('notifiable_id', Auth::id())
-                    ->where('notifiable_type', 'App\\Models\\User')
-                    ->whereNull('read_at')
-                    ->count(),
-            ]);
-        }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'status' => $reservation->status,
+                    'reservationId' => $reservation->id,
+                    'unread_count' => $this->getUnreadCount(),
+                ]);
+            }
 
-        return redirect()->back()->with('success', 'Reservation accepted successfully.');
+            return redirect()->back()->with('success', 'Reservation accepted successfully.');
+        });
     }
 
     public function cancelReservation(Request $request, $id)
     {
-        $reservation = Reservation::findOrFail($id);
-        $reservation->status = 'Rejected';
-        $reservation->save();
+        return DB::transaction(function () use ($request, $id) {
+            $reservation = Reservation::findOrFail($id);
+            $reservation->status = 'Rejected';
+            $reservation->save();
 
-        if ($reservation->payment) {
-            $reservation->payment->status = 'Rejected';
-            $reservation->payment->save();
-        }
+            // Cancel related order details
+            OrderDetail::where('reservation_id', $reservation->id)
+                ->update(['status' => 'Cancelled', 'updated_at' => now()]);
 
-        $order_details = OrderDetail::where('reservation_id', $reservation->id)->get();
-        if ($order_details->count() > 0) {
-            foreach ($order_details as $order) {
-                $order->status = 'Cancelled';
-                $order->save();
+            // Create notification for the customer (if they have a user account)
+            if ($reservation->user_id) {
+                $this->createNotification(
+                    $reservation->user_id,
+                    $reservation->id,
+                    'Your reservation has been cancelled/rejected.'
+                );
             }
-        }
 
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json([
-                'success'       => true,
-                'status'        => $reservation->status,
-                'reservationId' => $reservation->id,
-                'unread_count'  => DB::table('notifications')
-                    ->where('notifiable_id', Auth::id())
-                    ->where('notifiable_type', 'App\\Models\\User')
-                    ->whereNull('read_at')
-                    ->count(),
-            ]);
-        }
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'status' => $reservation->status,
+                    'reservationId' => $reservation->id,
+                    'unread_count' => $this->getUnreadCount(),
+                ]);
+            }
 
-        return redirect()->back()->with('success', 'Reservation cancelled successfully.');
+            return redirect()->back()->with('success', 'Reservation cancelled successfully.');
+        });
     }
 
-    public function showPayment($id)
+    public function getNotifications()
     {
         try {
-            $reservation = Reservation::with('payment', 'customer')->findOrFail($id);
+            $notifications = DB::table('reservation_notifications')
+                ->join('reservations', 'reservation_notifications.reservation_id', '=', 'reservations.id')
+                ->join('customers', 'reservations.customer_id', '=', 'customers.id')
+                ->join('tables', 'reservations.table_id', '=', 'tables.id')
+                ->leftJoin('reservation_payment_details', 'reservations.id', '=', 'reservation_payment_details.reservation_id')
+                ->where('reservation_notifications.user_id', Auth::id())
+                ->select([
+                    'reservation_notifications.id',
+                    'reservation_notifications.message',
+                    'reservation_notifications.is_read',
+                    'reservation_notifications.created_at',
+                    'reservations.id as reservation_id',
+                    'reservations.status as reservation_status',
+                    'reservations.pax',
+                    'reservations.reservation_time',
+                    'reservations.reservation_end_time',
+                    'customers.name as customer_name',
+                    'tables.table_number',
+                    'reservation_payment_details.advance_payment',
+                    'reservation_payment_details.payment_proof',
+                    'reservation_payment_details.payment_method'
+                ])
+                ->orderBy('reservation_notifications.created_at', 'desc')
+                ->limit(50)
+                ->get();
 
             return response()->json([
-                'name' => optional($reservation->customer)->name ?? 'Unknown',
-                'table_id' => $reservation->table_id,
-                'advance_payment' => $reservation->advance_payment,
-                'payment' => $reservation->payment,
-                'pax' => $reservation->pax,
-                'reservation' => [
-                    'status' => $reservation->status,
-                ]
+                'success' => true,
+                'notifications' => $notifications,
+                'unread_count' => $this->getUnreadCount()
             ]);
         } catch (\Exception $e) {
+            Log::error('Error fetching notifications: ' . $e->getMessage());
             return response()->json([
-                'error' => true,
-                'message' => $e->getMessage(),
+                'success' => false,
+                'message' => 'Failed to fetch notifications.'
             ], 500);
         }
     }
-    public function getNotifications()
+
+    public function markNotificationAsRead($id)
     {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['notifications' => [], 'unread_count' => 0]);
+        try {
+            $updated = DB::table('reservation_notifications')
+                ->where('id', $id)
+                ->where('user_id', Auth::id())
+                ->where('is_read', false)
+                ->update([
+                    'is_read' => true,
+                    'updated_at' => now()
+                ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $updated ? 'Notification marked as read.' : 'Notification already read or not found.',
+                'unread_count' => $this->getUnreadCount()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error marking notification as read: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update notification.'
+            ], 500);
         }
+    }
 
-        $allNotifications = DB::table('notifications')
-            ->where('notifiable_id', $user->id)
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('created_at', '>=', now()->subHours(24))
-            ->orderBy('created_at', 'desc')
-            ->get();
+    public function markAllNotificationsAsRead()
+    {
+        try {
+            $updated = DB::table('reservation_notifications')
+                ->where('user_id', Auth::id())
+                ->where('is_read', false)
+                ->update([
+                    'is_read' => true,
+                    'updated_at' => now()
+                ]);
 
-        $notifications = [];
-        $unreadCount = 0;
-
-        foreach ($allNotifications as $n) {
-            $data = json_decode($n->data, true) ?? [];
-
-            if ($n->read_at === null) {
-                $unreadCount++;
-            }
-
-            $reservation = \App\Models\reservation::find($data['reservation_id'] ?? null);
-
-
-
-            $notifications[] = [
-                'id'             => $n->id,
-                'reservation_id' => $data['reservation_id'] ?? null,
-                'name'           => $data['name']
-                    ?? $reservation?->customer?->name
-                    ?? 'Unknown',
-                'message'        => $data['message'] ?? '',
-                'time'           => \Carbon\Carbon::parse($n->created_at)->diffForHumans(),
-                'status'         => $reservation?->status ?? 'Pending',
-                'is_read'        => $n->read_at !== null,
-            ];
+            return response()->json([
+                'success' => true,
+                'message' => "Marked {$updated} notifications as read.",
+                'unread_count' => 0
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error marking all notifications as read: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update notifications.'
+            ], 500);
         }
+    }
 
-        return response()->json([
-            'notifications' => $notifications,
-            'unread_count' => $unreadCount
+    public function getUnreadCount()
+    {
+        try {
+            $count = DB::table('reservation_notifications')
+                ->where('user_id', Auth::id())
+                ->where('is_read', false)
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'unread_count' => $count
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting unread count: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get unread count.'
+            ], 500);
+        }
+    }
+
+    // ADD THESE HELPER METHODS TO ReceptionistController:
+    private function createNotification($userId, $reservationId, $message)
+    {
+        DB::table('reservation_notifications')->insert([
+            'user_id' => $userId,
+            'reservation_id' => $reservationId,
+            'message' => $message,
+            'is_read' => false,
+            'created_at' => now(),
+            'updated_at' => now()
         ]);
     }
 }

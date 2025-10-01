@@ -34,14 +34,13 @@ class User extends Authenticatable
 
     public function getRoleAttribute($value)
     {
-        Log::info('Getting role attribute', ['raw_value' => $value]);
         return $value;
     }
 
     protected $hidden = [
         'password',
         'remember_token',
-        'session_token', // Hide session token from JSON responses
+        'session_token',
     ];
 
     protected $dates = ['deleted_at'];
@@ -58,11 +57,6 @@ class User extends Authenticatable
         return $this->hasMany(transaction::class, 'cashier_id');
     }
 
-    // Session management methods for "one user per role" functionality
-
-    /**
-     * Check if another user with same role is logged in
-     */
     public static function isRoleActive($role, $excludeUserId = null)
     {
         return self::where('role', $role)
@@ -74,9 +68,6 @@ class User extends Authenticatable
             ->exists();
     }
 
-    /**
-     * Get the currently active user for a specific role
-     */
     public static function getActiveUserByRole($role)
     {
         return self::where('role', $role)
@@ -85,9 +76,6 @@ class User extends Authenticatable
             ->first();
     }
 
-    /**
-     * Force logout other users with same role
-     */
     public static function logoutRole($role, $excludeUserId = null)
     {
         return self::where('role', $role)
@@ -101,9 +89,7 @@ class User extends Authenticatable
             ]);
     }
 
-    /**
-     * Mark user as logged in with session token
-     */
+  
     public function markAsLoggedIn(string $sessionToken): bool
     {
         return $this->update([
@@ -113,9 +99,7 @@ class User extends Authenticatable
         ]);
     }
 
-    /**
-     * Mark user as logged out
-     */
+   
     public function markAsLoggedOut(): bool
     {
         return $this->update([
@@ -124,9 +108,7 @@ class User extends Authenticatable
         ]);
     }
 
-    /**
-     * Check if user's session is valid
-     */
+
     public function isSessionValid(string $sessionToken): bool
     {
         return $this->is_logged_in &&
@@ -134,33 +116,25 @@ class User extends Authenticatable
             $this->status === 'Active';
     }
 
-    /**
-     * Get full name attribute
-     */
+   
     public function getFullNameAttribute()
     {
         return "{$this->firstname} {$this->lastname}";
     }
 
-    /**
-     * Scope to get only active users
-     */
+ 
     public function scopeActive($query)
     {
         return $query->where('status', 'Active');
     }
 
-    /**
-     * Scope to get users by role
-     */
+  
     public function scopeByRole($query, $role)
     {
         return $query->where('role', $role);
     }
 
-    /**
-     * Scope to get logged in users
-     */
+    
     public function scopeLoggedIn($query)
     {
         return $query->where('is_logged_in', true);

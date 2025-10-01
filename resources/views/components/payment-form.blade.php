@@ -10,6 +10,8 @@
 
 <div id="tab-{{ $method }}" class="tab-content {{ $method === 'maya' ? 'hidden' : '' }}">
     @if($ewalletDetail)
+            <input type="hidden" class="ewallet-id" value="{{ $ewalletDetail->id }}">
+
         <div class="mb-2">
             <label class="block text-sm font-medium">
                 {{ ucfirst($method) }} Wallet:
@@ -74,16 +76,6 @@
             required>
         <span class="error text-red-500 text-sm mb-2 hidden"></span>
     @endif
-
-    <label class="block text-sm font-medium">Reference Number</label>
-    <input type="text" 
-        class="ref-no w-full border rounded px-3 py-2 mb-1" 
-        placeholder="Enter 13-digit reference number"
-        value="{{ $data['ref_no'] ?? '' }}" 
-        pattern="[0-9]{13}" 
-        maxlength="13" 
-        required>
-    <span class="error text-red-500 text-sm mb-2 hidden"></span>
     
     <div id="toast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-75 text-white px-6 py-3 rounded-md shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none z-50">
         Phone number copied!

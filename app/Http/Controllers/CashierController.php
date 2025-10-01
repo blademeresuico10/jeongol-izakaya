@@ -27,15 +27,14 @@ class CashierController extends Controller
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
 
-        $reservations = DB::table('reservations')
-            ->leftJoin('transactions', 'reservations.id', '=', 'transactions.reservation_id')
-            ->whereDate('reservations.reservation_time', $now->toDateString())
-            ->where('reservations.reservation_time', '<=', $now)
-            ->where('reservations.reservation_end_time', '>=', $now)
-            ->where('reservations.status', 'Accepted')
-            ->whereNull('transactions.id')
-            ->select('reservations.*')
+        $reservations = \App\Models\reservation::with('table')
+            ->whereDate('reservation_time', $now->toDateString())
+            ->where('reservation_time', '<=', $now)
+            ->where('reservation_end_time', '>=', $now)
+            ->where('status', 'Accepted')
+            ->whereDoesntHave('transactions')
             ->get();
+
 
         $reservationIds = $reservations->pluck('id')->toArray();
         $orders = DB::table('order_details')
@@ -102,12 +101,13 @@ class CashierController extends Controller
     public function getOrders($reservationId)
     {
         $reservation = DB::table('reservations')
-            ->join('customers', 'reservations.customer_id', '=', 'customers.id')
+            ->leftJoin('customers', 'reservations.customer_id', '=', 'customers.id')
+            ->leftJoin('reservation_payment_details', 'reservations.id', '=', 'reservation_payment_details.reservation_id')
             ->where('reservations.id', $reservationId)
             ->select(
                 'reservations.id as reservation_id',
                 'reservations.reservation_time',
-                'reservations.advance_payment',
+                'reservation_payment_details.advance_payment',
                 'customers.name as customer_name',
                 'customers.contact_number',
                 'customers.id_type',
@@ -115,6 +115,7 @@ class CashierController extends Controller
                 'reservations.customer_id'
             )
             ->first();
+
 
         if (!$reservation) {
             return response()->json(['message' => 'Reservation not found'], 404);
@@ -173,10 +174,7 @@ class CashierController extends Controller
 
     public function processPayment(Request $request)
     {
-        Log::info('Payment processing started', [
-            'reservation_id'   => $request->reservation_id,
-            'advance_payment'  => $request->advance_payment ?? 0
-        ]);
+
 
         try {
             $validated = $request->validate([
@@ -198,10 +196,7 @@ class CashierController extends Controller
                 'cash_received'                => 'nullable|numeric|min:0',
                 'change'                       => 'nullable|numeric|min:0',
             ]);
-
-            Log::info('Validation passed');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            Log::error('Validation failed', ['errors' => $e->errors()]);
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed'
@@ -215,12 +210,6 @@ class CashierController extends Controller
             if (!$reservation) {
                 throw new Exception('Reservation not found');
             }
-
-            Log::info('Reservation found', [
-                'id'             => $reservation->id,
-                'advance_payment' => $reservation->advance_payment ?? 0,
-                'customer_id'    => $reservation->customer_id
-            ]);
 
             $customerMap = [];
             if (!empty($request->customer_data)) {
@@ -289,43 +278,40 @@ class CashierController extends Controller
                 }
             }
 
-            $advancePayment  = floatval($request->advance_payment ?? $reservation->advance_payment ?? 0);
-            $orderSubtotal   = $subtotal - $totalDiscountAmount;
-            $finalAmountDue  = max(0, $orderSubtotal - $advancePayment);
+            $advancePayment      = floatval($request->advance_payment ?? $reservation->advance_payment ?? 0);
+            $totalAfterDiscounts = $subtotal - $totalDiscountAmount;
+            $toPay               = max(0, $totalAfterDiscounts - $advancePayment);
+            $cashReceived        = floatval($request->cash_received ?? 0);
+            $change              = floatval($request->change ?? 0);
 
             $transactionData = [
-                'transaction_no' => 'TEMP',
-                'subtotal'       => $subtotal,
-                'discount_total' => $totalDiscountAmount,
-                'total'          => $finalAmountDue,
-                'payment_method' => 'Cash',
-                'status'         => 'Completed',
-                'reservation_id' => $reservation->id,
-                'customer_id'    => $mainCustomer->id,
-                'cashier_id'     => Auth::id(),
-                'created_at'     => now(),
-                'updated_at'     => now(),
+                'transaction_no'  => 'TEMP',
+                'orders_total'    => $subtotal,
+                'discount_total'  => $totalDiscountAmount,
+                'grand_total'     => $totalAfterDiscounts,
+                'advance_payment' => $advancePayment,
+                'to_pay'          => $toPay,
+                'cash_received'   => $cashReceived,
+                'change'          => $change,
+                'payment_method'  => 'Cash',
+                'status'          => 'Completed',
+                'reservation_id'  => $reservation->id,
+                'customer_id'     => $mainCustomer->id,
+                'cashier_id'      => Auth::id(),
+                'created_at'      => now(),
+                'updated_at'      => now(),
             ];
-
-            $transactionColumns = DB::getSchemaBuilder()->getColumnListing('transactions');
-            if (in_array('advance_payment', $transactionColumns)) {
-                $transactionData['advance_payment'] = $advancePayment;
-            }
-            if (in_array('cash_received', $transactionColumns)) {
-                $transactionData['cash_received'] = floatval($request->cash_received ?? 0);
-            }
-            if (in_array('change', $transactionColumns)) {
-                $transactionData['change'] = floatval($request->change ?? 0);
-            }
 
             $transactionId = DB::table('transactions')->insertGetId($transactionData);
             $transactionNo = date('Ymd') . '-' . str_pad($transactionId, 6, '0', STR_PAD_LEFT);
 
+            // Update transaction number
             DB::table('transactions')->where('id', $transactionId)->update([
                 'transaction_no' => $transactionNo,
                 'updated_at'     => now(),
             ]);
 
+            // Insert transaction details
             foreach ($processedOrders as $order) {
                 DB::table('transaction_details')->insert([
                     'transaction_id'  => $transactionId,
@@ -350,35 +336,23 @@ class CashierController extends Controller
 
             DB::commit();
 
-            Log::info('Payment processed successfully', [
-                'transaction_id' => $transactionId,
-                'transaction_no' => $transactionNo,
-                'total' => $finalAmountDue,
-            ]);
-
             return response()->json([
-                'success'                  => true,
-                'message'                  => 'Payment processed successfully',
-                'transaction_no'           => $transactionNo,
-                'transaction_id'           => $transactionId,
-                'original_subtotal'        => $subtotal,
-                'discount_total'           => $totalDiscountAmount,
-                'subtotal_after_discounts' => $orderSubtotal,
-                'advance_payment'          => $advancePayment,
-                'final_amount_due'         => $finalAmountDue,
-                'cash_received'            => floatval($request->cash_received ?? 0),
-                'change'                   => floatval($request->change ?? 0),
-                'processed_items'          => count($processedOrders),
-                'discounted_customers'     => count($customerMap)
+                'success'         => true,
+                'message'         => 'Payment processed successfully',
+                'transaction_no'  => $transactionNo,
+                'transaction_id'  => $transactionId,
+                'orders_total'    => $subtotal,             
+                'discount_total'  => $totalDiscountAmount,
+                'grand_total'     => $totalAfterDiscounts,  
+                'advance_payment' => $advancePayment,
+                'to_pay'          => $toPay,
+                'cash_received'   => $cashReceived,
+                'change'          => $change,
+                'processed_items' => count($processedOrders),
+                'discounted_customers' => count($customerMap)
             ]);
         } catch (Exception $e) {
             DB::rollBack();
-
-            Log::error('Payment processing failed', [
-                'error' => $e->getMessage(),
-                'file'  => $e->getFile(),
-                'line'  => $e->getLine()
-            ]);
 
             return response()->json([
                 'success' => false,
@@ -392,7 +366,6 @@ class CashierController extends Controller
             $exists = \App\Models\customers::where('id_type', $idNumber)->exists();
             return response()->json(['exists' => $exists]);
         } catch (Exception $e) {
-            Log::error('Error checking customer: ' . $e->getMessage());
             return response()->json(['exists' => false, 'error' => 'Unable to check customer']);
         }
     }
@@ -418,7 +391,6 @@ class CashierController extends Controller
                 'details' => $details
             ]);
         } catch (Exception $e) {
-            Log::error('Error fetching transaction details: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Unable to fetch transaction details'
@@ -461,117 +433,12 @@ class CashierController extends Controller
         }
     }
 
-    public function acceptReservation(Request $request, $id)
-    {
-        $reservation = Reservation::findOrFail($id);
-        $reservation->status = 'Accepted';
-        $reservation->save();
 
-        if ($reservation->payment) {
-            $reservation->payment->status = 'Paid';
-            $reservation->payment->save();
-        }
-
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['success' => true]);
-        }
-
-        return redirect()->back()->with('success', 'Reservation accepted successfully.');
-    }
-
-    public function showPayment($id)
-    {
-        try {
-            $reservation = Reservation::with('payment')->findOrFail($id);
-
-            return response()->json([
-                'table_id' => $reservation->table_id,
-                'advance_payment' => $reservation->advance_payment,
-                'payment' => $reservation->payment,
-                'pax' => $reservation->pax,
-                'reservation' => [
-                    'status' => $reservation->status,
-                ]
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => true,
-                'message' => $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function cancelReservation(Request $request, $id)
-    {
-        $reservation = Reservation::findOrFail($id);
-        $reservation->status = 'Rejected';
-        $reservation->save();
-
-        if ($reservation->payment) {
-            $reservation->payment->status = 'Rejected';
-            $reservation->payment->save();
-        }
-
-        if ($request->ajax() || $request->wantsJson()) {
-            return response()->json(['success' => true]);
-        }
-
-        return redirect()->back()->with('success', 'Reservation cancelled successfully.');
-    }
-
-    public function getNotifications()
-    {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['notifications' => [], 'unread_count' => 0]);
-        }
-
-        $allNotifications = DB::table('notifications')
-            ->where('notifiable_id', $user->id)
-            ->where('notifiable_type', 'App\\Models\\User')
-            ->where('created_at', '>=', now()->subHours(24))
-            ->orderBy('created_at', 'asc')
-            ->get();
-
-        $notifications = [];
-        $unreadCount = 0;
-
-        foreach ($allNotifications as $n) {
-            $data = json_decode($n->data, true) ?? [];
-
-            if ($n->read_at === null) {
-                $unreadCount++;
-            }
-
-            $reservation = \App\Models\reservation::find($data['reservation_id'] ?? null);
-
-            $notifications[] = [
-                'id'             => $n->id,
-                'reservation_id' => $data['reservation_id'] ?? null,
-                'name'           => $data['customer_name']
-                    ?? $reservation?->customer?->name
-                    ?? 'Unknown',
-                'message'        => $data['message'] ?? '',
-                'time'           => \Carbon\Carbon::parse($n->created_at)->diffForHumans(),
-                'status'         => $reservation?->status ?? 'Pending',
-                'is_read'        => $n->read_at !== null,
-            ];
-        }
-
-        return response()->json([
-            'notifications' => $notifications,
-            'unread_count' => $unreadCount
-        ]);
-    }
 
     public function printReceipt(Request $request)
     {
         try {
-            Log::info('Receipt printing requested', [
-                'customer' => $request->customer_name,
-                'total' => $request->total,
-                'orders_count' => count($request->orders ?? [])
-            ]);
+
 
             $request->validate([
                 'customer_name' => 'required|string',
@@ -597,17 +464,13 @@ class CashierController extends Controller
 
             $printer->close();
 
-            Log::info('Receipt printed successfully');
 
             return response()->json([
                 'success' => true,
                 'message' => 'Receipt printed successfully'
             ]);
         } catch (Exception $e) {
-            Log::error('Receipt printing failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+
 
             return response()->json([
                 'success' => false,
@@ -663,7 +526,7 @@ class CashierController extends Controller
         try {
             $printer->setJustification(Printer::JUSTIFY_CENTER);
             $printer->selectPrintMode(Printer::MODE_DOUBLE_WIDTH);
-            $printer->text("RESTAURANT RECEIPT\n");
+            $printer->text("Jeongol Izakaya Hotpot % Grill\n");
             $printer->selectPrintMode();
 
             $printer->text(date('Y-m-d H:i:s A') . "\n");
@@ -724,9 +587,7 @@ class CashierController extends Controller
             } catch (Exception $e) {
             }
         } catch (Exception $e) {
-            Log::error('Error printing receipt content', [
-                'error' => $e->getMessage()
-            ]);
+
             throw $e;
         }
     }

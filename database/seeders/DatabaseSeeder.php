@@ -13,8 +13,9 @@ class DatabaseSeeder extends Seeder
             menuseeder::class,
             tableseeder::class,
             users::class,
-            stock::class,
+            ingredientsSeeder::class,
             EwalletDetailsSeeder::class,
+            menuingredientsseeder::class,
         ]);
     }
 }

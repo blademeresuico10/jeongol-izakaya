@@ -15,7 +15,7 @@
                 <div class="bg-white rounded-lg shadow p-6 mb-6">
                     <div class="flex items-center space-x-6">
                         @if($user->profile_picture)
-                            <img id="profileImage" src="{{ asset('storage/' . $user->profile_picture) }}"
+                            <img id="profileImage" src="{{ url('/file-serve/' . $user->profile_picture) }}"
                                 alt="Profile Picture" class="w-20 h-20 rounded-full object-cover">
                         @else
                             <div class="w-20 h-20 rounded-full bg-gray-400 flex items-center justify-center">

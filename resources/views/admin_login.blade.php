@@ -311,7 +311,6 @@
             </button>
         </div>
 
-        <!-- Forgot Password Form (no logo) -->
         <div id="forgotPasswordForm" class="login-box hidden">
             <h2 class="login-title">Reset Password</h2>
 
@@ -331,7 +330,6 @@
             <a href="#" class="back-link" onclick="adminAuth.showLogin()">← Back to Login</a>
         </div>
 
-        <!-- Code Verification Form (no logo) -->
         <div id="codeVerificationForm" class="login-box hidden">
             <h2 class="login-title">Enter Verification Code</h2>
 

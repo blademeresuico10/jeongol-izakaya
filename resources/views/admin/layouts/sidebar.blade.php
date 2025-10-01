@@ -12,45 +12,52 @@
             </p>
         </div>
     </a>
-    <!-- Divider -->
     <hr class="sidebar-divider my-0">
 
-    <li @class(['nav-item', 'active' => request()->is(patterns: 'home*')])>
-        <a class="nav-link" href="{{ url('dashboard') }}">
+    <li @class(['nav-item', 'active' => request()->is(patterns: 'dashboard*')])>
+        <a class="nav-link" href="{{ route('admin.home') }}">
             <i class="fas fa-fw fa-tachometer-alt"></i>
             <span>Dashboard</span>
         </a>
     </li>
 
+    <li @class(['nav-item', 'active' => request()->is('analytics*')])>
+        <a class="nav-link" href="{{route('admin.analytics')}}">
+            <i class="fas fa-chart-line"></i>
+            <span>Analytics</span>
+        </a>
+    </li>
+
     <li @class(['nav-item', 'active' => request()->is('users*')])>
-        <a class="nav-link" href="{{ url('users') }}">
+        <a class="nav-link" href="{{ route('admin.users') }}">
             <i class="fas fa-fw fa-users"></i>
             <span>Users</span>
         </a>
     </li>
 
     <li @class(['nav-item', 'active' => request()->is('menu*')])>
-        <a class="nav-link" href="{{url('menu_management')}}">
+        <a class="nav-link" href="{{route('admin.menu_management')}}">
             <i class="fas fa-utensils"></i>
             <span>Menu</span>
         </a>
     </li>
 
     <li @class(['nav-item', 'active' => request()->is('table*')])>
-        <a class="nav-link" href="{{url('table_management')}}">
+        <a class="nav-link" href="{{route('admin.table_management')}}">
             <i class="fas fa-utensils"></i>
             <span>Table</span>
         </a>
     </li>
 
-    <li @class(['nav-item', 'active' => request()->is('stock*')])>
-        <a class="nav-link" href="{{url('stock_management')}}">
+    <li @class(['nav-item', 'active' => request()->is('ingredients*')])>
+        <a class="nav-link" href="{{route('admin.ingredient_management')}}">
             <i class="fas fa-boxes"></i>
-            <span>Stock</span>
+            <span>Ingredients</span>
         </a>
     </li>
+
     <li @class(['nav-item', 'active' => request()->is('reports*')])>
-        <a class="nav-link" href="{{ url('reports') }}">
+        <a class="nav-link" href="{{ route('admin.reports') }}">
             <i class="fas fa-file-alt"></i>
             <span>Reports</span>
         </a>
@@ -83,7 +90,6 @@
     <hr class="sidebar-divider d-none d-md-block">
 
     <li @class(['nav-item', 'active' => request()->is('myprofile*')]) style="position: relative;">
-        <!-- My Profile button -->
         <a class="nav-link" href="{{ route('admin.profile') }}">
             <i class="fas fa-fw fa-user-alt"></i>
             <span>My Profile</span>

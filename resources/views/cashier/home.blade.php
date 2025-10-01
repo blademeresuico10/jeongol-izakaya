@@ -253,20 +253,12 @@
                 <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-13 w-20" />
             </div>
             <div class="relative">
-                <!-- Profile Button -->
                 <button id="userBtn" class="relative flex items-center gap-2 p-4 hover:bg-gray-100 z-50">
                     <div
                         class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
                         {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
                     </div>
 
-                    <Payment Details!-- <span id="notifBadgeProfile"
-                        class="absolute top-1 right-1 items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full hidden"
-                        data-count="{{ auth()->user()?->unreadNotifications->count() ?? 0 }}">
-                        {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
-                        </span>
-
-                        -->
                 </button>
 
                 <div id="userMenu"
@@ -275,16 +267,7 @@
                         <p class="text-sm font-medium">{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}</p>
                         <p class="text-xs text-gray-500">{{ Auth::user()->role }}</p>
                     </div>
-                    <!--
-                            <a href="javascript:void(0)" id="notifBtn" class="block px-4 py-2 hover:bg-gray-100 relative">
-                                Notifications
-                                <span id="notifBadgeLink"
-                                    class="absolute top-1 right-1 hidden items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full">
-                                    {{ auth()->user()?->unreadNotifications->count() ?? 0 }}
-                                </span>
 
-                            </a>
-        -->
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
@@ -292,49 +275,11 @@
                 </div>
             </div>
 
-            <!-- Notifications Modal
-                    <div id="notifModal"
-                        class="hidden fixed inset-0 flex items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
-                        <div class="w-full max-w-xs sm:w-80 bg-white rounded-lg shadow-lg">
-                            <div class="p-5 relative">
-                                <h2 class="text-lg font-semibold mb-4">Notifications</h2>
-                                <ul id="notifList" class="space-y-2 max-h-96 overflow-y-auto"></ul>
-                                <button id="notifClose" class="absolute top-2 right-2">✖</button>
-                            </div>
-                        </div>
-                    </div>
-    --
-                    <div id="paymentModal"
-                        class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-4">
-                        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto relative">
-                            <button id="closePaymentBtn"
-                                class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 font-bold text-xl">×</button>
-                            <h2 class="text-lg font-bold mb-4">Payment Details</h2>
-                            <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
-                            <div>
-                                <p><strong>Transaction Receipt</strong></p>
-                                <img id="paymentProof" src="" class="mb-2 w-24 h-24 object-contain" style="display:none;">
-                            </div>
-                            <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
-                            <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
-                            <p><strong>Status:</strong> <span id="paymentStatus">N/A</span></p>
-                            <div id="actionButtons" class="mt-4 text-center flex justify-center gap-2">
-                                <form id="acceptForm" method="POST" class="inline">@csrf
-                                    <button type="submit"
-                                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Accept</button>
-                                </form>
-                                <button id="cancelReservationBtn" class="px-4 py-2 bg-red-500 text-white">Cancel</button>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Receipt Zoom Modal -->
             <div id="receiptModal"
                 class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
                 <div class="relative max-w-4xl w-full p-4">
-                    <!-- Close button -->
                     <button id="closeReceipt"
                         class="absolute top-2 right-2 text-white hover:text-gray-300 text-3xl font-bold">&times;</button>
-                    <!-- Enlarged image -->
                     <img id="receiptImageLarge" src=""
                         class="w-full h-auto max-h-[90vh] object-contain rounded-lg shadow-lg">
                 </div>
@@ -342,7 +287,6 @@
 
         </div>
 
-        <!-- Tables -->
         <div id="dineInContent" class="flex justify-center m-5">
             <div class="table-layout grid lg:grid-cols-5 gap-10 justify-center">
                 @foreach($tables as $table)
@@ -441,7 +385,6 @@
                         </div>
                     </div>
 
-                    <!-- Modal Footer -->
                     <div class="flex justify-end gap-4 px-6 py-4 border-t border-gray-200">
                         <button onclick="window.app.printBill()" type="button"
                             class="px-6 py-2.5 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-sm">
@@ -456,30 +399,6 @@
             </div>
         </div>
 
-        <div onclick="printBill()" class="hidden p-4 space-y-4">
-            <div>
-                <p><strong>Date: </strong><span id="invoice_date"></span></p>
-                <p><strong>Customer: </strong><span id="customer_name"></span></p>
-            </div>
-
-            <div>
-                <div class="flex justify-between font-semibold border-b pb-2">
-                    <span class="flex-1">Item</span>
-                    <span class="w-16 text-center">Price</span>
-                    <span class="w-20 text-right">Quantity</span>
-                    <span class="w-24 text-right">Total</span>
-                </div>
-                <div id="invoiceItemsList" class="space-y-1"></div>
-            </div>
-
-            <div class="flex justify-end font-bold text-lg border-t pt-2">
-                <span>Total: </span>
-                <input type="text" id="total_price" name="total_price"
-                    class="bg-gray-200 border border-gray-300 text-sm rounded-lg w-32 p-2.5 ml-4 text-right" readonly />
-            </div>
-        </div>
-
-
         <div id="toast"
             class="fixed top-5 right-5 z-50 hidden opacity-0 px-4 py-3 rounded-lg shadow-md bg-red-600 text-white text-sm font-medium transition-opacity duration-300 ease-in-out">
             <span id="toast-message">Something went wrong</span>
@@ -487,12 +406,10 @@
     </div>
 </body>
 <script>
-    // Initialize menu data from backend
     window.menuPriceData = @json($menuData);
     window.menuPricesMap = {};
     const CASHIER_NAME = @json(auth()->user()->firstname . ' ' . auth()->user()->lastname);
 
-    // Build menu prices map
     if (window.menuPriceData && Array.isArray(window.menuPriceData) && window.menuPriceData.length > 0) {
         window.menuPriceData.forEach(item => {
             if (item && item.menu_item) {
@@ -544,7 +461,6 @@
                 notifModal: document.getElementById('notifModal'),
                 notifClose: document.getElementById('notifClose'),
                 notifList: document.getElementById('notifList'),
-                badgeProfile: document.getElementById('notifBadgeProfile'),
                 badgeLink: document.getElementById('notifBadgeLink'),
                 notificationPaymentModal: document.getElementById('paymentModal'),
                 notificationCloseBtn: document.getElementById('closePaymentBtn'),
@@ -558,7 +474,6 @@
 
         initializeEventListeners() {
             this.setupUserMenuEvents();
-            this.setupNotificationEvents();
             this.setupModalEvents();
             this.setupPaymentEvents();
             this.initializeImagePopup();
@@ -576,31 +491,7 @@
             }
         }
 
-        setupNotificationEvents() {
-            if (this.elements.notifBtn && this.elements.notifModal) {
-                this.elements.notifBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.elements.notifModal.classList.remove('hidden');
-                });
-            }
 
-            if (this.elements.notifClose) {
-                this.elements.notifClose.addEventListener('click', () => {
-                    this.elements.notifModal.classList.add('hidden');
-                });
-            }
-
-            if (this.elements.notifModal) {
-                this.elements.notifModal.addEventListener('click', () => {
-                    this.elements.notifModal.classList.add('hidden');
-                });
-
-                const notifContent = this.elements.notifModal.querySelector('div');
-                if (notifContent) {
-                    notifContent.addEventListener('click', (e) => e.stopPropagation());
-                }
-            }
-        }
 
         setupModalEvents() {
             if (this.elements.notificationPaymentModal) {
@@ -807,12 +698,10 @@
             img.addEventListener("click", () => {
                 if (!img.src || img.style.display === "none") return;
 
-                // overlay
                 const overlay = document.createElement("div");
                 overlay.className = "fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50";
                 overlay.style.cursor = "zoom-out";
 
-                // preview image (smaller, fixed size)
                 const bigImg = document.createElement("img");
                 bigImg.src = img.src;
                 bigImg.className =
@@ -821,7 +710,6 @@
                 overlay.appendChild(bigImg);
                 document.body.appendChild(overlay);
 
-                // close on click
                 overlay.addEventListener("click", () => overlay.remove());
             });
         }
@@ -1330,10 +1218,10 @@
             const totalText = document.getElementById("payment_total").textContent;
             const subtotal = parseFloat(totalText.replace('₱', '').replace(',', ''));
 
-            // Get advance payment from reservation data
+
             const advancePayment = parseFloat(currentReservationData.advance_payment || 0);
 
-            // Calculate final total after deducting advance payment
+
             const finalTotal = Math.max(0, subtotal - advancePayment);
 
             const discountSelects = document.querySelectorAll('.discount-type-select');
@@ -1430,7 +1318,6 @@
                 }
             }
 
-            // Pass both subtotal and final total to the cash handling modal
             this.showCashHandlingModal(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData);
         }
 
@@ -1546,7 +1433,6 @@
 
             setTimeout(() => cashInput.focus(), 100);
 
-            // Validate cash input
             cashInput.addEventListener('input', () => {
                 const cashReceived = parseFloat(cashInput.value) || 0;
                 cashError.classList.add('hidden');
@@ -1561,7 +1447,6 @@
                 }
             });
 
-            // Handle form submission
             const form = document.getElementById('cashPaymentForm');
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
@@ -1615,13 +1500,10 @@
         }
 
         processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData) {
-            // Show processing modal
             this.showProcessingModal();
 
-            // Auto-print receipt immediately
             this.printCashReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
 
-            // Prepare payment data
             const discountInputs = document.querySelectorAll('.discount-input');
             const discountedPersons = {};
 
@@ -1648,7 +1530,7 @@
                 customer_name: currentReservationData.customer_name,
                 subtotal: subtotal,
                 advance_payment: advancePayment,
-                total: finalTotal, // This is the final amount to pay after advance deduction
+                total: finalTotal,
                 orders: ordersData,
                 discounted_persons: discountedPersons,
                 customer_data: allCustomerData,
@@ -1656,7 +1538,6 @@
                 change_given: change
             };
 
-            // Process payment
             fetch('/process-payment', {
                 method: 'POST',
                 headers: {
@@ -1712,15 +1593,13 @@
         printCashReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData) {
             const receiptData = {
                 customer_name: currentReservationData.customer_name,
-                subtotal: subtotal,
-                advance_payment: advancePayment,
                 total: finalTotal,
                 cash_received: cashReceived,
                 change: change,
-                orders: currentReservationData.orders.map(order => ({
-                    order_name: order.order_name,
-                    quantity: parseInt(order.quantity) || 1,
-                    price: parseFloat(order.regular_price || order.calculated_price || order.unit_price || 0)
+                orders: currentReservationData.orders.map(o => ({
+                    order_name: o.order_name,
+                    quantity: o.quantity,
+                    price: o.order_price ?? o.regular_price
                 }))
             };
 
@@ -1746,8 +1625,8 @@
                     this.printCashReceiptBrowser(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
                 });
         }
+
         printCashReceiptBrowser(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData) {
-            // Create a printable receipt for browser printing
             const printWindow = window.open('', '_blank');
             printWindow.document.write(`
         <html>
@@ -1808,9 +1687,7 @@
 
         printBill() {
             const cashierName = CASHIER_NAME;
-
             const customerName = document.getElementById('payment_customer_name')?.value || 'Walk-in Customer';
-
             const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
             const totalElement = document.getElementById('payment_total');
 
@@ -1820,105 +1697,115 @@
             }
 
             const summaryItems = paymentSummaryDiv.querySelectorAll('.flex.justify-between.items-center.text-sm.py-2');
-
             if (summaryItems.length === 0) {
                 this.showToast('No items found in payment summary', 'error');
                 return;
             }
 
-            const now = new Date();
-            const date = now.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-
-
+            // Build items as table rows
             let itemsHTML = '';
-
             summaryItems.forEach(item => {
                 const itemNameElement = item.querySelector('.flex-1.pr-2');
                 const priceElement = item.querySelector('.w-20.text-right.font-mono');
-
                 if (itemNameElement && priceElement) {
                     const itemName = itemNameElement.textContent.trim();
                     const price = priceElement.textContent.trim();
 
                     let displayName = itemName;
                     let quantity = '1';
-
-                    const quantityMatch = itemName.match(/(.+)\s+x(\d+)$/);
+                    const quantityMatch = itemName.match(/(.+)\s+x(\d+)$/); // ✅ FIXED
                     if (quantityMatch) {
                         displayName = quantityMatch[1].trim();
                         quantity = quantityMatch[2];
                     }
 
                     itemsHTML += `<tr>
-                        <td>${displayName}</td>
-                        <td style="text-align: center;">${quantity}</td>
-                        <td style="text-align: right;">${price}</td>
-                    </tr>`;
+                <td style="padding: 3px 2px; font-size: 10px; text-align: left; width: 55%;">${displayName}</td>
+                <td style="padding: 3px 2px; font-size: 10px; text-align: center; width: 15%;">${quantity}</td>
+                <td style="padding: 3px 2px; font-size: 10px; text-align: right; width: 30%;">${price}</td>
+            </tr>`;
                 }
             });
 
             const total = totalElement.textContent.trim();
+            const printHTML = `<!DOCTYPE html>
+        <html>
+        <head>
+            <title>Bill</title>
+            <style>
+                @media print { 
+                    @page { size: 80mm auto; margin: 0; } 
+                    body { margin: 0; padding: 2mm; } 
+                }
+                body { 
+                    font-family: "Courier New", monospace; 
+                    font-size: 12px; 
+                    width: 280px; 
+                    margin: 0 auto; 
+                    padding: 8px; 
+                }
+                .center { text-align: center; }
+                .dotted-line { 
+                    border-top: 1px dotted #000; 
+                    margin: 6px 0; 
+                }
+                table { 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                }
+                th, td { 
+                    padding: 3px 2px; 
+                    font-size: 10px; 
+                }
+                th {
+                    border-bottom: 1px dotted #000;
+                    font-weight: bold;
+                }
+            </style>
+        </head>
+        <body>
+        
+            <div class="center" style="font-size: 20px;"><strong>Bill</strong></div>
+            <div class="dotted-line"></div>
+            <div style="font-size: 13px;">Customer: ${customerName}</div>
+            @foreach ($reservations as $reservation)
+                <div>Table: {{ $reservation->table?->table_number ?? 'N/A' }}</div>
+            @endforeach
 
-            const printHTML = `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Restaurant Bill</title>
-                    <style>
-                        body { font-family: "Courier New", monospace; margin: 20px; font-size: 12px; line-height: 1.4; }
-                        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-                        th, td { padding: 8px 4px; border-bottom: 1px dotted #ccc; }
-                        th { border-bottom: 2px solid #000; font-weight: bold; }
-                        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-                        .footer { margin-top: 30px; text-align: center; font-size: 10px; border-top: 1px dotted #ccc; padding-top: 15px; }
-                        @media print { body { margin: 0; } }
-                    </style>
-                </head>
-                <body>
-                    <div class="header">
-                        <h1>RESTAURANT BILL</h1>
-                    </div>
-                    <p><strong>Cashier:</strong> ${cashierName}</p>
-                    <p><strong>Date:</strong> ${date}</p>
-                    <p><strong>Customer:</strong> ${customerName}</p>
-                    
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 50%;">Item</th>
-                                <th style="width: 20%; text-align: center;">Qty</th>
-                                <th style="width: 30%; text-align: right;">Price</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${itemsHTML}
-                        </tbody>
-                    </table>
-                    
-                    <div style="border-top: 2px solid #000; padding-top: 10px; margin-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px;">
-                            <span>TOTAL:</span>
-                            <span>${total}</span>
-                        </div>
-                    </div>
-                    
+            <div class="dotted-line"></div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: left; width: 55%;">Item</th>
+                        <th style="text-align: center; width: 15%;">Qty</th>
+                        <th style="text-align: right; width: 30%;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>${itemsHTML}</tbody>
+            </table>
+            <div class="dotted-line"></div>
+            <div class="center"><strong>TOTAL: ${total}</strong></div>
         </body>
+        </html>`;
 
-        </html>
-        `;
-
-            const printWindow = window.open('', '_blank', 'width=800,height=600');
-            if (printWindow) {
-                printWindow.document.write(printHTML);
-                printWindow.document.close();
-            } else {
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
+            if (!printWindow) {
                 this.showToast('Unable to open print window. Please check popup settings.', 'error');
+                return;
             }
+
+            printWindow.document.write(printHTML);
+            printWindow.document.close();
+
+
+            printWindow.onload = function () {
+                setTimeout(() => {
+                    printWindow.print();
+                    setTimeout(() => printWindow.close(), 100);
+                }, 500);
+            };
         }
+
 
 
         showToast(message, type = 'info') {
@@ -1990,11 +1877,11 @@
         }
     }
 
-
 </script>
 
 </body>
 <!-- -->
 <!-- --><!-- -->
 <!-- -->
+
 </html>

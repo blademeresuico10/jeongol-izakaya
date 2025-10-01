@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\reservation;
+use App\Models\User;
 
 
 class CustomerController extends Controller
@@ -42,22 +43,26 @@ class CustomerController extends Controller
         ));
     }
 
+
     public function storeReservation(Request $request)
     {
         $validator = validator($request->all(), [
             'table_id'           => 'required|exists:tables,id',
-            'customer_name'      => 'required|string',
-            'contact_number'     => 'nullable|string|max:12',
+            'customer_name'      => 'required|string|max:255',
+            'contact_number'     => 'required|string|max:15',
             'pax'                => 'required|integer|min:1',
             'reserved_date'      => 'required|date',
             'arrival_time'       => 'required|date_format:H:i',
-            'advance_payment'    => 'nullable|numeric|min:0',
-            'notes'              => 'nullable|string',
-            'orders'             => 'nullable|array',
-            'orders.*.menu_id'   => 'required|exists:menu,id',
-            'orders.*.quantity'  => 'required|integer|min:1',
-            'orders.*.notes'     => 'nullable|string',
-            'proof'              => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:9120',
+            'advance_payment'    => 'required|numeric|min:0',
+            'payment_method'     => 'required|in:gcash,maya',
+            'proof'              => 'required|file|mimes:jpg,jpeg,png|max:5120',
+            'ewallet_number_id'  => 'required|exists:ewallet_details,id',
+            'number'             => 'required|string',
+            'registered_name'    => 'required|string',
+            'orders'            => 'required|array|min:1',
+            'orders.*.menu_id'  => 'required|exists:menu,id',
+            'orders.*.quantity' => 'required|integer|min:1',
+            'orders.*.notes'    => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -68,11 +73,10 @@ class CustomerController extends Controller
             ], 422);
         }
 
-        $validated = $validator->validated();
-
-        return DB::transaction(function () use ($validated, $request) {
+        return DB::transaction(function () use ($validator, $request) {
             try {
-                $userId = Auth::id() ?? null;
+                $validated = $validator->validated();
+                $userId = Auth::id();
 
                 $table = DB::table('tables')
                     ->where('id', $validated['table_id'])
@@ -80,154 +84,182 @@ class CustomerController extends Controller
                     ->first();
 
                 if (!$table) {
-                    return response()->json(['success' => false, 'message' => 'Invalid table.'], 404);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Table not found.'
+                    ], 404);
                 }
 
-                $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
-                $endDateTime = $reservedDateTime->copy()->addHours(2);
+                $reservationTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
+                $reservationEndTime = $reservationTime->copy()->addHours(2);
 
-                if ($reservedDateTime->lt(now())) {
-                    return response()->json(['success' => false, 'message' => 'Cannot reserve in the past.']);
+                if ($reservationTime->lt(now())) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Cannot make reservation in the past.'
+                    ], 400);
                 }
 
                 $conflict = DB::table('reservations')
                     ->where('table_id', $table->id)
-                    ->where('status', 'Accepted')
-                    ->where(function ($query) use ($reservedDateTime, $endDateTime) {
-                        $query->where('reservation_time', '<', $endDateTime)
-                            ->where('reservation_end_time', '>', $reservedDateTime);
+                    ->whereIn('status', ['Pending', 'Accepted'])
+                    ->where(function ($query) use ($reservationTime, $reservationEndTime) {
+                        $query->where('reservation_time', '<', $reservationEndTime)
+                            ->where('reservation_end_time', '>', $reservationTime);
                     })
-                    ->whereNotIn('id', function ($q) {
-                        $q->select('reservation_id')
-                            ->from('transactions')
-                            ->where('status', 'completed');
-                    })
-                    ->lockForUpdate()
                     ->exists();
 
                 if ($conflict) {
-                    return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Time slot is already reserved.'
+                    ], 409);
                 }
 
                 $customer = DB::table('customers')
                     ->where('name', $validated['customer_name'])
-                    ->where('contact_number', $validated['contact_number'] ?? '')
+                    ->where('contact_number', $validated['contact_number'])
                     ->first();
 
-                $customerId = $customer
-                    ? $customer->id
-                    : DB::table('customers')->insertGetId([
+                if (!$customer) {
+                    $customerId = DB::table('customers')->insertGetId([
                         'name'           => $validated['customer_name'],
-                        'contact_number' => $validated['contact_number'] ?? null,
+                        'contact_number' => $validated['contact_number'],
                         'created_at'     => now(),
                         'updated_at'     => now(),
                     ]);
-
-                $totalPrice = 0;
-                $reservationHour = $reservedDateTime->hour;
-                $isReservationLunchTime = $reservationHour >= 11 && $reservationHour < 17;
-
-                foreach ($validated['orders'] ?? [] as $order) {
-                    $menu = DB::table('menu')->find($order['menu_id']);
-                    if ($menu) {
-                        $price = $menu->regular_price;
-                        $totalPrice += $price * $order['quantity'];
-                    }
+                } else {
+                    $customerId = $customer->id;
                 }
 
                 $reservation = Reservation::create([
                     'pax'                  => $validated['pax'],
-                    'advance_payment'      => $validated['advance_payment'] ?? 0.00,
-                    'reservation_time'     => $reservedDateTime,
-                    'reservation_end_time' => $endDateTime,
+                    'reservation_time'     => $reservationTime,
+                    'reservation_end_time' => $reservationEndTime,
+                    'status'               => 'Pending',
                     'table_id'             => $table->id,
                     'customer_id'          => $customerId,
                     'user_id'              => $userId,
-                    'status'               => 'Pending',
                 ]);
 
-                if ($request->has('payment_method')) {
-                    $proofPath = $request->hasFile('proof')
-                        ? $request->file('proof')->store('payment_proofs', 'public')
-                        : null;
-
-                    DB::table('reservation_payments')->insert([
-                        'reservation_id'  => $reservation->id,
-                        'registered_name' => $request->input('registered_name'),
-                        'number'          => $request->input('number'),
-                        'amount'          => $request->input('amount') ?? 0.00,
-                        'method'          => $request->input('payment_method'),
-                        'ref_no'          => $request->input('ref_no'),
-                        'proof_path'      => $proofPath,
-                        'status'          => 'Pending',
-                        'created_at'      => now(),
-                        'updated_at'      => now(),
-                    ]);
+                $paymentProofPath = null;
+                if ($request->hasFile('proof')) {
+                    $paymentProofPath = $request->file('proof')
+                        ->store('payment_proofs', 'public');
                 }
 
-                foreach ($validated['orders'] ?? [] as $order) {
-                    $menu = DB::table('menu')->find($order['menu_id']);
-                    if (!$menu) continue;
+                DB::table('reservation_payment_details')->insert([
+                    'name'             => $validated['registered_name'],
+                    'contact'          => $validated['contact_number'],
+                    'advance_payment'  => $validated['advance_payment'],
+                    'payment_method'   => $validated['payment_method'],
+                    'payment_proof'    => $paymentProofPath,
+                    'reservation_id'   => $reservation->id,
+                    'ewallet_number'   => $validated['ewallet_number_id'],
+                    'created_at'       => now(),
+                    'updated_at'       => now(),
+                ]);
 
-                    $orderPrice = $menu->regular_price;
+                if (!empty($validated['orders'])) {
+                    $orderInserts = [];
+                    foreach ($validated['orders'] as $order) {
+                        $menu = DB::table('menu')->find($order['menu_id']);
+                        if ($menu) {
+                            $orderInserts[] = [
+                                'order_price'    => $menu->regular_price * $order['quantity'],
+                                'reservation_id' => $reservation->id,
+                                'menu_id'        => $menu->id,
+                                'quantity'       => $order['quantity'],
+                                'notes'          => $order['notes'] ?? null,
+                                'status'         => 'Pending',
+                                'customer_id'    => $customerId,
+                                'user_id'        => $userId,
+                                'created_at'     => now(),
+                                'updated_at'     => now(),
+                            ];
+                        }
+                    }
 
-                    DB::table('order_details')->insert([
-                        'order_price'    => $orderPrice * $order['quantity'],
-                        'reservation_id' => $reservation->id,
-                        'menu_id'        => $menu->id,
-                        'quantity'       => $order['quantity'],
-                        'notes'          => $order['notes'] ?? null,
-                        'status'         => 'Pending',
-                        'customer_id'    => $customerId,
-                        'user_id'        => $userId,
-                        'created_at'     => now(),
-                        'updated_at'     => now(),
-                    ]);
+                    if (!empty($orderInserts)) {
+                        DB::table('order_details')->insert($orderInserts);
+                    }
                 }
 
-                foreach (\App\Models\User::whereIn('role', ['receptionist'])->get() as $user) {
-                    $user->notify(new \App\Notifications\ReservationPaid($reservation));
-                }
+                $this->notifyReceptionists($reservation, $validated['customer_name']);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'Reservation placed successfully',
+                    'message' => 'Reservation created successfully.',
+                    'reservation_id' => $reservation->id,
                 ]);
             } catch (\Illuminate\Database\QueryException $e) {
+                Log::error('Database error in storeReservation: ' . $e->getMessage());
+
                 if ($e->getCode() == 23000) {
                     return response()->json([
                         'success' => false,
-                        'message' => 'This time slot has already been reserved by another customer.',
+                        'message' => 'Time slot conflict occurred.',
                     ], 409);
                 }
 
-                Log::error('Database error in reservation: ' . $e->getMessage());
                 return response()->json([
                     'success' => false,
                     'message' => 'Database error occurred.',
-                    'error'   => $e->getMessage(),
                 ], 500);
             } catch (\Exception $e) {
-                Log::error('General error in reservation: ' . $e->getMessage());
+                Log::error('Error in storeReservation: ' . $e->getMessage());
+
                 return response()->json([
                     'success' => false,
-                    'message' => 'Reservation failed.',
-                    'error'   => $e->getMessage(),
+                    'message' => 'Failed to create reservation.',
                 ], 500);
             }
         });
     }
 
-    public function getUnavailableTimes()
+    private function notifyReceptionists($reservation, $customerName)
     {
-        $reservations = \App\Models\reservation::select('id', 'reservation_time', 'reservation_end_time')
-            ->whereIn('status', ['Pending', 'Accepted']) 
-            ->orderBy('reservation_time', 'asc')
+        try {
+            $receptionists = User::where('role', 'receptionist')->get();
+            $notifications = [];
+
+            foreach ($receptionists as $receptionist) {
+                $notifications[] = [
+                    'message' => "New reservation request from {$customerName}.",
+                    'is_read' => false,
+                    'user_id' => $receptionist->id,
+                    'reservation_id' => $reservation->id,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            if (!empty($notifications)) {
+                DB::table('reservation_notifications')->insert($notifications);
+            }
+        } catch (\Exception $e) {
+            Log::error('Error sending notifications to receptionists: ' . $e->getMessage());
+        }
+    }
+
+    public function getUnavailableTimes(Request $request)
+    {
+        $tableId = $request->get('table_id');
+
+        if (!$tableId) {
+            return response()->json([]);
+        }
+
+        $reservations = DB::table('reservations')
+            ->where('table_id', $tableId)
+            ->whereDate('reservation_time', Carbon::now()->toDateString())
+            ->whereIn('status', ['Pending', 'Accepted'])
+            ->select('id', 'reservation_time', 'reservation_end_time', 'table_id')
+            ->orderBy('reservation_time')
             ->get();
 
         return response()->json($reservations);
     }
-
 
     public function storeFeedback(Request $request)
     {

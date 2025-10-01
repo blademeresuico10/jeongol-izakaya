@@ -2,8 +2,7 @@
 
 @include('admin.layouts.sidebar')
 
-<div id="content-wrapper" class="d-flex flex-column">
-
+<div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
 
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
@@ -45,4 +44,4 @@
 
 </div>
 
-@include('admin.layouts.script') 
+@include('admin.layouts.script')
