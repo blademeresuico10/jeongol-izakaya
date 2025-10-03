@@ -14,32 +14,23 @@ class Menu extends Model
     protected $fillable = [
         'menu_item',
         'regular_price',
-        'student_price',
-        'govt_employee_price',
         'image',
         'category',
         'has_customer_discount',
         'status' 
     ];
 
-    protected $casts = [
-        'regular_price' => 'decimal:2',
-        'student_price' => 'decimal:2',
-        'govt_employee_price' => 'decimal:2',
-        'has_customer_discount' => 'boolean'
-    ];
-
     
-    public function orderDetails()
+    public function orders()
     {
-        return $this->hasMany(\App\Models\OrderDetail::class, 'menu_id');
+        return $this->hasMany(orders::class);
     }
 
    
     public function hasActiveOrders()
     {
-        return $this->orderDetails()
-            ->whereHas('reservation', function($query) {
+        return $this->orders()
+            ->whereHas('reservations', function($query) {
                 $query->whereIn('status', ['pending', 'confirmed', 'in_progress']); 
             })
             ->exists();

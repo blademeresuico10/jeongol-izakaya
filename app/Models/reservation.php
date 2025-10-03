@@ -8,37 +8,36 @@ class Reservation extends Model
 {
     protected $fillable = [
         'pax',
-        'advance_payment',
-        'reservation_time',
-        'reservation_end_time',
+        'started_at',
+        'ended_at',
         'table_id',
         'customer_id',
         'user_id',
         'status',
     ];
 
-    public function orderDetails()
+    public function orders()
     {
-        return $this->hasMany(\App\Models\OrderDetail::class);
+        return $this->hasMany(orders::class, 'reservation_id', 'id');
     }
 
     public function customer()
     {
-        return $this->belongsTo(\App\Models\customers::class);
+        return $this->belongsTo(customers::class);
     }
 
     public function user()
     {
-        return $this->belongsTo(\App\Models\User::class);
+        return $this->belongsTo(User::class);
     }
 
     public function payment()
     {
-        return $this->hasOne(\App\Models\reservationPayment::class, 'reservation_id', 'id');
+        return $this->hasOne(reservationPayment::class, 'reservation_id', 'id');
     }
     public function table()
     {
-        return $this->belongsTo(\App\Models\table::class);
+        return $this->belongsTo(table::class);
     }
     public function transactions()
     {

@@ -31,8 +31,8 @@ class ingredientMovements extends Model
         return $this->belongsTo(User::class)->withDefault(); 
     }
 
-    public function orderDetail()
+    public function orders()
     {
-        return $this->belongsTo(OrderDetail::class)->withDefault();
+        return $this->hasMany(orders::class);
     }
 }

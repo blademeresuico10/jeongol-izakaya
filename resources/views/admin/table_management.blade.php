@@ -90,9 +90,14 @@
                                 <button type="button" class="close text-white"
                                     data-dismiss="modal"><span>&times;</span></button>
                             </div>
+                           @foreach ($tables as $table)
+                               @php
+                                   $add_new_table = $table->table_number + 1;
+                               @endphp
+                           @endforeach
                             <div class="modal-body">
                                 <label>Table Number</label>
-                                <input type="number" name="table_number" class="form-control" required>
+                                <input type="number" name="table_number" class="form-control" value="{{ $add_new_table }}" required readonly>
 
                                 <label class="mt-2">Capacity</label>
                                 <input type="number" name="capacity" class="form-control" required>

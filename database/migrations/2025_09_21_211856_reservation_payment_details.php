@@ -13,13 +13,13 @@ return new class extends Migration
     {
         Schema::create('reservation_payment_details', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('contact');
+            $table->string('registered_name');
+            $table->string('registered_number');
             $table->decimal('advance_payment', 8, 2);
-            $table->enum('payment_method', ['gcash', 'maya'])->nullable();
+            $table->enum('payment_method', ['gcash', 'maya', 'cash'])->nullable();
             $table->string('payment_proof')->nullable();
             $table->foreignId('reservation_id')->constrained('reservations')->onDelete('cascade');
-            $table->foreignId('ewallet_number')->constrained('ewallet_details')->onDelete('cascade');
+            $table->foreignId('ewallet_id')->nullable()->constrained('ewallet_details')->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -29,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('reservation_payment_details');
     }
 };

@@ -143,6 +143,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/home', [ReceptionistController::class, 'home'])->name('home');
         Route::get('/dashboard', [ReceptionistController::class, 'home']);
         Route::post('/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('storeReservation');
+        Route::post('/store-walkin', [ReceptionistController::class, 'storeWalkIn'])->name('storeWalkIn');
         Route::get('/available-times', [ReceptionistController::class, 'getAvailableTimeSlots'])->name('available_times');
         Route::get('/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('modify_orders');
         Route::get('/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('view_kitchen');
@@ -157,7 +158,7 @@ Route::middleware('auth')->group(function () {
     });
     
     Route::middleware('role:Receptionist')->group(function () {
-        Route::get('/view_reservations', [ReceptionistController::class, 'reservations'])->name('receptionist.reservations');
+        Route::get('/view_bookings', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
     });
 
     // KITCHEN STAFF ONLY ROUTES

@@ -292,14 +292,13 @@
                 @foreach($tables as $table)
                     @php
                         $isOccupied = in_array($table->table_number, $occupiedTables);
-                        $reservationId = $table->current_reservation_id ?? '';
+                        $reservationId = $table->current_reservation_id ?? $table->current_session_id ?? '';
                     @endphp
                     <div class="table-link cursor-pointer" data-reservation-id="{{ $reservationId }}"
                         data-table-number="{{ $table->table_number }}" data-table-capacity="{{ $table->capacity }}"
                         data-occupied="{{ $isOccupied ? '1' : '0' }}">
-                        <div class="flex justify-center ">
-                            <div
-                                class="relative h-40 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center ">
+                        <div class="flex justify-center">
+                            <div class="relative h-40 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center">
                                 <div class="absolute mt-2 -top-1 px-3 bg-gray-200 text-black text-xs rounded-full shadow">
                                     {{ $table->capacity }} Pax
                                 </div>
@@ -309,18 +308,32 @@
                                         class="w-20 h-20 rounded-full {{ $isOccupied ? 'bg-red-600' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
                                         <span class="text-lg font-semibold">Table-{{ $table->table_number }}</span>
                                     </div>
-                                    @if($table->current_reservation_id && $table->remaining_seconds > 0)
-                                        <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-600" fill="none"
-                                                viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
-                                            </svg>
-                                            <span class="countdown"
-                                                data-seconds="{{ $table->remaining_seconds }}">--:--:--</span>
-                                        </span>
+
+                                    @if($isOccupied)
+                                        @if(isset($table->remaining_seconds) && $table->remaining_seconds > 0)
+                                            <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
+                                                </svg>
+                                                <span class="countdown"
+                                                    data-seconds="{{ $table->remaining_seconds }}">00:00:00</span>
+                                            </span>
+                                        @elseif(isset($table->elapsed_seconds))
+                                            <span class="text-blue-600 font-medium mt-2 flex items-center space-x-1">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
+                                                </svg>
+                                                <span class="countup" data-seconds="{{ $table->elapsed_seconds }}">00:00:00</span>
+                                            </span>
+                                        @else
+                                            <span class="text-red-600 font-medium mt-2">Occupied</span>
+                                        @endif
                                     @else
-                                        <span class="text-green-600 font-medium">Available</span>
+                                        <span class="text-green-600 font-medium mt-2">Available</span>
                                     @endif
                                 </div>
                             </div>
@@ -410,14 +423,16 @@
     window.menuPricesMap = {};
     const CASHIER_NAME = @json(auth()->user()->firstname . ' ' . auth()->user()->lastname);
 
-    if (window.menuPriceData && Array.isArray(window.menuPriceData) && window.menuPriceData.length > 0) {
+    if (Array.isArray(window.menuPriceData) && window.menuPriceData.length > 0) {
         window.menuPriceData.forEach(item => {
             if (item && item.menu_item) {
                 window.menuPricesMap[item.menu_item] = {
-                    regular: parseFloat(item.regular_price) || 0,
-                    student: item.student_price !== null && item.student_price !== undefined ? parseFloat(item.student_price) : null,
-                    govt_employee: item.govt_employee_price !== null && item.govt_employee_price !== undefined ? parseFloat(item.govt_employee_price) : null,
-                    has_discount: item.has_customer_discount === 1 || item.has_customer_discount === true
+                    regular: parseFloat(item.regular) || 0,
+                    student: item.student !== null ? parseFloat(item.student) : null,
+                    govt_employee: item.govt_employee !== null ? parseFloat(item.govt_employee) : null,
+                    senior: item.senior !== null ? parseFloat(item.senior) : null,
+                    pwd: item.pwd !== null ? parseFloat(item.pwd) : null,
+                    has_discount: item.has_discount === 1 || item.has_discount === true
                 };
             }
         });
@@ -438,18 +453,18 @@
         }
 
         init() {
-            const initialize = () => {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    this.initializeElements();
+                    this.initializeEventListeners();
+                    this.setupTableClickEvents();
+                    setTimeout(() => this.initializeCountdowns(), 500);
+                });
+            } else {
                 this.initializeElements();
                 this.initializeEventListeners();
                 this.setupTableClickEvents();
-                this.initializeCountdowns();
-
-            };
-
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', initialize);
-            } else {
-                setTimeout(initialize, 0);
+                setTimeout(() => this.initializeCountdowns(), 500);
             }
         }
 
@@ -567,6 +582,7 @@
                 let seconds = parseInt(el.dataset.seconds) || 0;
 
                 function formatTime(s) {
+                    s = Math.max(0, s);
                     const h = String(Math.floor(s / 3600)).padStart(2, '0');
                     const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
                     const sec = String(s % 60).padStart(2, '0');
@@ -585,6 +601,27 @@
 
                 update();
             });
+
+            const countupElements = document.querySelectorAll('.countup');
+            countupElements.forEach(el => {
+                let seconds = parseInt(el.dataset.seconds) || 0;
+
+                function formatTime(s) {
+                    s = Math.max(0, s);
+                    const h = String(Math.floor(s / 3600)).padStart(2, '0');
+                    const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+                    const sec = String(s % 60).padStart(2, '0');
+                    return `${h}:${m}:${sec}`;
+                }
+
+                function update() {
+                    el.textContent = formatTime(seconds);
+                    seconds++;
+                    setTimeout(update, 1000);
+                }
+
+                update();
+            });
         }
 
 
@@ -594,7 +631,7 @@
 
             if (this.elements.tablePaymentModal) {
                 this.elements.tablePaymentModal.classList.remove('hidden');
-                this.fetchReservationData(reservationId, tableNumber);
+                this.fetchOrderData(reservationId, tableNumber);
             } else {
                 this.showToast('Payment modal not available', 'error');
             }
@@ -627,7 +664,7 @@
                 });
         }
 
-        fetchReservationData(reservationId, tableNumber) {
+        fetchOrderData(reservationId, tableNumber) {
             fetch('/orders/' + reservationId)
                 .then(response => {
                     if (!response.ok) {
@@ -639,12 +676,12 @@
                     if (data && data.reservation_id) {
                         this.populatePaymentModal(data, tableNumber);
                     } else {
-                        this.showToast('Reservation not found or no orders available', 'error');
+                        this.showToast('No order/orders found.', 'error');
                         this.populateBasicInfo(reservationId);
                     }
                 })
                 .catch(error => {
-                    this.showToast('Failed to load reservation data', 'error');
+                    this.showToast('Failed to load data', 'error');
                     this.populateBasicInfo(reservationId);
                 });
         }
@@ -754,8 +791,9 @@
             currentReservationData.orders.forEach(order => {
                 const itemName = order.order_name;
                 const menuItemData = window.menuPricesMap?.[itemName] || {};
-                const price = parseFloat(order.regular_price || order.calculated_price || order.unit_price || 0);
+
                 const qty = parseInt(order.quantity) || 1;
+                const price = parseFloat(order.regular_price || 0);
 
                 for (let i = 0; i < qty; i++) {
                     subtotal += price;
@@ -766,20 +804,20 @@
                     if (showDiscountSelect) {
                         orderLine.className = "flex justify-between items-center py-2 border-b border-gray-100";
                         orderLine.innerHTML = `
-                                <div class="flex-1">
-                                    <div class="font-medium">${itemName}</div>
-                                </div>
-                                <span class="w-20 text-right">₱${price.toFixed(2)}</span>
-                                <div class="w-40 text-right">
-                                    <select class="discount-type-select border border-gray-300 rounded px-1 py-1 text-sm w-50" 
-                                            data-item-price="${price}" 
-                                            data-item-name="${itemName}" 
-                                            id="discount-select-${itemCounter}">
-                                        ${this.getDiscountOptions(menuItemData)}
-                                    </select>
-                                </div>
-                                <span class="w-24 text-right font-medium item-total">₱${price.toFixed(2)}</span>
-                            `;
+                    <div class="flex-1">
+                        <div class="font-medium">${itemName}</div>
+                    </div>
+                    <span class="w-20 text-right">₱${price.toFixed(2)}</span>
+                    <div class="w-40 text-right">
+                        <select class="discount-type-select border border-gray-300 rounded px-1 py-1 text-sm w-50" 
+                                data-item-price="${price}" 
+                                data-item-name="${itemName}" 
+                                id="discount-select-${itemCounter}">
+                            ${this.getDiscountOptions(menuItemData)}
+                        </select>
+                    </div>
+                    <span class="w-24 text-right font-medium item-total">₱${price.toFixed(2)}</span>
+                `;
                         paymentItemsList.appendChild(orderLine);
                     } else {
                         orderLine.className = "hidden";
@@ -870,15 +908,15 @@
 
             if (!this.currentReservationData?.orders || this.currentReservationData.orders.length === 0) {
                 paymentSummaryDiv.innerHTML = `
-                        <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
-                            <span class="flex-1">Item</span>
-                            <span class="w-24 text-right">Total Price</span>
-                        </div>
-                        <div class="flex justify-between text-lg font-bold border-t pt-2">
-                            <span>Total Amount:</span>
-                            <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
-                        </div>
-                    `;
+            <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
+                <span class="flex-1">Item</span>
+                <span class="w-24 text-right">Total Price</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold border-t pt-2">
+                <span>Total Amount:</span>
+                <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
+            </div>
+        `;
                 return;
             }
 
@@ -892,7 +930,14 @@
 
             this.currentReservationData.orders.forEach((order, orderIndex) => {
                 const itemName = order.order_name;
-                const price = parseFloat(order.regular_price || order.calculated_price || order.unit_price || 0);
+
+                const price = parseFloat(
+                    order.order_price ||
+                    order.unit_price ||
+                    order.regular_price ||
+                    0
+                ) / (order.unit_price ? 1 : (parseInt(order.quantity) || 1));
+
                 const qty = parseInt(order.quantity) || 1;
 
                 for (let i = 0; i < qty; i++) {
@@ -966,15 +1011,15 @@
                 const discountType = entry.discountType || 'none';
 
                 breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
-                        <span class="flex-1 pr-2">${entry.name}</span>
-                        <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
-                        <div class="w-12 flex justify-center ml-2">
-                            ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
-                                            class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                            Info
-                                            </button>` : ''}
-                        </div>
-                    </div>`;
+            <span class="flex-1 pr-2">${entry.name}</span>
+            <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
+            <div class="w-12 flex justify-center ml-2">
+                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                Info
+                                </button>` : ''}
+            </div>
+        </div>`;
                 displayItemCounter++;
             });
 
@@ -986,30 +1031,30 @@
                 const discountType = group.discountType || 'none';
 
                 breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
-                        <span class="flex-1 pr-2">${displayName}</span>
-                        <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
-                        <div class="w-12 flex justify-center ml-2">
-                            ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
-                                            class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                            Info
-                                            </button>` : ''}
-                        </div>
-                    </div>`;
+            <span class="flex-1 pr-2">${displayName}</span>
+            <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
+            <div class="w-12 flex justify-center ml-2">
+                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                Info
+                                </button>` : ''}
+            </div>
+        </div>`;
                 displayItemCounter++;
             });
 
             paymentSummaryDiv.innerHTML = `
-                    <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
-                        <span class="flex-1">Item</span>
-                        <span class="w-20 text-right">Total Price</span>
-                        <span class="w-12 text-center ml-2"></span>
-                    </div>
-                    ${breakdownHtml}
-                    <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
-                        <span>Total Amount:</span>
-                        <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
-                    </div>
-                `;
+        <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
+            <span class="flex-1">Item</span>
+            <span class="w-20 text-right">Total Price</span>
+            <span class="w-12 text-center ml-2"></span>
+        </div>
+        ${breakdownHtml}
+        <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
+            <span>Total Amount:</span>
+            <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
+        </div>
+    `;
         }
 
         setupDiscountBreakdownSection() {
@@ -1502,7 +1547,8 @@
         processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData) {
             this.showProcessingModal();
 
-            this.printCashReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
+            // Print receipt first
+            this.printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
 
             const discountInputs = document.querySelectorAll('.discount-input');
             const discountedPersons = {};
@@ -1518,10 +1564,10 @@
 
             const ordersData = currentReservationData.orders.map(order => {
                 return {
-                    order_detail_id: order.order_detail_id,
+                    order_id: order.order_id,
                     order_name: order.order_name,
                     quantity: parseInt(order.quantity) || 1,
-                    price: parseFloat(order.regular_price || order.calculated_price || order.unit_price || 0)
+                    price: parseFloat(order.order_price || order.unit_price || order.regular_price || 0)
                 };
             });
 
@@ -1571,88 +1617,232 @@
                 })
                 .catch(error => {
                     this.removeProcessingModal();
-
-                    if (error.message.includes('Session expired') || error.message.includes('expired')) {
-                        this.showToast("Your session has expired. Please refresh the page and try again.", "error");
-                    } else if (error.message.includes('endpoint not found')) {
-                        this.showToast("Payment system is currently unavailable. Please contact support.", "error");
-                    } else if (error.message.includes('Server error')) {
-                        this.showToast("Server error occurred. Please try again in a few moments.", "error");
-                    } else if (error.message.includes('already exists')) {
-                        this.showToast("Customer ID number already exists. Please use a different ID number.", "error");
-                    } else if (error.message.includes('Database error')) {
-                        this.showToast("Database error occurred. Please try again.", "error");
-                    } else if (error.message.includes('Unexpected token')) {
-                        this.showToast("Server returned invalid response. Please refresh the page and try again.", "error");
-                    } else {
-                        this.showToast(error.message || "Payment processing failed. Please try again.", "error");
-                    }
+                    this.showToast(error.message || "Payment processing failed. Please try again.", "error");
                 });
         }
 
-        printCashReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData) {
-            const receiptData = {
-                customer_name: currentReservationData.customer_name,
-                total: finalTotal,
-                cash_received: cashReceived,
-                change: change,
-                orders: currentReservationData.orders.map(o => ({
-                    order_name: o.order_name,
-                    quantity: o.quantity,
-                    price: o.order_price ?? o.regular_price
-                }))
-            };
+        printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData) {
+            const today = new Date();
+            const dateStr = today.toLocaleDateString('en-PH', { year: 'numeric', month: '2-digit', day: '2-digit' });
+            const timeStr = today.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            fetch('/print-receipt', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify(receiptData)
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        console.log('Receipt printed to thermal printer');
-                    } else {
-                        console.error('Thermal printer failed:', data.message);
-                        this.printCashReceiptBrowser(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
+            const vatableSales = (subtotal / 1.12).toFixed(2);
+            const vat = (subtotal - vatableSales).toFixed(2);
+
+            let orderItemsHTML = '';
+            const itemGroups = {};
+            let itemIndex = 0;
+
+            const discountSelects = document.querySelectorAll('.discount-type-select');
+
+            currentReservationData.orders.forEach(order => {
+                const itemName = order.order_name;
+                const qty = parseInt(order.quantity) || 1;
+                const regularPrice = parseFloat(order.regular_price || 0);
+
+                for (let i = 0; i < qty; i++) {
+                    const itemTotalElements = document.querySelectorAll('.item-total');
+                    let finalPrice = regularPrice;
+
+                    if (itemIndex < itemTotalElements.length) {
+                        finalPrice = parseFloat(itemTotalElements[itemIndex].textContent.replace('₱', ''));
                     }
-                })
-                .catch(error => {
-                    console.error('Printer connection error:', error);
-                    this.printCashReceiptBrowser(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
-                });
-        }
 
-        printCashReceiptBrowser(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData) {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`
-        <html>
-        <head>
-            <title>Receipt</title>
-            <style>
-                body { font-family: monospace; width: 300px; }
-                .center { text-align: center; }
-                .line { border-bottom: 1px dashed #000; margin: 5px 0; }
-            </style>
-        </head>
-        <body>
-            <div class="center"><strong>RESTAURANT RECEIPT</strong></div>
-            <div class="center">${new Date().toLocaleString()}</div>
-            <div class="line"></div>
-            <div>Customer: ${currentReservationData.customer_name}</div>
-            <!-- Add more receipt content here -->
-            <div class="line"></div>
-            <div>Total: ₱${finalTotal.toFixed(2)}</div>
-            <div>Cash: ₱${cashReceived.toFixed(2)}</div>
-            <div>Change: ₱${change.toFixed(2)}</div>
-        </body>
-        </html>
-    `);
+                    const groupKey = itemName;
+                    if (!itemGroups[groupKey]) {
+                        itemGroups[groupKey] = {
+                            quantity: 0,
+                            regularPrice: regularPrice,
+                            totalAmount: 0
+                        };
+                    }
+                    itemGroups[groupKey].quantity += 1;
+                    itemGroups[groupKey].totalAmount += finalPrice;
+
+                    itemIndex++;
+                }
+            });
+
+            // ✅ Build the table with Unit Price (regular) and Amount (discounted)
+            Object.keys(itemGroups).forEach(itemName => {
+                const item = itemGroups[itemName];
+                orderItemsHTML += `
+            <tr>
+                <td style="padding: 4px 8px; border-bottom: 1px solid #ddd;">${itemName}</td>
+                <td style="padding: 4px 8px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
+                <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.regularPrice.toFixed(2)}</td>
+                <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.totalAmount.toFixed(2)}</td>
+            </tr>
+        `;
+            });
+
+            const printHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Jeongol Receipt</title>
+        <style>
+            @media print { 
+                @page { size: 80mm auto; margin: 0; } 
+                body { margin: 0; padding: 0; }
+            }
+            body { 
+                font-family: 'Courier New', monospace;
+                font-size: 11px;
+                width: 300px;
+                margin: 0 auto;
+                padding: 10px;
+            }
+            .header {
+                text-align: center;
+                border-bottom: 1px dashed #000;
+                padding-bottom: 8px;
+                margin-bottom: 8px;
+            }
+            .header h3 {
+                margin: 2px 0;
+                font-size: 13px;
+            }
+            .header p {
+                margin: 1px 0;
+                font-size: 9px;
+            }
+            .info-section {
+                margin: 8px 0;
+                font-size: 10px;
+            }
+            .info-row {
+                display: flex;
+                justify-content: space-between;
+                margin: 2px 0;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 8px 0;
+                font-size: 10px;
+            }
+            th {
+                border-top: 1px solid #000;
+                border-bottom: 1px solid #000;
+                padding: 4px 8px;
+                text-align: left;
+                font-weight: bold;
+            }
+            .summary {
+                margin-top: 8px;
+                border-top: 1px dashed #000;
+                padding-top: 8px;
+            }
+            .summary-row {
+                display: flex;
+                justify-content: space-between;
+                margin: 3px 0;
+            }
+            .total-row {
+                font-weight: bold;
+                font-size: 12px;
+                border-top: 1px solid #000;
+                padding-top: 4px;
+                margin-top: 4px;
+            }
+            .footer {
+                text-align: center;
+                margin-top: 12px;
+                border-top: 1px dashed #000;
+                padding-top: 8px;
+                font-size: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h3>Jeongol Izakaya Hotpot & Grill</h3>
+            <p>VAT Reg. TIN 295-774-127-00003</p>
+            <p>Koronadal City, South Cotabato, Philippines</p>
+            <p style="margin-top: 6px; font-weight: bold;">Receipt</p>
+        </div>
+
+        <div class="info-section">
+            <div class="info-row">
+                <span>Date:</span>
+                <span>${dateStr} ${timeStr}</span>
+            </div>
+            <div class="info-row">
+                <span>Cashier:</span>
+                <span>${CASHIER_NAME}</span>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align: left;">Item Description</th>
+                    <th style="text-align: center; width: 40px;">Qty</th>
+                    <th style="text-align: right; width: 60px;">Unit Price</th>
+                    <th style="text-align: right; width: 70px;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${orderItemsHTML}
+            </tbody>
+        </table>
+
+        <div class="summary">
+            <div class="summary-row">
+                <span>VATable Sales:</span>
+                <span>₱${vatableSales}</span>
+            </div>
+            <div class="summary-row">
+                <span>VAT (12%):</span>
+                <span>₱${vat}</span>
+            </div>
+            <div class="summary-row">
+                <span>Total Sales (VAT Inclusive):</span>
+                <span>₱${subtotal.toFixed(2)}</span>
+            </div>
+            ${advancePayment > 0 ? `
+            <div class="summary-row">
+                <span>Advance Payment:</span>
+                <span>₱${advancePayment.toFixed(2)}</span>
+            </div>
+            ` : ''}
+            <div class="summary-row total-row">
+                <span>TOTAL AMOUNT DUE:</span>
+                <span>₱${finalTotal.toFixed(2)}</span>
+            </div>
+            <div class="summary-row" style="margin-top: 8px;">
+                <span>Cash Received:</span>
+                <span>₱${cashReceived.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+                <span>Change:</span>
+                <span>₱${change.toFixed(2)}</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Thank you for dining with us!</p>
+            <p>Please come again</p>
+        </div>
+    </body>
+    </html>
+    `;
+            const printWindow = window.open('', '_blank', 'width=400,height=600');
+            if (!printWindow) {
+                this.showToast('Unable to open print window. Please check popup settings.', 'error');
+                return;
+            }
+
+            printWindow.document.write(printHTML);
             printWindow.document.close();
-            printWindow.print();
+
+            printWindow.onload = function () {
+                setTimeout(() => {
+                    printWindow.print();
+                    setTimeout(() => printWindow.close(), 100);
+                }, 500);
+            };
         }
 
         updateTableStatusAfterPayment(reservationId) {

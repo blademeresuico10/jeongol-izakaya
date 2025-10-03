@@ -10,12 +10,12 @@
 
 <div id="tab-{{ $method }}" class="tab-content {{ $method === 'maya' ? 'hidden' : '' }}">
     @if($ewalletDetail)
-            <input type="hidden" class="ewallet-id" value="{{ $ewalletDetail->id }}">
-
-        <div class="mb-2">
-            <label class="block text-sm font-medium">
-                {{ ucfirst($method) }} Wallet:
-            </label>
+    <input type="hidden" class="ewallet-id" name="ewallet_id" value="{{ $ewalletDetail->id }}">
+    
+    <div class="mb-2">
+        <label class="block text-sm font-medium">
+            {{ ucfirst($method) }} Wallet:
+        </label>
             <p class="ml-20 text-sm">{{ $ewalletDetail->wallet_name }}</p>
             <div class="ml-20 flex items-center space-x-2">
                 <p class="text-sm text-blue-600">{{ $ewalletDetail->wallet_number }}</p>
@@ -37,12 +37,13 @@
        Your {{ ucfirst($method) }} Account Number
     </label>
     <input type="tel" 
+        name="registered_number"
         pattern="[0-9]{11}"      
         maxlength="11"
         inputmode="numeric"       
         class="{{ $method }}-number w-full border rounded px-3 py-2 mb-1" 
         placeholder="09XXXXXXXXX"
-        value="{{ $data['number'] ?? '' }}" 
+        value="{{ $data['registered_number'] ?? '' }}" 
         required>
     <span class="error text-red-500 text-sm mb-2 hidden"></span>
 
@@ -50,6 +51,7 @@
         {{ ucfirst($method) }} Registered Name
     </label>
     <input type="text" 
+        name="registered_name"
         class="registered-name w-full border rounded px-3 py-2 mb-1" 
         placeholder="Full Name"
         value="{{ $data['registered_name'] ?? '' }}" 
@@ -58,6 +60,7 @@
 
     <label class="block  text-sm font-medium">Amount</label>
     <input type="number" 
+        name="amount"
         class="amount w-full border rounded px-3 py-2 mb-1" 
         placeholder="Enter amount"
         value="{{ $data['amount'] ?? '' }}" 
@@ -66,15 +69,12 @@
 
     <label class="block  text-sm font-medium">Upload Proof of Payment</label>
     @if(!empty($data['proof']))
-        <div class="mb-3">
-            <a href="{{ asset('storage/' . $data['proof']) }}" target="_blank"
-               class="text-blue-500 underline">View Proof</a>
+    <div class="mb-3">
+        <a href="{{ asset('storage/' . $data['proof']) }}" target="_blank"
+           class="text-blue-500 underline">View Proof</a>
         </div>
     @else
-        <input type="file" name="proof" 
-            class="proof w-full border rounded px-3 py-2 mb-1"
-            required>
-        <span class="error text-red-500 text-sm mb-2 hidden"></span>
+        <input type="file" name="proof" class="proof" required>
     @endif
     
     <div id="toast" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-black bg-opacity-75 text-white px-6 py-3 rounded-md shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none z-50">

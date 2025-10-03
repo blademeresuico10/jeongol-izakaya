@@ -13,21 +13,20 @@ class reservationPayment extends Model
 
     protected $fillable = [
         'reservation_id',
-        'name',             
-        'contact',           
-        'advance_payment',   
-        'payment_method',    
-        'payment_proof',     
-        'ewallet_number',   
+        'registered_name',
+        'registered_number',
+        'advance_payment',
+        'payment_method',
+        'payment_proof',
+        'ewallet_id',
     ];
 
     public function reservation()
     {
-        return $this->belongsTo(\App\Models\reservation::class, 'reservation_id', 'id');
+        return $this->belongsTo(Reservation::class, 'reservation_id', 'id');
     }
-
     public function ewalletDetail()
     {
-        return $this->belongsTo(\App\Models\EwalletDetail::class, 'ewallet_number', 'id');
+        return $this->belongsTo(EwalletDetail::class, 'ewallet_id', 'id');
     }
 }

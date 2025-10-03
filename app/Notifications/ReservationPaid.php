@@ -64,12 +64,14 @@ class ReservationPaid extends Notification
         ];
     }
 
-    public function toDatabase($notifiable)
+    public function toDatabase($notifiable): array
     {
         return [
             'reservation_id' => $this->reservation->id,
-            'name' => $this->reservation->customer->name, 
-            'message' => 'made a reservation',
+            'customer'       => $this->reservation->customer->name ?? 'Unknown',
+            'table'          => optional($this->reservation->table)->number ?? 'N/A',
+            'time'           => $this->reservation->started_at->format('Y-m-d H:i'),
+            'status'         => 'Paid',
         ];
     }
 }

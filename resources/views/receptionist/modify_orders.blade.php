@@ -248,18 +248,15 @@
       const ordersBox = document.getElementById('ordersBox');
       ordersBox.innerHTML = '';
 
-      // Use structured order data with actual database quantities
       const orderDataStr = button.getAttribute('data-order-data');
       if (orderDataStr && orderDataStr !== 'null' && orderDataStr !== '[]') {
         try {
           const orderData = JSON.parse(orderDataStr);
           orderData.forEach(order => {
-            // Use the actual quantity from database, not defaulting to 1
             addOrderTag(order.menu_item, order.quantity);
           });
         } catch (error) {
           console.error('Error parsing order data:', error);
-          // Fallback to old method if JSON parsing fails
           const ordersStr = button.getAttribute('data-orders');
           if (ordersStr && ordersStr !== 'No orders') {
             const orders = ordersStr.split(',').map(item => item.trim()).filter(Boolean);
@@ -304,14 +301,13 @@
         const qtyInput = tag.querySelector('input[type="number"]');
         const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
 
-        // Ensure minimum quantity of 1
         if (qty < 1) {
           qtyInput.value = 1;
           return { menu_name: item, quantity: 1 };
         }
 
         return { menu_name: item, quantity: qty };
-      }).filter(order => order.menu_name && order.menu_name.trim() !== ''); // Filter out empty items
+      }).filter(order => order.menu_name && order.menu_name.trim() !== ''); 
 
       document.getElementById('ordersInput').value = JSON.stringify(orders);
     }
@@ -334,7 +330,7 @@
 
       const input = document.createElement('input');
       input.type = 'number';
-      input.value = qty; // This will now use the actual database quantity
+      input.value = qty; 
       input.min = 1;
       input.className = "w-14 text-center bg-gray-50 border border-gray-200 rounded px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none";
       input.addEventListener('click', e => e.stopPropagation());
@@ -361,7 +357,7 @@
       select.addEventListener('change', function () {
         const selectedItem = select.value;
         if (!selectedItem) return;
-        addOrderTag(selectedItem, 1); // Only new items from dropdown get quantity 1
+        addOrderTag(selectedItem, 1); 
         updateOrdersInput();
         select.selectedIndex = 0;
       });
@@ -372,7 +368,6 @@
       const form = e.target;
       const formData = new FormData(form);
 
-      // Check if there are orders before submitting
       const ordersInput = document.getElementById('ordersInput').value;
       const orders = JSON.parse(ordersInput || '[]');
 

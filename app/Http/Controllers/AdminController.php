@@ -15,7 +15,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Models\menu;
-use App\Models\OrderDetail;
+use App\Models\orders;
 use Illuminate\Support\Facades\Log;
 use App\Models\expiredIngredients;
 use App\Models\ingredientBatch;
@@ -29,12 +29,13 @@ class AdminController extends Controller
         $todayRevenue = DB::table('transactions')
             ->whereDate('created_at', Carbon::today())
             ->where('status', '!=', 'Refunded')
-            ->sum('grand_total');  
+            ->sum('grand_total');
 
         $todayCustomers = DB::table('reservations')
-            ->whereDate('reservation_time', Carbon::today())
+            ->whereDate('started_at', Carbon::today())
             ->whereIn('status', ['Accepted', 'Completed'])
             ->sum('pax');
+
 
         $transactions = DB::table('transactions')
             ->join('users', 'transactions.cashier_id', '=', 'users.id')
@@ -50,9 +51,9 @@ class AdminController extends Controller
             ->map(function ($transaction) {
                 return (object)[
                     'id' => $transaction->id,
-                    'grand_total' => $transaction->grand_total, 
-                    'orders_total' => $transaction->orders_total, 
-                    'discount_total' => $transaction->discount_total, 
+                    'grand_total' => $transaction->grand_total,
+                    'orders_total' => $transaction->orders_total,
+                    'discount_total' => $transaction->discount_total,
                     'advance_payment' => $transaction->advance_payment ?? 0,
                     'cashier' => (object)[
                         'firstname' => $transaction->firstname,
@@ -62,14 +63,14 @@ class AdminController extends Controller
             });
 
         $popularMenusToday = DB::table('menu')
-            ->join('order_details', 'menu.id', '=', 'order_details.menu_id')
+            ->join('orders', 'menu.id', '=', 'orders.menu_id')
             ->select(
                 'menu.id',
                 'menu.menu_item',
-                DB::raw('SUM(order_details.quantity) as total_quantity')
+                DB::raw('SUM(orders.quantity) as total_quantity')
             )
-            ->where('order_details.status', 'Served')
-            ->whereDate('order_details.created_at', Carbon::today())
+            ->where('orders.status', 'Served')
+            ->whereDate('orders.created_at', Carbon::today())
             ->where('menu.status', 'Active')
             ->where('menu.category', 'Main')
             ->whereNull('menu.deleted_at')
@@ -79,14 +80,14 @@ class AdminController extends Controller
             ->get();
 
         $popularMenusWeek = DB::table('menu')
-            ->join('order_details', 'menu.id', '=', 'order_details.menu_id')
+            ->join('orders', 'menu.id', '=', 'orders.menu_id')
             ->select(
                 'menu.id',
                 'menu.menu_item',
-                DB::raw('SUM(order_details.quantity) as total_quantity')
+                DB::raw('SUM(orders.quantity) as total_quantity')
             )
-            ->where('order_details.status', 'Served')
-            ->whereBetween('order_details.created_at', [
+            ->where('orders.status', 'Served')
+            ->whereBetween('orders.created_at', [
                 Carbon::now()->startOfWeek(),
                 Carbon::now()->endOfWeek()
             ])
@@ -99,14 +100,14 @@ class AdminController extends Controller
             ->get();
 
         $popularMenusMonth = DB::table('menu')
-            ->join('order_details', 'menu.id', '=', 'order_details.menu_id')
+            ->join('orders', 'menu.id', '=', 'orders.menu_id')
             ->select(
                 'menu.id',
                 'menu.menu_item',
-                DB::raw('SUM(order_details.quantity) as total_quantity')
+                DB::raw('SUM(orders.quantity) as total_quantity')
             )
-            ->where('order_details.status', 'Served')
-            ->whereBetween('order_details.created_at', [
+            ->where('orders.status', 'Served')
+            ->whereBetween('orders.created_at', [
                 Carbon::now()->startOfMonth(),
                 Carbon::now()->endOfMonth()
             ])
@@ -117,6 +118,7 @@ class AdminController extends Controller
             ->orderByDesc('total_quantity')
             ->limit(5)
             ->get();
+
 
         $monthlyTransactions = DB::table('transactions')
             ->whereYear('created_at', Carbon::now()->year)
@@ -411,13 +413,9 @@ class AdminController extends Controller
         $showDeleted = $request->has('show_deleted');
 
         if ($showDeleted) {
-            $menu = DB::table('menu')
-                ->whereNotNull('deleted_at')
-                ->get();
+            $menu = Menu::onlyTrashed()->get();
         } else {
-            $menu = DB::table('menu')
-                ->whereNull('deleted_at')
-                ->get();
+            $menu = Menu::all();
         }
 
         return view('admin.menu_management', compact('menu'));
@@ -830,7 +828,7 @@ class AdminController extends Controller
             $menu = menu::findOrFail($id);
 
             if ($request->status === 'Blocked' && $menu->status !== 'Blocked') {
-                $hasActiveOrders = OrderDetail::where('menu_id', $id)
+                $hasActiveOrders = orders::where('menu_id', $id)
                     ->whereHas('reservation', function ($query) {
                         $query->whereIn('status', ['pending', 'confirmed', 'in_progress']);
                     })
@@ -1382,8 +1380,8 @@ class AdminController extends Controller
             ->whereYear('created_at', $currentYear)
             ->select(
                 DB::raw('MONTH(created_at) as month'),
-                DB::raw('SUM(orders_total) as gross_revenue'),       
-                DB::raw('SUM(grand_total) as net_revenue'),           
+                DB::raw('SUM(orders_total) as gross_revenue'),
+                DB::raw('SUM(grand_total) as net_revenue'),
                 DB::raw('SUM(discount_total) as total_discounts')
             )
             ->groupBy('month')

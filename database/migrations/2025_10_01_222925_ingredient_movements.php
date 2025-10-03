@@ -13,7 +13,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
             $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('set null');
-            $table->foreignId('order_details_id')->nullable()->constrained('order_details')->onDelete('set null');
+            $table->foreignId('order_id')->nullable()->constrained('orders')->onDelete('set null');
             $table->enum('type', ['stock_in', 'stock_out', 'adjustment', 'expired', 'used']);
             $table->decimal('quantity', 8, 2); 
             $table->decimal('stock_before', 8, 2);

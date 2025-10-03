@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('contact_number')->nullable();
+            $table->string('email')->nullable();
             $table->string('id_type')->nullable();   
             $table->timestamps();
         });

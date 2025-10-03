@@ -10,13 +10,13 @@ class customers extends Model
     protected $fillable = [
         'name',
         'contact_number',
+        'email',
         'id_type',
-       
     ];
 
     public function orders()
     {
-        return $this->hasMany(OrderDetail::class);
+        return $this->hasMany(orders::class);
     }
 
     public function reservation()
@@ -33,5 +33,6 @@ class customers extends Model
     {
         return $this->hasMany(transaction::class);
     }
+    
     
 }

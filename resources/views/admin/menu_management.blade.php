@@ -63,12 +63,8 @@
                                     </td>
                                     <td>{{ $item->menu_item }}</td>
                                     <td>
-                                        Regular: ₱{{ number_format($item->regular_price, 2) }} <br>
-                                        @if($item->student_price)
-                                            Student: ₱{{ number_format($item->student_price, 2) }} <br>
-                                        @endif
-                                        @if($item->govt_employee_price)
-                                            Gov’t Employee: ₱{{ number_format($item->govt_employee_price, 2) }}
+                                        Regular: ₱{{ number_format($item->regular_price, 2) }}
+                                        @if($item->has_customer_discount)
                                         @endif
                                     </td>
                                     <td>{{$item->status}}</td>
@@ -171,23 +167,17 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="student_price">Student Price (Optional)</label>
-                                    <input type="number" name="student_price" id="student_price" class="form-control"
-                                        step="0.01" min="0" value="{{ old('student_price') }}">
-                                    @error('student_price')
-                                        <small class="text-danger">{{ $message }}</small>
-                                    @enderror
+                                    <label>Customer Discount Available</label>
+                                    <select name="has_customer_discount" class="form-control" required>
+                                        <option value="1" {{ $item->has_customer_discount ? 'selected' : '' }}>Yes
+                                        </option>
+                                        <option value="0" {{ !$item->has_customer_discount ? 'selected' : '' }}>No
+                                        </option>
+                                    </select>
+                                    <small class="form-text text-muted">Whether this item is eligible for
+                                        student/government discounts</small>
                                 </div>
 
-                                <div class="form-group">
-                                    <label for="govt_employee_price">Gov't Employee Price (Optional)</label>
-                                    <input type="number" name="govt_employee_price" id="govt_employee_price"
-                                        class="form-control" step="0.01" min="0"
-                                        value="{{ old('govt_employee_price') }}">
-                                    @error('govt_employee_price')
-                                        <small class="text-danger">{{ $message }}</small>
-                                    @enderror
-                                </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-success">

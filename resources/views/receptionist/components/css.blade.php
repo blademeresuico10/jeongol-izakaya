@@ -54,6 +54,7 @@
     flex: 0 calc(15% - 10px);
     text-decoration: none;
   }
+
   .table {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -77,17 +78,11 @@
     background-color: #dd0000;
   }
 
-  .status-indicator {
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: white;
-    margin-top: 8px;
-    padding: 4px 8px;
-    background-color: rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+  .occupied .status-indicator {
+    background-color: #dd0000;
+    color: #fff;
   }
+
 
   @media (max-width: 1024px) {
     .table-link {

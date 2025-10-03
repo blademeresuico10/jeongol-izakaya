@@ -21,13 +21,6 @@
         </a>
     </li>
 
-    <li @class(['nav-item', 'active' => request()->is('analytics*')])>
-        <a class="nav-link" href="{{route('admin.analytics')}}">
-            <i class="fas fa-chart-line"></i>
-            <span>Analytics</span>
-        </a>
-    </li>
-
     <li @class(['nav-item', 'active' => request()->is('users*')])>
         <a class="nav-link" href="{{ route('admin.users') }}">
             <i class="fas fa-fw fa-users"></i>
@@ -67,6 +60,13 @@
         <a class="nav-link" href="{{ route('admin.ewallet_management') }}">
             <i class="fas fa-wallet"></i>
             <span>E-Wallet</span>
+        </a>
+    </li>
+
+    <li @class(['nav-item', 'active' => request()->is('others*')])>
+        <a class="nav-link" href="">
+            <i class="fas fa-layer-group"></i>
+            <span>Others</span>
         </a>
     </li>
 

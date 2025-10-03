@@ -139,11 +139,11 @@
         <div class="inline-options text-center"
         style="display:none; flex-direction: column; align-items: center; gap: 5px; margin-top: 10px;">
         <button
-          class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
-          onclick="event.stopPropagation(); makeOrder({{ $table->id }})">Place Order</button>
+          class="place-order-btn bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
+          data-table-id="{{ $table->id }}">Place Order</button>
         <button
-          class="bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
-          onclick="event.stopPropagation(); makeReservation({{ $table->id }})">Make Reservation</button>
+          class="make-reservation-btn bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
+          data-table-id="{{ $table->id }}">Make Reservation</button>
         </div>
       </div>
       </div>
@@ -151,7 +151,7 @@
     </div>
 
     <div class="bottom-buttons">
-      <a class="view-button" href="{{ route('receptionist.reservations') }}">View Reservations</a>
+      <a class="view-button" href="{{ route('receptionist.bookings') }}">Today's Bookings</a>
       <a class="view-button" href="{{ route('receptionist.modify_orders') }}">View Orders</a>
     </div>
 
@@ -547,7 +547,7 @@
           const tableCapacities = {
             @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
-        @endforeach
+      @endforeach
     };
 
     this.elements.tableLinks.forEach(link => {
@@ -567,7 +567,7 @@
                   paxInput.max = capacity;
                   paxInput.min = 1;
                   paxInput.placeholder = `Max ${capacity} people`;
-                  paxInput.value = ''; 
+                  paxInput.value = '';
                   paxInput.readOnly = false;
 
                   paxInput.addEventListener('input', function () {
@@ -602,13 +602,23 @@
               });
             });
 
-      document.addEventListener('click', (event) => {
-        if (!event.target.closest('.table-link')) {
-          document.querySelectorAll('.inline-options').forEach(opt => {
-            opt.style.display = 'none';
+      setTimeout(() => {
+        document.querySelectorAll('.place-order-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tableId = parseInt(btn.getAttribute('data-table-id'));
+            this.makeOrder(tableId);
           });
-        }
-      });
+        });
+
+        document.querySelectorAll('.make-reservation-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tableId = parseInt(btn.getAttribute('data-table-id'));
+            this.makeReservation(tableId);
+          });
+        });
+      }, 0);
   }
 
       initializeNotifications() {
@@ -652,7 +662,7 @@
         this.elements.notifList.innerHTML = '';
 
         notifications.sort((a, b) => {
-          const order = { "Pending": 1, "Accepted": 2, "Rejected": 3 };
+          const order = { "Pending": 1, "Active": 2, "Rejected": 3 };
           return (order[a.reservation_status] || 4) - (order[b.reservation_status] || 4);
         });
 
@@ -669,7 +679,7 @@
         li.onclick = () => this.openNotificationModalDirect(notification);
 
         let badgeClass = "bg-gray-300 text-gray-700";
-        if (notification.reservation_status === "Accepted") badgeClass = "bg-green-100 text-green-700";
+        if (notification.reservation_status === "Active") badgeClass = "bg-green-100 text-green-700";
         else if (notification.reservation_status === "Rejected") badgeClass = "bg-red-100 text-red-700";
 
         const formatReservationTime = (startDateTime, endDateTime) => {
@@ -743,7 +753,7 @@
 
         const actionButtons = document.getElementById('actionButtons');
         if (actionButtons) {
-          const shouldHideButtons = notification.reservation_status === "Accepted" || notification.reservation_status === "Rejected";
+          const shouldHideButtons = notification.reservation_status === "Active" || notification.reservation_status === "Rejected";
           actionButtons.style.display = shouldHideButtons ? "none" : "flex";
         }
       }
@@ -794,7 +804,7 @@
         const actionButtons = document.getElementById('actionButtons');
         if (actionButtons) {
           const reservationStatus = data.reservation?.status;
-          const shouldHideButtons = reservationStatus === "Accepted" || reservationStatus === "Rejected";
+          const shouldHideButtons = reservationStatus === "Active" || reservationStatus === "Rejected";
           actionButtons.style.display = shouldHideButtons ? "none" : "flex";
         }
       }
@@ -870,7 +880,7 @@
           const statusSpan = li.querySelector('span');
           if (statusSpan) {
             statusSpan.textContent = status;
-            const badgeClass = status === "Accepted" ? "bg-green-100 text-green-700" :
+            const badgeClass = status === "Active" ? "bg-green-100 text-green-700" :
               status === "Rejected" ? "bg-red-100 text-red-700" :
                 "bg-gray-300 text-gray-700";
             statusSpan.className = `px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`;
@@ -887,10 +897,11 @@
       makeOrder(tableId) {
         this.selectedTableId = tableId;
         this.isPlacingOrder = true;
-        this.elements.tableModal.style.display = 'flex';
 
-        this.setupOrderForm();
-        this.resetForm();
+        this.resetForm();       
+        this.setupOrderForm();   
+
+        this.elements.tableModal.style.display = 'flex';
       }
 
       makeReservation(tableId) {
@@ -903,25 +914,31 @@
         this.updateTimeFrameDisplay();
       }
 
+      makeOrder(tableId) {
+        this.selectedTableId = tableId;
+        this.isPlacingOrder = true;
+        this.elements.tableModal.style.display = 'flex';
+
+        this.setupOrderForm();
+        this.resetForm();
+      }
+
       setupOrderForm() {
         const now = new Date();
-
         this.elements.reservedDate.value = now.toISOString().substring(0, 10);
         this.elements.reservedDate.disabled = true;
-
         const hours = now.getHours().toString().padStart(2, '0');
         const minutes = now.getMinutes().toString().padStart(2, '0');
         this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
         this.elements.arrivalTimeInput.disabled = true;
-
         this.elements.reservationInfoGroup.style.display = 'none';
         this.elements.contactInput.style.display = 'none';
         this.elements.advancePayment.parentElement.style.display = 'none';
+
       }
 
       setupReservationForm() {
         const now = new Date();
-
         this.elements.reservationInfoGroup.style.display = '';
         this.elements.reservedDate.disabled = false;
         this.elements.arrivalTimeInput.disabled = false;
@@ -1172,7 +1189,7 @@
           this.elements.submitBtn.disabled = true;
           this.elements.submitBtn.textContent = "Submitting...";
           const data = this.prepareSubmissionData();
-          this.submitReservation(data);
+          this.submitOrder(data);
         }
       }
 
@@ -1198,7 +1215,7 @@
 
         const data = this.prepareSubmissionData();
         data.payment_method = method;
-        this.submitReservation(data);
+        this.submitOrder(data);
       }
 
       showErrorToast(message) {
@@ -1243,9 +1260,10 @@
         };
       }
 
-      submitReservation(data) {
-        const storeUrl = document.querySelector('meta[name="store-reservation-url"]')?.getAttribute('content')
-          || '/receptionist/store-reservation';
+      submitOrder(data) {
+        const storeUrl = this.isPlacingOrder
+          ? '/receptionist/store-walkin'  
+          : '/receptionist/store-reservation'; 
 
         fetch(storeUrl, {
           method: 'POST',
@@ -1259,6 +1277,7 @@
           .then(async res => {
             if (!res.ok) {
               const errorText = await res.text();
+              console.error('Server error:', errorText);
               throw new Error(`Server responded with ${res.status}: ${errorText}`);
             }
             return res.json();
@@ -1273,7 +1292,7 @@
           })
           .catch(error => {
             console.error("Reservation Error:", error);
-            alert("An error occurred while submitting the reservation.");
+            alert("An error occurred while submitting the reservation: " + error.message);
           })
           .finally(() => {
             this.elements.submitBtn.disabled = false;

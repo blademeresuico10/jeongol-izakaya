@@ -397,10 +397,10 @@
                 class="w-full border rounded p-2" />
             </div>
             <div>
-              <label for="contactNumber">Contact Number</label>
-              <input type="number" id="contactNumber" name="contact_number" placeholder="09XXXXXXXXX" maxlength="11"
+              <label for="email">Email</label>
+              <input type="email" id="email" name="email" placeholder="Enter your email" required
                 class="w-full border rounded p-2" />
-              <span class="text-red-500 text-sm hidden" id="contactError"></span>
+              <span class="text-red-500 text-sm hidden" id="emailError"></span>
             </div>
           </div>
 
@@ -485,7 +485,7 @@
     </div>
   </div>
 
-  <div id="paymentModal" class="fixed inset-0 z-[1100] hidden items-center justify-center bg-black bg-opacity-50">
+  <div id="paymentModal" class="fixed inset-0 z-[1100] hidden flex items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-4 relative">
       <button id="closePaymentModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700">✕</button>
       <h2 class="text-xl font-semibold text-center mb-4">Payment</h2>
@@ -496,10 +496,12 @@
         <button type="button" data-tab="maya" class="payment-tab flex-1 text-center py-2 font-semibold">Maya</button>
       </div>
 
-      <input type="hidden" id="selectedPaymentMethod" value="gcash">
+      <input type="hidden" name="ewallet_number" id="selectedPaymentMethod" />
 
-      <x-payment-form method="gcash" :readonly="true" :data="['amount' => 0]" />
-      <x-payment-form method="maya" :readonly="true" :data="['amount' => 0]" />
+      <div class="tab-wrapper">
+        <x-payment-form method="gcash" :data="['amount' => 0]" />
+        <x-payment-form method="maya" :data="['amount' => 0]" />
+      </div>
 
       <button id="submitBtn" type="button"
         class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
@@ -507,6 +509,8 @@
       </button>
     </div>
   </div>
+
+
 
   <div id="messageBox" style="
   display: none;
@@ -553,7 +557,7 @@
           this.initializeTabs();
           this.initializeModals();
           this.initializeDateTimeInputs();
-          this.initializeContactValidation();
+          this.initializeEmailValidation();
           this.initializeEventListeners();
           this.updateOrderSummary();
           this.loadUnavailableTimes();
@@ -573,8 +577,8 @@
           submitBtn: document.getElementById('submitBtn'),
           clearOrdersBtn: document.getElementById('clearOrdersBtn'),
 
+          emailInput: document.getElementById('email'),
           nameInput: document.getElementById('customerName'),
-          contactInput: document.getElementById('contactNumber'),
           paxInput: document.getElementById('pax'),
           notesInput: document.getElementById('notesTextarea'),
           dateInput: document.getElementById('reserved_date'),
@@ -690,7 +694,6 @@
       this.hideModal(paymentModal);
     });
 
-    // Tab switcher
     document.querySelectorAll('[data-tab]').forEach(tabButton => {
       tabButton.addEventListener('click', (e) => {
         const targetTab = e.target.dataset.tab;
@@ -731,12 +734,36 @@
           tabBtn.classList.add('bg-gray-200', 'font-bold', 'rounded');
 
           const tabName = tabBtn.getAttribute('data-tab');
+
           document.querySelectorAll('.tab-content').forEach(content => {
             content.classList.add('hidden');
           });
-          document.getElementById(`tab-${tabName}`)?.classList.remove('hidden');
+
+          const activeTab = document.getElementById(`tab-${tabName}`);
+          activeTab?.classList.remove('hidden');
+
+          if (activeTab) {
+            activeTab.querySelectorAll('input:not([type="hidden"]):not(.amount)').forEach(input => {
+              if (input.type !== 'file') {
+                input.value = '';
+              } else {
+                input.value = ''; 
+              }
+              input.classList.remove('input-error');
+            });
+          }
+
+          const ewalletEl = document.querySelector(`#tab-${tabName} .ewallet-id`);
+          document.getElementById('selectedPaymentMethod').value = ewalletEl ? ewalletEl.value : '';
         });
       });
+
+      const active = document.querySelector('.payment-tab.active');
+      if (active) {
+        const tabName = active.dataset.tab;
+        const ewalletEl = document.querySelector(`#tab-${tabName} .ewallet-id`);
+        document.getElementById('selectedPaymentMethod').value = ewalletEl ? ewalletEl.value : '';
+      }
     }
 
       async loadUnavailableTimes(tableId = null) {
@@ -974,71 +1001,45 @@
       this.updateAdvancePayment();
     }
 
-    initializeContactValidation() {
-      const { contactInput } = this.elements;
-      const error = document.getElementById('contactError');
+    initializeEmailValidation() {
+      const { emailInput } = this.elements;
+      const emailError = document.getElementById('emailError');
+      if (!emailInput || !emailError) return;
 
-      if (!contactInput || !error) {
-        console.warn('Contact input or error element not found');
-        return;
-      }
+      emailInput.addEventListener('input', () => {
+        const value = emailInput.value.trim();
 
-      contactInput.addEventListener('input', () => {
-        let value = contactInput.value.replace(/\D/g, '');
-
-        if (value.length > 11) {
-          value = value.slice(0, 11);
+        if (!value.includes('@')) {
+          emailError.textContent = 'Email must contain @';
+          emailError.classList.remove('hidden');
+          emailInput.classList.add('input-error');
+          return;
         }
 
-        if (value && !/^09\d{0,9}$/.test(value)) {
-          error.textContent = 'Enter a valid contact number (09XXXXXXXXX)';
-          error.classList.remove('hidden');
-          contactInput.classList.add('input-error');
+        if (value && !this.validateEmail(value)) {
+          emailError.textContent = 'Enter a valid email address (e.g. name@example.com)';
+          emailError.classList.remove('hidden');
+          emailInput.classList.add('input-error');
         } else {
-          error.textContent = '';
-          error.classList.add('hidden');
-          contactInput.classList.remove('input-error');
+          emailError.textContent = '';
+          emailError.classList.add('hidden');
+          emailInput.classList.remove('input-error');
         }
-        contactInput.value = value;
-      });
-
-      ['keydown', 'paste'].forEach(eventType => {
-        contactInput.addEventListener(eventType, this.handleContactInput.bind(this));
       });
     }
 
-    handleContactInput(e) {
-      const currentValue = this.elements.contactInput.value.replace(/\D/g, '');
-
-      if (e.type === 'keydown') {
-        if (currentValue.length >= 11 &&
-          !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key) &&
-          !e.ctrlKey && !e.metaKey) {
-          e.preventDefault();
-        }
-
-        if (!/\d/.test(e.key) &&
-          !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key) &&
-          !e.ctrlKey && !e.metaKey) {
-          e.preventDefault();
-        }
-      }
-
-      if (e.type === 'paste') {
-        e.preventDefault();
-        const paste = (e.clipboardData || window.clipboardData).getData('text');
-        const numbersOnly = paste.replace(/\D/g, '').slice(0, 11);
-        this.elements.contactInput.value = numbersOnly;
-        this.elements.contactInput.dispatchEvent(new Event('input'));
-      }
+    validateEmail(email) {
+      const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      return regex.test(email);
     }
+
 
     validateInputs() {
       let hasError = false;
 
       const requiredFields = [
         this.elements.nameInput,
-        this.elements.contactInput,
+        this.elements.emailInput,
         this.elements.paxInput,
         this.elements.timeInput,
         this.elements.dateInput
@@ -1055,24 +1056,47 @@
 
       const activeTab = document.querySelector(".tab-content:not(.hidden)");
       if (activeTab) {
-        const paymentFields = [
-          activeTab.querySelector(".gcash-number, .maya-number"),
-          activeTab.querySelector(".registered-name"),
-          activeTab.querySelector(".amount"),
-          activeTab.querySelector(".proof")
-        ];
+        const numberField = activeTab.querySelector(".gcash-number, .maya-number");
+        const nameField = activeTab.querySelector(".registered-name");
+        const amountField = activeTab.querySelector(".amount");
+        const proofField = activeTab.querySelector(".proof");
 
-        paymentFields.forEach(field => {
-          if (field) {
-            let value = field.value || (field.files && field.files.length > 0 ? field.files[0] : "");
-            if (!value) {
-              field.classList.add('input-error');
-              hasError = true;
-            } else {
-              field.classList.remove('input-error');
-            }
+        if (numberField) {
+          if (!numberField.value.trim()) {
+            numberField.classList.add('input-error');
+            hasError = true;
+          } else {
+            numberField.classList.remove('input-error');
           }
-        });
+        }
+
+        if (nameField) {
+          if (!nameField.value.trim()) {
+            nameField.classList.add('input-error');
+            hasError = true;
+          } else {
+            nameField.classList.remove('input-error');
+          }
+        }
+
+        if (amountField) {
+          if (!amountField.value.trim()) {
+            amountField.classList.add('input-error');
+            hasError = true;
+          } else {
+            amountField.classList.remove('input-error');
+          }
+        }
+
+        if (proofField) {
+          const hasFile = proofField.files && proofField.files.length > 0;
+          if (!hasFile) {
+            proofField.classList.add('input-error');
+            hasError = true;
+          } else {
+            proofField.classList.remove('input-error');
+          }
+        }
       }
 
       return !hasError;
@@ -1100,7 +1124,7 @@
       const basicData = {
         table_id: this.selectedTableNumber,
         customer_name: this.elements.nameInput.value.trim(),
-        contact_number: this.elements.contactInput.value.trim(),
+        email: this.elements.emailInput.value.trim(),
         pax: parseInt(this.elements.paxInput.value) || 1,
         reserved_date: this.elements.dateInput.value,
         arrival_time: this.elements.timeInput.value,
@@ -1114,15 +1138,14 @@
         }
       });
 
-      const ewalletId = activeTab.querySelector(".ewallet-id")?.value;
-      const ewalletNumber = activeTab.querySelector(".gcash-number, .maya-number")?.value;
-
+      const ewalletId = document.querySelector(`#tab-${method} .ewallet-id`)?.value;
       if (ewalletId) {
-        formData.append('ewallet_number_id', ewalletId);
+        formData.append('ewallet_id', ewalletId);
       }
 
-      if (ewalletNumber) {
-        formData.append('number', ewalletNumber.trim());
+      const registeredNumber = activeTab.querySelector(".gcash-number, .maya-number")?.value;
+      if (registeredNumber) {
+        formData.append('registered_number', registeredNumber.trim());
       }
 
       const registeredName = activeTab.querySelector(".registered-name")?.value;
@@ -1132,7 +1155,7 @@
 
       const proofInput = activeTab.querySelector(".proof");
       if (proofInput?.files?.[0]) {
-        formData.append('proof', proofInput.files[0]);
+        formData.append('payment_proof', proofInput.files[0]);
       }
 
       return { formData, hasOrders };
@@ -1221,7 +1244,7 @@
     }
 
     resetReservationForm() {
-      [this.elements.nameInput, this.elements.contactInput, this.elements.dateInput,
+      [this.elements.nameInput, this.elements.emailInput, this.elements.dateInput,
       this.elements.timeInput, this.elements.notesInput].forEach(el => {
         if (el) {
           el.value = '';
