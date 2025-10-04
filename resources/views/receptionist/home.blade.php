@@ -77,11 +77,20 @@
 
         <div id="notifModal"
           class="hidden fixed inset-0 flex items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
-          <div class="w-full max-w-xs sm:w-80 bg-white rounded-lg shadow-lg">
-            <div class="p-5 relative">
-              <h2 class="text-lg font-semibold mb-4">Notifications</h2>
-              <ul id="notifList" class="space-y-2 max-h-96 overflow-y-auto"></ul>
-              <button id="notifClose" class="absolute top-2 right-2">✖</button>
+          <div class="w-full max-w-md bg-white rounded-lg shadow-xl">
+            <div class="sticky top-0 bg-white border-b border-gray-200 rounded-t-lg z-10">
+              <div class="p-4 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-800">Notifications</h2>
+                <button id="notifClose" class="text-gray-500 hover:text-gray-700 transition-colors">
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="max-h-[calc(100vh-200px)] overflow-y-auto">
+              <ul id="notifList" class="divide-y divide-gray-100"></ul>
             </div>
           </div>
         </div>
@@ -107,7 +116,7 @@
               <form id="acceptForm" method="POST" class="inline">@csrf
                 <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Accept</button>
               </form>
-              <button id="cancelReservationBtn" class="px-4 py-2 bg-red-500 text-white">Cancel</button>
+              <button id="cancelReservationBtn" class="px-4 py-2 bg-red-500 text-white">Reject</button>
             </div>
           </div>
         </div>
@@ -139,8 +148,8 @@
         <div class="inline-options text-center"
         style="display:none; flex-direction: column; align-items: center; gap: 5px; margin-top: 10px;">
         <button
-          class="place-order-btn bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
-          data-table-id="{{ $table->id }}">Place Order</button>
+          class="make-walkin-btn bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
+          data-table-id="{{ $table->id }}">Walk-in Order</button>
         <button
           class="make-reservation-btn bg-blue-800 text-white border-none px-2.5 py-1.5 my-[3px] rounded cursor-pointer text-[17px] hover:bg-blue-700"
           data-table-id="{{ $table->id }}">Make Reservation</button>
@@ -300,34 +309,7 @@
         </div>
       </div>
 
-      <div id="paymentMethodModal"
-        class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
-          <div class="mb-4">
-            <h2 class="text-lg font-bold text-gray-800 mb-4">Payment Method</h2>
-            <p class="text-gray-600 mb-6">How will you pay for this reservation?</p>
 
-            <div class="space-y-3">
-              <button id="cashPayment"
-                class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                Cash
-              </button>
-              <button id="gcashPayment"
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                <span class="font-bold text-lg">G</span><span class="font-normal">Cash</span>
-              </button>
-              <button id="mayaPayment"
-                class="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors">
-                <span class="font-bold text-lg italic">Maya</span>
-              </button>
-            </div>
-
-            <button id="cancelPaymentMethod" class="mt-4 text-gray-500 hover:text-gray-700 text-sm">
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <script>
@@ -477,32 +459,6 @@
             });
           }
 
-          const paymentMethodModal = document.getElementById('paymentMethodModal');
-          const cashPayment = document.getElementById('cashPayment');
-          const gcashPayment = document.getElementById('gcashPayment');
-          const mayaPayment = document.getElementById('mayaPayment');
-          const cancelPaymentMethod = document.getElementById('cancelPaymentMethod');
-
-          if (cashPayment) {
-            cashPayment.addEventListener('click', () => this.selectPaymentMethod('Cash'));
-          }
-          if (gcashPayment) {
-            gcashPayment.addEventListener('click', () => this.selectPaymentMethod('GCash'));
-          }
-          if (mayaPayment) {
-            mayaPayment.addEventListener('click', () => this.selectPaymentMethod('Maya'));
-          }
-          if (cancelPaymentMethod) {
-            cancelPaymentMethod.addEventListener('click', () => this.hidePaymentMethodModal());
-          }
-
-          if (paymentMethodModal) {
-            paymentMethodModal.addEventListener('click', (e) => {
-              if (e.target === e.currentTarget) {
-                this.hidePaymentMethodModal();
-              }
-            });
-          }
 
           window.onclick = (e) => {
             if (e.target === this.elements.tableModal) {
@@ -547,7 +503,7 @@
           const tableCapacities = {
             @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
-      @endforeach
+        @endforeach
     };
 
     this.elements.tableLinks.forEach(link => {
@@ -603,11 +559,11 @@
             });
 
       setTimeout(() => {
-        document.querySelectorAll('.place-order-btn').forEach(btn => {
+        document.querySelectorAll('.make-walkin-btn').forEach(btn => {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const tableId = parseInt(btn.getAttribute('data-table-id'));
-            this.makeOrder(tableId);
+            this.walkIn(tableId);
           });
         });
 
@@ -654,8 +610,15 @@
         if (!this.elements.notifList) return;
 
         if (!notifications.length) {
-          this.elements.notifList.innerHTML =
-            '<li class="no-notifs p-3 text-center text-gray-500">No notifications</li>';
+          this.elements.notifList.innerHTML = `
+            <li class="p-8 text-center">
+                <svg class="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                <p class="text-gray-500 font-medium">No notifications</p>
+            </li>
+        `;
           return;
         }
 
@@ -673,14 +636,22 @@
 
       renderNotificationItem(notification) {
         const li = document.createElement('li');
-        li.className = 'p-3 bg-gray-100 rounded cursor-pointer mb-2';
+        li.className = 'p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150';
         li.dataset.reservationId = notification.reservation_id;
         li.dataset.notification = JSON.stringify(notification);
         li.onclick = () => this.openNotificationModalDirect(notification);
 
-        let badgeClass = "bg-gray-300 text-gray-700";
-        if (notification.reservation_status === "Active") badgeClass = "bg-green-100 text-green-700";
-        else if (notification.reservation_status === "Rejected") badgeClass = "bg-red-100 text-red-700";
+        let badgeClass = "bg-gray-100 text-gray-700";
+        let badgeText = notification.reservation_status;
+
+        if (notification.reservation_status === "Active") {
+          badgeClass = "bg-green-100 text-green-700";
+          badgeText = "Accepted"
+        } else if (notification.reservation_status === "Rejected") {
+          badgeClass = "bg-red-100 text-red-700";
+        } else if (notification.reservation_status === "Pending") {
+          badgeClass = "bg-yellow-100 text-yellow-700";
+        }
 
         const formatReservationTime = (startDateTime, endDateTime) => {
           if (!startDateTime || !endDateTime) return 'N/A';
@@ -690,7 +661,8 @@
 
           const dateStr = startDate.toLocaleDateString('en-US', {
             month: 'short',
-            day: 'numeric'
+            day: 'numeric',
+            year: 'numeric'
           });
 
           const startTime = startDate.toLocaleTimeString('en-US', {
@@ -705,22 +677,53 @@
             hour12: true
           }).toLowerCase();
 
-          return `${dateStr}, ${startTime} - ${endTime}`;
+          return { dateStr, timeRange: `${startTime} - ${endTime}` };
         };
 
-        const reservationTimeRange = formatReservationTime(notification.reservation_time, notification.reservation_end_time);
+        const { dateStr, timeRange } = formatReservationTime(
+          notification.started_at,
+          notification.ended_at
+        );
 
         li.innerHTML = `
-      <div class="flex justify-between items-center">
-          <div>
-              <p class="text-md font-semibold">${notification.customer_name}</p>
-              <p class="text-xs text-gray-500">${notification.message}</p>
-              <p class="text-xs text-gray-400 mt-1">${reservationTimeRange}</p>
-          </div>
-          <span class="px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}">
-              ${notification.reservation_status}
-          </span>
-      </div>
+        <div class="flex items-start gap-3">
+            <!-- Status Indicator -->
+            <div class="flex-shrink-0 mt-1">
+                <div class="w-2 h-2 rounded-full ${notification.reservation_status === "Pending" ? "bg-yellow-500 animate-pulse" :
+            notification.reservation_status === "Active" ? "bg-green-500" :
+              "bg-gray-400"
+          }"></div>
+            </div>
+            
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2 mb-1">
+                    <h3 class="font-semibold text-gray-900 truncate">${notification.customer_name}</h3>
+                    <span class="flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${badgeClass}">
+                        ${badgeText}
+                    </span>
+                </div>
+                
+                <p class="text-sm text-gray-600 mb-2">${notification.message}</p>
+                
+                <div class="flex items-center gap-4 text-xs text-gray-500">
+                    <div class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                        <span>${dateStr}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>${timeRange}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
 
         this.elements.notifList.appendChild(li);
@@ -894,16 +897,6 @@
         if (options) options.style.display = 'block';
       }
 
-      makeOrder(tableId) {
-        this.selectedTableId = tableId;
-        this.isPlacingOrder = true;
-
-        this.resetForm();       
-        this.setupOrderForm();   
-
-        this.elements.tableModal.style.display = 'flex';
-      }
-
       makeReservation(tableId) {
         this.selectedTableId = tableId;
         this.isPlacingOrder = false;
@@ -914,7 +907,7 @@
         this.updateTimeFrameDisplay();
       }
 
-      makeOrder(tableId) {
+      walkIn(tableId) {
         this.selectedTableId = tableId;
         this.isPlacingOrder = true;
         this.elements.tableModal.style.display = 'flex';
@@ -1135,16 +1128,6 @@
       handleSubmitReservation() {
         if (this.elements.submitBtn.disabled) return;
 
-        const [hours, minutes] = (this.elements.arrivalTimeInput.value || "00:00").split(':').map(Number);
-        const timeInMinutes = hours * 60 + minutes;
-        const minTime = 690;
-        const maxTime = this.isPlacingOrder ? 1200 : 1080;
-
-        if (timeInMinutes < minTime || timeInMinutes > maxTime) {
-          this.showErrorToast(`Invalid time chosen. Please select a time between 11:30 AM and ${this.isPlacingOrder ? "8:00 PM" : "6:00 PM"}.`);
-          return;
-        }
-
         if (!this.elements.customerName.value.trim()) {
           this.showErrorToast('Please enter customer name.');
           return;
@@ -1168,7 +1151,7 @@
           const hasMain = orders.some(item => item.category === 'main');
 
           if (!hasMain) {
-            this.showErrorToast('Please add at least one main menu item to continue.');
+            this.showErrorToast('Match the main menu order to the pax.');
             return;
           }
 
@@ -1181,42 +1164,12 @@
           }
         }
 
-        if (!this.isPlacingOrder) {
-          this.elements.submitBtn.disabled = true;
-          this.elements.submitBtn.textContent = "Processing...";
-          this.showPaymentMethodModal();
-        } else {
-          this.elements.submitBtn.disabled = true;
-          this.elements.submitBtn.textContent = "Submitting...";
-          const data = this.prepareSubmissionData();
-          this.submitOrder(data);
-        }
-      }
-
-      showPaymentMethodModal() {
-        const modal = document.getElementById('paymentMethodModal');
-        if (modal) {
-          modal.classList.remove('hidden');
-        }
-      }
-
-      hidePaymentMethodModal() {
-        const modal = document.getElementById('paymentMethodModal');
-        if (modal) {
-          modal.classList.add('hidden');
-        }
-        this.elements.submitBtn.disabled = false;
-        this.elements.submitBtn.textContent = "Submit";
-      }
-
-      selectPaymentMethod(method) {
-        this.selectedPaymentMethod = method;
-        this.hidePaymentMethodModal();
-
+        this.elements.submitBtn.disabled = true;
+        this.elements.submitBtn.textContent = "Submitting...";
         const data = this.prepareSubmissionData();
-        data.payment_method = method;
         this.submitOrder(data);
       }
+
 
       showErrorToast(message) {
         const toast = document.createElement('div');
@@ -1242,15 +1195,11 @@
       }
 
       prepareSubmissionData() {
-        return {
+        const baseData = {
           customer_name: this.elements.customerName.value.trim(),
           contact_number: this.elements.contactNumber.value.trim(),
           pax: this.elements.numberOfPax.value.trim(),
-          reserved_date: this.elements.reservedDate.value,
-          arrival_time: this.elements.arrivalTimeInput.value,
           table_id: this.selectedTableId,
-          is_order: this.isPlacingOrder,
-          advance_payment: this.elements.advancePayment.value.trim(),
           orders: Object.entries(this.selectedOrders).map(([id, item]) => ({
             menu_id: id,
             quantity: item.quantity,
@@ -1258,12 +1207,22 @@
             notes: this.elements.customerNotes.value.trim()
           }))
         };
+
+        if (this.isPlacingOrder) {
+          baseData.started_at = this.elements.arrivalTimeInput.value;
+        } else {
+          baseData.reserved_date = this.elements.reservedDate.value;
+          baseData.arrival_time = this.elements.arrivalTimeInput.value;
+          baseData.advance_payment = this.elements.advancePayment.value.trim() || 0;
+        }
+
+        return baseData;
       }
 
       submitOrder(data) {
         const storeUrl = this.isPlacingOrder
-          ? '/receptionist/store-walkin'  
-          : '/receptionist/store-reservation'; 
+          ? '/receptionist/store-walkin'
+          : '/receptionist/store-reservation';
 
         fetch(storeUrl, {
           method: 'POST',
@@ -1468,8 +1427,8 @@
         dashboard.updateQuantity(input);
       };
 
-      window.makeOrder = function (tableId) {
-        dashboard.makeOrder(tableId);
+      window.walkIn = function (tableId) {
+        dashboard.walkIn(tableId);
       };
 
       window.makeReservation = function (tableId) {

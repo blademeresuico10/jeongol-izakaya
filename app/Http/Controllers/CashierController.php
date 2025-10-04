@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Auth;
 use App\Models\reservation;
-use App\Models\walkins;
+use App\Models\walkin;
 use Illuminate\Support\Facades\Log;
 use App\Models\orders;
 
@@ -29,13 +29,14 @@ class CashierController extends Controller
             ->whereDoesntHave('transactions')
             ->get();
 
-        $walkins = walkins::with('table')
+        $walkin = walkin::with('table')
             ->where('status', 'Active')
-            ->whereNull('ended_at')
+            ->where('started_at', '<=', $now)
+            ->where('ended_at', '>', $now)
             ->get();
 
         $reservationIds = $reservations->pluck('id')->toArray();
-        $walkinIds = $walkins->pluck('id')->toArray();
+        $walkinIds = $walkin->pluck('id')->toArray();
 
         $orders = orders::with('menu')
             ->where(function ($query) use ($reservationIds, $walkinIds) {
@@ -50,7 +51,7 @@ class CashierController extends Controller
         $occupiedTables = [];
         foreach ($tables as $table) {
             $res = $reservations->firstWhere('table_id', $table->id);
-            $session = $walkins->firstWhere('table_id', $table->id);
+            $session = $walkin->firstWhere('table_id', $table->id);
 
             if ($res) {
                 $table->current_reservation_id = $res->id;
@@ -62,19 +63,18 @@ class CashierController extends Controller
                 $table->remaining_seconds = min(7200, max(0, $secondsRemaining));
 
                 $table->current_orders = $orders[$res->id] ?? [];
-                $occupiedTables[] = $table->table_number;
+                $occupiedTables[] = $res->table->table_number ?? $table->table_number;
             } elseif ($session) {
                 $table->current_reservation_id = null;
                 $table->current_session_id = $session->id;
                 $table->is_walk_in = true;
 
-                $startTime = Carbon::parse($session->started_at);
-                $elapsed = $now->diffInSeconds($startTime);
-                $table->elapsed_seconds = min(7200, $elapsed);
-                $table->remaining_seconds = null;
+                $endTime = Carbon::parse($session->ended_at);
+                $secondsRemaining = $now->diffInSeconds($endTime);
+                $table->elapsed_seconds = min(7200, $secondsRemaining);
 
-                $table->current_orders = $orders['walkin_' . $session->id] ?? [];
-                $occupiedTables[] = $table->table_number;
+                $table->current_orders = $orders[$session->id] ?? [];
+                $occupiedTables[] = $session->table->table_number ?? $table->table_number;
             } else {
                 $table->current_reservation_id = null;
                 $table->current_session_id = null;
@@ -119,7 +119,7 @@ class CashierController extends Controller
             'tables',
             'menuItems',
             'reservations',
-            'walkins',
+            'walkin',
             'menuPricesMap',
             'groupedMenu',
             'occupiedTables',
@@ -127,12 +127,12 @@ class CashierController extends Controller
         ));
     }
 
-
     public function getOrders($id)
     {
         $reservation = DB::table('reservations')
             ->leftJoin('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('reservation_payment_details', 'reservations.id', '=', 'reservation_payment_details.reservation_id')
+            ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
             ->where('reservations.id', $id)
             ->select(
                 'reservations.id as reservation_id',
@@ -142,13 +142,16 @@ class CashierController extends Controller
                 'customers.contact_number',
                 'customers.id_type',
                 'reservations.pax',
-                'reservations.customer_id'
+                'reservations.customer_id',
+                'tables.table_number',
+                DB::raw("'reservation' as order_type")
             )
             ->first();
 
         if (!$reservation) {
-            $session = DB::table('walk_ins')
+            $reservation = DB::table('walk_ins')
                 ->join('customers', 'walk_ins.customer_id', '=', 'customers.id')
+                ->join('tables', 'walk_ins.table_id', '=', 'tables.id')
                 ->where('walk_ins.id', $id)
                 ->select(
                     'walk_ins.id as reservation_id',
@@ -158,21 +161,25 @@ class CashierController extends Controller
                     'customers.contact_number',
                     'customers.id_type',
                     'walk_ins.pax',
-                    'walk_ins.customer_id'
+                    'walk_ins.customer_id',
+                    'tables.table_number',
+                    DB::raw("'walkin' as order_type")
                 )
                 ->first();
 
-            if (!$session) {
+            if (!$reservation) {
                 return response()->json(['message' => 'Order not found'], 404);
             }
-            $reservation = $session;
         }
 
         $orders = DB::table('orders')
             ->join('menu', 'orders.menu_id', '=', 'menu.id')
-            ->where(function ($query) use ($id) {
-                $query->where('orders.reservation_id', $id)
-                    ->orWhere('orders.walk_in_id', $id);
+            ->where(function ($query) use ($id, $reservation) {
+                if ($reservation->order_type === 'reservation') {
+                    $query->where('orders.reservation_id', $id);
+                } else {
+                    $query->where('orders.walk_in_id', $id);
+                }
             })
             ->select(
                 'orders.id as order_id',
@@ -197,10 +204,11 @@ class CashierController extends Controller
             'pax'              => $reservation->pax,
             'reservation_time' => $reservation->reservation_time,
             'advance_payment'  => floatval($reservation->advance_payment ?? 0),
+            'table_number'     => $reservation->table_number,
+            'order_type'       => $reservation->order_type,
             'orders'           => $orders
         ]);
     }
-
 
     private function calculateDiscountedPrice($menuItem, $regularPrice, $customerType)
     {
@@ -249,7 +257,8 @@ class CashierController extends Controller
     {
         try {
             $validated = $request->validate([
-                'reservation_id'               => 'required|integer|exists:reservations,id',
+                'reservation_id'               => 'required|integer',
+                'order_type'                   => 'required|in:reservation,walkin',
                 'subtotal'                     => 'nullable|numeric|min:0',
                 'advance_payment'              => 'nullable|numeric|min:0',
                 'total'                        => 'required|numeric|min:0',
@@ -268,16 +277,27 @@ class CashierController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Validation failed'
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
             ], 422);
         }
 
         try {
             DB::beginTransaction();
 
-            $reservation = Reservation::with('customer')->find($request->reservation_id);
-            if (!$reservation) {
-                throw new Exception('Reservation not found');
+            $isWalkIn = strtolower($request->order_type) === 'walkin';
+            $recordId = $request->reservation_id;
+
+            if ($isWalkIn) {
+                $record = walkin::with('customer')->find($recordId);
+                if (!$record) {
+                    throw new Exception('Walk-in not found');
+                }
+            } else {
+                $record = Reservation::with('customer')->find($recordId);
+                if (!$record) {
+                    throw new Exception('Reservation not found');
+                }
             }
 
             $uniqueCustomers = [];
@@ -302,12 +322,12 @@ class CashierController extends Controller
                 }
             }
 
-            $mainCustomer = $reservation->customer;
+            $mainCustomer = $record->customer;
             if (!$mainCustomer) {
                 $mainCustomer = Customers::create([
-                    'name' => 'Walk-in Customer',
+                    'name' => $isWalkIn ? 'Walk-in Customer' : 'Reservation Customer',
                 ]);
-                $reservation->update(['customer_id' => $mainCustomer->id]);
+                $record->update(['customer_id' => $mainCustomer->id]);
             }
 
             $ordersTotal         = 0;
@@ -358,7 +378,17 @@ class CashierController extends Controller
                 }
             }
 
-            $advancePayment = floatval($request->advance_payment ?? $reservation->advance_payment ?? 0);
+            $advancePayment = 0;
+            if (!$isWalkIn) {
+                $advancePayment = floatval($request->advance_payment ?? 0);
+                if ($advancePayment == 0) {
+                    $paymentDetail = DB::table('reservation_payment_details')
+                        ->where('reservation_id', $record->id)
+                        ->first();
+                    $advancePayment = floatval($paymentDetail->advance_payment ?? 0);
+                }
+            }
+
             $grandTotal     = $ordersTotal - $totalDiscountAmount;
             $toPay          = max(0, $grandTotal - $advancePayment);
             $cashReceived   = floatval($request->cash_received ?? 0);
@@ -375,7 +405,8 @@ class CashierController extends Controller
                 'change'          => $change,
                 'payment_method'  => 'Cash',
                 'status'          => 'Completed',
-                'reservation_id'  => $reservation->id,
+                'reservation_id'  => $isWalkIn ? null : $recordId,
+                'walk_in_id'      => $isWalkIn ? $recordId : null,
                 'customer_id'     => $mainCustomer->id,
                 'cashier_id'      => Auth::id(),
                 'created_at'      => now(),
@@ -403,25 +434,22 @@ class CashierController extends Controller
                 ]);
             }
 
-            $reservation->update(['status' => 'Completed']);
+            $record->update([
+                'status' => 'Completed',
+                'ended_at' => now()
+            ]);
 
-            $walkIn = DB::table('walk_ins')->where('id', $reservation->id)->first();
-
-
-            if ($walkIn) {
-                DB::table('walk_ins')
-                    ->where('id', $reservation->id)
-                    ->update([
-                        'status' => 'Completed',
-                        'ended_at' => now(),
-                        'updated_at' => now()
-                    ]);
+            if ($isWalkIn) {
+                DB::table('orders')
+                    ->where('walk_in_id', $record->id)
+                    ->where('status', 'Pending')
+                    ->update(['status' => 'Served', 'updated_at' => now()]);
+            } else {
+                DB::table('orders')
+                    ->where('reservation_id', $record->id)
+                    ->where('status', 'Pending')
+                    ->update(['status' => 'Served', 'updated_at' => now()]);
             }
-
-            DB::table('orders')
-                ->where('reservation_id', $reservation->id)
-                ->where('status', 'Pending')
-                ->update(['status' => 'Served', 'updated_at' => now()]);
 
             DB::commit();
 
@@ -438,10 +466,15 @@ class CashierController extends Controller
                 'cash_received'        => $cashReceived,
                 'change'              => $change,
                 'processed_items'      => count($processedOrders),
-                'discounted_customers' => count($uniqueCustomers)
+                'discounted_customers' => count($uniqueCustomers),
+                'type'                => $isWalkIn ? 'walk-in' : 'reservation'
             ]);
         } catch (Exception $e) {
             DB::rollBack();
+            Log::error('Payment Processing Failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Payment failed: ' . $e->getMessage()

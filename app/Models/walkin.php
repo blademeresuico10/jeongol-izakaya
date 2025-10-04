@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class walkins extends Model
+class walkin extends Model
 {
     protected $table = 'walk_ins';
     protected $fillable = [
@@ -16,6 +16,7 @@ class walkins extends Model
         'ended_at',
         'status',
     ];
+
 
     public function customer()
     {
@@ -35,5 +36,10 @@ class walkins extends Model
     public function orders()
     {
         return $this->hasMany(orders::class, 'walk_in_id', 'id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(transaction::class, 'walk_in_id', 'id');
     }
 }

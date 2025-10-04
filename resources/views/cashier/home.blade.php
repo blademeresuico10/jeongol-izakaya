@@ -311,24 +311,37 @@
 
                                     @if($isOccupied)
                                         @if(isset($table->remaining_seconds) && $table->remaining_seconds > 0)
-                                            <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
-                                                </svg>
-                                                <span class="countdown"
-                                                    data-seconds="{{ $table->remaining_seconds }}">00:00:00</span>
-                                            </span>
+                                                                <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                            d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
+                                                                    </svg>
+                                                                    <span class="countdown" data-seconds="{{ $table->remaining_seconds }}">
+                                                                        {{ sprintf(
+                                                '%02d:%02d:%02d',
+                                                floor($table->remaining_seconds / 3600),
+                                                floor(($table->remaining_seconds % 3600) / 60),
+                                                $table->remaining_seconds % 60
+                                            ) }}
+                                                                    </span>
+                                                                </span>
                                         @elseif(isset($table->elapsed_seconds))
-                                            <span class="text-blue-600 font-medium mt-2 flex items-center space-x-1">
-                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                                    viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                    <path stroke-linecap="round" stroke-linejoin="round"
-                                                        d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
-                                                </svg>
-                                                <span class="countup" data-seconds="{{ $table->elapsed_seconds }}">00:00:00</span>
-                                            </span>
+                                                                <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
+                                                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                                            d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
+                                                                    </svg>
+                                                                    <span class="countup" data-seconds="{{ $table->elapsed_seconds }}">
+                                                                        {{ sprintf(
+                                                '%02d:%02d:%02d',
+                                                floor($table->elapsed_seconds / 3600),
+                                                floor(($table->elapsed_seconds % 3600) / 60),
+                                                $table->elapsed_seconds % 60
+                                            ) }}
+                                                                    </span>
+                                                                </span>
                                         @else
                                             <span class="text-red-600 font-medium mt-2">Occupied</span>
                                         @endif
@@ -458,13 +471,13 @@
                     this.initializeElements();
                     this.initializeEventListeners();
                     this.setupTableClickEvents();
-                    setTimeout(() => this.initializeCountdowns(), 500);
+                    this.initializeCountdowns();
                 });
             } else {
                 this.initializeElements();
                 this.initializeEventListeners();
                 this.setupTableClickEvents();
-                setTimeout(() => this.initializeCountdowns(), 500);
+                this.initializeCountdowns();
             }
         }
 
@@ -804,20 +817,20 @@
                     if (showDiscountSelect) {
                         orderLine.className = "flex justify-between items-center py-2 border-b border-gray-100";
                         orderLine.innerHTML = `
-                    <div class="flex-1">
-                        <div class="font-medium">${itemName}</div>
-                    </div>
-                    <span class="w-20 text-right">₱${price.toFixed(2)}</span>
-                    <div class="w-40 text-right">
-                        <select class="discount-type-select border border-gray-300 rounded px-1 py-1 text-sm w-50" 
-                                data-item-price="${price}" 
-                                data-item-name="${itemName}" 
-                                id="discount-select-${itemCounter}">
-                            ${this.getDiscountOptions(menuItemData)}
-                        </select>
-                    </div>
-                    <span class="w-24 text-right font-medium item-total">₱${price.toFixed(2)}</span>
-                `;
+                        <div class="flex-1">
+                            <div class="font-medium">${itemName}</div>
+                        </div>
+                        <span class="w-20 text-right">₱${price.toFixed(2)}</span>
+                        <div class="w-40 text-right">
+                            <select class="discount-type-select border border-gray-300 rounded px-1 py-1 text-sm w-50" 
+                                    data-item-price="${price}" 
+                                    data-item-name="${itemName}" 
+                                    id="discount-select-${itemCounter}">
+                                ${this.getDiscountOptions(menuItemData)}
+                            </select>
+                        </div>
+                        <span class="w-24 text-right font-medium item-total">₱${price.toFixed(2)}</span>
+                    `;
                         paymentItemsList.appendChild(orderLine);
                     } else {
                         orderLine.className = "hidden";
@@ -908,15 +921,15 @@
 
             if (!this.currentReservationData?.orders || this.currentReservationData.orders.length === 0) {
                 paymentSummaryDiv.innerHTML = `
-            <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
-                <span class="flex-1">Item</span>
-                <span class="w-24 text-right">Total Price</span>
-            </div>
-            <div class="flex justify-between text-lg font-bold border-t pt-2">
-                <span>Total Amount:</span>
-                <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
-            </div>
-        `;
+                <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
+                    <span class="flex-1">Item</span>
+                    <span class="w-24 text-right">Total Price</span>
+                </div>
+                <div class="flex justify-between text-lg font-bold border-t pt-2">
+                    <span>Total Amount:</span>
+                    <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
+                </div>
+            `;
                 return;
             }
 
@@ -1011,15 +1024,15 @@
                 const discountType = entry.discountType || 'none';
 
                 breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
-            <span class="flex-1 pr-2">${entry.name}</span>
-            <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
-            <div class="w-12 flex justify-center ml-2">
-                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
-                                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                Info
-                                </button>` : ''}
-            </div>
-        </div>`;
+                <span class="flex-1 pr-2">${entry.name}</span>
+                <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
+                <div class="w-12 flex justify-center ml-2">
+                    ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                    Info
+                                    </button>` : ''}
+                </div>
+            </div>`;
                 displayItemCounter++;
             });
 
@@ -1031,30 +1044,30 @@
                 const discountType = group.discountType || 'none';
 
                 breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
-            <span class="flex-1 pr-2">${displayName}</span>
-            <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
-            <div class="w-12 flex justify-center ml-2">
-                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
-                                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                Info
-                                </button>` : ''}
-            </div>
-        </div>`;
+                <span class="flex-1 pr-2">${displayName}</span>
+                <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
+                <div class="w-12 flex justify-center ml-2">
+                    ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
+                                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                    Info
+                                    </button>` : ''}
+                </div>
+            </div>`;
                 displayItemCounter++;
             });
 
             paymentSummaryDiv.innerHTML = `
-        <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
-            <span class="flex-1">Item</span>
-            <span class="w-20 text-right">Total Price</span>
-            <span class="w-12 text-center ml-2"></span>
-        </div>
-        ${breakdownHtml}
-        <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
-            <span>Total Amount:</span>
-            <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
-        </div>
-    `;
+            <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
+                <span class="flex-1">Item</span>
+                <span class="w-20 text-right">Total Price</span>
+                <span class="w-12 text-center ml-2"></span>
+            </div>
+            ${breakdownHtml}
+            <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
+                <span>Total Amount:</span>
+                <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
+            </div>
+        `;
         }
 
         setupDiscountBreakdownSection() {
@@ -1083,57 +1096,57 @@
             const savedName = savedData ? savedData.name : '';
 
             const modalHtml = `
-        <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div class="bg-white rounded-lg p-6 w-96 max-w-sm mx-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Customer Information</h3>
-                    <button id="closeCustomerInfoModal" class="text-gray-400 hover:text-gray-600">X</button>
-                </div>
-                
-                <div class="mb-4 p-3 bg-blue-50 rounded-lg">
-                    <p class="text-sm text-blue-800">
-                        <strong>Item:</strong> ${itemName}
-                    </p>
-                    <p class="text-xs text-blue-600 mt-1">
-                        Customer information is required for this discount
-                    </p>
-                </div>
-                
-                <form id="customerInfoForm" class="space-y-4">
-                    <input type="hidden" name="item_name" value="${itemName}">
-                    <input type="hidden" name="item_index" value="${itemIndex}">
-                    <input type="hidden" name="customer_type" value="${discountType}">
-                    
-                    <div>
-                        <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
-                            Customer Name <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="customerName" name="name" required value="${savedName}"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                            placeholder="Enter customer name">
-                        <div id="nameError" class="text-red-500 text-xs mt-1 hidden">Customer name is required</div>
+            <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                <div class="bg-white rounded-lg p-6 w-96 max-w-sm mx-4">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Customer Information</h3>
+                        <button id="closeCustomerInfoModal" class="text-gray-400 hover:text-gray-600">X</button>
                     </div>
+                    
+                    <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+                        <p class="text-sm text-blue-800">
+                            <strong>Item:</strong> ${itemName}
+                        </p>
+                        <p class="text-xs text-blue-600 mt-1">
+                            Customer information is required for this discount
+                        </p>
+                    </div>
+                    
+                    <form id="customerInfoForm" class="space-y-4">
+                        <input type="hidden" name="item_name" value="${itemName}">
+                        <input type="hidden" name="item_index" value="${itemIndex}">
+                        <input type="hidden" name="customer_type" value="${discountType}">
+                        
+                        <div>
+                            <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
+                                Customer Name <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="customerName" name="name" required value="${savedName}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                placeholder="Enter customer name">
+                            <div id="nameError" class="text-red-500 text-xs mt-1 hidden">Customer name is required</div>
+                        </div>
 
-                    <div>
-                        <label for="customerIdType" class="block text-sm font-medium text-gray-700 mb-1">
-                            ID Type <span class="text-red-500">*</span>
-                        </label>
-                        <input type="text" id="customerIdType" name="id_type" value="${savedData ? savedData.id_type || idTypeValue : idTypeValue}" readonly
-                            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed">
-                    </div>
-                    
-                    <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" id="cancelCustomerInfo" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md">
-                            Close
-                        </button>
-                        <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
-                            Save
-                        </button>
-                    </div>
-                </form>
+                        <div>
+                            <label for="customerIdType" class="block text-sm font-medium text-gray-700 mb-1">
+                                ID Type <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="customerIdType" name="id_type" value="${savedData ? savedData.id_type || idTypeValue : idTypeValue}" readonly
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed">
+                        </div>
+                        
+                        <div class="flex justify-end space-x-3 mt-6">
+                            <button type="button" id="cancelCustomerInfo" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md">
+                                Close
+                            </button>
+                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
+                                Save
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
-        `;
+            `;
 
             const existingModal = document.getElementById('customerInfoModal');
             if (existingModal) {
@@ -1368,96 +1381,96 @@
 
         showCashHandlingModal(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData) {
             const modalHtml = `
-                    <div id="cashHandlingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                        <div class="bg-white rounded-lg p-6 w-80 max-w-sm mx-4 shadow-2xl">
-                            <div class="text-center mb-6">
-                                <h2 class="text-xl font-bold text-gray-800 mb-4">Cash Payment</h2>
-                                
-                                <!-- Payment Breakdown -->
-                                <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
-                                    <div class="flex justify-between text-sm text-blue-800">
-                                        <span>Subtotal:</span>
-                                        <span>₱${subtotal.toFixed(2)}</span>
-                                    </div>
-                                    ${advancePayment > 0 ? `
-                                    <div class="flex justify-between text-sm text-green-600 items-center">
-                                        <label for="advancePayment" class="mr-2">Advance Payment:</label>
-                                        <input 
-                                            type="number" 
-                                            id="advancePayment" 
-                                            name="advancePayment" 
-                                            value="${advancePayment.toFixed(2)}"
-                                            class="w-24 text-green-600 border border-green-600 rounded px-1 py-0.5 text-right"
-                                            step="0.01"
-                                            min="0"
-                                            oninput="
-                                                const newAdvance = parseFloat(this.value)||0;
-                                                const newAmountDue = ${subtotal} - newAdvance;
-                                                document.getElementById('amountDue').textContent = '₱'+newAmountDue.toFixed(2);
-                                                fetch('/cashier/update-advance/${currentReservationData.reservation_id}', {
-                                                    method: 'POST',
-                                                    headers: {
-                                                        'Content-Type': 'application/json',
-                                                        'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                    },
-                                                    body: JSON.stringify({ advance_payment: newAdvance })
-                                                });
-                                            "
-                                        >
-                                    </div>
+                        <div id="cashHandlingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                            <div class="bg-white rounded-lg p-6 w-80 max-w-sm mx-4 shadow-2xl">
+                                <div class="text-center mb-6">
+                                    <h2 class="text-xl font-bold text-gray-800 mb-4">Cash Payment</h2>
+                                    
+                                    <!-- Payment Breakdown -->
+                                    <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
+                                        <div class="flex justify-between text-sm text-blue-800">
+                                            <span>Subtotal:</span>
+                                            <span>₱${subtotal.toFixed(2)}</span>
+                                        </div>
+                                        ${advancePayment > 0 ? `
+                                        <div class="flex justify-between text-sm text-green-600 items-center">
+                                            <label for="advancePayment" class="mr-2">Advance Payment:</label>
+                                            <input 
+                                                type="number" 
+                                                id="advancePayment" 
+                                                name="advancePayment" 
+                                                value="${advancePayment.toFixed(2)}"
+                                                class="w-24 text-green-600 border border-green-600 rounded px-1 py-0.5 text-right"
+                                                step="0.01"
+                                                min="0"
+                                                oninput="
+                                                    const newAdvance = parseFloat(this.value)||0;
+                                                    const newAmountDue = ${subtotal} - newAdvance;
+                                                    document.getElementById('amountDue').textContent = '₱'+newAmountDue.toFixed(2);
+                                                    fetch('/cashier/update-advance/${currentReservationData.reservation_id}', {
+                                                        method: 'POST',
+                                                        headers: {
+                                                            'Content-Type': 'application/json',
+                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                                        },
+                                                        body: JSON.stringify({ advance_payment: newAdvance })
+                                                    });
+                                                "
+                                            >
+                                        </div>
 
-                                    <hr class="border-blue-200">
-                                    ` : ''}
-                                    <div class="flex justify-between">
-    <span class="text-sm text-blue-800">Amount Due:</span>
-    <span id="amountDue" class="text-2xl font-bold text-blue-600">₱${finalTotal.toFixed(2)}</span>
-</div>
+                                        <hr class="border-blue-200">
+                                        ` : ''}
+                                        <div class="flex justify-between">
+        <span class="text-sm text-blue-800">Amount Due:</span>
+        <span id="amountDue" class="text-2xl font-bold text-blue-600">₱${finalTotal.toFixed(2)}</span>
+    </div>
 
-                                </div>
-                            </div>
-
-                            <form id="cashPaymentForm" class="space-y-4">
-                                <div>
-                                    <label for="cashReceived" class="block text-sm font-medium text-gray-700 mb-2">
-                                        Cash Received
-                                    </label>
-                                    <div class="relative">
-                                        <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
-                                        <input 
-                                            type="number" 
-                                            id="cashReceived" 
-                                            name="cashReceived" 
-                                            step="0.01" 
-                                            min="${finalTotal}"
-                                            class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-lg font-mono"
-                                            placeholder="0.00"
-                                            required
-                                            autocomplete="off">
-                                    </div>
-                                    <div id="cashError" class="text-red-500 text-xs mt-1 hidden">
-                                        Insufficient amount
                                     </div>
                                 </div>
 
-                                <div class="flex justify-between space-x-3 mt-6">
-                                    <button 
-                                        type="button" 
-                                        id="cancelCashPayment" 
-                                        class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
-                                        Cancel
-                                    </button>
-                                    <button 
-                                        type="submit" 
-                                        id="completeCashPayment"
-                                        class="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                                        disabled>
-                                        Submit
+                                <form id="cashPaymentForm" class="space-y-4">
+                                    <div>
+                                        <label for="cashReceived" class="block text-sm font-medium text-gray-700 mb-2">
+                                            Cash Received
+                                        </label>
+                                        <div class="relative">
+                                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
+                                            <input 
+                                                type="number" 
+                                                id="cashReceived" 
+                                                name="cashReceived" 
+                                                step="0.01" 
+                                                min="${finalTotal}"
+                                                class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-lg font-mono"
+                                                placeholder="0.00"
+                                                required
+                                                autocomplete="off">
+                                        </div>
+                                        <div id="cashError" class="text-red-500 text-xs mt-1 hidden">
+                                            Insufficient amount
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-between space-x-3 mt-6">
+                                        <button 
+                                            type="button" 
+                                            id="cancelCashPayment" 
+                                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
+                                            Cancel
                                         </button>
-                                </div>
-                            </form>
+                                        <button 
+                                            type="submit" 
+                                            id="completeCashPayment"
+                                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                                            disabled>
+                                            Submit
+                                            </button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
 
             const existingModal = document.getElementById('cashHandlingModal');
             if (existingModal) {
@@ -1525,14 +1538,14 @@
         }
         showProcessingModal() {
             const modalHtml = `
-                <div id="processingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                    <div class="bg-white rounded-lg p-8 w-64 text-center shadow-2xl">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                        <h3 class="text-lg font-medium text-gray-900 mb-2">Processing Payment</h3>
-                        <p class="text-sm text-gray-600">Please wait...</p>
+                    <div id="processingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                        <div class="bg-white rounded-lg p-8 w-64 text-center shadow-2xl">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Processing Payment</h3>
+                            <p class="text-sm text-gray-600">Please wait...</p>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
 
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
@@ -1573,7 +1586,7 @@
 
             const paymentData = {
                 reservation_id: currentReservationData.reservation_id,
-                customer_name: currentReservationData.customer_name,
+                order_type: currentReservationData.order_type,
                 subtotal: subtotal,
                 advance_payment: advancePayment,
                 total: finalTotal,
@@ -1667,167 +1680,171 @@
             Object.keys(itemGroups).forEach(itemName => {
                 const item = itemGroups[itemName];
                 orderItemsHTML += `
-            <tr>
-                <td style="padding: 4px 8px; border-bottom: 1px solid #ddd;">${itemName}</td>
-                <td style="padding: 4px 8px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-                <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.regularPrice.toFixed(2)}</td>
-                <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.totalAmount.toFixed(2)}</td>
-            </tr>
-        `;
+                <tr>
+                    <td style="padding: 4px 8px; border-bottom: 1px solid #ddd;">${itemName}</td>
+                    <td style="padding: 4px 8px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
+                    <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.regularPrice.toFixed(2)}</td>
+                    <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.totalAmount.toFixed(2)}</td>
+                </tr>
+            `;
             });
 
             const printHTML = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Jeongol Receipt</title>
-        <style>
-            @media print { 
-                @page { size: 80mm auto; margin: 0; } 
-                body { margin: 0; padding: 0; }
-            }
-            body { 
-                font-family: 'Courier New', monospace;
-                font-size: 11px;
-                width: 300px;
-                margin: 0 auto;
-                padding: 10px;
-            }
-            .header {
-                text-align: center;
-                border-bottom: 1px dashed #000;
-                padding-bottom: 8px;
-                margin-bottom: 8px;
-            }
-            .header h3 {
-                margin: 2px 0;
-                font-size: 13px;
-            }
-            .header p {
-                margin: 1px 0;
-                font-size: 9px;
-            }
-            .info-section {
-                margin: 8px 0;
-                font-size: 10px;
-            }
-            .info-row {
-                display: flex;
-                justify-content: space-between;
-                margin: 2px 0;
-            }
-            table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 8px 0;
-                font-size: 10px;
-            }
-            th {
-                border-top: 1px solid #000;
-                border-bottom: 1px solid #000;
-                padding: 4px 8px;
-                text-align: left;
-                font-weight: bold;
-            }
-            .summary {
-                margin-top: 8px;
-                border-top: 1px dashed #000;
-                padding-top: 8px;
-            }
-            .summary-row {
-                display: flex;
-                justify-content: space-between;
-                margin: 3px 0;
-            }
-            .total-row {
-                font-weight: bold;
-                font-size: 12px;
-                border-top: 1px solid #000;
-                padding-top: 4px;
-                margin-top: 4px;
-            }
-            .footer {
-                text-align: center;
-                margin-top: 12px;
-                border-top: 1px dashed #000;
-                padding-top: 8px;
-                font-size: 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="header">
-            <h3>Jeongol Izakaya Hotpot & Grill</h3>
-            <p>VAT Reg. TIN 295-774-127-00003</p>
-            <p>Koronadal City, South Cotabato, Philippines</p>
-            <p style="margin-top: 6px; font-weight: bold;">Receipt</p>
-        </div>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Jeongol Receipt</title>
+            <style>
+                @media print { 
+                    @page { size: 80mm auto; margin: 0; } 
+                    body { margin: 0; padding: 0; }
+                }
+                body { 
+                    font-family: 'Courier New', monospace;
+                    font-size: 11px;
+                    width: 300px;
+                    margin: 0 auto;
+                    padding: 10px;
+                }
+                .header {
+                    text-align: center;
+                    border-bottom: 1px dashed #000;
+                    padding-bottom: 8px;
+                    margin-bottom: 8px;
+                }
+                .header h3 {
+                    margin: 2px 0;
+                    font-size: 13px;
+                }
+                .header p {
+                    margin: 1px 0;
+                    font-size: 9px;
+                }
+                .info-section {
+                    margin: 8px 0;
+                    font-size: 10px;
+                }
+                .info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 2px 0;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 8px 0;
+                    font-size: 10px;
+                }
+                th {
+                    border-top: 1px solid #000;
+                    border-bottom: 1px solid #000;
+                    padding: 4px 8px;
+                    text-align: left;
+                    font-weight: bold;
+                }
+                .summary {
+                    margin-top: 8px;
+                    border-top: 1px dashed #000;
+                    padding-top: 8px;
+                }
+                .summary-row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 3px 0;
+                }
+                .total-row {
+                    font-weight: bold;
+                    font-size: 12px;
+                    border-top: 1px solid #000;
+                    padding-top: 4px;
+                    margin-top: 4px;
+                }
+                .footer {
+                    text-align: center;
+                    margin-top: 12px;
+                    border-top: 1px dashed #000;
+                    padding-top: 8px;
+                    font-size: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h3>Jeongol Izakaya Hotpot & Grill</h3>
+                <p>VAT Reg. TIN 295-774-127-00003</p>
+                <p>Koronadal City, South Cotabato, Philippines</p>
+                <p style="margin-top: 6px; font-weight: bold;">Receipt</p>
+            </div>
 
-        <div class="info-section">
-            <div class="info-row">
-                <span>Date:</span>
-                <span>${dateStr} ${timeStr}</span>
+            <div class="info-section">
+                <div class="info-row">
+                    <span>Date:</span>
+                    <span>${dateStr} ${timeStr}</span>
+                </div>
+                <div class="info-row">
+                    <span>Cashier:</span>
+                    <span>${CASHIER_NAME}</span>
+                </div>
             </div>
-            <div class="info-row">
-                <span>Cashier:</span>
-                <span>${CASHIER_NAME}</span>
-            </div>
-        </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th style="text-align: left;">Item Description</th>
-                    <th style="text-align: center; width: 40px;">Qty</th>
-                    <th style="text-align: right; width: 60px;">Unit Price</th>
-                    <th style="text-align: right; width: 70px;">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${orderItemsHTML}
-            </tbody>
-        </table>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">Item Description</th>
+                        <th style="text-align: center; width: 40px;">Qty</th>
+                        <th style="text-align: right; width: 60px;">Unit Price</th>
+                        <th style="text-align: right; width: 70px;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${orderItemsHTML}
+                </tbody>
+            </table>
 
-        <div class="summary">
-            <div class="summary-row">
-                <span>VATable Sales:</span>
-                <span>₱${vatableSales}</span>
+            <div class="summary">
+                <div class="summary-row">
+                    <span>VATable Sales:</span>
+                    <span>₱${vatableSales}</span>
+                </div>
+                <div class="summary-row">
+                    <span>VAT (12%):</span>
+                    <span>₱${vat}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total Sales (VAT Inclusive):</span>
+                    <span>₱${subtotal.toFixed(2)}</span>
+                </div>
+                ${advancePayment > 0 ? `
+                <div class="summary-row">
+                    <span>Advance Payment:</span>
+                    <span>₱${advancePayment.toFixed(2)}</span>
+                </div>
+                ` : ''}
+                <div class="summary-row">
+                    <span>Discounted Person:</span>
+                    <span>${Object.keys(this.tempCustomerData).length}</span>
+                </div>
+                <div class="summary-row total-row">
+                    <span>TOTAL AMOUNT DUE:</span>
+                    <span>₱${finalTotal.toFixed(2)}</span>
+                </div>
+                <div class="summary-row" style="margin-top: 8px;">
+                    <span>Cash Received:</span>
+                    <span>₱${cashReceived.toFixed(2)}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Change:</span>
+                    <span>₱${change.toFixed(2)}</span>
+                </div>
             </div>
-            <div class="summary-row">
-                <span>VAT (12%):</span>
-                <span>₱${vat}</span>
-            </div>
-            <div class="summary-row">
-                <span>Total Sales (VAT Inclusive):</span>
-                <span>₱${subtotal.toFixed(2)}</span>
-            </div>
-            ${advancePayment > 0 ? `
-            <div class="summary-row">
-                <span>Advance Payment:</span>
-                <span>₱${advancePayment.toFixed(2)}</span>
-            </div>
-            ` : ''}
-            <div class="summary-row total-row">
-                <span>TOTAL AMOUNT DUE:</span>
-                <span>₱${finalTotal.toFixed(2)}</span>
-            </div>
-            <div class="summary-row" style="margin-top: 8px;">
-                <span>Cash Received:</span>
-                <span>₱${cashReceived.toFixed(2)}</span>
-            </div>
-            <div class="summary-row">
-                <span>Change:</span>
-                <span>₱${change.toFixed(2)}</span>
-            </div>
-        </div>
 
-        <div class="footer">
-            <p>Thank you for dining with us!</p>
-            <p>Please come again</p>
-        </div>
-    </body>
-    </html>
-    `;
+            <div class="footer">
+                <p>Thank you for dining with us!</p>
+                <p>Please come again</p>
+            </div>
+        </body>
+        </html>
+        `;
             const printWindow = window.open('', '_blank', 'width=400,height=600');
             if (!printWindow) {
                 this.showToast('Unable to open print window. Please check popup settings.', 'error');
@@ -1910,73 +1927,73 @@
                     }
 
                     itemsHTML += `<tr>
-                <td style="padding: 3px 2px; font-size: 10px; text-align: left; width: 55%;">${displayName}</td>
-                <td style="padding: 3px 2px; font-size: 10px; text-align: center; width: 15%;">${quantity}</td>
-                <td style="padding: 3px 2px; font-size: 10px; text-align: right; width: 30%;">${price}</td>
-            </tr>`;
+                    <td style="padding: 3px 2px; font-size: 10px; text-align: left; width: 55%;">${displayName}</td>
+                    <td style="padding: 3px 2px; font-size: 10px; text-align: center; width: 15%;">${quantity}</td>
+                    <td style="padding: 3px 2px; font-size: 10px; text-align: right; width: 30%;">${price}</td>
+                </tr>`;
                 }
             });
 
             const total = totalElement.textContent.trim();
             const printHTML = `<!DOCTYPE html>
-        <html>
-        <head>
-            <title>Bill</title>
-            <style>
-                @media print { 
-                    @page { size: 80mm auto; margin: 0; } 
-                    body { margin: 0; padding: 2mm; } 
-                }
-                body { 
-                    font-family: "Courier New", monospace; 
-                    font-size: 12px; 
-                    width: 280px; 
-                    margin: 0 auto; 
-                    padding: 8px; 
-                }
-                .center { text-align: center; }
-                .dotted-line { 
-                    border-top: 1px dotted #000; 
-                    margin: 6px 0; 
-                }
-                table { 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                }
-                th, td { 
-                    padding: 3px 2px; 
-                    font-size: 10px; 
-                }
-                th {
-                    border-bottom: 1px dotted #000;
-                    font-weight: bold;
-                }
-            </style>
-        </head>
-        <body>
-        
-            <div class="center" style="font-size: 20px;"><strong>Bill</strong></div>
-            <div class="dotted-line"></div>
-            <div style="font-size: 13px;">Customer: ${customerName}</div>
-            @foreach ($reservations as $reservation)
-                <div>Table: {{ $reservation->table?->table_number ?? 'N/A' }}</div>
-            @endforeach
+            <html>
+            <head>
+                <title>Bill</title>
+                <style>
+                    @media print { 
+                        @page { size: 80mm auto; margin: 0; } 
+                        body { margin: 0; padding: 2mm; } 
+                    }
+                    body { 
+                        font-family: "Courier New", monospace; 
+                        font-size: 12px; 
+                        width: 280px; 
+                        margin: 0 auto; 
+                        padding: 8px; 
+                    }
+                    .center { text-align: center; }
+                    .dotted-line { 
+                        border-top: 1px dotted #000; 
+                        margin: 6px 0; 
+                    }
+                    table { 
+                        width: 100%; 
+                        border-collapse: collapse; 
+                    }
+                    th, td { 
+                        padding: 3px 2px; 
+                        font-size: 10px; 
+                    }
+                    th {
+                        border-bottom: 1px dotted #000;
+                        font-weight: bold;
+                    }
+                </style>
+            </head>
+            <body>
+            
+                <div class="center" style="font-size: 20px;"><strong>Bill</strong></div>
+                <div class="dotted-line"></div>
+                <div style="font-size: 13px;">Customer: ${customerName}</div>
+                @foreach ($reservations as $reservation)
+                    <div>Table: {{ $reservation->table?->table_number ?? 'N/A' }}</div>
+                @endforeach
 
-            <div class="dotted-line"></div>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="text-align: left; width: 55%;">Item</th>
-                        <th style="text-align: center; width: 15%;">Qty</th>
-                        <th style="text-align: right; width: 30%;">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>${itemsHTML}</tbody>
-            </table>
-            <div class="dotted-line"></div>
-            <div class="center"><strong>TOTAL: ${total}</strong></div>
-        </body>
-        </html>`;
+                <div class="dotted-line"></div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; width: 55%;">Item</th>
+                            <th style="text-align: center; width: 15%;">Qty</th>
+                            <th style="text-align: right; width: 30%;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>${itemsHTML}</tbody>
+                </table>
+                <div class="dotted-line"></div>
+                <div class="center"><strong>TOTAL: ${total}</strong></div>
+            </body>
+            </html>`;
 
             const printWindow = window.open('', '_blank', 'width=400,height=600');
             if (!printWindow) {
@@ -2008,7 +2025,7 @@
 
             const toast = document.createElement('div');
             toast.className = `toast toast-${type} fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform
-        translate-x-full transition-transform duration-300`;
+            translate-x-full transition-transform duration-300`;
 
             const colors = {
                 success: 'bg-green-500 text-white',
@@ -2065,7 +2082,7 @@
         if (window.app && window.app.submitPayment) {
             window.app.submitPayment(event);
         }
-    }
+    }   
 
 </script>
 

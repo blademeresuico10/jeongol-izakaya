@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('reservation_payment_details', function (Blueprint $table) {
             $table->id();
-            $table->string('registered_name');
-            $table->string('registered_number');
+            $table->string('registered_name')->nullable();
+            $table->string('registered_number')->nullable();
             $table->decimal('advance_payment', 8, 2);
             $table->enum('payment_method', ['gcash', 'maya', 'cash'])->nullable();
             $table->string('payment_proof')->nullable();

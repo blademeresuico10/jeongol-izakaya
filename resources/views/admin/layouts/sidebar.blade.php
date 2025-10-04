@@ -64,7 +64,7 @@
     </li>
 
     <li @class(['nav-item', 'active' => request()->is('others*')])>
-        <a class="nav-link" href="">
+        <a class="nav-link" href="{{ route('admin.others') }}">
             <i class="fas fa-layer-group"></i>
             <span>Others</span>
         </a>

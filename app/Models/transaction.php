@@ -11,24 +11,27 @@ class transaction extends Model
 
     protected $fillable = [
         'transaction_no',
-        'subtotal',
+        'orders_total',      
         'discount_total',
         'advance_payment',
-        'total',
+        'grand_total',       
+        'to_pay',           
         'cash_received',
         'change',
         'payment_method',
         'status',
         'reservation_id',
+        'walk_in_id',
         'customer_id',
         'cashier_id',
     ];
 
     protected $casts = [
-        'subtotal' => 'decimal:2',
+        'orders_total' => 'decimal:2',     
         'discount_total' => 'decimal:2',
         'advance_payment' => 'decimal:2',
-        'total' => 'decimal:2',
+        'grand_total' => 'decimal:2',      
+        'to_pay' => 'decimal:2',          
         'cash_received' => 'decimal:2',
         'change' => 'decimal:2',
     ];
@@ -47,8 +50,14 @@ class transaction extends Model
     {
         return $this->belongsTo(Reservation::class);
     }
+
     public function orders()
     {
         return $this->hasMany(orders::class);
+    }
+
+    public function walkin()
+    {
+        return $this->belongsTo(walkin::class);
     }
 }

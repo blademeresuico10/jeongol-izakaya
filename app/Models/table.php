@@ -10,9 +10,9 @@ class table extends Model
     protected $fillable = ['table_number', 'capacity'];
 
     use SoftDeletes;
-    public function walkins()
+    public function walkin()
     {
-        return $this->hasMany(walkins::class, 'table_id');
+        return $this->hasMany(walkin::class, 'table_id');
     }
 
     public function reservations()

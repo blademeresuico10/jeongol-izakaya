@@ -21,7 +21,8 @@ return new class extends Migration
             $table->decimal('change', 10, 2)->nullable();
             $table->enum('payment_method', ['Cash', 'GCash', 'PayMaya'])->default('Cash');
             $table->enum('status', ['Pending', 'Completed', 'Refunded'])->default('Completed');
-            $table->foreignId('reservation_id')->constrained('reservations')->onDelete('cascade');
+            $table->foreignId('reservation_id')->nullable()->constrained('reservations')->onDelete('cascade');
+            $table->foreignId('walk_in_id')->nullable()->constrained('walk_ins')->onDelete('cascade');
             $table->foreignId('customer_id')->constrained('customers')->onDelete('cascade');
             $table->foreignId('cashier_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();

@@ -50,7 +50,6 @@
             $totalQuantity = $group->sum('quantity');
             $orderTime = \Carbon\Carbon::parse($first->started_at)->format('h:i A');
 
-            // Status mapping
             if ($first->status === 'Rejected') {
               $statusText = 'Cancelled';
               $statusClasses = 'bg-red-600 text-white';
@@ -86,7 +85,7 @@
                   <span class="text-gray-700 font-medium">{{ $first->pax }} pax</span>
 
                   <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
-                    {{ ucfirst($first->source ?? 'Reservation') }}
+                    {{ ucfirst($first->source ?? 'Reservation') }} 
                   </span>
 
                   <span class="px-3 py-1 rounded-full text-sm font-semibold {{ $statusClasses }}">

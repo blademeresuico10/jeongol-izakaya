@@ -8,7 +8,8 @@ use App\Http\Controllers\ReceptionistController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ReportsController;
-
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
@@ -34,10 +35,10 @@ Route::get('/file-serve/{path}', function ($path) {
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
     Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
-    
+
     Route::get('/login/admin', [LoginController::class, 'adminLogin'])->name('admin.login');
     Route::post('/login/admin', [LoginController::class, 'adminLoginSubmit'])->name('admin.login.submit');
-    
+
     Route::get('/login/admin/forgot-password', [LoginController::class, 'showAdminForgotPasswordForm'])->name('admin.password.request');
     Route::post('/login/admin/forgot-password', [LoginController::class, 'sendAdminResetLinkEmail'])->name('admin.password.email');
     Route::post('/verify-code', [LoginController::class, 'verifyResetCode'])->name('admin.password.verify');
@@ -52,17 +53,17 @@ Route::middleware('auth')->group(function () {
     Route::get('/validate-session', [LoginController::class, 'validateSession'])->name('validate.session');
 
     // ADMIN  ROUTES
-   Route::middleware('role:Admin')->group(function () {
+    Route::middleware('role:Admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'home'])->name('admin.home');
         Route::get('/home/dashboard-data', [AdminController::class, 'dashboardData'])->name('home.dashboard.data');
         Route::get('/home/sales-data', [AdminController::class, 'salesData'])->name('home.sales.data');
         Route::get('/debug/data', [AdminController::class, 'debugData'])->name('debug.data');
-        
+
         // Profile
         Route::get('/myprofile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::put('/updateprofile/{id}', [AdminController::class, 'updateProfile'])->name('admin.updateprofile');
         Route::put('/changepassword/{id}', [AdminController::class, 'changePassword'])->name('admin.changepassword');
-        
+
         // User Management
         Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
         Route::get('/adduser', [AdminController::class, 'adduser'])->name('admin.adduser');
@@ -72,7 +73,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/users/{id}', [AdminController::class, 'destroy'])->name('admin.destroyuser');
         Route::patch('/restoreuser/{id}', [AdminController::class, 'restore'])->name('admin.restoreuser');
         Route::delete('/forcedeleteuser/{id}', [AdminController::class, 'forceDelete'])->name('admin.forcedeleteuser');
-        
+
         // Menu Management
         Route::get('/menu_management', [AdminController::class, 'menu_management'])->name('admin.menu_management');
         Route::post('/addmenu', [AdminController::class, 'addmenu'])->name('admin.addmenu');
@@ -89,7 +90,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/menu/{menu}/add-ingredient', [AdminController::class, 'attachIngredient'])->name('menu.attachIngredient');
         Route::get('/ingredients/list', [AdminController::class, 'getAllIngredients'])->name('ingredients.list');
         Route::delete('/menu_ingredients/{id}', [AdminController::class, 'removeMenuIngredient'])->name('menu_ingredients.remove');
-        
+
         // Table Management
         Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
         Route::post('/addtable', [AdminController::class, 'addtable'])->name('admin.addtable');
@@ -99,7 +100,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/deletetable/{id}', [AdminController::class, 'deleteTable'])->name('admin.deleteTable');
         Route::patch('/restoretable/{id}', [AdminController::class, 'restoreTable'])->name('admin.restoreTable');
         Route::delete('/forcedeletetable/{id}', [AdminController::class, 'forceDeleteTable'])->name('admin.forceDeleteTable');
-        
+
         // Ingredient Management
         Route::prefix('ingredient_management')->group(function () {
             Route::get('/', [AdminController::class, 'ingredient_management'])->name('admin.ingredient_management');
@@ -114,19 +115,22 @@ Route::middleware('auth')->group(function () {
             Route::post('/remove-batch', [AdminController::class, 'removeBatch'])->name('ingredients.removeBatch');
             Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
         });
-        
+
         // Analytics
         Route::get('/analytics', [AdminController::class, 'analytics'])->name('admin.analytics');
-        
+
         // E-Wallet Management
         Route::get('/ewallet', [AdminController::class, 'ewallet_management'])->name('admin.ewallet_management');
         Route::post('/ewallet-store', [AdminController::class, 'ewallet_store'])->name('ewallet.store');
         Route::post('/ewallet/{id}/activate', [AdminController::class, 'activate'])->name('ewallet.activate');
         Route::post('/ewallet/{id}/deactivate', [AdminController::class, 'deactivate'])->name('ewallet.deactivate');
-        
+
+        // Others
+        Route::get('/others', [AdminController::class, 'others'])->name('admin.others');
+
         // Feedback
         Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
-        
+
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
         Route::get('/reports/sales', [ReportsController::class, 'salesReport'])->name('reports.sales');
@@ -156,7 +160,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/notifications/unread-count', [ReceptionistController::class, 'getUnreadCount'])->name('notification.unread-count');
         Route::post('/notifications/mark-all-read', [ReceptionistController::class, 'markAllNotificationsAsRead'])->name('notification.mark-all-read');
     });
-    
+
     Route::middleware('role:Receptionist')->group(function () {
         Route::get('/view_bookings', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
     });
@@ -177,7 +181,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/print-receipt', [CashierController::class, 'printReceipt']);
         Route::post('/test-printer', [CashierController::class, 'testPrinter']);
     });
-    
+
     Route::middleware('role:Cashier')->group(function () {
         Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
         Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
@@ -196,4 +200,12 @@ Route::middleware('auth')->group(function () {
         ])->get();
         return response()->json($menuItems);
     });
+
+    // Temporary - for development only
+    Route::get('/do-logout', function (Request $request) {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect('/login');
+    })->name('logout.dev');
 });

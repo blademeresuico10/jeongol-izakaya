@@ -1154,12 +1154,10 @@ class AdminController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get ingredient details
             $ingredient = DB::table('ingredients')->where('id', $request->ingredient_id)->first();
             $stockBefore = $ingredient->stocks;
             $stockAfter = $stockBefore + $request->quantity;
 
-            // Add to ingredient_batches
             DB::table('ingredient_batches')->insert([
                 'ingredient_id' => $request->ingredient_id,
                 'quantity' => $request->quantity,
@@ -1168,7 +1166,6 @@ class AdminController extends Controller
                 'updated_at' => now()
             ]);
 
-            // Update total stock
             DB::table('ingredients')
                 ->where('id', $request->ingredient_id)
                 ->update(['stocks' => $stockAfter]);
@@ -1427,6 +1424,13 @@ class AdminController extends Controller
             'yearStats',
             'currentYear'
         ));
+    }
+
+    //others
+
+    public function others()
+    {
+        return view('admin.others');
     }
 
 

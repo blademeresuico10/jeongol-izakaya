@@ -2,6 +2,8 @@
 <html lang="en">
 <link rel="shortcut icon" type="image/x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
 @vite('resources/css/app.css')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/2.2.1/datepicker.min.js"></script>
+
 
 <head>
 

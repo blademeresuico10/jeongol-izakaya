@@ -18,7 +18,7 @@ class orders extends Model
 
     public function menu()
     {
-        return $this->belongsTo(Menu::class, 'menu_id');
+        return $this->belongsTo(menu::class, 'menu_id');
     }
 
     public function reservation()

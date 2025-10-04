@@ -21,7 +21,7 @@
                                 </div>
                             </div>
                             <div>
-                                <p class="text-muted text-uppercase fw-semibold small mb-1">Total Revenue</p>
+                                <p class="text-muted text-uppercase fw-semibold small mb-1">Gross Sales/p>
                                 <h3 class="mb-0 fw-bold" id="revenueValue">₱0.00</h3>
                             </div>
                         </div>

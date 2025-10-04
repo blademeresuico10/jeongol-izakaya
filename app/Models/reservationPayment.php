@@ -29,4 +29,5 @@ class reservationPayment extends Model
     {
         return $this->belongsTo(EwalletDetail::class, 'ewallet_id', 'id');
     }
+    
 }
