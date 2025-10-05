@@ -42,12 +42,13 @@
         </a>
     </li>
 
-    <li @class(['nav-item', 'active' => request()->is('ingredients*')])>
-        <a class="nav-link" href="{{route('admin.ingredient_management')}}">
+    <li @class(['nav-item', 'active' => request()->is('ingredient_management*')])>
+        <a class="nav-link" href="{{ route('admin.ingredient_management') }}">
             <i class="fas fa-boxes"></i>
             <span>Stock</span>
         </a>
     </li>
+
 
     <li @class(['nav-item', 'active' => request()->is('reports*')])>
         <a class="nav-link" href="{{ route('admin.reports') }}">

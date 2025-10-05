@@ -16,7 +16,6 @@
       background-color: #f8fafc;
     }
 
-    /* Smooth expand animation */
     [x-cloak] {
       display: none;
     }
@@ -28,6 +27,7 @@
 </head>
 
 <body class="p-5">
+  
 
   <div class="flex justify-between items-center mb-3 px-4">
     <div class="flex items-center gap-2">
@@ -67,214 +67,82 @@
 
       <div class="overflow-y-auto max-h-[75vh] p-4 space-y-4">
 
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
+        <div class="overflow-y-auto max-h-[75vh] p-4 space-y-4">
+          @forelse($pendingOrders as $groupKey => $orderGroup)
+          <div x-data="{ open: false }" class="border rounded-lg p-4 bg-white cursor-pointer" @click="open = !open">
+
+          {{-- Header --}}
           <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
+            <h3 class="font-semibold text-gray-800 text-lg">
+            @php
+          $tableNumber = $orderGroup->first()->reservation->table->table_number
+          ?? $orderGroup->first()->walkin->table->table_number
+          ?? $orderGroup->first()->table->table_number
+          ?? null;
+        @endphp
+
+            @if($tableNumber)
+          Table {{ $tableNumber }}
+        @else
+          No Table
+        @endif
+            </h3>
+            <span class="text-sm text-gray-500">{{ $orderGroup->first()->created_at->diffForHumans() }}</span>
           </div>
 
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-        <div x-data="{ open: false }" class="border rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
-          @click="open = !open">
-          <div class="flex justify-between items-center">
-            <h3 class="font-semibold text-gray-800">Table #</h3>
-            <span class="text-sm text-gray-500">Time</span>
-          </div>
-
-          <div x-show="open" x-transition x-cloak
-            class="mt-3 text-sm text-gray-600 border-t border-gray-200 pt-3 expand bg-gray-50 rounded-md p-3">
-            <p class="font-medium text-blue-600">In Progress</p>
-            <ul class="list-disc list-inside ml-2 mt-1 space-y-1">
-              <li>Orders</li>
-            </ul>
-          </div>
-        </div>
-
-      </div>
-    </div>
-
-    <div class="bg-white border rounded-xl shadow-lg w-1/6 flex flex-col">
-      <div class="border-b bg-gray-100 rounded-t-xl">
-        <p class="p-4 text-lg font-semibold text-gray-700">Order Queue</p>
-      </div>
-
-      <div class="p-4 overflow-y-auto max-h-[75vh] space-y-3">
-        <ul>
-          <li class="border rounded-lg p-3 shadow-sm hover:shadow-md transition cursor-pointer">
-            <p>Order #</p>
-            <p>Table #</p>
+          {{-- Dropdown content --}}
+          <div x-show="open" x-transition class="mt-3 pt-3 border-t">
+            <ul class="space-y-2">
+            @foreach($orderGroup as $order)
+          <li class="flex justify-between">
+          <span>{{ $order->menu->menu_item ?? 'Menu item not found' }}</span>
+          <span class="font-semibold">x{{ $order->quantity }}</span>
           </li>
-        </ul>
+        @endforeach
+            </ul>
+
+            @php
+          $notes = $orderGroup->whereNotNull('notes')->pluck('notes')->unique();
+        @endphp
+
+            @if($notes->isNotEmpty())
+          <div class="mt-3 pt-3 border-t">
+          <p class="font-semibold mb-1">Notes:</p>
+          @foreach($notes as $note)
+          <p class="text-sm text-gray-600">{{ $note }}</p>
+        @endforeach
+          </div>
+        @endif
+
+            <form action="{{ route('kitchen.served') }}" method="POST" class="mt-4" @click.stop>
+            @csrf
+            <input type="hidden" name="order_id" value="{{ $orderGroup->first()->id }}">
+            <button type="submit"
+              class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded">
+              Mark as Served
+            </button>
+            </form>
+          </div>
+          </div>
+      @empty
+        <p class="text-center text-gray-500 py-8">No pending orders</p>
+      @endforelse
+        </div>
+
 
       </div>
     </div>
 
-    <div class="bg-white border rounded-xl shadow-lg w-1/6 flex flex-col">
-      <!-- Header -->
+    <div class="bg-white border rounded-xl shadow-lg w-1/3 flex flex-col">
       <div class="border-b bg-gray-100 rounded-t-xl">
-        <p class="p-4 text-lg font-semibold text-gray-700">Added Plates</p>
+        <p class="p-4 text-lg font-semibold text-gray-700">Extra Orders</p>
       </div>
 
-      <!-- Form -->
       <div class="p-4">
         <form action="" class="space-y-5">
 
           <div>
-            <label for="ingredient_name" class="block text-sm font-medium text-gray-700">Plate Name</label>
+            <label for="ingredient_name" class="block text-sm font-medium text-gray-700">Ingredient Name</label>
             <select name="ingredient_name" id="ingredient_name"
               class="mt-1 w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:outline-none">
               <option value="" disabled selected>Select an ingredient</option>
@@ -314,8 +182,7 @@
           </div>
 
           <div>
-            <button type="submit"
-              class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold  ">
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold  ">
               Save
             </button>
           </div>

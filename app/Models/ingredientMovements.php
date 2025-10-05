@@ -3,17 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\ingredients;
-use App\Models\User;
-use App\Models\OrderDetail;
-
 
 class ingredientMovements extends Model
 {
     protected $fillable = [
         'ingredient_id',
+        'ingredient_batch_id',  
         'user_id',
-        'order_details_id',
+        'order_id',  
         'type',
         'quantity',
         'stock_before',
@@ -31,8 +28,13 @@ class ingredientMovements extends Model
         return $this->belongsTo(User::class)->withDefault(); 
     }
 
-    public function orders()
+    public function order()  
     {
-        return $this->hasMany(orders::class);
+        return $this->belongsTo(orders::class);
+    }
+
+    public function ingredientBatch()
+    {
+        return $this->belongsTo(ingredientBatch::class);
     }
 }

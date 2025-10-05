@@ -8,5 +8,5 @@ class feedback extends Model
 {
     protected $table = 'feedback';
 
-    protected $fillable = ['message', 'email'];
+    protected $fillable = ['message'];
 }

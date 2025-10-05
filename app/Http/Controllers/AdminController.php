@@ -20,6 +20,11 @@ use Illuminate\Support\Facades\Log;
 use App\Models\expiredIngredients;
 use App\Models\ingredientBatch;
 use App\Models\ingredientMovements;
+use App\Models\ingredients;
+use App\Models\walkin;
+use App\Models\OperatingHour;
+use App\Models\MenuDiscount;
+
 
 
 class AdminController extends Controller
@@ -38,7 +43,6 @@ class AdminController extends Controller
         $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
         $lastWeekEnd   = Carbon::now()->subWeek()->endOfWeek();
 
-        // === WEEK-TO-WEEK COMPARISONS ===
         // Sales
         $thisWeekSales = transaction::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->sum('grand_total');
         $lastWeekSales = transaction::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->sum('grand_total');
@@ -87,6 +91,7 @@ class AdminController extends Controller
             ->orderBy('date')
             ->pluck('total', 'date');
 
+        // === MONTHLY SALES CHART ===
         $currentYear = Carbon::now()->year;
         $monthlySales = Transaction::selectRaw('MONTH(created_at) as month, SUM(grand_total) as total')
             ->whereYear('created_at', $currentYear)
@@ -99,6 +104,7 @@ class AdminController extends Controller
             $monthlySalesData[] = $monthlySales->get($i, 0);
         }
 
+        // === FLAGSHIP ITEMS (Top-selling Menu) ===
         $flagshipItems = orders::join('menu', 'orders.menu_id', '=', 'menu.id')
             ->select('menu.menu_item', 'menu.image', DB::raw('SUM(orders.quantity) as total_quantity'))
             ->groupBy('menu.menu_item', 'menu.image')
@@ -106,6 +112,68 @@ class AdminController extends Controller
             ->limit(10)
             ->get();
 
+        // === RECENT ACTIVITIES (Today Only) ===
+        $today = Carbon::today();
+
+        $recentReservations = Reservation::whereDate('created_at', $today)
+            ->latest()
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'type' => 'Reservation',
+                    'name' => $r->customer_name ?? 'Guest',
+                    'table' => 'Table ' . ($r->table_id ?? 'N/A'),
+                    'status' => 'Reserved',
+                    'created_at' => $r->created_at,
+                    'time' => $r->created_at->diffForHumans(),
+                    'icon' => 'fa-calendar-check',
+                    'color' => '#4ade80',
+                ];
+            });
+
+        $recentWalkins = Walkin::with(['customer', 'table'])
+            ->whereDate('created_at', $today)
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'type' => 'Walk-in',
+                    'name' => optional($item->customer)->name ?? 'Guest',
+                    'table' => optional($item->table)->table_name ?? 'N/A',
+                    'status' => ucfirst($item->status),
+                    'created_at' => $item->created_at,
+                    'time' => $item->created_at->diffForHumans(),
+                    'icon' => 'fa-user-check',
+                    'color' => '#60a5fa',
+                ];
+            });
+
+        $recentTransactions = Transaction::with(['customer'])
+            ->whereDate('created_at', $today)
+            ->latest()
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'type' => 'Transaction',
+                    'name' => optional($item->customer)->name ?? 'Guest',
+                    'table' => null,
+                    'status' => ucfirst($item->status),
+                    'created_at' => $item->created_at,
+                    'time' => $item->created_at->diffForHumans(),
+                    'icon' => 'fa-receipt',
+                    'color' => '#facc15',
+                ];
+            });
+
+        $recentActivities = collect()
+            ->merge($recentReservations)
+            ->merge($recentWalkins)
+            ->merge($recentTransactions)
+            ->sortByDesc('created_at')
+            ->take(7)
+            ->values();
+
+        // === RETURN TO VIEW ===
         return view('admin.home', compact(
             'totalGrossSales',
             'totalOrders',
@@ -120,9 +188,11 @@ class AdminController extends Controller
             'customersTrend',
             'reservationsTrend',
             'monthlySalesData',
-            'flagshipItems'
+            'flagshipItems',
+            'recentActivities'
         ));
     }
+
     public function profile()
     {
         $user = Auth::user();
@@ -460,7 +530,6 @@ class AdminController extends Controller
             'quantity' => 'required|numeric|min:1'
         ]);
 
-        // Check if ingredient already exists for this menu
         $exists = DB::table('menu_ingredients')
             ->where('menu_id', $menuId)
             ->where('ingredient_id', $request->ingredient_id)
@@ -547,10 +616,8 @@ class AdminController extends Controller
     {
         try {
 
-            // Check if there are any batches at all
             $allBatches = DB::table('ingredient_batches')->count();
 
-            // Check date range
             $sevenDaysFromNow = now()->addDays(7);
 
             $batches = DB::table('ingredient_batches')
@@ -673,27 +740,34 @@ class AdminController extends Controller
     public function getExpiredOnly()
     {
         try {
-
-            $expiredItems = DB::table('expired_ingredients')
+            $expiredItems = DB::table('ingredient_batches')
+                ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
+                ->whereDate('ingredient_batches.expiration_date', '<=', now())
+                ->where('ingredient_batches.quantity', '>', 0) 
                 ->select(
-                    'id',
-                    'ingredient_name',
-                    'quantity',
-                    'expiration_date',
-                    'expired_at',
-                    'unit',
-                    'category',
-                    'notes',
-                    DB::raw("DATEDIFF(CURDATE(), expired_at) as days_since_marked")
+                    'ingredient_batches.id as batch_id',
+                    'ingredients.name as ingredient_name',
+                    'ingredient_batches.quantity',
+                    'ingredients.unit',
+                    'ingredient_batches.expiration_date'
                 )
-                ->orderBy('expired_at', 'desc')
-                ->get();
+                ->orderBy('ingredient_batches.expiration_date', 'desc')
+                ->get()
+                ->map(function ($b) {
+                    return [
+                        'ingredient_name' => $b->ingredient_name,
+                        'quantity' => $b->quantity,
+                        'unit' => $b->unit,
+                        'expiration_date' => $b->expiration_date,
+                        'notes' => 'Batch expired'
+                    ];
+                });
 
             return response()->json(['expired_items' => $expiredItems]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load expired items: ' . $e->getMessage()
+                'message' => 'Failed to load expired ingredients: ' . $e->getMessage()
             ], 500);
         }
     }
@@ -1064,7 +1138,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|unique:ingredients,name',
             'category' => 'required|in:meat,vegetables,soupbase,beverage',
-            'unit' => 'required|in:grams,pieces'
+            'unit' => 'required|in:kg,pieces'
         ]);
 
         try {
@@ -1107,7 +1181,7 @@ class AdminController extends Controller
         $request->validate([
             'name' => 'required|string|max:255|unique:ingredients,name,' . $id,
             'category' => 'required|in:meat,vegetables,soupbase,beverage',
-            'unit' => 'required|in:grams,pieces'
+            'unit' => 'required|in:kg,pieces'
         ]);
 
         DB::table('ingredients')
@@ -1135,52 +1209,41 @@ class AdminController extends Controller
         $request->validate([
             'ingredient_id' => 'required|exists:ingredients,id',
             'quantity' => 'required|numeric|min:0.01',
-            'expiration_date' => 'required|date|after_or_equal:today'
+            'arrived_at' => 'required|date',
+            'expiration_date' => 'required|date|after_or_equal:arrived_at'
         ]);
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
+            $ingredient = ingredients::findOrFail($request->ingredient_id);
 
-            $ingredient = DB::table('ingredients')->where('id', $request->ingredient_id)->first();
-            $stockBefore = $ingredient->stocks;
-            $stockAfter = $stockBefore + $request->quantity;
-
-            DB::table('ingredient_batches')->insert([
+            ingredientBatch::create([
                 'ingredient_id' => $request->ingredient_id,
                 'quantity' => $request->quantity,
-                'expiration_date' => $request->expiration_date,
-                'created_at' => now(),
-                'updated_at' => now()
+                'arrived_at' => $request->arrived_at,
+                'expiration_date' => $request->expiration_date
             ]);
 
-            DB::table('ingredients')
-                ->where('id', $request->ingredient_id)
-                ->update(['stocks' => $stockAfter]);
+            $oldStock = $ingredient->stocks;
+            $newStock = $oldStock + $request->quantity;
+            $ingredient->update(['stocks' => $newStock]);
 
-            DB::table('ingredient_movements')->insert([
-                'ingredient_id' => $request->ingredient_id,
+            ingredientMovements::create([
+                'ingredient_id' => $ingredient->id,
                 'user_id' => Auth::id(),
                 'type' => 'stock_in',
                 'quantity' => $request->quantity,
-                'stock_before' => $stockBefore,
-                'stock_after' => $stockAfter,
-                'notes' => 'Stock added via Add Stock form',
-                'created_at' => now(),
-                'updated_at' => now()
+                'stock_before' => $oldStock,
+                'stock_after' => $newStock,
+                'notes' => "Stock added via batch"
             ]);
 
             DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Stock added successfully'
-            ]);
+            return response()->json(['success' => true, 'message' => 'Stock added successfully']);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to add stock: ' . $e->getMessage()
-            ], 500);
+            Log::error('Add Stock Error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
@@ -1201,7 +1264,7 @@ class AdminController extends Controller
         try {
             DB::beginTransaction();
 
-            // Get current stock
+
             $ingredient = DB::table('ingredients')->where('id', $request->ingredient_id)->first();
             $stockBefore = $ingredient->stocks;
             $stockAfter = $request->new_quantity;
@@ -1338,12 +1401,23 @@ class AdminController extends Controller
                     'ingredient_batches.quantity',
                     'ingredient_batches.expiration_date',
                     'ingredients.unit',
-                    'ingredient_batches.created_at'
+                    'ingredient_batches.arrived_at'
                 )
                 ->where('ingredient_batches.quantity', '>', 0)
-                ->whereBetween('ingredient_batches.created_at', [$startDate, $endDate])
-                ->orderBy('ingredient_batches.created_at', 'desc')
-                ->get();
+                ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
+                ->whereDate('ingredient_batches.expiration_date', '>', now()) // ✅ exclude expired
+                ->orderBy('ingredient_batches.arrived_at', 'desc')
+                ->get()
+                ->map(function ($b) {
+                    return [
+                        'id' => $b->id,
+                        'ingredient_name' => $b->ingredient_name,
+                        'quantity' => $b->quantity,
+                        'unit' => $b->unit,
+                        'arrived_at' => \Carbon\Carbon::parse($b->arrived_at)->format('Y-m-d'),
+                        'expiration_date' => \Carbon\Carbon::parse($b->expiration_date)->format('Y-m-d')
+                    ];
+                });
 
             return response()->json(['batches' => $batches]);
         } catch (\Exception $e) {
@@ -1353,6 +1427,79 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    public function updateBatch(Request $request, $id)
+    {
+        $request->validate([
+            'quantity' => 'required|numeric|min:0.01',
+            'arrived_at' => 'required|date',
+            'expiration_date' => 'required|date'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $batch = IngredientBatch::findOrFail($id);
+            $ingredient = $batch->ingredient;
+
+            $oldQty = $batch->quantity;
+            $newQty = $request->quantity;
+            $diff = $newQty - $oldQty;
+
+            $batch->update([
+                'quantity' => $newQty,
+                'arrived_at' => $request->arrived_at,
+                'expiration_date' => $request->expiration_date
+            ]);
+
+            $ingredient->update(['stocks' => $ingredient->stocks + $diff]);
+
+            ingredientMovements::create([
+                'ingredient_id' => $ingredient->id,
+                'user_id' => Auth::id(),
+                'type' => 'adjustment',
+                'quantity' => $diff,
+                'stock_before' => $ingredient->stocks - $diff,
+                'stock_after' => $ingredient->stocks,
+                'notes' => "Batch updated"
+            ]);
+
+            DB::commit();
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false], 500);
+        }
+    }
+
+    public function deleteBatch($id)
+    {
+        DB::beginTransaction();
+        try {
+            $batch = IngredientBatch::findOrFail($id);
+            $ingredient = $batch->ingredient;
+
+            $ingredient->update(['stocks' => max(0, $ingredient->stocks - $batch->quantity)]);
+
+            ingredientMovements::create([
+                'ingredient_id' => $ingredient->id,
+                'user_id' => Auth::id(),
+                'type' => 'expired',
+                'quantity' => -$batch->quantity,
+                'stock_before' => $ingredient->stocks + $batch->quantity,
+                'stock_after' => $ingredient->stocks,
+                'notes' => "Batch deleted"
+            ]);
+
+            $batch->delete();
+            DB::commit();
+
+            return response()->json(['success' => true]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['success' => false], 500);
+        }
+    }
+
 
     public function analytics()
     {
@@ -1413,13 +1560,111 @@ class AdminController extends Controller
         ));
     }
 
-    //others
 
     public function others()
     {
-        return view('admin.others');
+        $hours = OperatingHour::all();
+        $discounts = MenuDiscount::with('menu')->get();
+        $menus = Menu::whereNull('deleted_at')->get();
+
+        return view('admin.others', compact('hours', 'discounts', 'menus'));
     }
 
+    public function storeOperatingHours(Request $request)
+    {
+        $request->validate([
+            'date' => 'required|date|after_or_equal:today',
+            'open_time' => 'required_without:is_closed|date_format:H:i',
+            'close_time' => 'required_without:is_closed|date_format:H:i',
+            'is_closed' => 'nullable|boolean'
+        ]);
+
+        $existing = OperatingHour::where('date', $request->date)
+            ->where('is_default', false)
+            ->first();
+
+        if ($existing) {
+            $existing->update([
+                'open_time' => $request->has('is_closed') ? null : $request->open_time,
+                'close_time' => $request->has('is_closed') ? null : $request->close_time,
+                'is_closed' => $request->has('is_closed')
+            ]);
+        } else {
+            OperatingHour::create([
+                'is_default' => false,
+                'date' => $request->date,
+                'open_time' => $request->has('is_closed') ? null : $request->open_time,
+                'close_time' => $request->has('is_closed') ? null : $request->close_time,
+                'is_closed' => $request->has('is_closed')
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Date-specific hours set successfully!');
+    }
+
+    public function updateOperatingHours(Request $request, $id)
+    {
+        $request->validate([
+            'date' => 'required|date',
+            'open_time' => 'required_without:is_closed|date_format:H:i',
+            'close_time' => 'required_without:is_closed|date_format:H:i',
+            'is_closed' => 'nullable|boolean'
+        ]);
+
+        $hours = OperatingHour::findOrFail($id);
+
+        $hours->update([
+            'date' => $request->date,
+            'open_time' => $request->has('is_closed') ? null : $request->open_time,
+            'close_time' => $request->has('is_closed') ? null : $request->close_time,
+            'is_closed' => $request->has('is_closed')
+        ]);
+
+        return redirect()->back()->with('success', 'Operating hours updated successfully!');
+    }
+
+    public function deleteOperatingHours($id)
+    {
+        $hours = OperatingHour::findOrFail($id);
+
+        if ($hours->is_default) {
+            return redirect()->back()->with('error', 'Cannot delete default operating hours!');
+        }
+
+        $hours->delete();
+
+        return redirect()->back()->with('success', 'Date override removed successfully!');
+    }
+    public function storeDiscount(Request $request)
+    {
+        $request->validate([
+            'menu_id' => 'required|exists:menu,id',
+            'discount_type' => 'required|in:Student,Government Employee,Senior Citizen,PWD',
+            'discount_percentage' => 'required|numeric|min:0|max:100'
+        ]);
+
+        MenuDiscount::create($request->all());
+
+        return redirect()->back()->with('success', 'Discount added successfully!');
+    }
+
+    public function updateDiscount(Request $request, $id)
+    {
+        $request->validate([
+            'discount_percentage' => 'required|numeric|min:0|max:100'
+        ]);
+
+        $discount = MenuDiscount::findOrFail($id);
+        $discount->update(['discount_percentage' => $request->discount_percentage]);
+
+        return redirect()->back()->with('success', 'Discount updated successfully!');
+    }
+
+    public function deleteDiscount($id)
+    {
+        MenuDiscount::findOrFail($id)->delete();
+        return redirect()->back()->with('success', 'Discount removed successfully!');
+    }
 
 
     public function export(Request $request)
@@ -1692,9 +1937,34 @@ class AdminController extends Controller
         return redirect()->back()->with('success', ucfirst($wallet->payment_method) . ' wallet set to Inactive!');
     }
 
-    public function feedback()
+    public function feedback(Request $request)
     {
-        $feedbacks = DB::table('feedback')->get();
+        $query = Feedback::query();
+
+        if ($request->filled('search')) {
+            $query->where('message', 'like', '%' . $request->search . '%');
+        }
+
+        $feedbacks = $query->orderBy('created_at', 'desc')->get();
+
+        if ($request->ajax()) {
+            $html = '';
+            if ($feedbacks->count()) {
+                $html .= '<ul class="list-unstyled">';
+                foreach ($feedbacks as $feedback) {
+                    $html .= '<li class="mb-3 p-3 border rounded shadow-sm bg-white">';
+                    $html .= '<p class="mb-1"><strong>Message:</strong> ' . $feedback->message . '</p>';
+                    $html .= '<p class="text-muted mb-0"><strong>Submitted At:</strong> ' . $feedback->created_at->format('d M Y, h:i A') . '</p>';
+                    $html .= '</li>';
+                }
+                $html .= '</ul>';
+            } else {
+                $html = '<p class="text-center text-muted">No feedback available.</p>';
+            }
+
+            return response()->json(['feedbacks' => $html]);
+        }
+
         return view('admin.feedback', compact('feedbacks'));
     }
 }

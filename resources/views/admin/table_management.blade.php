@@ -79,7 +79,6 @@
                 </div>
             </div>
 
-            {{-- Add Modal --}}
             <div class="modal fade" id="addTableModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('storeTable') }}" method="POST">
@@ -90,18 +89,21 @@
                                 <button type="button" class="close text-white"
                                     data-dismiss="modal"><span>&times;</span></button>
                             </div>
-                           @foreach ($tables as $table)
-                               @php
-                                   $add_new_table = $table->table_number + 1;
-                               @endphp
-                           @endforeach
+
+                            @php
+                                $lastTableNumber = $tables->max('table_number') ?? 0;
+                                $add_new_table = $lastTableNumber + 1;
+                            @endphp
+
                             <div class="modal-body">
                                 <label>Table Number</label>
-                                <input type="number" name="table_number" class="form-control" value="{{ $add_new_table }}" required readonly>
+                                <input type="number" name="table_number" class="form-control"
+                                    value="{{ $add_new_table }}" required readonly>
 
                                 <label class="mt-2">Capacity</label>
                                 <input type="number" name="capacity" class="form-control" required>
                             </div>
+
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-success">Add</button>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -111,7 +113,7 @@
                 </div>
             </div>
 
-            {{-- Edit Modals --}}
+
             @foreach ($tables as $item)
                 @if(!$item->deleted_at)
                     <div class="modal fade" id="editTableModal{{ $item->id }}" tabindex="-1" role="dialog">
@@ -145,7 +147,6 @@
                 @endif
             @endforeach
 
-            {{-- Delete Confirm Modal --}}
             <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -171,7 +172,6 @@
                 </div>
             </div>
 
-            {{-- Restore Modal --}}
             <div class="modal fade" id="restoreConfirmModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -196,7 +196,6 @@
                 </div>
             </div>
 
-            {{-- Force Delete Modal --}}
             <div class="modal fade" id="forceDeleteConfirmModal" tabindex="-1" role="dialog">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content border-danger">

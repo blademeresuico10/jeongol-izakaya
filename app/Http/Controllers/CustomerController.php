@@ -265,13 +265,11 @@ class CustomerController extends Controller
     public function storeFeedback(Request $request)
     {
         $validated = $request->validate([
-            'email' => 'required|email',
             'message' => 'required|string|max:500',
         ]);
 
         try {
             DB::table('feedback')->insert([
-                'email' => $validated['email'],
                 'message' => $validated['message'],
                 'created_at' => now(),
                 'updated_at' => now(),

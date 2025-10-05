@@ -6,21 +6,18 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
+
     public function up(): void
     {
         Schema::create('operating_hours', function (Blueprint $table) {
             $table->id();
-            $table->string('day_of_week');
-            $table->time('open_time');
-            $table->time('close_time');
-            $table->timestamps();
+            $table->boolean('is_default')->default(false);   
+            $table->date('date')->nullable();               
+            $table->time('open_time')->nullable();         
+            $table->time('close_time')->nullable();        
+            $table->boolean('is_closed')->default(false);   
         });
     }
 
-    
-    public function down(): void
-    {
-
-    }
+    public function down(): void {}
 };

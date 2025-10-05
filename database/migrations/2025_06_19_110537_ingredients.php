@@ -13,7 +13,7 @@ return new class extends Migration
             $stock->id();
             $stock->string('name')->unique();
             $stock->enum('category', ['meat', 'vegetables', 'soupbase', 'beverage']);
-            $stock->enum('unit', ['grams', 'pieces']);
+            $stock->enum('unit', ['kg', 'pieces']);
             $stock->decimal('stocks', 8, 2);
             $stock->timestamps();
         });

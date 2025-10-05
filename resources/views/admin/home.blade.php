@@ -166,16 +166,13 @@
                             @empty
                                 <div class="text-center text-muted py-4">
                                     <i class="fas fa-info-circle mb-2" style="font-size: 2rem; color: #ccc;"></i>
-                                    <p class="mb-0">No flagship items yet</p>
+                                    <p class="mb-0">No orders.</p>
                                 </div>
                             @endforelse
                         </div>
 
                     </div>
                 </div>
-
-
-
             </div>
 
             <div class="row g-4 mb-4">
@@ -194,22 +191,52 @@
                 </div>
 
                 <div class="col-xl-4">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 py-3">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
+                        <div class="card-header bg-white border-0 py-3 d-flex align-items-center">
                             <div class="d-flex align-items-center">
-                                <i class="fas fa-clock fs-5 me-3" style="color: #321ee9;"></i>
-                                <h5 class="card-title mb-0 fw-bold">Recent Activity</h5>
+                                <div class="p-2 rounded-3 me-3">
+                                    <i class="fas fa-clock fs-5" style="color: #4f46e5;"></i>
+                                </div>
+                                <h5 class="card-title mb-0 fw-bold text-gray-800">Today's Activity</h5>
                             </div>
                         </div>
-                        <div class="card-body p-0">
 
-                        </div>
-                        <div class="card-footer bg-white border-0 py-3 text-center">
-                            <a href="#" class="text-decoration-none small fw-semibold">View All Activity <i
-                                    class="fas fa-arrow-right ms-1"></i></a>
+                        <div class="card-body px-3 pb-3 pt-0" style="max-height: 400px; overflow-y: auto;">
+                            @if($recentActivities->isNotEmpty())
+                                <ul class="list-group list-group-flush">
+                                    @foreach($recentActivities as $activity)
+                                        <li class="list-group-item border-0 d-flex align-items-center px-0 py-3 rounded hover-bg-light"
+                                            style="transition: background-color 0.2s;">
+                                            <div class="me-3 d-flex justify-content-center align-items-center rounded-circle"
+                                                style="background-color: {{ $activity['color'] }}33; width: 42px; height: 42px;">
+                                                <i class="fas {{ $activity['icon'] }}"
+                                                    style="color: {{ $activity['color'] }};"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold text-dark">{{ $activity['type'] }}</div>
+                                                <div class="small text-muted">
+                                                    {{ $activity['name'] }}
+                                                    @if($activity['table'])
+                                                        • <span class="text-primary">{{ $activity['table'] }}</span>
+                                                    @endif
+                                                </div>
+                                                <div class="text-secondary small mt-1">
+                                                    {{ $activity['status'] }} • {{ $activity['time'] }}
+                                                </div>
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            @else
+                                <div class="text-center text-muted py-5">
+                                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                                    <p class="mb-0 small">No activities recorded today.</p>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>

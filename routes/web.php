@@ -121,12 +121,15 @@ Route::middleware('auth')->group(function () {
             Route::post('/add-stock', [AdminController::class, 'addStock'])->name('ingredient.addStock');
             Route::post('/update-stock', [AdminController::class, 'updateStock'])->name('ingredient.updateStock');
             Route::get('/addStockForm', [AdminController::class, 'addStockForm'])->name('ingredient.addStockForm');
+            Route::put('/update-batch/{id}', [AdminController::class, 'updateBatch'])->name('batch.update');
+            Route::delete('/delete-batch/{id}', [AdminController::class, 'deleteBatch'])->name('batch.delete');
             Route::get('/updateStockForm', [AdminController::class, 'updateStockForm'])->name('ingredient.updateStockForm');
             Route::get('/stock-batches', [AdminController::class, 'getStockBatches'])->name('ingredient.stockBatches');
             Route::get('/expiry-data', [AdminController::class, 'expiryData'])->name('ingredients.expiry_data');
             Route::get('/expired-only', [AdminController::class, 'getExpiredOnly'])->name('ingredients.expired_only');
-            Route::post('/remove-batch', [AdminController::class, 'removeBatch'])->name('ingredients.removeBatch');
             Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
+            Route::put('/batches/{id}', [AdminController::class, 'updateBatch'])->name('batches.update');
+            Route::delete('/batches/{id}', [AdminController::class, 'deleteBatch'])->name('batches.delete');
         });
 
         // Analytics
@@ -140,6 +143,17 @@ Route::middleware('auth')->group(function () {
 
         // Others
         Route::get('/others', [AdminController::class, 'others'])->name('admin.others');
+
+        // Operating Hours Management
+        Route::put('/operating-hours/default', [AdminController::class, 'updateDefaultHours'])->name('admin.operating_hours.update_default');
+        Route::post('/operating-hours', [AdminController::class, 'storeOperatingHours'])->name('admin.operating_hours.store');
+        Route::put('/operating-hours/{id}', [AdminController::class, 'updateOperatingHours'])->name('admin.operating_hours.update');
+        Route::delete('/operating-hours/{id}', [AdminController::class, 'deleteOperatingHours'])->name('admin.operating_hours.delete');
+
+        // Discounts Management
+        Route::post('/discounts', [AdminController::class, 'storeDiscount'])->name('admin.discounts.store');
+        Route::put('/discounts/{id}', [AdminController::class, 'updateDiscount'])->name('admin.discounts.update');
+        Route::delete('/discounts/{id}', [AdminController::class, 'deleteDiscount'])->name('admin.discounts.delete');
 
         // Feedback
         Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
@@ -181,11 +195,9 @@ Route::middleware('auth')->group(function () {
     // KITCHEN STAFF ONLY ROUTES
     Route::middleware('role:Kitchen Staff')->prefix('kitchen')->name('kitchen.')->group(function () {
         Route::get('/home', [KitchenController::class, 'home'])->name('home');
-        Route::get('/dashboard', [KitchenController::class, 'home']);
-        Route::post('/update-stock', [KitchenController::class, 'updateStock'])->name('updateStock');
-        Route::post('/complete-order', [KitchenController::class, 'storeCompletedOrders'])->name('completeOrder');
+        Route::post('/served', [KitchenController::class, 'markAsServed'])->name('served');
     });
-
+    
     // CASHIER ONLY ROUTES
     Route::middleware('role:Cashier')->prefix('cashier')->name('cashier.')->group(function () {
         Route::get('/home', [CashierController::class, 'home'])->name('home');

@@ -1,178 +1,453 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
 
-<div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
+<div id="content-wrapper" class="d-flex flex-column">
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-            <h1 class="h3 mb-0 text-gray-800">Others</h1>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="far fa-clock mr-2"></i>Operating Hours & Discount Management
+            </h1>
         </nav>
 
-        <div class="container-fluid px-4">
-            <div class="row justify-content-start">
-                <!-- Operating Hours Card -->
-                <div class="col-lg-4 col-md-6 mb-4">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header text-gray-600 py-3">
-                            <h6 class="mb-0 font-weight-bold">
-                                <i class="far fa-calendar-check mr-2"></i>Operating Hours Management
-                            </h6>
-                        </div>
-                        <div class="card-body p-3" id="calendar-body"></div>
-                    </div>
+        <div class="container-fluid">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-primary text-white py-2">
+                    <h6 class="mb-0 font-weight-bold">Operating Hours Management</h6>
                 </div>
+                <div class="card-body p-2">
+                    <div class="row">
+                        <div class="col-md-3">
+                            @php
+                                $defaultHours = $hours->where('is_default', true)->first();
+                            @endphp
+                            <div class="border rounded p-2 bg-light mb-2">
+                                <small class="font-weight-bold d-block mb-1">Default Daily Hours</small>
+                                @if($defaultHours)
+                                    @if($defaultHours->is_closed)
+                                        <span class="badge badge-danger">Closed Daily</span>
+                                    @else
+                                        <div class="text-center">
+                                            <strong>{{ date('g:i A', strtotime($defaultHours->open_time)) }}</strong>
+                                            <span class="mx-1">-</span>
+                                            <strong>{{ date('g:i A', strtotime($defaultHours->close_time)) }}</strong>
+                                        </div>
+                                    @endif
+                                @else
+                                    <span class="text-muted small">Not set</span>
+                                @endif
+                                <hr class="my-1">
+                                <small class="text-muted d-block">Contact admin to change</small>
+                            </div>
 
-                <div class="col-lg-4 col-md-6 mb-4">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header text-gray-600 py-3">
-                            <h6 class="mb-0 font-weight-bold">
-                                <i class="fas fa-percentage mr-2"></i>Discount Management
-                            </h6>
+                            <div class="card border d-flex flex-column" style="height: 250px;">
+                                <div class="card-header bg-light py-1 px-2">
+                                    <small class="font-weight-bold">Custom Dates</small>
+                                </div>
+                                <div class="card-body p-0 flex-grow-1" style="overflow-y: auto; max-height: 215px;">
+                                    <table class="table table-sm table-bordered mb-0" style="table-layout: fixed;">
+                                        <tbody>
+                                            @forelse($hours->where('is_default', false)->sortBy('date') as $hour)
+                                                <tr>
+                                                    <td class="py-1 px-2" style="width: 60%;">
+                                                        <small
+                                                            class="font-weight-bold d-block">{{ \Carbon\Carbon::parse($hour->date)->format('M d') }}</small>
+                                                        <small class="text-muted d-block text-truncate">
+                                                            @if($hour->is_closed)
+                                                                Closed
+                                                            @else
+                                                                {{ date('g:i A', strtotime($hour->open_time)) }} -
+                                                                {{ date('g:i A', strtotime($hour->close_time)) }}
+                                                            @endif
+                                                        </small>
+                                                    </td>
+                                                    <td class="py-1 px-1 text-center" style="width: 40%;">
+                                                        <div class="d-flex justify-content-center">
+                                                            <button class="btn btn-xs btn-primary p-1 mr-1 edit-override"
+                                                                data-id="{{ $hour->id }}" data-date="{{ $hour->date }}"
+                                                                data-open="{{ $hour->open_time }}"
+                                                                data-close="{{ $hour->close_time }}"
+                                                                data-closed="{{ $hour->is_closed }}">
+                                                                <i class="fas fa-edit" style="font-size: 10px;"></i>
+                                                            </button>
+                                                            <form
+                                                                action="{{ route('admin.operating_hours.delete', $hour->id) }}"
+                                                                method="POST" class="d-inline"
+                                                                onsubmit="return confirm('Remove?')">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-xs btn-danger p-1">
+                                                                    <i class="fas fa-trash" style="font-size: 10px;"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="2" class="text-center py-2">
+                                                        <small class="text-muted">No custom operating hours</small>
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body p-3">
-                            <form method="POST">
-                                @csrf
-                                <div class="mb-3">
-                                    <label class="form-label small text-muted">Discount Name</label>
-                                    <input type="text" name="discount_name" class="form-control form-control-sm"
-                                        required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label small text-muted">Discount Percentage</label>
-                                    <input type="number" name="discount_percentage" class="form-control form-control-sm"
-                                        min="0" max="100" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-sm btn-block">
-                                    <i class="fas fa-save mr-1"></i>Add Discount
-                                </button>
-                            </form>
+                        <div class="col-md-9">
+                            <div id="calendar-container" class="border rounded p-2"></div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <style>
-        .cal-header {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #5a5c69;
-            padding: 0.5rem 0.25rem;
-            border-bottom: 1px solid #e9ecef;
-        }
-
-        .cal-day {
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #2e3338;
-            padding: 0.75rem 0.25rem;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .cal-day:hover:not(.empty) {
-            background: #d1e7fd;
-            color: #4e73df;
-            border-radius: 0.25rem;
-        }
-
-        .cal-day.today {
-            background: rgb(77, 77, 247);
-            color: white;
-            font-weight: 600;
-            border-radius: 0.25rem;
-        }
-
-        .cal-day.empty {
-            color: transparent;
-            cursor: default;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
-            border: none;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 3px 8px rgba(78, 115, 223, 0.3);
-        }
-
-        .btn-light:hover {
-            background: #4e73df;
-            color: white;
-        }
-    </style>
-
-    <script>
-        let month = {{ now()->month }};
-        let year = {{ now()->year }};
-
-        function renderCalendar(m, y) {
-            const date = new Date(y, m - 1, 1);
-            const daysInMonth = new Date(y, m, 0).getDate();
-            const firstDay = date.getDay();
-            const today = new Date();
-
-            let html = `
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <button onclick="changeMonth(-1)" class="btn btn-sm btn-light"><i class="fas fa-chevron-left"></i></button>
-            <h6 class="mb-0 font-weight-bold">${date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</h6>
-            <button onclick="changeMonth(1)" class="btn btn-sm btn-light"><i class="fas fa-chevron-right"></i></button>
-        </div>
-        <table class="table table-borderless mb-0">
-            <thead><tr class="text-center">
-                <th class="cal-header">Su</th><th class="cal-header">Mo</th><th class="cal-header">Tu</th>
-                <th class="cal-header">We</th><th class="cal-header">Th</th><th class="cal-header">Fr</th><th class="cal-header">Sa</th>
-            </tr></thead><tbody>`;
-
-            let day = 1;
-            for (let week = 0; week < 6; week++) {
-                html += '<tr class="text-center">';
-                for (let d = 0; d < 7; d++) {
-                    const cell = (week * 7) + d;
-                    if (cell >= firstDay && day <= daysInMonth) {
-                        const isToday = day === today.getDate() && m === (today.getMonth() + 1) && y === today.getFullYear();
-                        html += `<td class="cal-day ${isToday ? 'today' : ''}">${day}</td>`;
-                        day++;
-                    } else {
-                        html += '<td class="cal-day empty"></td>';
-                    }
-                }
-                html += '</tr>';
-                if (day > daysInMonth) break;
-            }
-
-            html += `</tbody></table>
-        <div class="border rounded p-3 bg-light mt-3">
-            <h6 class="text-muted mb-2 small"><i class="far fa-clock mr-1"></i>Set Operating Hours</h6>
-            <form method="POST">
-                @csrf
-                <div class="row mb-2">
-                    <div class="col-6">
-                        <label class="small text-muted mb-1">Opening Time</label>
-                        <input type="time" name="opening_time" class="form-control form-control-sm"  required>
-                    </div>
-                    <div class="col-6">
-                        <label class="small text-muted mb-1">Closing Time</label>
-                        <input type="time" name="closing_time" class="form-control form-control-sm"  required>
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 font-weight-bold">Discount Management</h6>
+                    <button class="btn btn-sm btn-light" data-toggle="modal" data-target="#addDiscountModal">
+                        <i class="fas fa-plus"></i> Add Discount
+                    </button>
+                </div>
+                <div class="card-body p-2">
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="thead-light sticky-top">
+                                <tr>
+                                    <th>Menu Item</th>
+                                    <th>Discount Type</th>
+                                    <th>Percentage</th>
+                                    <th class="text-center" width="100">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($discounts ?? [] as $discount)
+                                    <tr>
+                                        <td class="align-middle">{{ $discount->menu->menu_item }}</td>
+                                        <td class="align-middle">
+                                            <span class="badge badge-info">{{ $discount->discount_type }}</span>
+                                        </td>
+                                        <td class="align-middle">{{ $discount->discount_percentage }}%</td>
+                                        <td class="text-center align-middle">
+                                            <button class="btn btn-xs btn-primary p-1 edit-discount"
+                                                data-id="{{ $discount->id }}"
+                                                data-percentage="{{ $discount->discount_percentage }}">
+                                                <i class="fas fa-edit" style="font-size: 10px;"></i>
+                                            </button>
+                                            <form action="{{ route('admin.discounts.delete', $discount->id) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('Remove this discount?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-xs btn-danger p-1">
+                                                    <i class="fas fa-trash" style="font-size: 10px;"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="4" class="text-center py-3 text-muted">
+                                            No discounts configured
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-sm btn-block">
-                    <i class="fas fa-save mr-1"></i>Save 
-                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dateHoursModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title mb-0"><span id="modalDate"></span></h6>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form id="dateHoursForm" method="POST">
+                @csrf
+                <input type="hidden" name="_method" id="formMethod" value="POST">
+                <input type="hidden" name="date" id="selectedDate">
+                <div class="modal-body p-2">
+                    <div class="form-group mb-2">
+                        <label class="small mb-1">Opening</label>
+                        <input type="time" name="open_time" id="modalOpenTime" class="form-control form-control-sm">
+                    </div>
+                    <div class="form-group mb-2">
+                        <label class="small mb-1">Closing</label>
+                        <input type="time" name="close_time" id="modalCloseTime" class="form-control form-control-sm">
+                    </div>
+                    <div class="custom-control custom-checkbox">
+                        <input type="checkbox" class="custom-control-input" id="modalClosed" name="is_closed" value="1"
+                            onchange="toggleModalTimes(this)">
+                        <label class="custom-control-label small" for="modalClosed">Mark as closed</label>
+                    </div>
+                </div>
+                <div class="modal-footer p-2">
+                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                </div>
             </form>
-        </div>`;
+        </div>
+    </div>
+</div>
 
-            document.getElementById('calendar-body').innerHTML = html;
+<div class="modal fade" id="addDiscountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white py-2">
+                <h6 class="modal-title mb-0">Add New Discount</h6>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form action="{{ route('admin.discounts.store') }}" method="POST">
+                @csrf
+                <div class="modal-body p-3">
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Menu Item</label>
+                        <select name="menu_id" class="form-control form-control-sm" required>
+                            <option value="">Select Menu Item</option>
+                            @foreach($menus ?? [] as $menu)
+                                <option value="{{ $menu->id }}">{{ $menu->menu_item }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">Discount Type</label>
+                        <select name="discount_type" class="form-control form-control-sm" required>
+                            <option value="">Select Type</option>
+                            <option value="Student">Student</option>
+                            <option value="Government Employee">Government Employee</option>
+                            <option value="Senior Citizen">Senior Citizen</option>
+                            <option value="PWD">PWD</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="small font-weight-bold">Discount Percentage (%)</label>
+                        <input type="number" name="discount_percentage" class="form-control form-control-sm" min="0"
+                            max="100" step="0.01" required>
+                    </div>
+                </div>
+                <div class="modal-footer p-2">
+                    <button type="submit" class="btn btn-success btn-sm">Add Discount</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editDiscountModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white py-2">
+                <h6 class="modal-title mb-0">Edit Discount</h6>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form id="editDiscountForm" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-body p-3">
+                    <div class="form-group mb-0">
+                        <label class="small font-weight-bold">Discount Percentage (%)</label>
+                        <input type="number" name="discount_percentage" id="editDiscountPercentage"
+                            class="form-control form-control-sm" min="0" max="100" step="0.01" required>
+                    </div>
+                </div>
+                <div class="modal-footer p-2">
+                    <button type="submit" class="btn btn-primary btn-sm">Update</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@include('admin.layouts.script')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 2px;
+    }
+
+    .calendar-header {
+        text-align: center;
+        font-weight: 600;
+        color: #5a5c69;
+        padding: 3px;
+        font-size: 0.7rem;
+    }
+
+    .calendar-day {
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e3e6f0;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .calendar-day:hover:not(.empty):not(.past) {
+        background: #4e73df;
+        color: white;
+    }
+
+    .calendar-day.today {
+        background: #4e73df;
+        color: white;
+        font-weight: 700;
+    }
+
+    .calendar-day.past {
+        color: #d1d3e2;
+        cursor: not-allowed;
+        background: #f8f9fc;
+    }
+
+    .calendar-day.empty {
+        border: none;
+        cursor: default;
+    }
+
+    .calendar-day.has-override {
+        background: #1cc88a;
+        color: white;
+    }
+
+    .calendar-day.closed-override {
+        background: #e74a3b;
+        color: white;
+    }
+
+    .month-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+    .month-nav button {
+        border: none;
+        background: #f8f9fc;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 0.75rem;
+    }
+
+    .month-nav button:hover {
+        background: #4e73df;
+        color: white;
+    }
+
+    .btn-xs {
+        padding: 2px 6px;
+        font-size: 0.7rem;
+    }
+</style>
+
+<script>
+    let currentMonth ={{ now()->month }};
+    let currentYear ={{ now()->year }};
+    const overrides = @json($hours->where('is_default', false)->keyBy('date'));
+
+    function renderCalendar() {
+        const date = new Date(currentYear, currentMonth - 1, 1);
+        const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+        const firstDay = date.getDay();
+        const today = new Date();
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+        let html = `<div class="month-nav"><button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button><small class="font-weight-bold">${monthNames[currentMonth - 1]} ${currentYear}</small><button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button></div><div class="calendar-grid">`;
+        ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(d => html += `<div class="calendar-header">${d}</div>`);
+
+        for (let i = 0; i < firstDay; i++)html += '<div class="calendar-day empty"></div>';
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const cellDate = new Date(currentYear, currentMonth - 1, day);
+            const isToday = cellDate.toDateString() === today.toDateString();
+            const isPast = cellDate < today && !isToday;
+
+            let classes = 'calendar-day';
+            if (isToday) classes += ' today';
+            if (isPast) classes += ' past';
+            if (overrides[dateStr]) classes += overrides[dateStr].is_closed ? ' closed-override' : ' has-override';
+
+            const onclick = isPast ? '' : `onclick="openDateModal('${dateStr}')"`;
+            html += `<div class="${classes}" ${onclick}>${day}</div>`;
+        }
+        html += '</div>';
+        document.getElementById('calendar-container').innerHTML = html;
+    }
+
+    function changeMonth(direction) {
+        currentMonth += direction;
+        if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+        else if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+        renderCalendar();
+    }
+
+    function openDateModal(dateStr) {
+        const override = overrides[dateStr];
+        const formattedDate = new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        document.getElementById('modalDate').textContent = formattedDate;
+        document.getElementById('selectedDate').value = dateStr;
+
+        if (override) {
+            document.getElementById('formMethod').value = 'PUT';
+            document.getElementById('dateHoursForm').action = `/operating-hours/${override.id}`;
+            document.getElementById('modalOpenTime').value = override.open_time || '';
+            document.getElementById('modalCloseTime').value = override.close_time || '';
+            document.getElementById('modalClosed').checked = override.is_closed;
+        } else {
+            document.getElementById('formMethod').value = 'POST';
+            document.getElementById('dateHoursForm').action = '{{ route("admin.operating_hours.store") }}';
+            document.getElementById('modalOpenTime').value = '{{ $defaultHours->open_time ?? "11:30" }}';
+            document.getElementById('modalCloseTime').value = '{{ $defaultHours->close_time ?? "20:00" }}';
+            document.getElementById('modalClosed').checked = false;
         }
 
-        function changeMonth(dir) {
-            month += dir;
-            if (month > 12) { month = 1; year++; }
-            if (month < 1) { month = 12; year--; }
-            renderCalendar(month, year);
-        }
+        toggleModalTimes(document.getElementById('modalClosed'));
+        $('#dateHoursModal').modal('show');
+    }
 
-        document.addEventListener('DOMContentLoaded', () => renderCalendar(month, year));
-    </script>
+    function toggleModalTimes(checkbox) {
+        const openTime = document.getElementById('modalOpenTime');
+        const closeTime = document.getElementById('modalCloseTime');
+        openTime.disabled = checkbox.checked;
+        closeTime.disabled = checkbox.checked;
+        openTime.required = !checkbox.checked;
+        closeTime.required = !checkbox.checked;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        renderCalendar();
+        document.querySelectorAll('.edit-override').forEach(btn => {
+            btn.addEventListener('click', function () { openDateModal(this.dataset.date); });
+        });
+
+        document.querySelectorAll('.edit-discount').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const id = this.dataset.id;
+                const percentage = this.dataset.percentage;
+                document.getElementById('editDiscountPercentage').value = percentage;
+                document.getElementById('editDiscountForm').action = `/discounts/${id}`;
+                $('#editDiscountModal').modal('show');
+            });
+        });
+
+        @if(session('success'))
+            Swal.fire({ icon: 'success', title: 'Success', text: '{{ session("success") }}', timer: 2000, showConfirmButton: false });
+        @endif
+});
+</script>

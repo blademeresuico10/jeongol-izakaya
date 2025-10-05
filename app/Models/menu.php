@@ -35,4 +35,10 @@ class Menu extends Model
             })
             ->exists();
     }
+    public function menuDiscount()
+    {
+        return $this->hasOne(MenuDiscount::class, 'menu_id', 'id');
+    }
+
+    
 }

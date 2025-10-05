@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             EwalletDetailsSeeder::class,
             menuingredientsseeder::class,
             MenuDiscountSeeder::class,
+            OperatingHoursSeeder::class,
         ]);
     }
 }

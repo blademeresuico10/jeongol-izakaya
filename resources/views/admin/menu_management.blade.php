@@ -20,6 +20,7 @@
                 </a>
             </div>
 
+
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -53,9 +54,10 @@
                                 <tr>
                                     <td>
                                         <div class="mb-3 text-center">
-                                            @if($item->image)
-                                                <img src="{{ asset('storage/jeongol_menu/' . $item->image) }}" alt="No Picture"
-                                                    width="100" height="100" style="object-fit: cover; border-radius: 80%;">
+                                            @if ($item->image)
+                                                <img src="{{ asset('storage/jeongol_menu/' . $item->image) }}"
+                                                    alt="{{ $item->menu_item }}" width="100" height="100"
+                                                    style="object-fit: cover; border-radius: 80%;">
                                             @else
                                                 <span class="text-muted">No Picture</span>
                                             @endif
@@ -64,13 +66,11 @@
                                     <td>{{ $item->menu_item }}</td>
                                     <td>
                                         Regular: ₱{{ number_format($item->regular_price, 2) }}
-                                        @if($item->has_customer_discount)
-                                        @endif
                                     </td>
-                                    <td>{{$item->status}}</td>
+                                    <td>{{ $item->status }}</td>
 
                                     <td>
-                                        @if($item->deleted_at)
+                                        @if ($item->deleted_at)
                                             <button type="button" class="btn btn-sm btn-success"
                                                 onclick="showRestoreModal({{ $item->id }}, '{{ addslashes($item->menu_item) }}')"
                                                 title="Restore">
@@ -99,12 +99,13 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="3" class="text-center">
+                                    <td colspan="5" class="text-center">
                                         {{ request()->has('show_deleted') ? 'No deleted items found' : 'No menu items found' }}
                                     </td>
                                 </tr>
                             @endforelse
                         </tbody>
+
                     </table>
                 </div>
             </div>
@@ -169,9 +170,9 @@
                                 <div class="form-group">
                                     <label>Customer Discount Available</label>
                                     <select name="has_customer_discount" class="form-control" required>
-                                        <option value="1" {{ $item->has_customer_discount ? 'selected' : '' }}>Yes
+                                        <option value="1" {{ old('has_customer_discount', 1) == 1 ? 'selected' : '' }}>Yes
                                         </option>
-                                        <option value="0" {{ !$item->has_customer_discount ? 'selected' : '' }}>No
+                                        <option value="0" {{ old('has_customer_discount', 1) == 0 ? 'selected' : '' }}>No
                                         </option>
                                     </select>
                                     <small class="form-text text-muted">Whether this item is eligible for
@@ -234,7 +235,7 @@
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label class="font-weight-bold">Quantity <span id="unitLabel"
+                                    <label class="font-weight-bold">Quantity<span id="unitLabel"
                                             class="text-muted"></span></label>
                                     <input type="number" id="ingredientQty" class="form-control" min="1" step="any"
                                         placeholder="Enter quantity" required>
@@ -465,7 +466,7 @@
                                     <thead class="thead-light">
                                         <tr>
                                             <th>Ingredient</th>
-                                            <th width="150">Quantity</th>
+                                            <th width="150">Quantity(grams)</th>
                                             <th width="80">Action</th>
                                         </tr>
                                     </thead>
