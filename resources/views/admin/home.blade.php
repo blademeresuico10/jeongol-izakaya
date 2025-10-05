@@ -2,43 +2,62 @@
 @include('admin.layouts.sidebar')
 @vite(['resources/js/app.js'])
 
-
-
 <div id="content-wrapper" class="d-flex flex-column">
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
         </nav>
 
-        <div class="container-fluid px-4  ">
+        <div class="container-fluid px-4">
             <div class="row g-4 mb-4">
                 <div class="col-xl-3 col-md-6">
-                    <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <div class="">
-                                    <i class="fas fa-dollar-sign text-primary fs-4"></i>
+                            <div class="d-flex align-items-start justify-content-between mb-3">
+                                <div class="flex-grow-1">
+                                    <h2 class="mb-0 fw-bold" style="color: black">
+                                        ₱{{ number_format($totalGrossSales, 2) }}</h2>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Gross Sales</p>
+                                </div>
+                                <div class="ms-3">
+                                    <i class="fas fa-dollar-sign" style="color: #321ee9; font-size: 3rem;"></i>
                                 </div>
                             </div>
-                            <div>
-                                <p class="text-muted text-uppercase fw-semibold small mb-1">Gross Sales/p>
-                                <h3 class="mb-0 fw-bold" id="revenueValue">₱0.00</h3>
+                            <div class="mb-2">
+                                <span
+                                    class="badge bg-opacity-10 {{ $salesChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                    <i class="fas {{ $salesChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
+                                    {{ number_format($salesChange, 1) }}%
+                                </span>
+                            </div>
+                            <div class="chart-container" style="height: 60px;">
+                                <canvas id="salesChart"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-3 col-md-6">
-                    <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <div class="">
-                                    <i class="fas fa-shopping-bag text-success fs-4"></i>
+                            <div class="d-flex align-items-start justify-content-between mb-3">
+                                <div class="flex-grow-1">
+                                    <h2 class="mb-0 fw-bold" style="color: black">{{ number_format($totalOrders) }}</h2>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Total Orders</p>
+                                </div>
+                                <div class="ms-3">
+                                    <i class="fas fa-shopping-bag" style="color: #321ee9; font-size: 3rem;"></i>
                                 </div>
                             </div>
-                            <div>
-                                <p class="text-muted text-uppercase fw-semibold small mb-1">Total Orders</p>
-                                <h3 class="mb-0 fw-bold" id="ordersValue">0</h3>
+                            <div class="mb-2">
+                                <span
+                                    class="badge bg-opacity-10 {{ $ordersChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                    <i class="fas {{ $ordersChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
+                                    {{ number_format($ordersChange, 1) }}%
+                                </span>
+                            </div>
+                            <div class="chart-container" style="height: 60px;">
+                                <canvas id="ordersChartMini"></canvas>
                             </div>
                         </div>
                     </div>
@@ -47,12 +66,25 @@
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100 hover-lift">
                         <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <i class="fas fa-users text-info fs-4"></i>
+                            <div class="d-flex align-items-start justify-content-between mb-3">
+                                <div class="flex-grow-1">
+                                    <h2 class="mb-0 fw-bold" style="color: black">{{ number_format($totalCustomers) }}
+                                    </h2>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Total Customers</p>
+                                </div>
+                                <div class="ms-3">
+                                    <i class="fas fa-users" style="color: #321ee9; font-size: 3rem;"></i>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-muted text-uppercase fw-semibold small mb-1">Total Customers</p>
-                                <h3 class="mb-0 fw-bold" id="customersValue">0</h3>
+                            <div class="mb-2">
+                                <span
+                                    class="badge bg-opacity-10 {{ $customersChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                    <i class="fas {{ $customersChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
+                                    {{ number_format($customersChange, 1) }}%
+                                </span>
+                            </div>
+                            <div class="chart-container" style="height: 60px;">
+                                <canvas id="customersChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -61,32 +93,40 @@
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100 hover-lift">
                         <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between mb-3">
-                                <i class="fas fa-calendar-check text-warning fs-4"></i>
+                            <div class="d-flex align-items-start justify-content-between mb-3">
+                                <div class="flex-grow-1">
+                                    <h2 class="mb-0 fw-bold" style="color: black">
+                                        {{ number_format($totalReservations) }}
+                                    </h2>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Reservations</p>
+                                </div>
+                                <div class="ms-3">
+                                    <i class="fas fa-calendar-check" style="color: #321ee9; font-size: 3rem;"></i>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-muted text-uppercase fw-semibold small mb-1">Reservations</p>
-                                <h3 class="mb-0 fw-bold" id="reservationsValue">0</h3>
+                            <div class="mb-2">
+                                <span
+                                    class="badge bg-opacity-10 {{ $reservationsChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                    <i class="fas {{ $reservationsChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
+                                    {{ number_format($reservationsChange, 1) }}%
+                                </span>
+                            </div>
+                            <div class="chart-container" style="height: 60px;">
+                                <canvas id="reservationsChartMini"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+
             <div class="row g-4 mb-4">
                 <div class="col-xl-8">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white border-0 py-3">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                    <div 
-                                        style="width: 45px; height: 45px;">
-                                        <i class="fas fa-chart-line text-primary fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title mb-0 fw-bold">Sales Overview</h5>
-                                    </div>
-                                </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-chart-line fs-5 me-3" style="color: #321ee9;"></i>
+                                <h5 class="card-title mb-0 fw-bold">Sales Overview</h5>
                             </div>
                         </div>
                         <div class="card-body">
@@ -95,43 +135,56 @@
                     </div>
                 </div>
 
-                <!-- Popular Orders -->
                 <div class="col-xl-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white border-0 py-3">
-                            <div class="d-flex align-items-center justify-content-between mb-0">
-                                <div class="d-flex align-items-center">
-                                    <div 
-                                        style="width: 45px; height: 45px;">
-                                        <i class="fas fa-utensils text-success fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title mb-0 fw-bold">Menu Analytics</h5>
-                                    </div>
-                                </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-utensils fs-5 me-3" style="color: #321ee9;"></i>
+                                <h5 class="card-title mb-0 fw-bold">Flagship Items</h5>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <canvas id="ordersChart" height="280"></canvas>
+
+                        <div class="card-body overflow-auto" style="max-height: 400px;">
+                            @forelse ($flagshipItems as $index => $item)
+                                <div class="d-flex align-items-center justify-content-between mb-2 p-2 rounded border"
+                                    style="transition: 0.2s; border-color: #f0f0f0;">
+
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ url('/file-serve/' . $item->image) }}" alt="{{ $item->menu_item }}"
+                                            class="rounded me-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ $item->menu_item }}</div>
+                                            <small class="text-muted">Orders: {{ $item->total_quantity }}</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-circle bg-warning text-white fw-bold d-flex align-items-center justify-content-center"
+                                        style="width: 30px; height: 30px;">
+                                        #{{ $index + 1 }}
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle mb-2" style="font-size: 2rem; color: #ccc;"></i>
+                                    <p class="mb-0">No flagship items yet</p>
+                                </div>
+                            @endforelse
                         </div>
+
                     </div>
                 </div>
+
+
+
             </div>
 
             <div class="row g-4 mb-4">
                 <div class="col-xl-8">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white border-0 py-3">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center">
-                                    <div
-                                        style="width: 45px; height: 45px;">
-                                        <i class="fas fa-boxes text-warning fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <h5 class="card-title mb-0 fw-bold">Ingredients</h5>
-                                    </div>
-                                </div>
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-boxes fs-5 me-3" style="color: #321ee9;"></i>
+                                <h5 class="card-title mb-0 fw-bold">Stock</h5>
                             </div>
                         </div>
                         <div class="card-body">
@@ -144,10 +197,7 @@
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white border-0 py-3">
                             <div class="d-flex align-items-center">
-                                <div 
-                                    style="width: 45px; height: 45px;">
-                                    <i class="fas fa-clock text-info fs-5"></i>
-                                </div>
+                                <i class="fas fa-clock fs-5 me-3" style="color: #321ee9;"></i>
                                 <h5 class="card-title mb-0 fw-bold">Recent Activity</h5>
                             </div>
                         </div>
@@ -165,50 +215,170 @@
     </div>
 </div>
 
-<style>
-    .hover-lift {
-        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-    }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const salesTrend = @json($salesTrend ?? []);
+        const ordersTrend = @json($ordersTrend ?? []);
+        const customersTrend = @json($customersTrend ?? []);
+        const reservationsTrend = @json($reservationsTrend ?? []);
 
-    .hover-lift:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
+        function safeData(data) {
+            if (!data || Object.keys(data).length === 0) {
+                return {
+                    labels: ['No Data'],
+                    values: [0]
+                };
+            }
+            return {
+                labels: Object.keys(data),
+                values: Object.values(data)
+            };
+        }
 
-    .avatar-icon {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 60px;
-        height: 60px;
-    }
+        const salesData = safeData(salesTrend);
+        const ordersData = safeData(ordersTrend);
+        const customersData = safeData(customersTrend);
+        const reservationsData = safeData(reservationsTrend);
 
-    .avatar-sm {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 36px;
-        height: 36px;
-    }
+        // --- Mini Chart Config ---
+        const miniChartConfig = {
+            type: 'line',
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function (context) {
+                                const date = context[0]?.label || '';
+                                return `Date: ${date}`;
+                            },
+                            label: function (context) {
+                                const val = context.parsed.y ?? 0;
+                                return 'Value: ' + val.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { display: false },
+                    y: { display: false }
+                },
+                elements: {
+                    point: { radius: 0 },
+                    line: {
+                        borderWidth: 2,
+                        tension: 0.4,
+                        borderColor: '#321ee9'
+                    }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
+                }
+            }
+        };
 
-    .card-header {
-        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    }
+        // Mini charts
+        new Chart(document.getElementById('salesChart'), {
+            ...miniChartConfig,
+            data: { labels: salesData.labels, datasets: [{ data: salesData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+        });
 
-    .nav-pills .nav-link {
-        border-radius: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 500;
-        padding: 0.5rem 1rem;
-    }
+        new Chart(document.getElementById('ordersChartMini'), {
+            ...miniChartConfig,
+            data: { labels: ordersData.labels, datasets: [{ data: ordersData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+        });
 
-    .nav-pills .nav-link.active {
-        background-color: #0d6efd;
-    }
+        new Chart(document.getElementById('customersChart'), {
+            ...miniChartConfig,
+            data: { labels: customersData.labels, datasets: [{ data: customersData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+        });
 
-    .list-group-item:hover {
-        background-color: rgba(0, 0, 0, 0.02);
-    }
-</style>
+        new Chart(document.getElementById('reservationsChartMini'), {
+            ...miniChartConfig,
+            data: { labels: reservationsData.labels, datasets: [{ data: reservationsData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+        });
+
+        const months = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+
+        const monthlySalesData = @json($monthlySalesData);
+
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'line',
+            data: {
+                labels: months,
+                datasets: [{
+                    data: monthlySalesData,
+                    borderColor: '#321ee9',
+                    backgroundColor: 'rgba(50, 30, 233, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointBackgroundColor: '#321ee9',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11,
+                                weight: '500'
+                            },
+                            color: '#6c757d'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: {
+                                size: 11
+                            },
+                            color: '#6c757d',
+                            callback: function (value) {
+                                return '₱' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                events: []
+            }
+        });
+    });
+
+
+</script>
 
 @include('admin.layouts.script')

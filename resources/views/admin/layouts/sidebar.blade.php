@@ -45,7 +45,7 @@
     <li @class(['nav-item', 'active' => request()->is('ingredients*')])>
         <a class="nav-link" href="{{route('admin.ingredient_management')}}">
             <i class="fas fa-boxes"></i>
-            <span>Ingredients</span>
+            <span>Stock</span>
         </a>
     </li>
 

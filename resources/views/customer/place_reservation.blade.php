@@ -616,7 +616,7 @@
 
         const tableCapacities = {
           @foreach($tables as $table)
-      {{ $table->id }}: {{ $table->capacity }},
+        {{ $table->id }}: {{ $table->capacity }},
     @endforeach
     };
 
@@ -747,7 +747,7 @@
               if (input.type !== 'file') {
                 input.value = '';
               } else {
-                input.value = ''; 
+                input.value = '';
               }
               input.classList.remove('input-error');
             });

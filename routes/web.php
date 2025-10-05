@@ -10,6 +10,7 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
 
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
@@ -18,17 +19,29 @@ Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])-
 Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUnavailableTimes'])->name('customer.unavailable-times');
 
 Route::get('/file-serve/{path}', function ($path) {
-    $possiblePaths = [
-        storage_path('app/public/' . $path),
-        public_path('storage/' . $path),
-        base_path('storage/app/public/' . $path),
+    $folders = [
+        'jeongol_menu',
+        'payment_proofs',
+        'profile_pictures',
     ];
+
+    $possiblePaths = [];
+
+    foreach ($folders as $folder) {
+        $folderPath = $folder ? $folder . '/' : '';
+        $possiblePaths = array_merge($possiblePaths, [
+            storage_path("app/public/{$folderPath}{$path}"),
+            public_path("storage/{$folderPath}{$path}"),
+            base_path("storage/app/public/{$folderPath}{$path}"),
+        ]);
+    }
+
     foreach ($possiblePaths as $filePath) {
         if (file_exists($filePath) && is_readable($filePath)) {
-            return response()->file($filePath);
+            return Response::file($filePath);
         }
     }
-    abort(404);
+    abort(404, 'File not found.');
 })->where('path', '.*');
 
 
@@ -189,7 +202,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/check-customer/{idNumber}', [CashierController::class, 'checkCustomer']);
     });
 
-    // SHARED ROUTES (Multiple roles can access)
     Route::get('/api/menu-prices', function () {
         $menuItems = \App\Models\Menu::select([
             'menu_item',
@@ -201,7 +213,6 @@ Route::middleware('auth')->group(function () {
         return response()->json($menuItems);
     });
 
-    // Temporary - for development only
     Route::get('/do-logout', function (Request $request) {
         Auth::logout();
         $request->session()->invalidate();

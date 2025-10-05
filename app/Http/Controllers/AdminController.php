@@ -26,116 +26,103 @@ class AdminController extends Controller
 {
     public function home()
     {
-        $todayRevenue = DB::table('transactions')
-            ->whereDate('created_at', Carbon::today())
-            ->where('status', '!=', 'Refunded')
-            ->sum('grand_total');
+        // === TOTAL COUNTS ===
+        $totalGrossSales   = transaction::sum('grand_total');
+        $totalOrders       = orders::count();
+        $totalCustomers    = customers::count();
+        $totalReservations = Reservation::count();
 
-        $todayCustomers = DB::table('reservations')
-            ->whereDate('started_at', Carbon::today())
-            ->whereIn('status', ['Accepted', 'Completed'])
-            ->sum('pax');
+        // === DATE RANGES ===
+        $thisWeekStart = Carbon::now()->startOfWeek();
+        $thisWeekEnd   = Carbon::now()->endOfWeek();
+        $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
+        $lastWeekEnd   = Carbon::now()->subWeek()->endOfWeek();
 
+        // === WEEK-TO-WEEK COMPARISONS ===
+        // Sales
+        $thisWeekSales = transaction::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->sum('grand_total');
+        $lastWeekSales = transaction::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->sum('grand_total');
+        $salesChange = $lastWeekSales > 0 ? (($thisWeekSales - $lastWeekSales) / $lastWeekSales) * 100 : 0;
 
-        $transactions = DB::table('transactions')
-            ->join('users', 'transactions.cashier_id', '=', 'users.id')
-            ->select(
-                'transactions.*',
-                'users.firstname',
-                'users.lastname'
-            )
-            ->whereDate('transactions.created_at', Carbon::today())
-            ->where('transactions.status', '!=', 'Refunded')
-            ->orderBy('transactions.created_at', 'desc')
-            ->get()
-            ->map(function ($transaction) {
-                return (object)[
-                    'id' => $transaction->id,
-                    'grand_total' => $transaction->grand_total,
-                    'orders_total' => $transaction->orders_total,
-                    'discount_total' => $transaction->discount_total,
-                    'advance_payment' => $transaction->advance_payment ?? 0,
-                    'cashier' => (object)[
-                        'firstname' => $transaction->firstname,
-                        'lastname' => $transaction->lastname,
-                    ]
-                ];
-            });
+        // Orders
+        $thisWeekOrders = orders::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
+        $lastWeekOrders = orders::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
+        $ordersChange = $lastWeekOrders > 0 ? (($thisWeekOrders - $lastWeekOrders) / $lastWeekOrders) * 100 : 0;
 
-        $popularMenusToday = DB::table('menu')
-            ->join('orders', 'menu.id', '=', 'orders.menu_id')
-            ->select(
-                'menu.id',
-                'menu.menu_item',
-                DB::raw('SUM(orders.quantity) as total_quantity')
-            )
-            ->where('orders.status', 'Served')
-            ->whereDate('orders.created_at', Carbon::today())
-            ->where('menu.status', 'Active')
-            ->where('menu.category', 'Main')
-            ->whereNull('menu.deleted_at')
-            ->groupBy('menu.id', 'menu.menu_item')
+        // Customers
+        $thisWeekCustomers = customers::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
+        $lastWeekCustomers = customers::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
+        $customersChange = $lastWeekCustomers > 0 ? (($thisWeekCustomers - $lastWeekCustomers) / $lastWeekCustomers) * 100 : 0;
+
+        // Reservations
+        $thisWeekReservations = Reservation::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
+        $lastWeekReservations = Reservation::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
+        $reservationsChange = $lastWeekReservations > 0 ? (($thisWeekReservations - $lastWeekReservations) / $lastWeekReservations) * 100 : 0;
+
+        // === 7-DAY TRENDS FOR MINI CHARTS ===
+        $startDate = Carbon::now()->subDays(6);
+        $endDate = Carbon::now();
+
+        $salesTrend = Transaction::selectRaw('DATE(created_at) as date, SUM(grand_total) as total')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date');
+
+        $ordersTrend = orders::selectRaw('DATE(created_at) as date, COUNT(*) as total')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date');
+
+        $customersTrend = customers::selectRaw('DATE(created_at) as date, COUNT(*) as total')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date');
+
+        $reservationsTrend = Reservation::selectRaw('DATE(created_at) as date, COUNT(*) as total')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('date')
+            ->orderBy('date')
+            ->pluck('total', 'date');
+
+        $currentYear = Carbon::now()->year;
+        $monthlySales = Transaction::selectRaw('MONTH(created_at) as month, SUM(grand_total) as total')
+            ->whereYear('created_at', $currentYear)
+            ->groupBy('month')
+            ->orderBy('month')
+            ->pluck('total', 'month');
+
+        $monthlySalesData = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $monthlySalesData[] = $monthlySales->get($i, 0);
+        }
+
+        $flagshipItems = orders::join('menu', 'orders.menu_id', '=', 'menu.id')
+            ->select('menu.menu_item', 'menu.image', DB::raw('SUM(orders.quantity) as total_quantity'))
+            ->groupBy('menu.menu_item', 'menu.image')
             ->orderByDesc('total_quantity')
-            ->limit(5)
+            ->limit(10)
             ->get();
-
-        $popularMenusWeek = DB::table('menu')
-            ->join('orders', 'menu.id', '=', 'orders.menu_id')
-            ->select(
-                'menu.id',
-                'menu.menu_item',
-                DB::raw('SUM(orders.quantity) as total_quantity')
-            )
-            ->where('orders.status', 'Served')
-            ->whereBetween('orders.created_at', [
-                Carbon::now()->startOfWeek(),
-                Carbon::now()->endOfWeek()
-            ])
-            ->where('menu.status', 'Active')
-            ->where('menu.category', 'Main')
-            ->whereNull('menu.deleted_at')
-            ->groupBy('menu.id', 'menu.menu_item')
-            ->orderByDesc('total_quantity')
-            ->limit(5)
-            ->get();
-
-        $popularMenusMonth = DB::table('menu')
-            ->join('orders', 'menu.id', '=', 'orders.menu_id')
-            ->select(
-                'menu.id',
-                'menu.menu_item',
-                DB::raw('SUM(orders.quantity) as total_quantity')
-            )
-            ->where('orders.status', 'Served')
-            ->whereBetween('orders.created_at', [
-                Carbon::now()->startOfMonth(),
-                Carbon::now()->endOfMonth()
-            ])
-            ->where('menu.status', 'Active')
-            ->where('menu.category', 'Main')
-            ->whereNull('menu.deleted_at')
-            ->groupBy('menu.id', 'menu.menu_item')
-            ->orderByDesc('total_quantity')
-            ->limit(5)
-            ->get();
-
-
-        $monthlyTransactions = DB::table('transactions')
-            ->whereYear('created_at', Carbon::now()->year)
-            ->where('status', '!=', 'Refunded')
-            ->get()
-            ->groupBy(fn($t) => Carbon::parse($t->created_at)->format('M'));
 
         return view('admin.home', compact(
-            'todayRevenue',
-            'todayCustomers',
-            'transactions',
-            'popularMenusToday',
-            'popularMenusWeek',
-            'popularMenusMonth',
+            'totalGrossSales',
+            'totalOrders',
+            'totalCustomers',
+            'totalReservations',
+            'salesChange',
+            'ordersChange',
+            'customersChange',
+            'reservationsChange',
+            'salesTrend',
+            'ordersTrend',
+            'customersTrend',
+            'reservationsTrend',
+            'monthlySalesData',
+            'flagshipItems'
         ));
     }
-
     public function profile()
     {
         $user = Auth::user();

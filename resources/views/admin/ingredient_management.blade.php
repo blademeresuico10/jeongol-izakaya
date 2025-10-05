@@ -4,7 +4,7 @@
 <div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-            <h1 class="h3 mb-0 text-gray-800">Ingredients Management</h1>
+            <h1 class="h3 mb-0 text-gray-800">Stock Management</h1>
         </nav>
 
         <div class="container-fluid">
