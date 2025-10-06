@@ -17,10 +17,10 @@
                                 <div class="flex-grow-1">
                                     <h2 class="mb-0 fw-bold" style="color: black">
                                         ₱{{ number_format($totalGrossSales, 2) }}</h2>
-                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Gross Sales</p>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Today's Sales</p>
                                 </div>
                                 <div class="ms-3">
-                                    <i class="fas fa-dollar-sign" style="color: #321ee9; font-size: 3rem;"></i>
+                                    <i class="fas fa-peso-sign fa-3x" style="color: #321ee9;"></i>
                                 </div>
                             </div>
                             <div class="mb-2">
@@ -43,7 +43,7 @@
                             <div class="d-flex align-items-start justify-content-between mb-3">
                                 <div class="flex-grow-1">
                                     <h2 class="mb-0 fw-bold" style="color: black">{{ number_format($totalOrders) }}</h2>
-                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Total Orders</p>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Today's Orders</p>
                                 </div>
                                 <div class="ms-3">
                                     <i class="fas fa-shopping-bag" style="color: #321ee9; font-size: 3rem;"></i>
@@ -70,7 +70,8 @@
                                 <div class="flex-grow-1">
                                     <h2 class="mb-0 fw-bold" style="color: black">{{ number_format($totalCustomers) }}
                                     </h2>
-                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Total Customers</p>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Today's Customers
+                                    </p>
                                 </div>
                                 <div class="ms-3">
                                     <i class="fas fa-users" style="color: #321ee9; font-size: 3rem;"></i>
@@ -150,8 +151,8 @@
                                     style="transition: 0.2s; border-color: #f0f0f0;">
 
                                     <div class="d-flex align-items-center">
-                                        <img src="{{ url('/file-serve/' . $item->image) }}" alt="{{ $item->menu_item }}"
-                                            class="rounded me-2" style="width: 50px; height: 50px; object-fit: cover;">
+                                        <img src="{{ asset('storage/jeongol_menu/' . $item->image) }}" class="rounded me-2"
+                                            style="width: 50px; height: 50px; object-fit: cover;">
                                         <div>
                                             <div class="fw-bold text-dark">{{ $item->menu_item }}</div>
                                         </div>
@@ -175,21 +176,44 @@
             </div>
 
             <div class="row g-4 mb-4">
-                <div class="col-xl-8">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-header bg-white border-0 py-3">
+
+                <!-- Ingredients Table (main column) -->
+                <div class="col-xl-8 col-lg-12">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 py-3 d-flex align-items-center">
                             <div class="d-flex align-items-center">
                                 <i class="fas fa-boxes fs-5 me-3" style="color: #321ee9;"></i>
-                                <h5 class="card-title mb-0 fw-bold">Stock</h5>
+                                <h5 class="card-title mb-0 fw-bold text-gray-800">Ingredients Stock</h5>
                             </div>
                         </div>
-                        <div class="card-body">
-                            <canvas id="reservationsChart" height="300"></canvas>
+                        <div class="card-body p-3">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover align-middle mb-0">
+                                    <thead class="bg-blue-700 text-white">
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Unit</th>
+                                            <th>Stock (kg)</th>
+                                            <th>Level</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($ingredients as $index => $ingredient)
+                                            <tr>
+                                                <td>{{ $ingredient->name }}</td>
+                                                <td>{{ $ingredient->unit }}</td>
+                                                <td>{{ number_format($ingredient->stocks, 2) }}</td>
+                                                <td></td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-xl-4">
+                <div class="col-xl-4 col-lg-12">
                     <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
                         <div class="card-header bg-white border-0 py-3 d-flex align-items-center">
                             <div class="d-flex align-items-center">
@@ -200,7 +224,7 @@
                             </div>
                         </div>
 
-                        <div class="card-body px-3 pb-3 pt-0" style="max-height: 400px; overflow-y: auto;">
+                        <div class="card-body" style="overflow-y: auto;">
                             @if($recentActivities->isNotEmpty())
                                 <div class="d-flex flex-column gap-2">
                                     @foreach($recentActivities as $activity)
@@ -211,6 +235,7 @@
                                                     <i class="fas {{ $activity['icon'] }}"
                                                         style="color: {{ $activity['color'] }};"></i>
                                                 </div>
+
                                                 <div class="flex-grow-1">
                                                     <div class="fw-semibold text-dark">{{ $activity['type'] }}</div>
                                                     <div class="small text-muted">{{ $activity['name'] }}</div>
@@ -231,8 +256,8 @@
                         </div>
                     </div>
                 </div>
-
             </div>
+
         </div>
     </div>
 </div>

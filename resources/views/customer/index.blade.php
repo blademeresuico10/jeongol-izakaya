@@ -162,7 +162,7 @@
 
           <a href="{{ route('customer.place_reservation') }}"
             class="w-fit px-6 py-3 bg-orange-500 rounded-lg font-bold">
-            Book a Table
+            Reserve now!
           </a>
 
         </div>

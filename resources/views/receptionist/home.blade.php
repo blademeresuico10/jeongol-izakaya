@@ -14,6 +14,62 @@
   @vite('resources/css/app.css')
 
   <style>
+    #selectedOrdersContainer::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #selectedOrdersContainer::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #selectedOrdersContainer::-webkit-scrollbar-thumb {
+      background: #cbd5e0;
+      border-radius: 10px;
+    }
+
+    #selectedOrdersContainer::-webkit-scrollbar-thumb:hover {
+      background: #a0aec0;
+    }
+
+    /* Slide-in animation for order items */
+    #selectedOrdersContainer>div {
+      animation: slideInOrder 0.3s ease-out;
+    }
+
+    @keyframes slideInOrder {
+      from {
+        opacity: 0;
+        transform: translateX(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* Order item hover effect */
+    .order-item-card {
+      transition: all 0.2s ease;
+    }
+
+    .order-item-card:hover {
+      transform: translateX(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
     ul::-webkit-scrollbar {
       width: 6px;
     }
@@ -105,9 +161,7 @@
             <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
             <div>
               <p><strong>Transaction Receipt</strong></p>
-              <img id="paymentProof"
-                class="mb-2 w-20 h-20 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
-                style="display:none;" onclick="openImageModal(this.src)">
+              <img id="paymentProof" class="w-50 h-50 rounded border">
             </div>
             <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
             <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
@@ -160,7 +214,7 @@
     </div>
 
     <div class="bottom-buttons">
-      <a class="view-button" href="{{ route('receptionist.bookings') }}">Today's Bookings</a>
+      <a class="view-button" href="{{ route('receptionist.bookings') }}">Today's Reservation</a>
       <a class="view-button" href="{{ route('receptionist.modify_orders') }}">View Orders</a>
     </div>
 
@@ -236,61 +290,80 @@
         </div>
       </div>
 
-      <div id="default-modal" tabindex="-1" aria-hidden="true"
-        class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full flex justify-center items-center">
-        <div class="relative w-full max-w-2xl h-[450px]">
-          <div class="relative h-full bg-white rounded-lg shadow flex flex-col">
-            <div class="modal-section flex-shrink-0">
-              <div class="flex items-center justify-between p-4 rounded-t bg-red-800">
-                <h3 class="text-xl font-semibold text-white">Orders Breakdown</h3>
-                <div class="text-white text-sm">
-                  <span id="totalItemsCount" class="font-medium">0 items</span>
+      <div id="default-modal"
+        class="fixed inset-y-0 right-0 z-50 transform translate-x-full transition-transform duration-300 ease-in-out"
+        style="width: 480px;">
+
+        <div id="modalBackdrop"
+          class="fixed inset-0 bg-black bg-opacity-50 -z-10 opacity-0 transition-opacity duration-300 pointer-events-none">
+        </div>
+
+        <div class="h-full bg-white shadow-2xl flex flex-col">
+
+          <div class="flex-shrink-0 bg-gradient-to-r from-red-700 to-red-800 px-6 py-5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="bg-white/20 p-2 rounded-lg">
+                  <i class="fas fa-shopping-cart text-white text-xl"></i>
+                </div>
+                <div>
+                  <h3 class="text-xl font-bold text-white">Orders Breakdown</h3>
+                  <p id="totalItemsCount" class="text-white/80 text-sm mt-0.5">0 items</p>
                 </div>
               </div>
+              <button id="closeOrdersPanel" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
+          </div>
+          <div class="flex-1 overflow-y-auto bg-gray-50">
 
-            <div id="orderSummary"
-              class="flex-1 p-4 bg-gray-50 text-sm text-gray-800 border overflow-y-auto overflow-x-hidden"
-              style="max-height: calc(450px - 140px);">
-
-              <div id="emptyState" class="flex flex-col items-center justify-center h-full text-gray-500 hidden">
-                <svg class="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div id="emptyState" class="flex flex-col items-center justify-center h-full px-6 py-12">
+              <div class="bg-gray-100 rounded-full p-8 mb-6">
+                <svg class="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                 </svg>
-                <p class="text-lg font-medium">No orders!</p>
               </div>
-
-              <div id="selectedOrdersContainer" class="space-y-2">
-              </div>
-
-              <div id="orderTotal" class="mt-4 pt-3 border-t border-gray-300 bg-white rounded-lg p-3 shadow-sm hidden">
-                <div class="flex justify-between items-center mb-2">
-                  <span class="text-base font-semibold text-gray-700">Total Quantity:</span>
-                  <span id="totalQuantity" class="text-base font-bold text-orange-600">0</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-lg font-semibold text-gray-800">Total:</span>
-                  <span id="grandTotal" class="text-lg font-bold text-red-600">₱0.00</span>
-                </div>
-              </div>
+              <p class="text-xl font-semibold text-gray-600 mb-2">No orders yet</p>
+              <p class="text-sm text-gray-400 text-center">Start adding items from the menu</p>
             </div>
 
-            <div class="flex justify-between gap-4 p-4 border-t border-gray-200 bg-white flex-shrink-0">
-              <div class="flex gap-2">
-                <button id="clearOrdersBtn" type="button"
-                  class="bg-red-600 hover:bg-red-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-red-300 transition-colors">
-                  <i class="fas fa-trash mr-2"></i>Clear All
-                </button>
+            <div id="selectedOrdersContainer" class="p-4 space-y-3">
+            </div>
+          </div>
+
+          <div id="orderTotal" class="flex-shrink-0 bg-white border-t-2 border-gray-200 p-4 hidden">
+            <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 space-y-3">
+              <div class="flex items-center justify-between text-gray-700">
+                <span class="font-medium">Total Items</span>
+                <span id="totalQuantity" class="text-lg font-bold text-orange-600">0</span>
               </div>
-              <div class="flex gap-2">
-                <button data-modal-hide="default-modal" type="button"
-                  class="bg-green-600 hover:bg-green-700 text-white font-medium text-sm px-5 py-2.5 rounded-lg focus:outline-none focus:ring-4 focus:ring-green-300 transition-colors">
-                  Confirm Order
-                </button>
+              <div class="h-px bg-gray-300"></div>
+              <div class="flex items-center justify-between">
+                <span class="text-lg font-bold text-gray-800">Total Amount</span>
+                <span id="grandTotal" class="text-2xl font-bold text-red-600">₱0.00</span>
               </div>
             </div>
           </div>
+
+          <div class="flex-shrink-0 p-4 bg-white border-t border-gray-200">
+            <div class="grid grid-cols-2 gap-3">
+              <button id="clearOrdersBtn" type="button"
+                class="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-gray-400">
+                <i class="fas fa-trash text-sm"></i>
+                <span>Clear All</span>
+              </button>
+              <button data-modal-hide="default-modal" type="button"
+                class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
+                <i class="fas fa-check text-sm"></i>
+                <span>Confirm</span>
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -308,8 +381,6 @@
           </button>
         </div>
       </div>
-
-
     </div>
 
     <script>
@@ -440,31 +511,48 @@
             });
           }
 
+          // Setup slide-in panel for orders
           if (this.elements.viewOrdersBtn && this.elements.defaultModal) {
+            const backdrop = document.getElementById('modalBackdrop');
+            const closeOrdersPanel = document.getElementById('closeOrdersPanel');
+
             this.elements.viewOrdersBtn.addEventListener('click', () => {
-              this.elements.defaultModal.classList.remove('hidden');
-            });
-
-            const closeButtons = this.elements.defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
-            closeButtons.forEach(btn => {
-              btn.addEventListener('click', () => {
-                this.elements.defaultModal.classList.add('hidden');
-              });
-            });
-
-            this.elements.defaultModal.addEventListener('click', (e) => {
-              if (e.target === this.elements.defaultModal) {
-                this.elements.defaultModal.classList.add('hidden');
+              this.elements.defaultModal.classList.remove('translate-x-full');
+              if (backdrop) {
+                backdrop.classList.remove('pointer-events-none', 'opacity-0');
+                backdrop.classList.add('opacity-100');
               }
+              document.body.style.overflow = 'hidden';
+            });
+
+            if (closeOrdersPanel) {
+              closeOrdersPanel.addEventListener('click', () => {
+                this.closeOrdersPanel();
+              });
+            }
+
+            const confirmButtons = this.elements.defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
+            confirmButtons.forEach(btn => {
+              btn.addEventListener('click', () => {
+                this.closeOrdersPanel();
+              });
             });
           }
 
+        }
 
-          window.onclick = (e) => {
-            if (e.target === this.elements.tableModal) {
-              this.elements.tableModal.style.display = 'none';
-            }
-          };
+        closeOrdersPanel() {
+          if (this.elements.defaultModal) {
+            this.elements.defaultModal.classList.add('translate-x-full');
+          }
+
+          const backdrop = document.getElementById('modalBackdrop');
+          if (backdrop) {
+            backdrop.classList.add('pointer-events-none', 'opacity-0');
+            backdrop.classList.remove('opacity-100');
+          }
+
+          document.body.style.overflow = '';
         }
 
         setupFormEvents() {
@@ -503,7 +591,7 @@
           const tableCapacities = {
             @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
-      @endforeach
+        @endforeach
     };
 
     this.elements.tableLinks.forEach(link => {
@@ -819,6 +907,8 @@
         }
       }
 
+
+
       handleAcceptReservation(e) {
         e.preventDefault();
         if (!this.reservationId) return;
@@ -1035,36 +1125,48 @@
             const defaultImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NEg0NEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPHBhdGggZD0iTTI4IDI4SDM2VjM2SDI4VjI4WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
 
             const orderItem = document.createElement('div');
-            orderItem.className = "bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow";
             orderItem.innerHTML = `
-          <div class="flex items-center space-x-4">
+        <div class="order-item-card bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+          <div class="flex items-start gap-3">
             <div class="flex-shrink-0">
-              <img src="${getImagePath()}" alt="${item.name}" 
-                   class="w-16 h-16 object-cover rounded-lg border border-gray-200"
+              <img src="${getImagePath()}" 
+                   alt="${item.name}" 
+                   class="w-20 h-20 object-cover rounded-lg border-2 border-gray-100"
                    onerror="this.src='${defaultImage}'">
             </div>
             
             <div class="flex-1 min-w-0">
-              <h4 class="text-base font-semibold text-gray-900 truncate">${item.name}</h4>
-              <p class="text-sm text-gray-600">₱${item.price.toFixed(2)} each</p>
-              <p class="text-sm font-medium text-orange-600">Subtotal: ₱${(item.price * item.quantity).toFixed(2)}</p>
+              <h4 class="font-bold text-gray-900 text-base mb-1 truncate">${item.name}</h4>
+              <p class="text-sm text-gray-500 mb-2">₱${item.price.toFixed(2)} each</p>
+              
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-gray-600 font-medium">Qty:</label>
+                <input type="number" 
+                       min="1" 
+                       max="99" 
+                       value="${item.quantity}" 
+                       class="w-16 text-center px-2 py-1.5 border-2 border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                       data-id="${id}"
+                       onchange="dashboard.updateQuantity(this)"
+                       onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+              </div>
             </div>
             
-            <div class="flex items-center space-x-3">
-              <input type="number" min="1" max="99" value="${item.quantity}" 
-                     class="w-16 text-center px-2 py-1 border border-gray-300 rounded-md text-sm font-medium focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                     data-id="${id}"
-                     onchange="dashboard.updateQuantity(this)"
-                     onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+            <div class="flex flex-col items-end gap-2">
+              <button type="button" 
+                      onclick="dashboard.removeOrderItem('${id}')" 
+                      class="w-8 h-8 flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-colors"
+                      title="Remove item">
+                <i class="fas fa-times text-sm"></i>
+              </button>
+              <div class="text-right">
+                <p class="text-xs text-gray-500 mb-0.5">Subtotal</p>
+                <p class="text-lg font-bold text-red-600">₱${(item.price * item.quantity).toFixed(2)}</p>
+              </div>
             </div>
-            
-            <button type="button" onclick="dashboard.removeOrderItem('${id}')" 
-                    class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 rounded-full transition-colors"
-                    title="Remove item">
-              <span class="text-sm font-bold">×</span>
-            </button>
           </div>
-        `;
+        </div>
+      `;
             container.appendChild(orderItem);
           });
 
@@ -1390,32 +1492,6 @@
       }
 }
 
-      function openImageModal(imageSrc) {
-        let modal = document.getElementById('imageModal');
-        if (!modal) {
-          modal = document.createElement('div');
-          modal.id = 'imageModal';
-          modal.innerHTML = `
-      <div class="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50" onclick="closeImageModal()">
-          <div class="relative max-w-4xl max-h-[90vh] p-4">
-              <button onclick="closeImageModal()" class="absolute top-2 right-2 text-white bg-black bg-opacity-50 rounded-full w-8 h-8 flex items-center justify-center hover:bg-opacity-70">×</button>
-              <img id="modalImage" src="" class="max-w-full max-h-full object-contain rounded border shadow-lg bg-white p-4">
-          </div>
-      </div>
-    `;
-          document.body.appendChild(modal);
-        }
-
-        document.getElementById('modalImage').src = imageSrc;
-        modal.style.display = 'block';
-      }
-
-      function closeImageModal() {
-        const modal = document.getElementById('imageModal');
-        if (modal) {
-          modal.style.display = 'none';
-        }
-      }
 
       const dashboard = new ReceptionistDashboard();
 

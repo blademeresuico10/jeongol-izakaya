@@ -36,7 +36,7 @@ class KitchenController extends Controller
                     ?? $order->walkin->status
                     ?? $order->status;
 
-                return $status !== 'Completed'; 
+                return $status !== 'Completed';
             });
 
 
@@ -74,6 +74,7 @@ class KitchenController extends Controller
 
         $order = orders::findOrFail($orderId);
 
+        // Get all pending orders for the same reservation or walk-in
         if ($order->reservation_id) {
             $orders = orders::where('reservation_id', $order->reservation_id)
                 ->where('status', 'pending')
@@ -95,135 +96,62 @@ class KitchenController extends Controller
         DB::beginTransaction();
 
         try {
-            $mainOrders = $orders->filter(function ($order) {
-                return $order->menu && $order->menu->category === 'main';
-            });
+            $mainOrders = $orders->filter(fn($o) => $o->menu && $o->menu->category === 'main');
+            $addonOrders = $orders->filter(fn($o) => $o->menu && $o->menu->category === 'add_ons');
 
-            $addonOrders = $orders->filter(function ($order) {
-                return $order->menu && $order->menu->category === 'add_ons';
-            });
+            $processedIngredients = [];
 
-            $processedMainIngredients = [];
+            // Helper function to process stock deduction
+            $processIngredients = function ($singleOrder, $isAddon = false) use (&$processedIngredients) {
+                $menuIngredients = MenuIngredient::where('menu_id', $singleOrder->menu_id)->get();
 
+                foreach ($menuIngredients as $menuIngredient) {
+                    $ingredient = ingredients::find($menuIngredient->ingredient_id);
+                    if (!$ingredient) continue;
+
+                    // Avoid deducting the same main ingredient multiple times
+                    if (!$isAddon && in_array($ingredient->id, $processedIngredients)) continue;
+
+                    $quantityNeeded = $isAddon
+                        ? $menuIngredient->quantity * $singleOrder->quantity
+                        : $menuIngredient->quantity;
+
+                    // Use your deductStock helper
+                    $ingredient->deductStock(
+                        $quantityNeeded,
+                        $singleOrder->id,
+                        auth()->id(),
+                        ($isAddon ? "Add-on" : "Main") . ": " . ($isAddon ? "{$singleOrder->quantity} x " : "") . "{$singleOrder->menu->menu_item}"
+                    );
+
+                    if (!$isAddon) {
+                        $processedIngredients[] = $ingredient->id;
+                    }
+                }
+
+                $singleOrder->status = 'served';
+                $singleOrder->save();
+            };
+
+            // Process main orders
             foreach ($mainOrders as $singleOrder) {
-                $menuIngredients = MenuIngredient::where('menu_id', $singleOrder->menu_id)->get();
-
-                foreach ($menuIngredients as $menuIngredient) {
-                    $ingredientKey = $menuIngredient->ingredient_id;
-
-                    if (in_array($ingredientKey, $processedMainIngredients)) {
-                        continue;
-                    }
-
-                    $ingredient = ingredients::find($menuIngredient->ingredient_id);
-
-                    if (!$ingredient) {
-                        continue;
-                    }
-
-                    $quantityToDeduct = $menuIngredient->quantity;
-
-                    if ($ingredient->unit === 'kg') {
-                        $availableGrams = $ingredient->stocks * 1000;
-
-                        if ($availableGrams < $quantityToDeduct) {
-                            DB::rollBack();
-                            return redirect()->back()->with('error', "Not enough {$ingredient->name}! Need {$quantityToDeduct}g but only have {$availableGrams}g available.");
-                        }
-
-                        $ingredient->deductStock(
-                            $quantityToDeduct,
-                            $singleOrder->id,
-                            auth()->id(),
-                            "Main: {$singleOrder->menu->menu_item} - Default serving"
-                        );
-                    } elseif ($ingredient->unit === 'pieces') {
-                        if ($ingredient->stocks < $quantityToDeduct) {
-                            DB::rollBack();
-                            return redirect()->back()->with('error', "Not enough {$ingredient->name}! Need {$quantityToDeduct} pieces but only have {$ingredient->stocks} available.");
-                        }
-
-                        $stockBefore = $ingredient->stocks;
-                        $ingredient->stocks -= $quantityToDeduct;
-                        $ingredient->save();
-
-                        ingredientMovements::create([
-                            'ingredient_id' => $ingredient->id,
-                            'user_id' => Auth::id(),
-                            'order_id' => $singleOrder->id,
-                            'type' => 'used',
-                            'quantity' => $quantityToDeduct,
-                            'stock_before' => $stockBefore,
-                            'stock_after' => $ingredient->stocks,
-                            'notes' => "Main: {$singleOrder->menu->menu_item} - Default serving"
-                        ]);
-                    }
-
-                    $processedMainIngredients[] = $ingredientKey;
-                }
-
-                $singleOrder->status = 'served';
-                $singleOrder->save();
+                $processIngredients($singleOrder);
             }
 
-            // Process ADD-ONS orders
+            // Process add-on orders
             foreach ($addonOrders as $singleOrder) {
-                $menuIngredients = MenuIngredient::where('menu_id', $singleOrder->menu_id)->get();
-
-                foreach ($menuIngredients as $menuIngredient) {
-                    $ingredient = ingredients::find($menuIngredient->ingredient_id);
-
-                    if (!$ingredient) {
-                        continue;
-                    }
-
-                    $totalNeeded = $menuIngredient->quantity * $singleOrder->quantity;
-
-                    if ($ingredient->unit === 'kg') {
-                        $availableGrams = $ingredient->stocks * 1000;
-
-                        if ($availableGrams < $totalNeeded) {
-                            DB::rollBack();
-                            return redirect()->back()->with('error', "Not enough {$ingredient->name}! Need {$totalNeeded}g but only have {$availableGrams}g available.");
-                        }
-
-                        $ingredient->deductStock(
-                            $totalNeeded,
-                            $singleOrder->id,
-                            auth()->id(),
-                            "Add-on: {$singleOrder->quantity} x {$singleOrder->menu->menu_item}"
-                        );
-                    } elseif ($ingredient->unit === 'pieces') {
-                        if ($ingredient->stocks < $totalNeeded) {
-                            DB::rollBack();
-                            return redirect()->back()->with('error', "Not enough {$ingredient->name}! Need {$totalNeeded} pieces but only have {$ingredient->stocks} available.");
-                        }
-
-                        $stockBefore = $ingredient->stocks;
-                        $ingredient->stocks -= $totalNeeded;
-                        $ingredient->save();
-
-                        ingredientMovements::create([
-                            'ingredient_id' => $ingredient->id,
-                            'user_id' => auth()->id(),
-                            'order_id' => $singleOrder->id,
-                            'type' => 'used',
-                            'quantity' => $totalNeeded,
-                            'stock_before' => $stockBefore,
-                            'stock_after' => $ingredient->stocks,
-                            'notes' => "Add-on: {$singleOrder->quantity} x {$singleOrder->menu->menu_item}"
-                        ]);
-                    }
-                }
-
-                $singleOrder->status = 'served';
-                $singleOrder->save();
+                $processIngredients($singleOrder, true);
             }
+
+            DB::commit();
+
+            return redirect()->back()->with('success');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Failed to process order: ' . $e->getMessage());
         }
     }
+
 
     public function storeUnlimitedRefill(Request $request)
     {

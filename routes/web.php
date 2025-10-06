@@ -20,16 +20,16 @@ Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUn
 Route::get('/customer/check-availability', [CustomerController::class, 'checkAvailability'])->name('customer.checkAvailability');
 
 Route::get('/file-serve/{folder}/{filename}', function ($folder, $filename) {
-   
+
     $allowedFolders = ['jeongol_menu', 'payment_proofs', 'profile_pictures'];
     if (!in_array($folder, $allowedFolders)) {
         abort(404, 'Folder not allowed.');
     }
 
-   
+
     $filePath = storage_path("app/public/{$folder}/{$filename}");
 
-    
+
     if (!file_exists($filePath) || !is_readable($filePath)) {
         abort(404, 'File not found.');
     }
@@ -124,9 +124,6 @@ Route::middleware('auth')->group(function () {
             Route::put('/batches/{id}', [AdminController::class, 'updateBatch'])->name('batches.update');
             Route::delete('/batches/{id}', [AdminController::class, 'deleteBatch'])->name('batches.delete');
         });
-
-        // Analytics
-        Route::get('/analytics', [AdminController::class, 'analytics'])->name('admin.analytics');
 
         // E-Wallet Management
         Route::get('/ewallet', [AdminController::class, 'ewallet_management'])->name('admin.ewallet_management');

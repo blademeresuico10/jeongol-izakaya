@@ -31,39 +31,32 @@ class AdminController extends Controller
 {
     public function home()
     {
-        // === TOTAL COUNTS ===
         $totalGrossSales   = transaction::sum('grand_total');
         $totalOrders       = orders::count();
         $totalCustomers    = customers::count();
         $totalReservations = Reservation::count();
 
-        // === DATE RANGES ===
         $thisWeekStart = Carbon::now()->startOfWeek();
         $thisWeekEnd   = Carbon::now()->endOfWeek();
         $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
         $lastWeekEnd   = Carbon::now()->subWeek()->endOfWeek();
 
-        // Sales
         $thisWeekSales = transaction::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->sum('grand_total');
         $lastWeekSales = transaction::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->sum('grand_total');
         $salesChange = $lastWeekSales > 0 ? (($thisWeekSales - $lastWeekSales) / $lastWeekSales) * 100 : 0;
 
-        // Orders
         $thisWeekOrders = orders::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
         $lastWeekOrders = orders::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
         $ordersChange = $lastWeekOrders > 0 ? (($thisWeekOrders - $lastWeekOrders) / $lastWeekOrders) * 100 : 0;
 
-        // Customers
         $thisWeekCustomers = customers::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
         $lastWeekCustomers = customers::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
         $customersChange = $lastWeekCustomers > 0 ? (($thisWeekCustomers - $lastWeekCustomers) / $lastWeekCustomers) * 100 : 0;
 
-        // Reservations
         $thisWeekReservations = Reservation::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
         $lastWeekReservations = Reservation::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
         $reservationsChange = $lastWeekReservations > 0 ? (($thisWeekReservations - $lastWeekReservations) / $lastWeekReservations) * 100 : 0;
 
-        // === 7-DAY TRENDS FOR MINI CHARTS ===
         $startDate = Carbon::now()->subDays(6);
         $endDate = Carbon::now();
 
@@ -91,7 +84,6 @@ class AdminController extends Controller
             ->orderBy('date')
             ->pluck('total', 'date');
 
-        // === MONTHLY SALES CHART ===
         $currentYear = Carbon::now()->year;
         $monthlySales = Transaction::selectRaw('MONTH(created_at) as month, SUM(grand_total) as total')
             ->whereYear('created_at', $currentYear)
@@ -104,7 +96,6 @@ class AdminController extends Controller
             $monthlySalesData[] = $monthlySales->get($i, 0);
         }
 
-        // === FLAGSHIP ITEMS (Top-selling Menu) ===
         $flagshipItems = orders::join('menu', 'orders.menu_id', '=', 'menu.id')
             ->select('menu.menu_item', 'menu.image', DB::raw('SUM(orders.quantity) as total_quantity'))
             ->groupBy('menu.menu_item', 'menu.image')
@@ -112,7 +103,6 @@ class AdminController extends Controller
             ->limit(10)
             ->get();
 
-        // === RECENT ACTIVITIES (Today Only) ===
         $today = Carbon::today();
 
         $recentReservations = Reservation::whereDate('created_at', $today)
@@ -173,7 +163,8 @@ class AdminController extends Controller
             ->take(7)
             ->values();
 
-        // === RETURN TO VIEW ===
+        $ingredients = ingredients::select('id', 'name', 'unit', 'stocks')->get();
+
         return view('admin.home', compact(
             'totalGrossSales',
             'totalOrders',
@@ -189,7 +180,8 @@ class AdminController extends Controller
             'reservationsTrend',
             'monthlySalesData',
             'flagshipItems',
-            'recentActivities'
+            'recentActivities',
+            'ingredients'
         ));
     }
 
@@ -1493,67 +1485,6 @@ class AdminController extends Controller
             return response()->json(['success' => false], 500);
         }
     }
-
-
-    public function analytics()
-    {
-        $currentYear = now()->year;
-
-        $monthlyData = DB::table('transactions')
-            ->whereNotNull('created_at')
-            ->where('status', '!=', 'Refunded')
-            ->whereYear('created_at', $currentYear)
-            ->select(
-                DB::raw('MONTH(created_at) as month'),
-                DB::raw('SUM(orders_total) as gross_revenue'),
-                DB::raw('SUM(grand_total) as net_revenue'),
-                DB::raw('SUM(discount_total) as total_discounts')
-            )
-            ->groupBy('month')
-            ->orderBy('month', 'asc')
-            ->get()
-            ->keyBy('month');
-
-        $labels = [];
-        $grossRevenue = [];
-        $netRevenue = [];
-        $discounts = [];
-
-        for ($month = 1; $month <= 12; $month++) {
-            $labels[] = \Carbon\Carbon::create($currentYear, $month, 1)->format('M');
-
-            if (isset($monthlyData[$month])) {
-                $grossRevenue[] = (float) $monthlyData[$month]->gross_revenue;
-                $netRevenue[] = (float) $monthlyData[$month]->net_revenue;
-                $discounts[] = (float) $monthlyData[$month]->total_discounts;
-            } else {
-                $grossRevenue[] = 0;
-                $netRevenue[] = 0;
-                $discounts[] = 0;
-            }
-        }
-
-        $yearStats = DB::table('transactions')
-            ->where('status', '!=', 'Refunded')
-            ->whereYear('created_at', $currentYear)
-            ->selectRaw('
-            COUNT(*) as count,
-            SUM(grand_total) as revenue,
-            SUM(orders_total) as gross_revenue,
-            SUM(discount_total) as discounts
-        ')
-            ->first();
-
-        return view('admin.analytics', compact(
-            'labels',
-            'grossRevenue',
-            'netRevenue',
-            'discounts',
-            'yearStats',
-            'currentYear'
-        ));
-    }
-
 
     public function others()
     {

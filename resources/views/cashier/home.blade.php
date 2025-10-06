@@ -367,6 +367,7 @@
             <span id="toast-message">Something went wrong</span>
         </div>
     </div>
+
 </body>
 <script>
     window.menuPriceData = @json($menuData);

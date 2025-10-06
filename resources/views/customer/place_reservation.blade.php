@@ -689,7 +689,7 @@
             if (!existingLabel) {
               const bookedLabel = document.createElement('div');
               bookedLabel.className = 'booked-label';
-              bookedLabel.textContent = 'BOOKED';
+              bookedLabel.textContent = 'Reserved';
               tableDiv.appendChild(bookedLabel);
             }
           } else {

@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Bookings</title>
+  <title>Reservation</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
   @vite('resources/css/app.css')
@@ -12,7 +12,7 @@
 <body class="bg-gray-100 min-h-screen">
   <div class="reservation-section">
     <div class="flex items-center justify-center mt-4 mb-6">
-      <h2 class="text-3xl font-bold text-gray-800">Today's Bookings</h2>
+      <h2 class="text-3xl font-bold text-gray-800">Today's Reservation</h2>
     </div>
 
     @php
