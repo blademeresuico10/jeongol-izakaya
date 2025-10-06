@@ -42,9 +42,7 @@
     }
 
 
-    @media only screen and (min-width: 320px) and (max-width: 374px) {
-     
-    }
+    @media only screen and (min-width: 320px) and (max-width: 374px) {}
 
     @media only screen and (min-width: 375px) and (max-width: 389px) {
       #menuContainer {
@@ -71,7 +69,7 @@
     }
 
     @media only screen and (max-height: 430px) and (orientation: portrait) {
-      
+
 
       #menu {
         padding-top: 1rem;
@@ -79,15 +77,13 @@
       }
     }
 
-    @media (min-width: 768px) {
-     
-    }
+    @media (min-width: 768px) {}
 
     .menu-detail-card {
       transition: all 0.3s ease;
     }
 
-    
+
     @media (max-width: 360px) {
       #menuContainer {
         gap: 0.5rem;
@@ -182,8 +178,7 @@
 
           @forelse($mainMenuItems as $item)
         <div class="menu-card-wrapper">
-        <div
-          class="bg-white/5 backdrop-blur-sm border border-white/20 overflow-hidden rounded-lg">
+        <div class="bg-white/5 backdrop-blur-sm border border-white/20 overflow-hidden rounded-lg">
 
           <div class="relative w-full h-36 xs:h-40 sm:h-48 md:h-56 overflow-hidden">
           <button onclick="toggleDetails('{{ Str::slug($item->menu_item) }}-details')"
@@ -533,17 +528,17 @@
     const menu = document.getElementById('mobileMenu');
     const icon = document.querySelector('#mobileMenuBtn i');
     menu.classList.toggle('hidden');
-    icon.classList.toggle('fa-bars');
-    icon.classList.toggle('fa-times');
+    
   });
 
+  // Location modal handlers
   document.getElementById('navLocation').addEventListener('click', () => openModal('locationModal'));
   document.getElementById('mobileLocation').addEventListener('click', () => {
     openModal('locationModal');
     document.getElementById('mobileMenu').classList.add('hidden');
   });
 
-  document.getElementById('openFeedback').addEventListener('click', () => openModal('feedbackModal'));
+  // Feedback modal handlers
   document.getElementById('navFeedback').addEventListener('click', () => openModal('feedbackModal'));
   document.getElementById('mobileFeedback').addEventListener('click', () => {
     openModal('feedbackModal');
@@ -597,6 +592,5 @@
     });
   });
 </script>
-
 
 </html>

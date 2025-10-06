@@ -503,7 +503,7 @@
           const tableCapacities = {
             @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
-        @endforeach
+      @endforeach
     };
 
     this.elements.tableLinks.forEach(link => {
@@ -741,19 +741,20 @@
         const paymentProof = document.getElementById('paymentProof');
         if (paymentProof) {
           if (notification.payment_proof) {
-            paymentProof.src = `/storage/${notification.payment_proof}`;
+            let filename = notification.payment_proof.includes('/')
+              ? notification.payment_proof.split('/').pop()
+              : notification.payment_proof;
+            paymentProof.src = `/file-serve/payment_proofs/${filename}`;
             paymentProof.style.display = 'block';
           } else {
             paymentProof.style.display = 'none';
           }
         }
-
         this.updateElementText('customername', notification.customer_name || 'N/A');
         this.updateElementText('tableNumber', notification.table_number || 'N/A');
         this.updateElementText('requiredAmount', notification.advance_payment ? `₱${parseFloat(notification.advance_payment).toFixed(2)}` : 'N/A');
         this.updateElementText('paxCount', notification.pax || 'N/A');
         this.updateElementText('paymentStatus', notification.reservation_status || 'N/A');
-
         const actionButtons = document.getElementById('actionButtons');
         if (actionButtons) {
           const shouldHideButtons = notification.reservation_status === "Active" || notification.reservation_status === "Rejected";
@@ -791,19 +792,18 @@
         if (paymentProof) {
           if (data.payment?.proof_path) {
             let path = data.payment.proof_path;
-            paymentProof.src = `/file-serve/${data.payment.proof_path}`;
+            let filename = path.includes('/') ? path.split('/').pop() : path;
+            paymentProof.src = `/file-serve/payment_proofs/${filename}`;
             paymentProof.style.display = 'block';
           } else {
             paymentProof.style.display = 'none';
           }
         }
-
         this.updateElementText('customername', data.name || 'N/A')
         this.updateElementText('tableNumber', data.table_id || 'N/A');
         this.updateElementText('requiredAmount', data.advance_payment || 'N/A');
         this.updateElementText('paxCount', data.pax || 'N/A');
         this.updateElementText('paymentStatus', data.payment?.status || 'N/A');
-
         const actionButtons = document.getElementById('actionButtons');
         if (actionButtons) {
           const reservationStatus = data.reservation?.status;

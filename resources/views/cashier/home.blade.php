@@ -93,38 +93,6 @@
             transform: scale(0.98);
         }
 
-        .modal-enter {
-            animation: modalEnter 0.3s ease-out;
-        }
-
-        .modal-exit {
-            animation: modalExit 0.3s ease-in;
-        }
-
-        @keyframes modalEnter {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        @keyframes modalExit {
-            from {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            to {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-        }
-
         .overflow-y-auto::-webkit-scrollbar {
             width: 6px;
         }
@@ -169,38 +137,6 @@
 
             100% {
                 transform: rotate(360deg);
-            }
-        }
-
-        .table-available {
-            animation: pulse-green 2s infinite;
-        }
-
-        .table-occupied {
-            animation: pulse-red 2s infinite;
-        }
-
-        @keyframes pulse-green {
-
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
-            }
-
-            50% {
-                box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
-            }
-        }
-
-        @keyframes pulse-red {
-
-            0%,
-            100% {
-                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
-            }
-
-            50% {
-                box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
             }
         }
 
@@ -298,7 +234,8 @@
                         data-table-number="{{ $table->table_number }}" data-table-capacity="{{ $table->capacity }}"
                         data-occupied="{{ $isOccupied ? '1' : '0' }}">
                         <div class="flex justify-center">
-                            <div class="relative h-40 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center">
+                            <div
+                                class="relative h-40 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center {{ $isOccupied ? 'table-occupied' : 'table-available' }}">
                                 <div class="absolute mt-2 -top-1 px-3 bg-gray-200 text-black text-xs rounded-full shadow">
                                     {{ $table->capacity }} Pax
                                 </div>
@@ -306,7 +243,7 @@
                                 <div class="flex flex-col items-center mt-6">
                                     <div
                                         class="w-20 h-20 rounded-full {{ $isOccupied ? 'bg-red-600' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
-                                        <span class="text-lg font-semibold">Table-{{ $table->table_number }}</span>
+                                        <span class="text-lg font-semibold">T-{{ $table->table_number }}</span>
                                     </div>
 
                                     @if($isOccupied)
@@ -315,7 +252,7 @@
                                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                         <path stroke-linecap="round" stroke-linejoin="round"
-                                                                            d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
+                                                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                     </svg>
                                                                     <span class="countdown" data-seconds="{{ $table->remaining_seconds }}">
                                                                         {{ sprintf(
@@ -331,7 +268,7 @@
                                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                                                         viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                                                         <path stroke-linecap="round" stroke-linejoin="round"
-                                                                            d="M12 6v6l4 2m0-10a9 9 0 1 0 9 9 9 9 0 0 0-9-9z" />
+                                                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                                     </svg>
                                                                     <span class="countup" data-seconds="{{ $table->elapsed_seconds }}">
                                                                         {{ sprintf(
@@ -1096,57 +1033,58 @@
             const savedName = savedData ? savedData.name : '';
 
             const modalHtml = `
-            <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                <div class="bg-white rounded-lg p-6 w-96 max-w-sm mx-4">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900">Customer Information</h3>
-                        <button id="closeCustomerInfoModal" class="text-gray-400 hover:text-gray-600">X</button>
-                    </div>
-                    
-                    <div class="mb-4 p-3 bg-blue-50 rounded-lg">
-                        <p class="text-sm text-blue-800">
-                            <strong>Item:</strong> ${itemName}
-                        </p>
-                        <p class="text-xs text-blue-600 mt-1">
-                            Customer information is required for this discount
-                        </p>
-                    </div>
-                    
-                    <form id="customerInfoForm" class="space-y-4">
-                        <input type="hidden" name="item_name" value="${itemName}">
-                        <input type="hidden" name="item_index" value="${itemIndex}">
-                        <input type="hidden" name="customer_type" value="${discountType}">
-                        
-                        <div>
-                            <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
-                                Customer Name <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="customerName" name="name" required value="${savedName}"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                                placeholder="Enter customer name">
-                            <div id="nameError" class="text-red-500 text-xs mt-1 hidden">Customer name is required</div>
-                        </div>
-
-                        <div>
-                            <label for="customerIdType" class="block text-sm font-medium text-gray-700 mb-1">
-                                ID Type <span class="text-red-500">*</span>
-                            </label>
-                            <input type="text" id="customerIdType" name="id_type" value="${savedData ? savedData.id_type || idTypeValue : idTypeValue}" readonly
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed">
-                        </div>
-                        
-                        <div class="flex justify-end space-x-3 mt-6">
-                            <button type="button" id="cancelCustomerInfo" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md">
-                                Close
-                            </button>
-                            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
-                                Save
-                            </button>
-                        </div>
-                    </form>
-                </div>
+    <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 w-96 max-w-sm mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold text-gray-900">Customer Information</h3>
+                <button id="closeCustomerInfoModal" class="text-gray-400 hover:text-gray-600">X</button>
             </div>
-            `;
+            
+            <div class="mb-4 p-3 bg-blue-50 rounded-lg">
+                <p class="text-sm text-blue-800">
+                    <strong>Item:</strong> ${itemName}
+                </p>
+                <p class="text-xs text-blue-600 mt-1">
+                    Customer information is required for this discount
+                </p>
+            </div>
+            
+            <form id="customerInfoForm" class="space-y-4">
+                <input type="hidden" name="item_name" value="${itemName}">
+                <input type="hidden" name="item_index" value="${itemIndex}">
+                <input type="hidden" name="customer_type" value="${discountType}">
+                
+                <div>
+                    <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
+                        Customer Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="customerName" name="name" required value="${savedName}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="Enter customer name"
+                        oninput="this.value = this.value.replace(/[0-9]/g, '')">
+                    <div id="nameError" class="text-red-500 text-xs mt-1 hidden">Customer name is required</div>
+                </div>
+
+                <div>
+                    <label for="customerIdType" class="block text-sm font-medium text-gray-700 mb-1">
+                        ID Type <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="customerIdType" name="id_type" value="${savedData ? savedData.id_type || idTypeValue : idTypeValue}" readonly
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-700 cursor-not-allowed">
+                </div>
+                
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" id="cancelCustomerInfo" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md">
+                        Close
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    `;
 
             const existingModal = document.getElementById('customerInfoModal');
             if (existingModal) {
@@ -2082,7 +2020,7 @@
         if (window.app && window.app.submitPayment) {
             window.app.submitPayment(event);
         }
-    }   
+    }
 
 </script>
 

@@ -19,31 +19,23 @@ Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])-
 Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUnavailableTimes'])->name('customer.unavailable-times');
 Route::get('/customer/check-availability', [CustomerController::class, 'checkAvailability'])->name('customer.checkAvailability');
 
-Route::get('/file-serve/{path}', function ($path) {
-    $folders = [
-        'jeongol_menu',
-        'payment_proofs',
-        'profile_pictures',
-    ];
-
-    $possiblePaths = [];
-
-    foreach ($folders as $folder) {
-        $folderPath = $folder ? $folder . '/' : '';
-        $possiblePaths = array_merge($possiblePaths, [
-            storage_path("app/public/{$folderPath}{$path}"),
-            public_path("storage/{$folderPath}{$path}"),
-            base_path("storage/app/public/{$folderPath}{$path}"),
-        ]);
+Route::get('/file-serve/{folder}/{filename}', function ($folder, $filename) {
+   
+    $allowedFolders = ['jeongol_menu', 'payment_proofs', 'profile_pictures'];
+    if (!in_array($folder, $allowedFolders)) {
+        abort(404, 'Folder not allowed.');
     }
 
-    foreach ($possiblePaths as $filePath) {
-        if (file_exists($filePath) && is_readable($filePath)) {
-            return Response::file($filePath);
-        }
+   
+    $filePath = storage_path("app/public/{$folder}/{$filename}");
+
+    
+    if (!file_exists($filePath) || !is_readable($filePath)) {
+        abort(404, 'File not found.');
     }
-    abort(404, 'File not found.');
-})->where('path', '.*');
+
+    return Response::file($filePath);
+});
 
 
 Route::middleware('guest')->group(function () {
