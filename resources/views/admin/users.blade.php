@@ -400,7 +400,6 @@
 <script>
     $(document).ready(function () {
 
-        // Modal functions for delete, restore, and force delete
         window.showDeleteModal = function (id, itemName) {
             try {
                 const deleteItemNameElement = document.getElementById('deleteItemName');
@@ -479,7 +478,6 @@
             }
         };
 
-        // Validation functions
         function validateField(field, errorMessage = '') {
             const $field = $(field);
             const $feedback = $field.siblings('.invalid-feedback');
@@ -502,7 +500,6 @@
             $('#submitBtn').prop('disabled', false);
         }
 
-        // Password match validation
         const password = document.getElementById('password');
         const confirmPassword = document.getElementById('confirm_password');
         const warning = document.getElementById('password-warning');

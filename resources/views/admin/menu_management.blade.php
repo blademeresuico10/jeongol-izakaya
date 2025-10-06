@@ -433,10 +433,88 @@
 @include('admin.layouts.script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    $(document).ready(function () {
-        let currentMenuId = null; // Store the current menu ID globally
 
-        // Menu Ingredients Modal - Load and Display
+    window.showDeleteModal = function (id, itemName) {
+        try {
+            const deleteItemNameElement = document.getElementById('deleteItemName');
+            const deleteFormElement = document.getElementById('deleteForm');
+
+            if (deleteItemNameElement && deleteFormElement) {
+                deleteItemNameElement.textContent = itemName;
+                deleteFormElement.action = "{{ url('deletemenu') }}/" + id;
+                $('#deleteConfirmModal').modal('show');
+            } else {
+                console.error('Delete modal elements not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to show delete confirmation. Please refresh the page.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error showing delete modal:', error);
+        }
+    };
+
+    window.showRestoreModal = function (id, itemName) {
+        try {
+            const restoreItemNameElement = document.getElementById('restoreItemName');
+            const restoreFormElement = document.getElementById('restoreForm');
+
+            if (restoreItemNameElement && restoreFormElement) {
+                restoreItemNameElement.textContent = itemName;
+                restoreFormElement.action = "{{ url('restoremenu') }}/" + id;
+                $('#restoreConfirmModal').modal('show');
+            } else {
+                console.error('Restore modal elements not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to show restore confirmation. Please refresh the page.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error showing restore modal:', error);
+        }
+    };
+
+    window.showForceDeleteModal = function (id, itemName) {
+        try {
+            const forceDeleteItemNameElement = document.getElementById('forceDeleteItemName');
+            const forceDeleteFormElement = document.getElementById('forceDeleteForm');
+
+            if (forceDeleteItemNameElement && forceDeleteFormElement) {
+                forceDeleteItemNameElement.textContent = itemName;
+                forceDeleteFormElement.action = "{{ url('forcedeletemenu') }}/" + id;
+                $('#forceDeleteConfirmModal').modal('show');
+            } else {
+                console.error('Force delete modal elements not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to show permanent delete confirmation. Please refresh the page.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error showing force delete modal:', error);
+        }
+    };
+
+    $(document).ready(function () {
+        let currentMenuId = null;
+
         $('#menuIngredientsModal').on('show.bs.modal', function () {
             const content = document.getElementById('ingredientsContent');
             content.innerHTML = `
@@ -538,7 +616,6 @@
                 });
         });
 
-        // Save Ingredients Changes
         $('#saveIngredientsBtn').on('click', function () {
             const updates = [];
             let hasError = false;
@@ -603,7 +680,6 @@
                 });
         });
 
-        // Remove Ingredient
         $(document).on('click', '.removeIngredientBtn', function () {
             const ingredientId = $(this).data('id');
             const row = $(this).closest('tr');
@@ -660,7 +736,6 @@
             });
         });
 
-        // Add Ingredient Button Click
         $(document).on('click', '.addIngredientBtn', function () {
             currentMenuId = $(this).data('menu-id');
             const menuName = $(this).data('menu-name');
@@ -684,7 +759,6 @@
                         return;
                     }
 
-                    // Group ingredients by category
                     const grouped = data.ingredients.reduce((acc, ing) => {
                         if (!acc[ing.category]) acc[ing.category] = [];
                         acc[ing.category].push(ing);
@@ -711,14 +785,12 @@
                 });
         });
 
-        // Update unit label when ingredient is selected
         $(document).on('change', '#ingredientSelect', function () {
             const selected = $(this).find('option:selected');
             const unit = selected.data('unit');
             $('#unitLabel').text(unit ? `(${unit})` : '');
         });
 
-        // Add Ingredient Form Submit
         $('#addIngredientForm').on('submit', function (e) {
             e.preventDefault();
 
@@ -755,12 +827,10 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Close the add ingredient modal
                         $('#addIngredientForm')[0].reset();
                         $('#unitLabel').text('');
                         $('#addIngredientModal').modal('hide');
 
-                        // Show success message
                         Swal.fire({
                             icon: 'success',
                             title: 'Success',
@@ -769,7 +839,6 @@
                             showConfirmButton: false
                         });
 
-                        // Reload only the ingredients content (not the whole page)
                         const content = document.getElementById('ingredientsContent');
                         content.innerHTML = `
                     <div class="text-center py-3">
@@ -863,14 +932,12 @@
                 });
         });
 
-        // Reset form when modal is hidden
         $('#addIngredientModal').on('hidden.bs.modal', function () {
             $('#addIngredientForm')[0].reset();
             $('#unitLabel').text('');
         });
     });
 
-    // CSS to hide spinner arrows
     const style = document.createElement('style');
     style.textContent = `
     input[type="number"].ingredient-qty::-webkit-outer-spin-button,

@@ -87,7 +87,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/editmenu/{id}', [AdminController::class, 'editMenu'])->name('admin.editmenu');
         Route::put('/updatemenu/{id}', [AdminController::class, 'updateMenu'])->name('admin.updatemenu');
         Route::delete('/deletemenu/{id}', [AdminController::class, 'deleteMenu'])->name('admin.deleteMenu');
-        Route::post('/deletemenu/{id}', [AdminController::class, 'deleteMenu']);
         Route::patch('/restoremenu/{id}', [AdminController::class, 'restoreMenu'])->name('admin.restoreMenu');
         Route::delete('/forcedeletemenu/{id}', [AdminController::class, 'forceDeleteMenu'])->name('admin.forceDeleteMenu');
         Route::get('/menu_ingredients', [AdminController::class, 'menuIngredients'])->name('admin.menu_ingredients');
@@ -150,11 +149,9 @@ Route::middleware('auth')->group(function () {
 
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
-        Route::get('/reports/sales', [ReportsController::class, 'salesReport'])->name('reports.sales');
-        Route::get('/reports/revenue', [ReportsController::class, 'revenueReport'])->name('reports.revenue');
-        Route::get('/reports/reservations', [ReportsController::class, 'reservationReport'])->name('reports.reservations');
-        Route::get('/reports/staff', [ReportsController::class, 'staffReport'])->name('reports.staff');
-        Route::get('/reports/stock', [ReportsController::class, 'stockReport'])->name('reports.stock');
+        Route::get('/reports/sales', [ReportsController::class, 'salesReport'])->name('admin.sales_report');
+        Route::get('/reports/transaction', [ReportsController::class, 'transactionReport'])->name('admin.transaction_reports');
+        Route::get('/reports/stock', [ReportsController::class, 'stockReport'])->name('admin.stock_reports');
         Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');
         Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('admin.reports.export-csv');
     });

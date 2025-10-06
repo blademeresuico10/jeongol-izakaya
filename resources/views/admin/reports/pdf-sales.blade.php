@@ -144,83 +144,76 @@
 </head>
 
 <body>
-    <!-- Header -->
     <div class="header">
-        <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="report-title">Sales Report</div>
+        <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="date-range">{{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}</div>
-        <div class="generated-info">Generated on {{ $generatedAt->format('F j, Y \a\t g:i A') }}</div>
     </div>
 
-    <!-- Summary Section -->
-    <div class="summary-section">
-        <div class="section-title">Executive Summary</div>
-        <div class="summary-grid">
-            <div class="summary-card">
-                <div class="summary-label">Total Sales</div>
-                <div class="summary-value currency">{{ number_format($totalSales, 2) }}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Total Customers</div>
-                <div class="summary-value">{{ number_format($totalPax) }}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-label">Transactions</div>
-                <div class="summary-value">{{ number_format($transactionCount) }}</div>
-            </div>
-        </div>
-
-        <div style="text-align: center; margin-top: 15px;">
-            <div style="display: inline-block; margin: 0 20px;">
-                <div class="summary-label">Total Discounts Applied</div>
-                <div class="summary-value currency">{{ number_format($totalDiscounts, 2) }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sales Transactions Section -->
     <div class="section-title">Transaction Details</div>
     @if($sales->count() > 0)
         <table>
             <thead>
                 <tr>
-                    <th style="width: 12%;">Transaction #</th>
-                    <th style="width: 10%;">Date</th>
-                    <th style="width: 8%;">Time</th>
-                    <th style="width: 8%;">Table</th>
-                    <th style="width: 15%;">Customer</th>
-                    <th style="width: 6%;">Pax</th>
-                    <th style="width: 12%;">Subtotal</th>
-                    <th style="width: 10%;">Discount</th>
-                    <th style="width: 12%;">Total</th>
-                    <th style="width: 7%;">Payment</th>
+                    <th>Transaction #</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Customer</th>
+                    <th>Table / Type</th>
+                    <th>Pax</th>
+                    <th class="text-right">Subtotal (₱)</th>
+                    <th class="text-right">Discount (₱)</th>
+                    <th class="text-right">Advance (₱)</th>
+                    <th class="text-right">Total (₱)</th>
+                    <th>Payment</th>
+                    <th>Cashier</th>
+                    <th>Status</th>
                 </tr>
             </thead>
+
             <tbody>
                 @foreach($sales as $sale)
                     <tr>
                         <td>{{ $sale->transaction_no ?? '#' . $sale->id }}</td>
-                        <td>{{ $sale->date }}</td>
-                        <td>{{ $sale->time ?? 'N/A' }}</td>
-                        <td class="text-center">{{ $sale->table_number }}</td>
-                        <td>{{ $sale->customer_name }}</td>
-                        <td class="text-center">{{ $sale->pax }}</td>
-                        <td class="text-right currency">{{ number_format($sale->subtotal, 2) }}</td>
+                        <td>{{ $sale->created_at ? $sale->created_at->format('Y-m-d') : 'N/A' }}</td>
+                        <td>{{ $sale->created_at ? $sale->created_at->format('h:i A') : 'N/A' }}</td>
+                        <td>{{ $sale->customer->name ?? 'Walk-in' }}</td>
+                        <td>
+                            @if($sale->reservation)
+                                Table {{ $sale->reservation->table_number }}
+                            @elseif($sale->walkin)
+                                Walk-in
+                            @else
+                                N/A
+                            @endif
+                        </td>
+                        <td class="text-center">
+                            {{ $sale->reservation->pax ?? $sale->walkin->pax ?? '-' }}
+                        </td>
+                        <td class="text-right currency">{{ number_format($sale->orders_total, 2) }}</td>
                         <td class="text-right currency">{{ number_format($sale->discount_total ?? 0, 2) }}</td>
-                        <td class="text-right currency">{{ number_format($sale->total, 2) }}</td>
-                        <td class="text-center">{{ $sale->payment_method ?? 'Cash' }}</td>
+                        <td class="text-right currency">{{ number_format($sale->advance_payment ?? 0, 2) }}</td>
+                        <td class="text-right currency">{{ number_format($sale->grand_total, 2) }}</td>
+                        <td class="text-center">{{ ucfirst($sale->payment_method ?? 'Cash') }}</td>
+                        <td>{{ $sale->cashier->name ?? 'N/A' }}</td>
+                        <td class="text-center">
+                            @if($sale->status === 'paid')
+                                <span style="color: green;">Paid</span>
+                            @elseif($sale->status === 'pending')
+                                <span style="color: orange;">Pending</span>
+                            @else
+                                <span style="color: gray;">{{ ucfirst($sale->status ?? 'N/A') }}</span>
+                            @endif
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
+
         </table>
     @else
         <div class="no-data">No transactions found for the selected period.</div>
     @endif
 
-    <!-- Footer -->
-    <div class="footer">
-        <div>Generated by Jeongol Izakaya Management System</div>
-    </div>
 </body>
 
 </html>

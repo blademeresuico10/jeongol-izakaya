@@ -176,86 +176,129 @@
             </div>
 
             <div class="row g-4 mb-4">
-
-                <!-- Ingredients Table (main column) -->
                 <div class="col-xl-8 col-lg-12">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
-                        <div class="card-header bg-white border-0 py-3 d-flex align-items-center">
-                            <div class="d-flex align-items-center">
-                                <i class="fas fa-boxes fs-5 me-3" style="color: #321ee9;"></i>
-                                <h5 class="card-title mb-0 fw-bold text-gray-800">Ingredients Stock</h5>
+                        <div class="card-header bg-white border-0 py-3">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="d-flex align-items-center">
+                                    <div class="p-2 rounded-3 me-3" style="background-color: rgba(50, 30, 233, 0.1);">
+                                        <i class="fas fa-boxes fs-5" style="color: #321ee9;"></i>
+                                    </div>
+                                    <h5 class="card-title mb-0 fw-bold text-gray-800">Ingredients Stock</h5>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-body p-3">
-                            <div class="table-responsive">
-                                <table class="table table-bordered table-hover align-middle mb-0">
-                                    <thead class="bg-blue-700 text-white">
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Unit</th>
-                                            <th>Stock (kg)</th>
-                                            <th>Level</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($ingredients as $index => $ingredient)
-                                            <tr>
-                                                <td>{{ $ingredient->name }}</td>
-                                                <td>{{ $ingredient->unit }}</td>
-                                                <td>{{ number_format($ingredient->stocks, 2) }}</td>
-                                                <td></td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
+                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                            @forelse ($ingredients as $ingredient)
+                                <div class="d-flex align-items-center justify-content-between p-3 mb-2 rounded-3 border"
+                                    style="transition: all 0.2s ease; background-color: #fafbfc;">
+                                    <div class="d-flex align-items-center flex-grow-1">
+                                        <div class="me-3">
+                                            @if($ingredient->image)
+                                                <img src="{{ asset('storage/ingredients/' . $ingredient->image) }}"
+                                                    alt="{{ $ingredient->name }}" class="rounded-circle"
+                                                    style="width: 50px; height: 50px; object-fit: cover; border: 2px solid rgba(50, 30, 233, 0.1);">
+                                            @else
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                                    style="width: 50px; height: 50px; background-color: rgba(50, 30, 233, 0.08);">
+                                                    <i class="fas fa-box" style="color: #321ee9; font-size: 18px;"></i>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-semibold" style="color: #1f2937;">{{ $ingredient->name }}
+                                            </h6>
+                                            <small class="text-muted">{{ $ingredient->category }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3">
+                                        <div class="text-end me-2">
+                                            <div class="fw-bold" style="color: #1f2937; font-size: 18px;">
+                                                {{ $ingredient->stocks }}</div>
+                                            <small class="text-muted">{{ $ingredient->unit }}</small>
+                                        </div>
+                                        <div>
+                                            @if($ingredient->stocks < 10)
+                                                <span class="badge bg-danger bg-opacity-10 text-white px-3 py-2">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>Low Stock
+                                                </span>
+                                            @elseif($ingredient->stocks < 50)
+                                                <span class="badge bg-warning bg-opacity-10 text-white px-3 py-2">
+                                                    <i class="fas fa-exclamation-circle me-1"></i>Medium
+                                                </span>
+                                            @else
+                                                <span class="badge bg-success bg-opacity-10 text-white px-3 py-2">
+                                                    <i class="fas fa-check-circle me-1"></i>Good
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="text-center py-5">
+                                    <div class="mb-3">
+                                        <i class="fas fa-box-open" style="font-size: 3rem; color: #e5e7eb;"></i>
+                                    </div>
+                                    <p class="text-muted mb-0">No ingredients found</p>
+                                </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>
 
                 <div class="col-xl-4 col-lg-12">
-                    <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden">
-                        <div class="card-header bg-white border-0 py-3 d-flex align-items-center">
-                            <div class="d-flex align-items-center">
-                                <div class="p-2 rounded-3 me-3">
-                                    <i class="fas fa-clock fs-5" style="color: #4f46e5;"></i>
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-0 py-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <div class="p-2 rounded-3 me-3" style="background-color: rgba(50, 30, 233, 0.1);">
+                                        <i class="fas fa-clock fs-5" style="color: #321ee9;"></i>
+                                    </div>
+                                    <h5 class="card-title mb-0 fw-bold text-gray-800">Today's Activity</h5>
                                 </div>
-                                <h5 class="card-title mb-0 fw-bold text-gray-800">Today's Activity</h5>
                             </div>
                         </div>
 
-                        <div class="card-body" style="overflow-y: auto;">
+                        <div class="card-body" style="max-height: 500px; overflow-y: auto;">
                             @if($recentActivities->isNotEmpty())
                                 <div class="d-flex flex-column gap-2">
                                     @foreach($recentActivities as $activity)
-                                        <div class="card shadow-sm border-0">
-                                            <div class="card-body d-flex align-items-center py-3">
-                                                <div class="me-3 d-flex justify-content-center align-items-center rounded-circle"
-                                                    style="background-color: {{ $activity['color'] }}33; width: 42px; height: 42px;">
-                                                    <i class="fas {{ $activity['icon'] }}"
-                                                        style="color: {{ $activity['color'] }};"></i>
-                                                </div>
+                                        <div class="d-flex align-items-start p-3 rounded-3 border"
+                                            style="transition: all 0.2s ease; background-color: #fafbfc;">
+                                            <div class="me-3 d-flex justify-content-center align-items-center rounded-circle flex-shrink-0"
+                                                style="background-color: {{ $activity['color'] }}15; width: 42px; height: 42px;">
+                                                <i class="fas {{ $activity['icon'] }}"
+                                                    style="color: {{ $activity['color'] }}; font-size: 16px;"></i>
+                                            </div>
 
-                                                <div class="flex-grow-1">
-                                                    <div class="fw-semibold text-dark">{{ $activity['type'] }}</div>
-                                                    <div class="small text-muted">{{ $activity['name'] }}</div>
-                                                    <div class="text-secondary small mt-1">
-                                                        {{ $activity['status'] }} • {{ $activity['time'] }}
-                                                    </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-semibold mb-1" style="color: #1f2937; font-size: 14px;">
+                                                    {{ $activity['type'] }}
+                                                </div>
+                                                <div class="text-muted mb-2" style="font-size: 13px;">
+                                                    {{ $activity['name'] }}
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2" style="font-size: 12px;">
+                                                    <span
+                                                        class="badge bg-light text-dark px-2 py-1">{{ $activity['status'] }}</span>
+                                                    <span class="text-muted">{{ $activity['time'] }}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     @endforeach
                                 </div>
                             @else
-                                <div class="text-center text-muted py-5">
-                                    <i class="fas fa-inbox fa-2x mb-2"></i>
-                                    <p class="mb-0 small">No activities recorded today.</p>
+                                <div class="text-center py-5">
+                                    <div class="mb-3">
+                                        <i class="fas fa-inbox" style="font-size: 3rem; color: #e5e7eb;"></i>
+                                    </div>
+                                    <p class="text-muted mb-0">No activities recorded today</p>
                                 </div>
                             @endif
                         </div>
                     </div>
                 </div>
+
             </div>
 
         </div>
