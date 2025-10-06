@@ -11,11 +11,11 @@ class transaction extends Model
 
     protected $fillable = [
         'transaction_no',
-        'orders_total',      
+        'orders_total',
         'discount_total',
         'advance_payment',
-        'grand_total',       
-        'to_pay',           
+        'grand_total',
+        'to_pay',
         'cash_received',
         'change',
         'payment_method',
@@ -27,11 +27,11 @@ class transaction extends Model
     ];
 
     protected $casts = [
-        'orders_total' => 'decimal:2',     
+        'orders_total' => 'decimal:2',
         'discount_total' => 'decimal:2',
         'advance_payment' => 'decimal:2',
-        'grand_total' => 'decimal:2',      
-        'to_pay' => 'decimal:2',          
+        'grand_total' => 'decimal:2',
+        'to_pay' => 'decimal:2',
         'cash_received' => 'decimal:2',
         'change' => 'decimal:2',
     ];
@@ -59,5 +59,10 @@ class transaction extends Model
     public function walkin()
     {
         return $this->belongsTo(walkin::class);
+    }
+
+    public function transactionDetails()
+    {
+        return $this->hasMany(transactionDetail::class);
     }
 }

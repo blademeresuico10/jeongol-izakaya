@@ -149,7 +149,7 @@ Route::middleware('auth')->group(function () {
 
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
-        Route::get('/reports/sales', [ReportsController::class, 'salesReport'])->name('admin.sales_report');
+        Route::get('/reports/sales/pdf', [ReportsController::class, 'salesReportPdf'])->name('admin.sales_report.pdf');
         Route::get('/reports/transaction', [ReportsController::class, 'transactionReport'])->name('admin.transaction_reports');
         Route::get('/reports/stock', [ReportsController::class, 'stockReport'])->name('admin.stock_reports');
         Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');

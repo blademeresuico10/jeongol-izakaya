@@ -77,19 +77,26 @@
 
 <script>
     document.querySelectorAll('[data-export]').forEach(button => {
-    button.addEventListener('click', () => {
-        const type = button.getAttribute('data-export');
-        const filter = document.querySelector(`[data-filter="${type}"]`).value;
+        button.addEventListener('click', () => {
+            const type = button.getAttribute('data-export');
+            const filter = document.querySelector(`[data-filter="${type}"]`).value;
 
-        const routes = {
-            sales: "{{ route('admin.sales_report') }}",
-            transaction: "{{ route('admin.transaction_reports') }}",
-            stock: "{{ route('admin.stock_reports') }}"
-        };
+            const routes = {
+                sales: "{{ route('admin.sales_report.pdf') }}",
+                transaction: "{{ route('admin.transaction_reports') }}",
+                stock: "{{ route('admin.stock_reports') }}"
+            };
 
-        if (routes[type]) {
-            window.location.href = `${routes[type]}?filter=${filter}`;
-        }
+            if (routes[type]) {
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = `${routes[type]}?filter=${filter}`;
+                document.body.appendChild(iframe);
+                
+                setTimeout(() => {
+                    document.body.removeChild(iframe);
+                }, 5000);
+            }
+        });
     });
-});
 </script>

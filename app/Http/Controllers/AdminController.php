@@ -1589,12 +1589,27 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Discount removed successfully!');
     }
 
+
     public function ewallet_management()
     {
         $ewallet_details = DB::table('ewallet_details')->get();
-        return view('admin.ewallet_management', compact('ewallet_details'));
-    }
 
+        $receipts = DB::table('reservation_payment_details')
+            ->leftJoin('reservations', 'reservation_payment_details.reservation_id', '=', 'reservations.id')
+            ->leftJoin('customers', 'reservations.customer_id', '=', 'customers.id')
+            ->whereNotNull('reservation_payment_details.payment_proof')
+            ->whereIn('reservation_payment_details.payment_method', ['gcash', 'maya'])
+            ->select(
+                'reservation_payment_details.id',
+                'reservation_payment_details.payment_proof',
+                'reservation_payment_details.created_at as submitted_at',
+                DB::raw('COALESCE(customers.name, "Unknown Customer") as customer_name')
+            )
+            ->orderBy('reservation_payment_details.created_at', 'desc')
+            ->get();
+
+        return view('admin.ewallet_management', compact('ewallet_details', 'receipts'));
+    }
     public function ewallet_store(Request $request)
     {
         $request->validate([

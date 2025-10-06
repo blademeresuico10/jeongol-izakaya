@@ -39,7 +39,7 @@
                                     <td class="border px-2 py-1">
                                         <span
                                             class="px-2 py-1 rounded text-xs 
-                                                                {{ $gcash->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                                                        {{ $gcash->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                                             {{ $gcash->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
@@ -93,16 +93,14 @@
                                     <td class="border px-2 py-1">
                                         <span
                                             class="px-2 py-1 rounded text-xs 
-                                                                {{ $maya->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                                                        {{ $maya->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                                             {{ $maya->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
                                     <td class="border px-2 py-1 text-center">
                                         @if($maya->is_active)
-                                            <!-- Active -> No button -->
                                             <span class="text-xs text-gray-500 italic">—</span>
                                         @else
-                                            <!-- Inactive -> show Activate -->
                                             <form action="{{ route('ewallet.activate', $maya->id) }}" method="POST"
                                                 class="inline activate-form">
                                                 @csrf
@@ -118,6 +116,53 @@
                                 </tr>
                             @endforeach
                         </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Receipt Submissions Table -->
+        <div class="flex justify-center mt-8 px-6 mb-8">
+            <div class="w-4/5 border rounded-lg">
+                <div class="bg-gray-200 flex justify-between items-center text-black px-4 py-2">
+                    <h6 class="font-semibold">Receipt Submissions</h6>
+                </div>
+
+                <div class="p-1">
+                    <table class="w-full text-sm border border-gray-300">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="border px-2 py-1">Receipt</th>
+                                <th class="border px-2 py-1">Customer Name</th>
+                                <th class="border px-2 py-1">DateTime Submitted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse ($receipts as $receipt)
+                                <tr>
+                                    <td class="border px-2 py-1 text-center">
+                                        @if ($receipt->payment_proof)
+                                            <img src="{{ url('/file-serve/payment_proofs/' . basename($receipt->payment_proof)) }}"
+                                                alt="Receipt Image" class="mx-auto rounded shadow-md"
+                                                style="max-width: 120px; max-height: 120px; object-fit: cover;">
+                                        @else
+                                            <span class="text-gray-400 italic">No Image</span>
+                                        @endif
+                                    </td>
+                                    <td class="border px-2 py-1">{{ $receipt->customer_name }}</td>
+                                    <td class="border px-2 py-1">
+                                        {{ \Carbon\Carbon::parse($receipt->submitted_at)->format('M d, Y h:i A') }}
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="3" class="border px-2 py-1 text-center text-gray-500 italic">
+                                        No receipts submitted yet
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+
                     </table>
                 </div>
             </div>
@@ -165,6 +210,7 @@
                 </form>
             </div>
         </div>
+
     </div>
 </div>
 

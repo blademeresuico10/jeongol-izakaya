@@ -9,6 +9,7 @@ use App\Models\transactionDetail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportsController extends Controller
 {
@@ -19,50 +20,87 @@ class ReportsController extends Controller
         return view('admin.reports');
     }
 
-    public function salesReport(Request $request)
+    public function salesReportPdf(Request $request)
     {
-        $filter = $request->query('filter', 'daily');
+        try {
+            $filter = $request->query('filter', 'daily');
 
-        switch ($filter) {
-            case 'weekly':
-                $dateFrom = now()->startOfWeek();
-                $dateTo = now()->endOfWeek();
-                break;
-            case 'monthly':
-                $dateFrom = now()->startOfMonth();
-                $dateTo = now()->endOfMonth();
-                break;
-            case 'yearly':
-                $dateFrom = now()->startOfYear();
-                $dateTo = now()->endOfYear();
-                break;
-            default:
-                $dateFrom = now()->startOfDay();
-                $dateTo = now()->endOfDay();
-                break;
+            switch ($filter) {
+                case 'weekly':
+                    $dateFrom = now()->startOfWeek();
+                    $dateTo = now()->endOfWeek();
+                    $filterDate = $dateFrom->format('M d, Y') . ' - ' . $dateTo->format('M d, Y');
+                    break;
+                case 'monthly':
+                    $dateFrom = now()->startOfMonth();
+                    $dateTo = now()->endOfMonth();
+                    $filterDate = $dateFrom->format('F Y');
+                    break;
+                case 'yearly':
+                    $dateFrom = now()->startOfYear();
+                    $dateTo = now()->endOfYear();
+                    $filterDate = $dateFrom->format('Y');
+                    break;
+                default:
+                    $dateFrom = now()->startOfDay();
+                    $dateTo = now()->endOfDay();
+                    $filterDate = $dateFrom->format('F j, Y');
+                    break;
+            }
+
+            $transactions = transaction::with(['customer', 'reservation', 'walkin', 'cashier', 'transactionDetails'])
+                ->whereBetween('created_at', [$dateFrom, $dateTo])
+                ->orderBy('created_at', 'desc')
+                ->get();
+
+            $grossSales = $transactions->sum('orders_total') ?? 0;
+            $netSales = $transactions->sum('grand_total') ?? 0;
+            $totalDiscounts = $transactions->sum('discount_total') ?? 0;
+
+            $totalCustomers = $transactions->sum(function ($transaction) {
+                return $transaction->reservation->pax ?? $transaction->walkin->pax ?? 0;
+            });
+
+            // Collect all transaction details
+            $allDetails = [];
+            foreach ($transactions as $transaction) {
+                foreach ($transaction->transactionDetails as $detail) {
+                    $allDetails[] = [
+                        'item_name' => $detail->item_name,
+                        'quantity' => $detail->quantity,
+                    ];
+                }
+            }
+
+            // Group by item name
+            $groupedSales = collect($allDetails)->groupBy('item_name')->map(function ($items, $itemName) {
+                return [
+                    'item_name' => $itemName,
+                    'quantity' => $items->sum('quantity'),
+                    'total' => 0,
+                ];
+            })->values();
+
+            $pdf = Pdf::loadView('admin.reports.pdf-sales', compact(
+                'filter',
+                'filterDate',
+                'groupedSales',
+                'grossSales',
+                'netSales',
+                'totalDiscounts',
+                'totalCustomers',
+                'dateFrom',
+                'dateTo'
+            ))->setPaper('a4', 'landscape');
+
+            $filename = 'sales-report-' . $dateFrom->format('Y-m-d') . '-to-' . $dateTo->format('Y-m-d') . '.pdf';
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            \Log::error('PDF Generation Error: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
         }
-
-        $sales = transaction::with(['customer', 'reservation', 'walkin', 'cashier'])
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->get();
-
-        $totalSales = $sales->sum('grand_total');
-        $totalDiscounts = $sales->sum('discount_total');
-        $transactionCount = $sales->count();
-        $totalPax = DB::table('reservations')
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->sum('pax');
-
-        return view('reports.pdf-sales', compact(
-            'filter',
-            'sales',
-            'totalSales',
-            'totalDiscounts',
-            'transactionCount',
-            'totalPax',
-            'dateFrom',
-            'dateTo'
-        ));
     }
 
     public function transactionReport(Request $request)

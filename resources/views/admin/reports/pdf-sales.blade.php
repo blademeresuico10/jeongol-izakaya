@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Sales Report - {{ $dateFrom->format('M d, Y') }} to {{ $dateTo->format('M d, Y') }}</title>
+    <title>Sales Report</title>
     <style>
         body {
             font-size: 12px;
@@ -147,68 +147,46 @@
     <div class="header">
         <div class="report-title">Sales Report</div>
         <div class="company-name">JEONGOL IZAKAYA</div>
-        <div class="date-range">{{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}</div>
+        <div class="date-range">As of {{ $filterDate }}</div>
     </div>
 
-    <div class="section-title">Transaction Details</div>
-    @if($sales->count() > 0)
+    @if($groupedSales->count() > 0)
         <table>
             <thead>
                 <tr>
-                    <th>Transaction #</th>
-                    <th>Date</th>
-                    <th>Time</th>
-                    <th>Customer</th>
-                    <th>Table / Type</th>
-                    <th>Pax</th>
-                    <th class="text-right">Subtotal (₱)</th>
-                    <th class="text-right">Discount (₱)</th>
-                    <th class="text-right">Advance (₱)</th>
+                    <th>Gross Sales</th>
+                    <th>Net Sales</th>
+                    <th>Total Discounted</th>
+                    <th>Total Customer</th>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
                     <th class="text-right">Total (₱)</th>
-                    <th>Payment</th>
-                    <th>Cashier</th>
-                    <th>Status</th>
                 </tr>
             </thead>
 
             <tbody>
-                @foreach($sales as $sale)
+                @foreach($groupedSales as $index => $sale)
                     <tr>
-                        <td>{{ $sale->transaction_no ?? '#' . $sale->id }}</td>
-                        <td>{{ $sale->created_at ? $sale->created_at->format('Y-m-d') : 'N/A' }}</td>
-                        <td>{{ $sale->created_at ? $sale->created_at->format('h:i A') : 'N/A' }}</td>
-                        <td>{{ $sale->customer->name ?? 'Walk-in' }}</td>
-                        <td>
-                            @if($sale->reservation)
-                                Table {{ $sale->reservation->table_number }}
-                            @elseif($sale->walkin)
-                                Walk-in
-                            @else
-                                N/A
-                            @endif
-                        </td>
-                        <td class="text-center">
-                            {{ $sale->reservation->pax ?? $sale->walkin->pax ?? '-' }}
-                        </td>
-                        <td class="text-right currency">{{ number_format($sale->orders_total, 2) }}</td>
-                        <td class="text-right currency">{{ number_format($sale->discount_total ?? 0, 2) }}</td>
-                        <td class="text-right currency">{{ number_format($sale->advance_payment ?? 0, 2) }}</td>
-                        <td class="text-right currency">{{ number_format($sale->grand_total, 2) }}</td>
-                        <td class="text-center">{{ ucfirst($sale->payment_method ?? 'Cash') }}</td>
-                        <td>{{ $sale->cashier->name ?? 'N/A' }}</td>
-                        <td class="text-center">
-                            @if($sale->status === 'paid')
-                                <span style="color: green;">Paid</span>
-                            @elseif($sale->status === 'pending')
-                                <span style="color: orange;">Pending</span>
-                            @else
-                                <span style="color: gray;">{{ ucfirst($sale->status ?? 'N/A') }}</span>
-                            @endif
-                        </td>
+                        @if($index === 0)
+                            <td rowspan="{{ $groupedSales->count() }}" class="text-right currency">
+                                {{ number_format($grossSales, 2) }}
+                            </td>
+                            <td rowspan="{{ $groupedSales->count() }}" class="text-right currency">
+                                {{ number_format($netSales, 2) }}
+                            </td>
+                            <td rowspan="{{ $groupedSales->count() }}" class="text-right currency">
+                                {{ number_format($totalDiscounts, 2) }}
+                            </td>
+                            <td rowspan="{{ $groupedSales->count() }}" class="text-center">
+                                {{ $totalCustomers }}
+                            </td>
+                        @endif
+                        <td>{{ $sale['item_name'] }}</td>
+                        <td class="text-center">{{ $sale['quantity'] }}</td>
+                        <td class="text-right currency">{{ number_format($sale['total'], 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
-
         </table>
     @else
         <div class="no-data">No transactions found for the selected period.</div>
