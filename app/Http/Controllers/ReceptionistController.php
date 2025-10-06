@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use App\Models\orders;
 use App\Models\reservationPayment;
 use App\Models\walkin;
+use App\Models\table;
 
 class ReceptionistController extends Controller
 {
@@ -21,33 +22,34 @@ class ReceptionistController extends Controller
     {
         $currentTime = Carbon::now();
 
-        $tables = \App\Models\table::with(['reservations' => function ($query) use ($currentTime) {
-            $query->where('status', 'Active')
-                ->where('started_at', '<=', $currentTime)
-                ->where('ended_at', '>=', $currentTime);
-        }, 'walkin' => function ($query) use ($currentTime) {
-            $query->where('status', 'Active')
-                ->where('started_at', '<=', $currentTime)
-                ->where('ended_at', '>=', $currentTime);
-        }])
-            ->get()
-            ->map(function ($table) {
-                $table->is_occupied = $table->reservations->isNotEmpty() || $table->walkin->isNotEmpty();
+        $tables = Table::with([
+            'reservation' => function ($query) use ($currentTime) {
+                $query->where('status', 'Active')
+                    ->where('started_at', '<=', $currentTime)
+                    ->where('ended_at', '>=', $currentTime);
+            },
+            'walkin' => function ($query) use ($currentTime) {
+                $query->where('status', 'Active')
+                    ->where('started_at', '<=', $currentTime)
+                    ->where('ended_at', '>=', $currentTime);
+            },
+        ])->get()->map(function ($table) {
+            $table->is_occupied = $table->reservation->isNotEmpty() || $table->walkin->isNotEmpty();
 
-                $table->reservation_id = $table->reservations->first()->id ?? null;
-                $table->reservation_status = $table->reservations->first()->status ?? null;
-                $table->reservation_started_at = $table->reservations->first()->started_at ?? null;
-                $table->reservation_ended_at = $table->reservations->first()->ended_at ?? null;
+            $table->reservation_id = $table->reservation->first()->id ?? null;
+            $table->reservation_status = $table->reservation->first()->status ?? null;
+            $table->reservation_started_at = $table->reservation->first()->started_at ?? null;
+            $table->reservation_ended_at = $table->reservation->first()->ended_at ?? null;
 
-                $table->walkin_id = $table->walkin->first()->id ?? null;
-                $table->walkin_status = $table->walkin->first()->status ?? null;
-                $table->walkin_started_at = $table->walkin->first()->started_at ?? null;
-                $table->walkin_ended_at = $table->walkin->first()->ended_at ?? null;
+            $table->walkin_id = $table->walkin->first()->id ?? null;
+            $table->walkin_status = $table->walkin->first()->status ?? null;
+            $table->walkin_started_at = $table->walkin->first()->started_at ?? null;
+            $table->walkin_ended_at = $table->walkin->first()->ended_at ?? null;
 
-                return $table;
-            });
+            return $table;
+        });
 
-        $reservations = Reservation::whereDate('started_at', Carbon::now()->toDateString())->get();
+        $reservation = reservation::whereDate('started_at', Carbon::now()->toDateString())->get();
         $walkin = walkin::whereDate('started_at', Carbon::now()->toDateString())->get();
 
         $menuItems = menu::all()->map(function ($item) {
@@ -61,11 +63,12 @@ class ReceptionistController extends Controller
         return view('receptionist.home', compact(
             'tables',
             'menuItems',
-            'reservations',
+            'reservation',
             'groupedMenu',
             'walkin',
         ));
     }
+
 
     public function storeReservation(Request $request)
     {
@@ -417,29 +420,31 @@ class ReceptionistController extends Controller
 
         $combinedOrders = $reservationOrders->unionAll($walkinOrders)->get();
 
-        $groupedOrders = $combinedOrders->groupBy('record_id')->map(function ($orders) {
-            $orderData = $orders->filter(fn($order) => !is_null($order->menu_item))
-                ->map(fn($order) => [
-                    'menu_item' => $order->menu_item,
-                    'quantity' => (int) $order->quantity
-                ])->values()->toArray();
+        $groupedOrders = $combinedOrders
+            ->groupBy(fn($item) => $item->source . '_' . $item->record_id)
+            ->map(function ($orders) {
+                $orderData = $orders->filter(fn($order) => !is_null($order->menu_item))
+                    ->map(fn($order) => [
+                        'menu_item' => $order->menu_item,
+                        'quantity' => (int) $order->quantity
+                    ])->values()->toArray();
 
-            $ordersWithQty = collect($orderData)
-                ->map(fn($o) => "{$o['menu_item']} x {$o['quantity']}")
-                ->implode(', ');
+                $ordersWithQty = collect($orderData)
+                    ->map(fn($o) => "{$o['menu_item']} x {$o['quantity']}")
+                    ->implode(', ');
 
-            return (object)[
-                'source' => $orders->first()->source,
-                'reservation_id' => $orders->first()->record_id,
-                'record_id' => $orders->first()->record_id,
-                'customer_name' => $orders->first()->customer_name,
-                'table_number' => $orders->first()->table_number,
-                'pax' => $orders->first()->pax,
-                'orders' => $ordersWithQty ?: 'No orders',
-                'order_data' => json_encode($orderData),
-                'note' => $orders->pluck('order_notes')->filter()->unique()->implode(', '),
-            ];
-        });
+                return (object)[
+                    'source' => $orders->first()->source,
+                    'record_id' => $orders->first()->record_id,
+                    'customer_name' => $orders->first()->customer_name,
+                    'table_number' => $orders->first()->table_number,
+                    'pax' => $orders->first()->pax,
+                    'orders' => $ordersWithQty ?: 'No orders',
+                    'order_data' => json_encode($orderData),
+                    'note' => $orders->pluck('order_notes')->filter()->unique()->implode(', '),
+                ];
+            });
+
 
         return view('receptionist.modify_orders', compact('groupedOrders', 'menuItems'));
     }
@@ -461,44 +466,38 @@ class ReceptionistController extends Controller
             $source = $request->source;
             $recordId = $request->record_id;
 
-            // Determine which table and model to use
             if ($source === 'reservation') {
                 $record = Reservation::findOrFail($recordId);
                 $foreignKey = 'reservation_id';
             } else {
-                $record = walkin::findOrFail($recordId);
+                $record = Walkin::findOrFail($recordId);
                 $foreignKey = 'walk_in_id';
             }
 
-            // Update pax if changed
             if ($record->pax != $request->pax) {
                 $record->pax = $request->pax;
                 $record->save();
             }
 
-            // Get existing orders
             $existingOrders = orders::where($foreignKey, $recordId)
                 ->where(function ($query) {
-                    $query->whereNull('status')
-                        ->orWhere('status', '!=', 'Cancelled');
+                    $query->whereNull('status')->orWhere('status', '!=', 'Cancelled');
                 })
                 ->get();
 
-            $newOrders = json_decode($request->orders, true) ?: [];
-
             $existingOrdersMap = $existingOrders->keyBy('menu_id');
 
+            $newOrders = json_decode($request->orders, true) ?: [];
             $newOrdersMap = collect($newOrders)->keyBy(function ($item) {
-                $menu = Menu::where('menu_item', $item['menu_name'])->first();
+                $menu = menu::where('menu_item', $item['menu_name'])->first();
                 return $menu ? $menu->id : null;
             })->filter(fn($item, $key) => $key !== null);
 
             $currentTime = now();
             $changes = [];
 
-            // Process new/updated orders
             foreach ($newOrdersMap as $menuId => $newOrder) {
-                $menu = Menu::find($menuId);
+                $menu = menu::find($menuId);
                 if (!$menu) continue;
 
                 $newQuantity = (int) $newOrder['quantity'];
@@ -535,7 +534,6 @@ class ReceptionistController extends Controller
 
                     $existingOrdersMap->forget($menuId);
                 } else {
-                    // New order
                     $changes[] = [
                         'type' => 'addition',
                         'menu_name' => str_replace([' Lunch', ' Dinner'], '', $menu->menu_item),
@@ -544,19 +542,18 @@ class ReceptionistController extends Controller
                     ];
 
                     orders::create([
-                        $foreignKey      => $recordId,
-                        'menu_id'        => $menuId,
-                        'quantity'       => $newQuantity,
-                        'price'          => $newPrice,
-                        'notes'          => $newNotes,
-                        'status'         => 'Pending',
-                        'created_at'     => $currentTime,
-                        'updated_at'     => $currentTime,
+                        $foreignKey  => $recordId,
+                        'menu_id'    => $menuId,
+                        'quantity'   => $newQuantity,
+                        'price'      => $newPrice,
+                        'notes'      => $newNotes,
+                        'status'     => 'Pending',
+                        'created_at' => $currentTime,
+                        'updated_at' => $currentTime,
                     ]);
                 }
             }
 
-            // Cancel removed orders
             if ($existingOrdersMap->isNotEmpty()) {
                 foreach ($existingOrdersMap as $existingOrder) {
                     $menu = Menu::find($existingOrder->menu_id);
@@ -592,6 +589,7 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
+
 
     public function acceptReservation(Request $request, $id)
     {

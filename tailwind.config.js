@@ -5,7 +5,11 @@ module.exports = {
    
   ],
   theme: {
-    extend: {},
+    extend: {
+      screens: {
+        'xs' : '375'
+      }
+    },
   },
   plugins: [],
 }

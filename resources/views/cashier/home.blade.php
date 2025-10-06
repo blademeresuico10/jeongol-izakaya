@@ -854,7 +854,7 @@
         }
 
         isMainCategoryItemWithDiscount(itemName, menuItemData) {
-            const mainItems = ['Unlimited Samgyupsal', 'HotPot', 'Fusion'];
+            const mainItems = ['Samgyupsal', 'HotPot', 'Fusion'];
             return mainItems.includes(itemName) && menuItemData.has_discount;
         }
 
@@ -936,7 +936,7 @@
             let totalAmount = 0;
             let breakdownHtml = '';
 
-            const mainMenuItems = ['Unlimited Samgyupsal', 'HotPot', 'Fusion'];
+            const mainMenuItems = ['Samgyupsal', 'HotPot', 'Fusion'];
             const itemGroups = {};
             const mainMenuEntries = [];
             let itemCounter = 0;

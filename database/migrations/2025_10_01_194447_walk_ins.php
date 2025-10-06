@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedInteger('pax');
             $table->dateTime('started_at');
             $table->dateTime('ended_at')->nullable();
-            $table->enum('status', ['Pending', 'Active', 'Rejected', 'Completed'])->default('Active');
+            $table->enum('status', ['Active', 'Completed'])->default('Active');
             $table->timestamps();
         });
     }

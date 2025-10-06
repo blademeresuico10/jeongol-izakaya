@@ -13,12 +13,20 @@ use App\Models\reservationPayment;
 use App\Notifications\ReservationPaid;
 use Illuminate\Support\Facades\Notification;
 use App\Models\orders;
+use App\Models\menu;
+use App\Models\walkin;
+use App\Models\table;
 
 class CustomerController extends Controller
 {
     public function index()
     {
-        return view('customer.index');
+        $mainMenuItems = menu::where('category', 'main')
+            ->where('status', '!=', 'Blocked')
+            ->take(3)
+            ->get();
+
+        return view('customer.index', compact('mainMenuItems'));
     }
 
     public function place_reservation(Request $request)
@@ -44,6 +52,53 @@ class CustomerController extends Controller
             'groupedMenu',
             'menuItems'
         ));
+    }
+
+    public function checkAvailability(Request $request)
+    {
+        $date = $request->input('date');
+        $time = $request->input('time');
+
+        if (!$date || !$time) {
+            return response()->json(['tables' => []]);
+        }
+
+        $searchDateTime = \Carbon\Carbon::parse("$date $time");
+
+        $tables = table::all();
+
+        $availabilityData = [];
+
+        foreach ($tables as $table) {
+            $isBookedReservation = reservation::where('table_id', $table->id)
+                ->where('status', '!=', 'cancelled')
+                ->where(function ($query) use ($searchDateTime) {
+                    $query->where(function ($q) use ($searchDateTime) {
+                        $q->where('started_at', '<=', $searchDateTime)
+                            ->where('ended_at', '>=', $searchDateTime);
+                    });
+                })
+                ->exists();
+
+            $isBookedWalkin = walkin::where('table_id', $table->id)
+                ->where('status', 'active')
+                ->where(function ($query) use ($searchDateTime) {
+                    $query->where(function ($q) use ($searchDateTime) {
+                        $q->where('started_at', '<=', $searchDateTime)
+                            ->where('ended_at', '>=', $searchDateTime);
+                    });
+                })
+                ->exists();
+
+            $availabilityData[] = [
+                'id' => $table->id,
+                'table_number' => $table->table_number,
+                'capacity' => $table->capacity,
+                'is_available' => !($isBookedReservation || $isBookedWalkin)
+            ];
+        }
+
+        return response()->json(['tables' => $availabilityData]);
     }
 
 

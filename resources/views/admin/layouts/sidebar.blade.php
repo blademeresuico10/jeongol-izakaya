@@ -49,6 +49,13 @@
         </a>
     </li>
 
+    <li @class(['nav-item', 'active' => request()->is('analytics*')])>
+        <a class="nav-link" href="{{ route('admin.analytics') }}">
+            <i class="fas fa-chart-bar"></i>
+            <span>Analytics</span>
+        </a>
+    </li>
+
 
     <li @class(['nav-item', 'active' => request()->is('reports*')])>
         <a class="nav-link" href="{{ route('admin.reports') }}">
@@ -71,10 +78,10 @@
         </a>
     </li>
 
-    <li class="nav-item">
+    <li @class(['nav-item', 'active' => request()->is('feedback*')])>
         <a class="nav-link" href="{{ route('admin.feedback') }}">
             <i class="fas fa-comments"></i>
-            <span>Feedbacks</span>
+            <span>Feedback</span>
         </a>
     </li>
 

@@ -44,14 +44,6 @@ class MenuSeeder extends Seeder
             ],
 
             [
-                'menu_item' => 'Unlimited Wagyu',
-                'regular_price' => 388.00,
-                'image' => 'wagyu.jpeg',
-                'category' => 'add_ons',
-                'has_customer_discount' => false,
-            ],
-
-            [
                 'menu_item' => 'Coco Island',
                 'regular_price' => 120.00,
                 'image' => 'coco_island.png',

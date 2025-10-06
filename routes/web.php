@@ -17,6 +17,7 @@ Route::get('/customer/place_reservation', [CustomerController::class, 'place_res
 Route::post('/customer/reserve', [CustomerController::class, 'storeReservation'])->name('customer.reserve');
 Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])->name('customer.feedback');
 Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUnavailableTimes'])->name('customer.unavailable-times');
+Route::get('/customer/check-availability', [CustomerController::class, 'checkAvailability'])->name('customer.checkAvailability');
 
 Route::get('/file-serve/{path}', function ($path) {
     $folders = [
@@ -196,8 +197,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Kitchen Staff')->prefix('kitchen')->name('kitchen.')->group(function () {
         Route::get('/home', [KitchenController::class, 'home'])->name('home');
         Route::post('/served', [KitchenController::class, 'markAsServed'])->name('served');
+        Route::post('/unlimited/refill', [KitchenController::class, 'storeUnlimitedRefill'])->name('unlimited.refill');
+        Route::post('/orders/additional', [KitchenController::class, 'storeAdditionalOrder'])->name('orders.additional');
     });
-    
+
     // CASHIER ONLY ROUTES
     Route::middleware('role:Cashier')->prefix('cashier')->name('cashier.')->group(function () {
         Route::get('/home', [CashierController::class, 'home'])->name('home');

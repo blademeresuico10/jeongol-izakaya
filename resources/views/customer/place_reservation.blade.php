@@ -63,6 +63,31 @@
       transform: scale(1.03);
     }
 
+    .table.booked {
+      background-color: #6c757d !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
+    }
+
+    .table.booked:hover {
+      background-color: #5a6268 !important;
+      transform: none !important;
+    }
+
+    .booked-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      pointer-events: none;
+    }
+
     .modal {
       display: none;
       position: fixed;
@@ -358,12 +383,33 @@
 </head>
 
 <body>
-  <header>
-    <a href="{{ route('customer.index') }}" class="me-2 text-dark" style="text-decoration: none;">
-      <i class="bi bi-arrow-left-circle-fill"></i>
+  <header class="bg-black/60 text-white flex items-center px-4 py-3 shadow-md relative">
+    <a href="{{ route('customer.index') }}" class="flex items-center text-white hover:text-black left-4">
+      <i class="bi bi-arrow-left-circle-fill text-2xl"></i>
     </a>
-    Welcome to <strong>Jeongol Izakaya</strong>
+
+    <h1 class="mx-auto text-lg sm:text-xl font-semibold text-center">
+      Welcome to <strong>Jeongol Izakaya</strong>
+    </h1>
   </header>
+
+  <section class="mt-4">
+    <div class="max-w-fit mx-auto bg-white/90 text-black rounded-lg shadow-xl p-2 flex items-center gap-2">
+      <h2 class="text-md font-semibold text-center m-2">Choose Time</h2>
+
+      <div class="flex items-center gap-0.5">
+        <label for="date" class="text-black text-[15px] ">Date:</label>
+        <input type="date" id="date" name="date"
+          class="px-1.5 py-1 rounded border border-black text-gray-500 text-[9px] focus:outline-none ">
+      </div>
+
+      <div class="flex items-center gap-0.5">
+        <label for="time" class="text-black text-[15px] ">Time:</label>
+        <input type="time" id="time" name="time"
+          class="px-1.5 py-1 rounded border border-black text-gray-500 text-[9px] focus:outline-none ">
+      </div>
+    </div>
+  </section>
 
   <div class="table-layout grid grid-cols-2 gap-4">
     @foreach($tables as $table)
@@ -431,13 +477,6 @@
                 <input type="number" id="advance_payment" readonly class="hidden" />
               </div>
             </div>
-          </div>
-
-          <div>
-            <label for="unavailableTime">Occupied Time</label>
-            <select id="unavailableTime" name="unavailable_time" required class="w-full border rounded p-2">
-              <option value="" selected>View Occupied Time</option>
-            </select>
           </div>
 
 
@@ -525,19 +564,6 @@
   z-index: 9999;
 "></div>
 
-  <footer class="text-center p-3 bg-gray-900 text-white mt-5">
-    <p>Contact us</p>
-    <div>
-      <a href="https://www.facebook.com/jeongol.izakaya" target="_blank" class="text-white mx-2">
-        <i class="bi bi-facebook"></i>
-      </a>
-      <a href="#" class="text-white mx-2"><i class="bi bi-instagram"></i></a>
-      <a href="#" class="text-white mx-2"><i class="bi bi-twitter"></i></a>
-      <a href="#" class="text-white mx-2"><i class="bi bi-envelope-fill"></i></a>
-    </div>
-    <p class="mt-2">&copy; 2025 Jeongol Izakaya. All rights reserved.</p>
-  </footer>
-
   <div id="fly-animation-container"
     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></div>
 
@@ -559,8 +585,8 @@
           this.initializeDateTimeInputs();
           this.initializeEmailValidation();
           this.initializeEventListeners();
+          this.initializeAvailabilitySearch();
           this.updateOrderSummary();
-          this.loadUnavailableTimes();
 
         });
       }
@@ -590,6 +616,9 @@
           totalQuantity: document.getElementById('totalQuantity'),
           totalPrice: document.getElementById('totalPrice'),
 
+          searchDateInput: document.getElementById('date'),
+          searchTimeInput: document.getElementById('time'),
+
           tableLinks: document.querySelectorAll('.table-link')
         };
       }
@@ -603,6 +632,92 @@
         });
       }
 
+      initializeAvailabilitySearch() {
+        const { searchDateInput, searchTimeInput } = this.elements;
+
+        if (!searchDateInput || !searchTimeInput) return;
+
+        searchDateInput.addEventListener('change', () => this.checkAvailability());
+        searchTimeInput.addEventListener('change', () => this.checkAvailability());
+
+        searchTimeInput.addEventListener('input', () => {
+          clearTimeout(this.searchTimeout);
+          this.searchTimeout = setTimeout(() => this.checkAvailability(), 500);
+        });
+      }
+
+      async checkAvailability() {
+        const date = this.elements.searchDateInput?.value;
+        const time = this.elements.searchTimeInput?.value;
+
+        if (!date || !time) {
+          this.resetTableAvailability();
+          return;
+        }
+
+        try {
+          const response = await fetch(`/customer/check-availability?date=${date}&time=${time}`);
+
+          if (!response.ok) {
+            throw new Error('Failed to check availability');
+          }
+
+          const data = await response.json();
+          this.updateTableAvailability(data.tables);
+
+        } catch (error) {
+          console.error('Error checking availability:', error);
+          this.showMessageBox('Failed to check table availability', 'error');
+        }
+      }
+
+      updateTableAvailability(tables) {
+        this.elements.tableLinks.forEach(link => {
+          const tableId = parseInt(link.getAttribute('data-table-id'));
+          const tableData = tables.find(t => t.id === tableId);
+
+          if (!tableData) return;
+
+          const tableDiv = link.querySelector('.table');
+          const existingLabel = tableDiv.querySelector('.booked-label');
+
+          if (!tableData.is_available) {
+            tableDiv.classList.remove('available', 'bg-green-100');
+            tableDiv.classList.add('booked');
+            link.style.pointerEvents = 'none';
+
+            if (!existingLabel) {
+              const bookedLabel = document.createElement('div');
+              bookedLabel.className = 'booked-label';
+              bookedLabel.textContent = 'BOOKED';
+              tableDiv.appendChild(bookedLabel);
+            }
+          } else {
+            tableDiv.classList.remove('booked');
+            tableDiv.classList.add('available', 'bg-green-100');
+            link.style.pointerEvents = 'auto';
+
+            if (existingLabel) {
+              existingLabel.remove();
+            }
+          }
+        });
+      }
+
+      resetTableAvailability() {
+        this.elements.tableLinks.forEach(link => {
+          const tableDiv = link.querySelector('.table');
+          const existingLabel = tableDiv.querySelector('.booked-label');
+
+          tableDiv.classList.remove('booked');
+          tableDiv.classList.add('available', 'bg-green-100');
+          link.style.pointerEvents = 'auto';
+
+          if (existingLabel) {
+            existingLabel.remove();
+          }
+        });
+      }
       initializeModals() {
         const {
           tableModal,
@@ -618,9 +733,9 @@
           @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
     @endforeach
-    };
+  };
 
-    tableLinks.forEach(link => {
+  tableLinks.forEach(link => {
             link.addEventListener('click', e => {
               e.preventDefault();
 
@@ -632,10 +747,8 @@
 
               if (paxInput && capacity) {
                 paxInput.value = capacity;
-
                 paxInput.max = capacity;
                 paxInput.min = capacity - 1;
-
                 paxInput.readOnly = false;
 
                 paxInput.addEventListener('input', function () {
@@ -648,10 +761,26 @@
                 });
               }
 
-              this.loadUnavailableTimes(this.selectedTableNumber);
+              const searchDate = this.elements.searchDateInput?.value;
+              const searchTime = this.elements.searchTimeInput?.value;
+
+              if (searchDate) {
+                const reservedDateInput = document.getElementById('reserved_date');
+                if (reservedDateInput) {
+                  reservedDateInput.value = searchDate;
+                }
+              }
+
+              if (searchTime) {
+                const arrivalTimeInput = document.getElementById('arrivalTimeInput');
+                if (arrivalTimeInput) {
+                  arrivalTimeInput.value = searchTime;
+                }
+              }
+
               this.showModal(tableModal);
             });
-    });
+  });
 
     closeModal.addEventListener('click', () => {
       this.hideModal(tableModal);
@@ -688,7 +817,6 @@
 
       this.showModal(paymentModal);
     });
-
 
     closePaymentModal.addEventListener('click', () => {
       this.hideModal(paymentModal);

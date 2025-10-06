@@ -39,20 +39,17 @@ class menuingredientsseeder extends Seeder
         ]);
 
       
-         DB::table('menu_ingredients')->insert([
-             ['menu_id' => 4, 'ingredient_id' => 17, 'quantity' => 200.00], 
-         ]);
 
          DB::table('menu_ingredients')->insert([
-            ['menu_id' => 5, 'ingredient_id' => 17, 'quantity' => 500.00], 
+            ['menu_id' => 4, 'ingredient_id' => 17, 'quantity' => 500.00], 
         ]);
 
          DB::table('menu_ingredients')->insert([
-            ['menu_id' => 6, 'ingredient_id' => 18, 'quantity' => 1.00], 
+            ['menu_id' => 5, 'ingredient_id' => 18, 'quantity' => 1.00], 
          ]);
 
         DB::table('menu_ingredients')->insert([
-            ['menu_id' => 7, 'ingredient_id' => 12, 'quantity' => 1.00], 
+            ['menu_id' => 6, 'ingredient_id' => 12, 'quantity' => 1.00], 
         ]);
     }
 }

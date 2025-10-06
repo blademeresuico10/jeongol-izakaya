@@ -154,13 +154,12 @@
                                             class="rounded me-2" style="width: 50px; height: 50px; object-fit: cover;">
                                         <div>
                                             <div class="fw-bold text-dark">{{ $item->menu_item }}</div>
-                                            <small class="text-muted">Orders: {{ $item->total_quantity }}</small>
                                         </div>
                                     </div>
 
                                     <div class="rounded-circle bg-warning text-white fw-bold d-flex align-items-center justify-content-center"
                                         style="width: 30px; height: 30px;">
-                                        #{{ $index + 1 }}
+                                        {{ $item->total_quantity }}
                                     </div>
                                 </div>
                             @empty
@@ -203,30 +202,26 @@
 
                         <div class="card-body px-3 pb-3 pt-0" style="max-height: 400px; overflow-y: auto;">
                             @if($recentActivities->isNotEmpty())
-                                <ul class="list-group list-group-flush">
+                                <div class="d-flex flex-column gap-2">
                                     @foreach($recentActivities as $activity)
-                                        <li class="list-group-item border-0 d-flex align-items-center px-0 py-3 rounded hover-bg-light"
-                                            style="transition: background-color 0.2s;">
-                                            <div class="me-3 d-flex justify-content-center align-items-center rounded-circle"
-                                                style="background-color: {{ $activity['color'] }}33; width: 42px; height: 42px;">
-                                                <i class="fas {{ $activity['icon'] }}"
-                                                    style="color: {{ $activity['color'] }};"></i>
-                                            </div>
-                                            <div class="flex-grow-1">
-                                                <div class="fw-semibold text-dark">{{ $activity['type'] }}</div>
-                                                <div class="small text-muted">
-                                                    {{ $activity['name'] }}
-                                                    @if($activity['table'])
-                                                        • <span class="text-primary">{{ $activity['table'] }}</span>
-                                                    @endif
+                                        <div class="card shadow-sm border-0">
+                                            <div class="card-body d-flex align-items-center py-3">
+                                                <div class="me-3 d-flex justify-content-center align-items-center rounded-circle"
+                                                    style="background-color: {{ $activity['color'] }}33; width: 42px; height: 42px;">
+                                                    <i class="fas {{ $activity['icon'] }}"
+                                                        style="color: {{ $activity['color'] }};"></i>
                                                 </div>
-                                                <div class="text-secondary small mt-1">
-                                                    {{ $activity['status'] }} • {{ $activity['time'] }}
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-semibold text-dark">{{ $activity['type'] }}</div>
+                                                    <div class="small text-muted">{{ $activity['name'] }}</div>
+                                                    <div class="text-secondary small mt-1">
+                                                        {{ $activity['status'] }} • {{ $activity['time'] }}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </li>
+                                        </div>
                                     @endforeach
-                                </ul>
+                                </div>
                             @else
                                 <div class="text-center text-muted py-5">
                                     <i class="fas fa-inbox fa-2x mb-2"></i>
