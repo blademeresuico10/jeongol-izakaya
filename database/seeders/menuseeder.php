@@ -12,7 +12,7 @@ class MenuSeeder extends Seeder
     {
         DB::table('menu')->insert([
             [
-                'menu_item' => 'Unlimited Samgyupsal',
+                'menu_item' => 'Samgyupsal',
                 'regular_price' => 598.00,
                 'image' => 'samgyup.jpeg',
                 'category' => 'main',

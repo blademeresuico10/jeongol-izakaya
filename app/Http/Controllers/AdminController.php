@@ -743,7 +743,7 @@ class AdminController extends Controller
             $expiredItems = DB::table('ingredient_batches')
                 ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
                 ->whereDate('ingredient_batches.expiration_date', '<=', now())
-                ->where('ingredient_batches.quantity', '>', 0) 
+                ->where('ingredient_batches.quantity', '>', 0)
                 ->select(
                     'ingredient_batches.id as batch_id',
                     'ingredients.name as ingredient_name',
@@ -780,8 +780,7 @@ class AdminController extends Controller
                     'menu_item' => 'required|string|max:255|unique:menu,menu_item,NULL,id,deleted_at,NULL',
                     'category' => 'required|in:main,add_ons',
                     'regular_price' => 'required|numeric|min:0',
-                    'student_price' => 'nullable|numeric|min:0',
-                    'govt_employee_price' => 'nullable|numeric|min:0',
+                    'has_customer_discount' => 'required|boolean',
                     'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
                 ],
                 [
@@ -793,15 +792,11 @@ class AdminController extends Controller
                     'regular_price.required' => 'Regular price is required.',
                     'regular_price.numeric' => 'Regular price must be a valid number.',
                     'regular_price.min' => 'Regular price cannot be negative.',
-                    'student_price.numeric' => 'Student price must be a valid number.',
-                    'student_price.min' => 'Student price cannot be negative.',
-                    'govt_employee_price.numeric' => 'Government employee price must be a valid number.',
-                    'govt_employee_price.min' => 'Government employee price cannot be negative.',
+                    'has_customer_discount.required' => 'Customer discount option is required.',
                     'image.required' => 'Menu item image is required.',
                     'image.image' => 'The uploaded file must be an image.',
                     'image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
                     'image.max' => 'Image size cannot exceed 2MB.',
-
                 ]
             );
 
@@ -816,9 +811,7 @@ class AdminController extends Controller
                 'menu_item' => $request->menu_item,
                 'category' => $request->category,
                 'regular_price' => $request->regular_price,
-                'student_price' => $request->student_price,
-                'govt_employee_price' => $request->govt_employee_price,
-                'has_customer_discount' => false,
+                'has_customer_discount' => (bool) $request->has_customer_discount,
                 'status' => 'Active',
                 'image' => $imageName,
                 'created_at' => now(),
@@ -832,9 +825,10 @@ class AdminController extends Controller
                 ->withInput()
                 ->withErrors($e->validator);
         } catch (\Exception $e) {
+            Log::error('Menu store error: ' . $e->getMessage());
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'An error occurred while adding the menu item. Please try again.');
+                ->with('error', 'An error occurred while adding the menu item: ' . $e->getMessage());
         }
     }
 

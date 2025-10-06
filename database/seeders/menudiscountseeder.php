@@ -10,7 +10,7 @@ class MenuDiscountSeeder extends Seeder
     public function run(): void
     {
         // Get IDs for main menu items
-        $samgyupsalId = DB::table('menu')->where('menu_item', 'Unlimited Samgyupsal')->value('id');
+        $samgyupsalId = DB::table('menu')->where('menu_item', 'Samgyupsal')->value('id');
         $hotpotId     = DB::table('menu')->where('menu_item', 'HotPot')->value('id');
         $fusionId     = DB::table('menu')->where('menu_item', 'Fusion')->value('id');
 
