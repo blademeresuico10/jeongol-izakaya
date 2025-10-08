@@ -44,7 +44,7 @@ class ingredients extends Model
     {
         $stockBefore = $this->stocks;
         $kgToDeduct = $this->convertGramsToKg($grams);
-        
+
         $this->stocks -= $kgToDeduct;
         $this->save();
 
@@ -60,5 +60,10 @@ class ingredients extends Model
         ]);
 
         return $this;
+    }
+
+    public function stockAlertLevel()
+    {
+        return $this->hasOne(StockAlertLevel::class, 'ingredient_id');
     }
 }

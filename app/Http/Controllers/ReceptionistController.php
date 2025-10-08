@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use App\Models\menu;
 use App\Models\Users;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use App\Models\orders;
 use App\Models\reservationPayment;
 use App\Models\walkin;
@@ -276,7 +277,7 @@ class ReceptionistController extends Controller
     {
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
 
-        $reservationsQuery = DB::table('reservations')
+        $reservations = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('orders', 'reservations.id', '=', 'orders.reservation_id')
             ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
@@ -294,46 +295,23 @@ class ReceptionistController extends Controller
                 DB::raw("'reservation' as source"),
                 'reservations.status'
             )
-            ->whereDate('reservations.started_at', $targetDate);
-
-        $walkInsQuery = DB::table('walk_ins')
-            ->join('customers', 'walk_ins.customer_id', '=', 'customers.id')
-            ->leftJoin('orders', 'walk_ins.id', '=', 'orders.walk_in_id')
-            ->leftJoin('tables', 'walk_ins.table_id', '=', 'tables.id')
-            ->leftJoin('menu', 'orders.menu_id', '=', 'menu.id')
-            ->select(
-                'walk_ins.id as reservation_id',
-                'tables.table_number',
-                'walk_ins.pax',
-                'walk_ins.started_at',
-                'walk_ins.ended_at',
-                'customers.name as customer_name',
-                'menu.menu_item',
-                'orders.quantity',
-                'orders.notes',
-                DB::raw("'walk_in' as source"),
-                'walk_ins.status'
-            )
-            ->whereDate('walk_ins.started_at', $targetDate);
-
-        $combined = $reservationsQuery
-            ->unionAll($walkInsQuery)
-            ->get()
-            ->sortByDesc('started_at')
-            ->values();
+            ->whereDate('reservations.started_at', $targetDate)
+            ->orderByDesc('reservations.started_at')
+            ->get();
 
         $completedTransactionReservationIds = DB::table('transactions')
-            ->whereIn('reservation_id', $combined->pluck('reservation_id'))
+            ->whereIn('reservation_id', $reservations->pluck('reservation_id'))
             ->pluck('reservation_id')
             ->unique();
 
         $servedTransactions = collect($completedTransactionReservationIds);
 
         return view('receptionist.view_bookings', [
-            'combined' => $combined,
+            'combined' => $reservations,
             'servedTransactions' => $servedTransactions,
         ]);
     }
+
 
     public function modifyOrders()
     {
@@ -594,7 +572,7 @@ class ReceptionistController extends Controller
     public function acceptReservation(Request $request, $id)
     {
         return DB::transaction(function () use ($request, $id) {
-            $reservation = Reservation::findOrFail($id);
+            $reservation = Reservation::with(['customer', 'table'])->findOrFail($id);
             $reservation->status = 'Active';
             $reservation->save();
 
@@ -605,6 +583,12 @@ class ReceptionistController extends Controller
                     'The reservation has been accepted and confirmed.'
                 );
             }
+
+            Mail::send('emails.reservation_accepted', ['reservation' => $reservation], function ($message) use ($reservation) {
+                $message->to($reservation->customer->email)
+                    ->subject('Your Reservation is Confirmed at Jeongol Izakaya');
+            });
+
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
@@ -622,7 +606,7 @@ class ReceptionistController extends Controller
     public function cancelReservation(Request $request, $id)
     {
         return DB::transaction(function () use ($request, $id) {
-            $reservation = Reservation::findOrFail($id);
+            $reservation = Reservation::with(['customer', 'table', 'payment'])->findOrFail($id);
             $reservation->status = 'Rejected';
             $reservation->save();
 
@@ -636,6 +620,14 @@ class ReceptionistController extends Controller
                     'Your reservation has been cancelled/rejected.'
                 );
             }
+
+            if ($reservation->customer && $reservation->customer->email && $reservation->started_at) {
+                Mail::send('emails.reservation_rejected', ['reservation' => $reservation], function ($message) use ($reservation) {
+                    $message->to($reservation->customer->email)
+                        ->subject('Your Reservation at Jeongol Izakaya Has Been Rejected');
+                });
+            }
+
 
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([

@@ -19,14 +19,12 @@ return new class extends Migration
             $table->string('contact_number');
             $table->string('email')->nullable()->unique(); 
             $table->string('username')->unique();
-            $table->timestamp('email_verified_at')->nullable(); 
+            $table->string('address')->nullable();
             $table->string('password');
             $table->enum('status', ['Active', 'Inactive', 'Deleted'])->default('Active');
             $table->string('profile_picture')->nullable();
             $table->boolean('is_logged_in')->default(false);
-            $table->timestamp('last_login_at')->nullable();
             $table->string('session_token')->nullable();
-            $table->rememberToken(); 
             $table->timestamps();
             $table->softDeletes();
             $table->index(['email', 'role']); 

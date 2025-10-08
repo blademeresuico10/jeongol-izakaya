@@ -511,7 +511,6 @@
             });
           }
 
-          // Setup slide-in panel for orders
           if (this.elements.viewOrdersBtn && this.elements.defaultModal) {
             const backdrop = document.getElementById('modalBackdrop');
             const closeOrdersPanel = document.getElementById('closeOrdersPanel');
@@ -591,7 +590,7 @@
           const tableCapacities = {
             @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
-        @endforeach
+      @endforeach
     };
 
     this.elements.tableLinks.forEach(link => {
@@ -1126,7 +1125,7 @@
 
             const orderItem = document.createElement('div');
             orderItem.innerHTML = `
-        <div class="order-item-card bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
+        <div class="order-item-card bg-white rounded-xl p-4 border border-gray-200">
           <div class="flex items-start gap-3">
             <div class="flex-shrink-0">
               <img src="${getImagePath()}" 
@@ -1227,50 +1226,64 @@
         this.clearOrders();
       }
 
-      handleSubmitReservation() {
+      async handleSubmitReservation() {
         if (this.elements.submitBtn.disabled) return;
 
-        if (!this.elements.customerName.value.trim()) {
-          this.showErrorToast('Please enter customer name.');
-          return;
-        }
-
-        if (!this.isPlacingOrder && !this.elements.contactNumber.value.trim()) {
-          this.showErrorToast('Please enter contact number.');
-          return;
-        }
-
+        const name = this.elements.customerName.value.trim();
+        const contact = this.elements.contactNumber.value.trim();
         const paxInput = document.getElementById('numberOfPax');
-        const paxCount = parseInt(paxInput.value) || 0;
+        const dateInput = document.getElementById('reserved_date');
+        const timeInput = document.getElementById('arrivalTimeInput');
 
-        if (paxCount <= 0) {
-          this.showErrorToast('Please enter a valid number of pax.');
+        const paxCount = parseInt(paxInput?.value) || 0;
+        const date = dateInput?.value;
+        const time = timeInput?.value;
+
+        const emptyFields = [];
+        if (!name) emptyFields.push(this.elements.customerName);
+        if (!this.isPlacingOrder && !contact) emptyFields.push(this.elements.contactNumber);
+        if (!paxCount) emptyFields.push(paxInput);
+        if (!date) emptyFields.push(dateInput);
+        if (!time) emptyFields.push(timeInput);
+
+        if (emptyFields.length > 0) {
+          emptyFields.forEach(f => f.classList.add('border-red-500'));
+          this.showErrorToast('Please fill in all required fields.');
           return;
         }
 
-        if (!this.isPlacingOrder) {
-          const orders = Object.values(this.selectedOrders);
-          const hasMain = orders.some(item => item.category === 'main');
+        const selectedDate = new Date(`${date}T${time}`);
+        const now = new Date();
 
-          if (!hasMain) {
-            this.showErrorToast('Match the main menu order to the pax.');
-            return;
-          }
+        if (selectedDate < now.setHours(0, 0, 0, 0)) {
+          this.showErrorToast('You cannot select a past date.');
+          dateInput.classList.add('border-red-500');
+          return;
+        }
 
-          const mainMenuOrders = orders.filter(item => item.category === 'main');
-          const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
+        const orders = Object.values(this.selectedOrders || {});
+        const hasMain = orders.some(item => item.category === 'main');
 
-          if (totalMainMenuQuantity !== paxCount) {
-            this.showErrorToast(`Match your main menu order to your pax.`);
-            return;
-          }
+        if (!hasMain) {
+          this.showErrorToast('You must order at least one main menu item.');
+          return;
+        }
+
+        const mainMenuOrders = orders.filter(item => item.category === 'main');
+        const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
+
+        if (totalMainMenuQuantity !== paxCount) {
+          this.showErrorToast('Match your main menu order quantity to your number of pax.');
+          return;
         }
 
         this.elements.submitBtn.disabled = true;
         this.elements.submitBtn.textContent = "Submitting...";
+
         const data = this.prepareSubmissionData();
         this.submitOrder(data);
       }
+
 
 
       showErrorToast(message) {

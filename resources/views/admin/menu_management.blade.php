@@ -110,8 +110,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel"
-                aria-hidden="true">
+            <div class="modal fade" id="addMenuModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
@@ -175,8 +174,7 @@
                                         <option value="0" {{ old('has_customer_discount', 1) == 0 ? 'selected' : '' }}>No
                                         </option>
                                     </select>
-                                    <small class="form-text text-muted">Whether this item is eligible for
-                                        student/government discounts</small>
+                                   
                                 </div>
 
                             </div>
@@ -191,7 +189,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="menuIngredientsModal" tabindex="-1" role="dialog"
+            <div class="modal fade" id="menuIngredientsModal" data-backdrop="static" data-keyboard="false"
                 aria-labelledby="menuIngredientsLabel" aria-hidden="true">
                 <div class="modal-dialog modal-lg" role="document">
                     <div class="modal-content">
@@ -215,7 +213,7 @@
             </div>
 
             <!-- Add Ingredient Modal -->
-            <div class="modal fade" id="addIngredientModal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal fade" id="addIngredientModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
@@ -252,7 +250,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="deleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-danger text-white">
@@ -282,7 +280,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="restoreConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="restoreConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
@@ -310,7 +308,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="forceDeleteConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="forceDeleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content border-danger">
                         <div class="modal-header bg-danger text-white">
@@ -344,7 +342,7 @@
 
             @foreach ($menu as $item)
                 @if(!$item->deleted_at)
-                    <div class="modal fade" id="editMenuModal{{ $item->id }}" tabindex="-1" role="dialog"
+                    <div class="modal fade" id="editMenuModal{{ $item->id }}" data-backdrop="static" data-keyboard="false""
                         aria-labelledby="editMenuModalLabel{{ $item->id }}" aria-hidden="true">
                         <div class="modal-dialog" role="document">
                             <form action="{{ route('admin.updatemenu', $item->id) }}" method="POST">
@@ -381,20 +379,6 @@
                                             <input type="number" name="regular_price" value="{{ $item->regular_price }}"
                                                 class="form-control" step="0.01" min="0" required>
                                         </div>
-
-                                        <div class="form-group">
-                                            <label>Student Price (Optional)</label>
-                                            <input type="number" name="student_price" value="{{ $item->student_price }}"
-                                                class="form-control" step="0.01" min="0">
-                                        </div>
-
-                                        <div class="form-group">
-                                            <label>Gov't Employee Price (Optional)</label>
-                                            <input type="number" name="govt_employee_price"
-                                                value="{{ $item->govt_employee_price }}" class="form-control" step="0.01"
-                                                min="0">
-                                        </div>
-
                                         <div class="form-group">
                                             <label>Customer Discount Available</label>
                                             <select name="has_customer_discount" class="form-control" required>
@@ -517,12 +501,7 @@
 
         $('#menuIngredientsModal').on('show.bs.modal', function () {
             const content = document.getElementById('ingredientsContent');
-            content.innerHTML = `
-            <div class="text-center py-3">
-                <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
-                <p class="mt-2">Loading ingredients...</p>
-            </div>
-        `;
+          ;
 
             fetch("{{ route('admin.menu_ingredients') }}")
                 .then(res => res.json())

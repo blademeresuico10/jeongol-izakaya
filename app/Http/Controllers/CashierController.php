@@ -86,29 +86,27 @@ class CashierController extends Controller
         }
 
         $menuDiscounts = DB::table('menu_discounts')->get()->groupBy('menu_id');
-        $menuPricesMap = [];
         $menuData = [];
 
         foreach ($menuItems as $item) {
             $discounts = $menuDiscounts[$item->id] ?? collect();
+
             $studentDisc = $discounts->firstWhere('discount_type', 'Student');
             $govtDisc    = $discounts->firstWhere('discount_type', 'Government Employee');
             $seniorDisc  = $discounts->firstWhere('discount_type', 'Senior Citizen');
             $pwdDisc     = $discounts->firstWhere('discount_type', 'PWD');
 
-            $row = [
-                'menu_item'     => $item->menu_item,
-                'regular'       => $item->regular_price,
-                'student'       => $studentDisc ? round($item->regular_price * (1 - ($studentDisc->discount_percentage / 100)), 2) : null,
-                'govt_employee' => $govtDisc    ? round($item->regular_price * (1 - ($govtDisc->discount_percentage / 100)), 2)    : null,
-                'senior'        => $seniorDisc  ? round($item->regular_price * (1 - ($seniorDisc->discount_percentage / 100)), 2)  : null,
-                'pwd'           => $pwdDisc     ? round($item->regular_price * (1 - ($pwdDisc->discount_percentage / 100)), 2)     : null,
-                'has_discount'  => $item->has_customer_discount,
+            $menuData[] = [
+                'menu_item'       => $item->menu_item,
+                'regular_price'   => (float) $item->regular_price,
+                'student_percent' => $studentDisc->discount_percentage ?? null,
+                'govt_percent'    => $govtDisc->discount_percentage ?? null,
+                'senior_percent'  => $seniorDisc->discount_percentage ?? null,
+                'pwd_percent'     => $pwdDisc->discount_percentage ?? null,
+                'has_discount'    => $item->has_customer_discount,
             ];
-
-            $menuPricesMap[$item->menu_item] = $row;
-            $menuData[] = $row;
         }
+
 
         $groupedMenu = [];
         foreach ($menuItems as $item) {
@@ -120,7 +118,6 @@ class CashierController extends Controller
             'menuItems',
             'reservations',
             'walkin',
-            'menuPricesMap',
             'groupedMenu',
             'occupiedTables',
             'menuData'
@@ -223,13 +220,11 @@ class CashierController extends Controller
         ];
 
         $discountType = $discountTypeMap[$customerType] ?? null;
-
         if (!$discountType) {
             return $regularPrice;
         }
 
         $menuId = DB::table('menu')->where('menu_item', $menuItem)->value('id');
-
         if (!$menuId) {
             return $regularPrice;
         }
@@ -247,11 +242,21 @@ class CashierController extends Controller
         }
 
         if ($discount) {
-            return round($regularPrice * (1 - ($discount->discount_percentage / 100)), 2);
+            $discountedPrice = $regularPrice * (1 - ($discount->discount_percentage / 100));
+
+            $decimalPart = $discountedPrice - floor($discountedPrice);
+            if ($decimalPart >= 0.5) {
+                $discountedPrice = ceil($discountedPrice);
+            } else {
+                $discountedPrice = floor($discountedPrice);
+            }
+
+            return $discountedPrice;
         }
 
         return $regularPrice;
     }
+
 
     public function processPayment(Request $request)
     {

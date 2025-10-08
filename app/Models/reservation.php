@@ -16,6 +16,11 @@ class Reservation extends Model
         'status',
     ];
 
+    protected $casts = [
+        'started_at' => 'datetime',
+        'ended_at' => 'datetime',
+    ];
+
     public function orders()
     {
         return $this->hasMany(orders::class, 'reservation_id', 'id');
@@ -35,10 +40,12 @@ class Reservation extends Model
     {
         return $this->hasOne(reservationPayment::class, 'reservation_id', 'id');
     }
+    
     public function table()
     {
         return $this->belongsTo(table::class);
     }
+    
     public function transactions()
     {
         return $this->hasMany(transaction::class);

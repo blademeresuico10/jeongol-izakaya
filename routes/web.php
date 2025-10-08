@@ -131,8 +131,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/ewallet/{id}/deactivate', [AdminController::class, 'deactivate'])->name('ewallet.deactivate');
 
         // Others
-        Route::get('/others', [AdminController::class, 'others'])->name('admin.others');
+        Route::get('/miscelanious', [AdminController::class, 'others'])->name('admin.others');
+        // Add this to your routes/web.php inside the admin middleware group
 
+        Route::put('/stock-levels/{id}', [AdminController::class, 'updateStockLevel'])->name('admin.stock_levels.update');
+        
         // Operating Hours Management
         Route::put('/operating-hours/default', [AdminController::class, 'updateDefaultHours'])->name('admin.operating_hours.update_default');
         Route::post('/operating-hours', [AdminController::class, 'storeOperatingHours'])->name('admin.operating_hours.store');
@@ -176,7 +179,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware('role:Receptionist')->group(function () {
-        Route::get('/view_bookings', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
+        Route::get('/view_reservations', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
     });
 
     // KITCHEN STAFF ONLY ROUTES

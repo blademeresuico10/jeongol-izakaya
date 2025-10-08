@@ -79,7 +79,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="addTableModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="addTableModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('storeTable') }}" method="POST">
                         @csrf
@@ -116,7 +116,7 @@
 
             @foreach ($tables as $item)
                 @if(!$item->deleted_at)
-                    <div class="modal fade" id="editTableModal{{ $item->id }}" tabindex="-1" role="dialog">
+                    <div class="modal fade" id="editTableModal{{ $item->id }}" tabindex="-1" data-backdrop="static" data-keyboard="false"">
                         <div class="modal-dialog" role="document">
                             <form action="{{ route('admin.updatetable', $item->id) }}" method="POST">
                                 @csrf
@@ -147,7 +147,7 @@
                 @endif
             @endforeach
 
-            <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="deleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-danger text-white">
@@ -172,7 +172,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="restoreConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="restoreConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
@@ -196,7 +196,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="forceDeleteConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="forceDeleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content border-danger">
                         <div class="modal-header bg-danger text-white">

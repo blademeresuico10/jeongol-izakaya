@@ -10,6 +10,7 @@
 
         <div class="container-fluid px-4">
             <div class="row g-4 mb-4">
+                <!-- Sales Card -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
@@ -17,17 +18,16 @@
                                 <div class="flex-grow-1">
                                     <h2 class="mb-0 fw-bold" style="color: black">
                                         ₱{{ number_format($totalGrossSales, 2) }}</h2>
-                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Today's Sales</p>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Net Sales</p>
                                 </div>
                                 <div class="ms-3">
                                     <i class="fas fa-peso-sign fa-3x" style="color: #321ee9;"></i>
                                 </div>
                             </div>
                             <div class="mb-2">
-                                <span
-                                    class="badge bg-opacity-10 {{ $salesChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                <span class="small {{ $salesChange >= 0 ? 'text-success' : 'text-danger' }}">
                                     <i class="fas {{ $salesChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
-                                    {{ number_format($salesChange, 1) }}%
+                                    {{ $salesChange >= 0 ? '+' : '' }}{{ number_format(abs($salesChange), 1) }}%
                                 </span>
                             </div>
                             <div class="chart-container" style="height: 60px;">
@@ -37,23 +37,23 @@
                     </div>
                 </div>
 
+                <!-- Orders Card -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-start justify-content-between mb-3">
                                 <div class="flex-grow-1">
                                     <h2 class="mb-0 fw-bold" style="color: black">{{ number_format($totalOrders) }}</h2>
-                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Today's Orders</p>
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Orders</p>
                                 </div>
                                 <div class="ms-3">
                                     <i class="fas fa-shopping-bag" style="color: #321ee9; font-size: 3rem;"></i>
                                 </div>
                             </div>
                             <div class="mb-2">
-                                <span
-                                    class="badge bg-opacity-10 {{ $ordersChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                <span class="small {{ $ordersChange >= 0 ? 'text-success' : 'text-danger' }}">
                                     <i class="fas {{ $ordersChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
-                                    {{ number_format($ordersChange, 1) }}%
+                                    {{ $ordersChange >= 0 ? '+' : '' }}{{ number_format(abs($ordersChange), 1) }}%
                                 </span>
                             </div>
                             <div class="chart-container" style="height: 60px;">
@@ -70,7 +70,7 @@
                                 <div class="flex-grow-1">
                                     <h2 class="mb-0 fw-bold" style="color: black">{{ number_format($totalCustomers) }}
                                     </h2>
-                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Today's Customers
+                                    <p class="text-black text-uppercase fw-semibold small mb-0 mt-1">Customers
                                     </p>
                                 </div>
                                 <div class="ms-3">
@@ -78,10 +78,9 @@
                                 </div>
                             </div>
                             <div class="mb-2">
-                                <span
-                                    class="badge bg-opacity-10 {{ $customersChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                <span class="small {{ $customersChange >= 0 ? 'text-success' : 'text-danger' }}">
                                     <i class="fas {{ $customersChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
-                                    {{ number_format($customersChange, 1) }}%
+                                    {{ $customersChange >= 0 ? '+' : '' }}{{ number_format(abs($customersChange), 1) }}%
                                 </span>
                             </div>
                             <div class="chart-container" style="height: 60px;">
@@ -91,6 +90,7 @@
                     </div>
                 </div>
 
+                <!-- Reservations Card -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100 hover-lift">
                         <div class="card-body">
@@ -106,10 +106,9 @@
                                 </div>
                             </div>
                             <div class="mb-2">
-                                <span
-                                    class="badge bg-opacity-10 {{ $reservationsChange >= 0 ? 'text-success' : 'text-danger' }} small">
+                                <span class="small {{ $reservationsChange >= 0 ? 'text-success' : 'text-danger' }}">
                                     <i class="fas {{ $reservationsChange >= 0 ? 'fa-arrow-up' : 'fa-arrow-down' }}"></i>
-                                    {{ number_format($reservationsChange, 1) }}%
+                                    {{ $reservationsChange >= 0 ? '+' : '' }}{{ number_format(abs($reservationsChange), 1) }}%
                                 </span>
                             </div>
                             <div class="chart-container" style="height: 60px;">
@@ -119,7 +118,6 @@
                     </div>
                 </div>
             </div>
-
 
             <div class="row g-4 mb-4">
                 <div class="col-xl-8">
@@ -211,27 +209,11 @@
                                             <small class="text-muted">{{ $ingredient->category }}</small>
                                         </div>
                                     </div>
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="text-end me-2">
-                                            <div class="fw-bold" style="color: #1f2937; font-size: 18px;">
-                                                {{ $ingredient->stocks }}</div>
-                                            <small class="text-muted">{{ $ingredient->unit }}</small>
-                                        </div>
-                                        <div>
-                                            @if($ingredient->stocks < 10)
-                                                <span class="badge bg-danger bg-opacity-10 text-white px-3 py-2">
-                                                    <i class="fas fa-exclamation-triangle me-1"></i>Low Stock
-                                                </span>
-                                            @elseif($ingredient->stocks < 50)
-                                                <span class="badge bg-warning bg-opacity-10 text-white px-3 py-2">
-                                                    <i class="fas fa-exclamation-circle me-1"></i>Medium
-                                                </span>
-                                            @else
-                                                <span class="badge bg-success bg-opacity-10 text-white px-3 py-2">
-                                                    <i class="fas fa-check-circle me-1"></i>Good
-                                                </span>
-                                            @endif
-                                        </div>
+                                    <div>
+                                        <span
+                                            class="badge {{ $ingredient->badge_class }} bg-opacity-10 text-white px-3 py-2">
+                                           {{ $ingredient->badge_text }}
+                                        </span>
                                     </div>
                                 </div>
                             @empty
@@ -275,12 +257,7 @@
                                                 <div class="fw-semibold mb-1" style="color: #1f2937; font-size: 14px;">
                                                     {{ $activity['type'] }}
                                                 </div>
-                                                <div class="text-muted mb-2" style="font-size: 13px;">
-                                                    {{ $activity['name'] }}
-                                                </div>
                                                 <div class="d-flex align-items-center gap-2" style="font-size: 12px;">
-                                                    <span
-                                                        class="badge bg-light text-dark px-2 py-1">{{ $activity['status'] }}</span>
                                                     <span class="text-muted">{{ $activity['time'] }}</span>
                                                 </div>
                                             </div>
@@ -298,11 +275,10 @@
                         </div>
                     </div>
                 </div>
-
             </div>
-
         </div>
     </div>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -313,25 +289,28 @@
         const customersTrend = @json($customersTrend ?? []);
         const reservationsTrend = @json($reservationsTrend ?? []);
 
-        function safeData(data) {
-            if (!data || Object.keys(data).length === 0) {
-                return {
-                    labels: ['No Data'],
-                    values: [0]
-                };
+        function prepare7DaysData(trendData) {
+            const labels = [];
+            const values = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                labels.push(label);
+                values.push(trendData[dateStr] || 0);
             }
-            return {
-                labels: Object.keys(data),
-                values: Object.values(data)
-            };
+
+            return { labels, values };
         }
 
-        const salesData = safeData(salesTrend);
-        const ordersData = safeData(ordersTrend);
-        const customersData = safeData(customersTrend);
-        const reservationsData = safeData(reservationsTrend);
+        const salesData = prepare7DaysData(salesTrend);
+        const ordersData = prepare7DaysData(ordersTrend);
+        const customersData = prepare7DaysData(customersTrend);
+        const reservationsData = prepare7DaysData(reservationsTrend);
 
-        // --- Mini Chart Config ---
         const miniChartConfig = {
             type: 'line',
             options: {
@@ -348,8 +327,7 @@
                         displayColors: false,
                         callbacks: {
                             title: function (context) {
-                                const date = context[0]?.label || '';
-                                return `Date: ${date}`;
+                                return context[0]?.label || '';
                             },
                             label: function (context) {
                                 const val = context.parsed.y ?? 0;
@@ -378,25 +356,140 @@
             }
         };
 
-        // Mini charts
         new Chart(document.getElementById('salesChart'), {
             ...miniChartConfig,
-            data: { labels: salesData.labels, datasets: [{ data: salesData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+            data: {
+                labels: salesData.labels,
+                datasets: [{
+                    data: salesData.values,
+                    fill: true,
+                    backgroundColor: 'rgba(50,30,233,0.1)'
+                }]
+            },
+            options: {
+                ...miniChartConfig.options,
+                plugins: {
+                    ...miniChartConfig.options.plugins,
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function (context) {
+                                return context[0]?.label || '';
+                            },
+                            label: function (context) {
+                                return 'Sales: ₱' + (context.parsed.y ?? 0).toLocaleString();
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         new Chart(document.getElementById('ordersChartMini'), {
             ...miniChartConfig,
-            data: { labels: ordersData.labels, datasets: [{ data: ordersData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+            data: {
+                labels: ordersData.labels,
+                datasets: [{
+                    data: ordersData.values,
+                    fill: true,
+                    backgroundColor: 'rgba(50,30,233,0.1)'
+                }]
+            },
+            options: {
+                ...miniChartConfig.options,
+                plugins: {
+                    ...miniChartConfig.options.plugins,
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function (context) {
+                                return context[0]?.label || '';
+                            },
+                            label: function (context) {
+                                return 'Orders: ' + (context.parsed.y ?? 0);
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         new Chart(document.getElementById('customersChart'), {
             ...miniChartConfig,
-            data: { labels: customersData.labels, datasets: [{ data: customersData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+            data: {
+                labels: customersData.labels,
+                datasets: [{
+                    data: customersData.values,
+                    fill: true,
+                    backgroundColor: 'rgba(50,30,233,0.1)'
+                }]
+            },
+            options: {
+                ...miniChartConfig.options,
+                plugins: {
+                    ...miniChartConfig.options.plugins,
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function (context) {
+                                return context[0]?.label || '';
+                            },
+                            label: function (context) {
+                                return 'Customers: ' + (context.parsed.y ?? 0);
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         new Chart(document.getElementById('reservationsChartMini'), {
             ...miniChartConfig,
-            data: { labels: reservationsData.labels, datasets: [{ data: reservationsData.values, fill: true, backgroundColor: 'rgba(50,30,233,0.1)' }] }
+            data: {
+                labels: reservationsData.labels,
+                datasets: [{
+                    data: reservationsData.values,
+                    fill: true,
+                    backgroundColor: 'rgba(50,30,233,0.1)'
+                }]
+            },
+            options: {
+                ...miniChartConfig.options,
+                plugins: {
+                    ...miniChartConfig.options.plugins,
+                    tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 8,
+                        displayColors: false,
+                        callbacks: {
+                            title: function (context) {
+                                return context[0]?.label || '';
+                            },
+                            label: function (context) {
+                                return 'Reservations: ' + (context.parsed.y ?? 0);
+                            }
+                        }
+                    }
+                }
+            }
         });
 
         const months = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -467,8 +560,6 @@
             }
         });
     });
-
-
 </script>
 
 @include('admin.layouts.script')

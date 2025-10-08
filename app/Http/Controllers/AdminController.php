@@ -24,59 +24,115 @@ use App\Models\ingredients;
 use App\Models\walkin;
 use App\Models\OperatingHour;
 use App\Models\MenuDiscount;
-
-
+use App\Models\StockAlertLevel;
 
 class AdminController extends Controller
 {
     public function home()
     {
-        $totalGrossSales   = transaction::sum('grand_total');
-        $totalOrders       = orders::count();
-        $totalCustomers    = customers::count();
-        $totalReservations = Reservation::count();
+        $today = Carbon::today();
 
-        $thisWeekStart = Carbon::now()->startOfWeek();
-        $thisWeekEnd   = Carbon::now()->endOfWeek();
-        $lastWeekStart = Carbon::now()->subWeek()->startOfWeek();
-        $lastWeekEnd   = Carbon::now()->subWeek()->endOfWeek();
+        $totalGrossSales = transaction::whereDate('created_at', $today)->sum('grand_total');
 
-        $thisWeekSales = transaction::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->sum('grand_total');
-        $lastWeekSales = transaction::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->sum('grand_total');
-        $salesChange = $lastWeekSales > 0 ? (($thisWeekSales - $lastWeekSales) / $lastWeekSales) * 100 : 0;
+        $todayReservationOrders = orders::whereDate('created_at', $today)
+            ->whereNotNull('reservation_id')
+            ->distinct('reservation_id')
+            ->count('reservation_id');
 
-        $thisWeekOrders = orders::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
-        $lastWeekOrders = orders::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
-        $ordersChange = $lastWeekOrders > 0 ? (($thisWeekOrders - $lastWeekOrders) / $lastWeekOrders) * 100 : 0;
+        $todayWalkinOrders = orders::whereDate('created_at', $today)
+            ->whereNotNull('walk_in_id')
+            ->distinct('walk_in_id')
+            ->count('walk_in_id');
 
-        $thisWeekCustomers = customers::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
-        $lastWeekCustomers = customers::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
-        $customersChange = $lastWeekCustomers > 0 ? (($thisWeekCustomers - $lastWeekCustomers) / $lastWeekCustomers) * 100 : 0;
+        $totalOrders = $todayReservationOrders + $todayWalkinOrders;
 
-        $thisWeekReservations = Reservation::whereBetween('created_at', [$thisWeekStart, $thisWeekEnd])->count();
-        $lastWeekReservations = Reservation::whereBetween('created_at', [$lastWeekStart, $lastWeekEnd])->count();
-        $reservationsChange = $lastWeekReservations > 0 ? (($thisWeekReservations - $lastWeekReservations) / $lastWeekReservations) * 100 : 0;
+        $reservationPax = Reservation::whereDate('created_at', $today)
+            ->whereHas('orders')
+            ->sum('pax');
+
+        $walkinPax = walkin::whereDate('created_at', $today)
+            ->whereHas('orders')
+            ->sum('pax');
+
+        $totalCustomers = $reservationPax + $walkinPax;
+
+        $totalReservations = Reservation::whereDate('created_at', $today)->count();
+
+        $yesterday = Carbon::yesterday();
+
+        $todaySales = $totalGrossSales;
+        $yesterdaySales = transaction::whereDate('created_at', $yesterday)->sum('grand_total');
+        $salesChange = $yesterdaySales > 0 ? (($todaySales - $yesterdaySales) / $yesterdaySales) * 100 : 0;
+
+        $yesterdayReservationOrders = orders::whereDate('created_at', $yesterday)
+            ->whereNotNull('reservation_id')
+            ->distinct('reservation_id')
+            ->count('reservation_id');
+
+        $yesterdayWalkinOrders = orders::whereDate('created_at', $yesterday)
+            ->whereNotNull('walk_in_id')
+            ->distinct('walk_in_id')
+            ->count('walk_in_id');
+
+        $yesterdayOrders = $yesterdayReservationOrders + $yesterdayWalkinOrders;
+        $ordersChange = $yesterdayOrders > 0 ? (($totalOrders - $yesterdayOrders) / $yesterdayOrders) * 100 : 0;
+
+        $yesterdayResPax = Reservation::whereDate('created_at', $yesterday)
+            ->whereHas('orders')
+            ->sum('pax');
+
+        $yesterdayWalkinPax = walkin::whereDate('created_at', $yesterday)
+            ->whereHas('orders')
+            ->sum('pax');
+
+        $yesterdayCustomers = $yesterdayResPax + $yesterdayWalkinPax;
+        $customersChange = $yesterdayCustomers > 0 ? (($totalCustomers - $yesterdayCustomers) / $yesterdayCustomers) * 100 : 0;
+
+        $yesterdayReservations = Reservation::whereDate('created_at', $yesterday)->count();
+        $reservationsChange = $yesterdayReservations > 0 ? (($totalReservations - $yesterdayReservations) / $yesterdayReservations) * 100 : 0;
 
         $startDate = Carbon::now()->subDays(6);
         $endDate = Carbon::now();
 
-        $salesTrend = Transaction::selectRaw('DATE(created_at) as date, SUM(grand_total) as total')
+        $salesTrend = transaction::selectRaw('DATE(created_at) as date, SUM(grand_total) as total')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date')
             ->pluck('total', 'date');
 
-        $ordersTrend = orders::selectRaw('DATE(created_at) as date, COUNT(*) as total')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('total', 'date');
+        $ordersTrend = collect();
+        for ($i = 0; $i < 7; $i++) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
 
-        $customersTrend = customers::selectRaw('DATE(created_at) as date, COUNT(*) as total')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->groupBy('date')
-            ->orderBy('date')
-            ->pluck('total', 'date');
+            $resOrders = orders::whereDate('created_at', $date)
+                ->whereNotNull('reservation_id')
+                ->distinct('reservation_id')
+                ->count('reservation_id');
+
+            $walkinOrders = orders::whereDate('created_at', $date)
+                ->whereNotNull('walk_in_id')
+                ->distinct('walk_in_id')
+                ->count('walk_in_id');
+
+            $ordersTrend->put($date, $resOrders + $walkinOrders);
+        }
+        $ordersTrend = $ordersTrend->sortKeys();
+
+        $customersTrend = collect();
+        for ($i = 0; $i < 7; $i++) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+
+            $resPax = Reservation::whereDate('created_at', $date)
+                ->whereHas('orders')
+                ->sum('pax');
+
+            $walkinPax = walkin::whereDate('created_at', $date)
+                ->whereHas('orders')
+                ->sum('pax');
+
+            $customersTrend->put($date, $resPax + $walkinPax);
+        }
+        $customersTrend = $customersTrend->sortKeys();
 
         $reservationsTrend = Reservation::selectRaw('DATE(created_at) as date, COUNT(*) as total')
             ->whereBetween('created_at', [$startDate, $endDate])
@@ -85,7 +141,7 @@ class AdminController extends Controller
             ->pluck('total', 'date');
 
         $currentYear = Carbon::now()->year;
-        $monthlySales = Transaction::selectRaw('MONTH(created_at) as month, SUM(grand_total) as total')
+        $monthlySales = transaction::selectRaw('MONTH(created_at) as month, SUM(grand_total) as total')
             ->whereYear('created_at', $currentYear)
             ->groupBy('month')
             ->orderBy('month')
@@ -103,17 +159,12 @@ class AdminController extends Controller
             ->limit(10)
             ->get();
 
-        $today = Carbon::today();
-
         $recentReservations = Reservation::whereDate('created_at', $today)
             ->latest()
             ->get()
             ->map(function ($r) {
                 return [
                     'type' => 'Reservation',
-                    'name' => $r->customer_name ?? 'Guest',
-                    'table' => 'Table ' . ($r->table_id ?? 'N/A'),
-                    'status' => 'Reserved',
                     'created_at' => $r->created_at,
                     'time' => $r->created_at->diffForHumans(),
                     'icon' => 'fa-calendar-check',
@@ -121,7 +172,7 @@ class AdminController extends Controller
                 ];
             });
 
-        $recentWalkins = Walkin::with(['customer', 'table'])
+        $recentWalkins = walkin::with(['customer', 'table'])
             ->whereDate('created_at', $today)
             ->latest()
             ->get()
@@ -138,7 +189,7 @@ class AdminController extends Controller
                 ];
             });
 
-        $recentTransactions = Transaction::with(['customer'])
+        $recentTransactions = transaction::with(['customer'])
             ->whereDate('created_at', $today)
             ->latest()
             ->get()
@@ -163,7 +214,50 @@ class AdminController extends Controller
             ->take(7)
             ->values();
 
-        $ingredients = ingredients::select('id', 'name', 'unit', 'stocks')->get();
+        $ingredients = ingredients::select('id', 'name', 'category', 'unit', 'stocks')
+            ->with(['stockAlertLevel'])
+            ->get()
+            ->map(function ($ingredient) {
+                $alertLevel = $ingredient->stockAlertLevel;
+
+                if ($alertLevel) {
+                    if ($ingredient->stocks <= ($alertLevel->critical_stock ?? 0)) {
+                        $ingredient->status = 'critical';
+                        $ingredient->badge_class = 'bg-danger';
+                        $ingredient->badge_text = 'Critical';
+                        $ingredient->badge_icon = 'fa-exclamation-triangle';
+                    } elseif ($ingredient->stocks <= ($alertLevel->low_stock ?? 0)) {
+                        $ingredient->status = 'low';
+                        $ingredient->badge_class = 'bg-warning';
+                        $ingredient->badge_text = 'Low Stock';
+                        $ingredient->badge_icon = 'fa-exclamation-circle';
+                    } else {
+                        $ingredient->status = 'good';
+                        $ingredient->badge_class = 'bg-success';
+                        $ingredient->badge_text = 'Good';
+                        $ingredient->badge_icon = 'fa-check-circle';
+                    }
+                } else {
+                    if ($ingredient->stocks < 10) {
+                        $ingredient->status = 'low';
+                        $ingredient->badge_class = 'bg-danger';
+                        $ingredient->badge_text = 'Low Stock';
+                        $ingredient->badge_icon = 'fa-exclamation-triangle';
+                    } elseif ($ingredient->stocks < 50) {
+                        $ingredient->status = 'medium';
+                        $ingredient->badge_class = 'bg-warning';
+                        $ingredient->badge_text = 'Medium';
+                        $ingredient->badge_icon = 'fa-exclamation-circle';
+                    } else {
+                        $ingredient->status = 'good';
+                        $ingredient->badge_class = 'bg-success';
+                        $ingredient->badge_text = 'Good';
+                        $ingredient->badge_icon = 'fa-check-circle';
+                    }
+                }
+
+                return $ingredient;
+            });
 
         return view('admin.home', compact(
             'totalGrossSales',
@@ -199,6 +293,7 @@ class AdminController extends Controller
                 'lastname' => 'required|string|max:255',
                 'contact_number' => 'required|string|max:20',
                 'email' => 'required|email|unique:users,email,' . $id,
+                'address' => 'required|string|max:255',
                 'username' => 'required|string|unique:users,username,' . $id,
                 'password' => 'nullable|string|min:6',
                 'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -220,6 +315,7 @@ class AdminController extends Controller
             $user->firstname = $request->firstname;
             $user->lastname = $request->lastname;
             $user->contact_number = $request->contact_number;
+            $user->address = $request->address;
             $user->email = $request->email;
             $user->username = $request->username;
 
@@ -320,6 +416,7 @@ class AdminController extends Controller
                 'lastname' => 'required|string|max:255',
                 'role' => 'required|string|in:Admin,Receptionist,Cashier,Kitchen Staff',
                 'contact_number' => 'required|string|max:11',
+                'address' => 'required|string|max:255',
                 'username' => 'required|string|unique:users,username',
                 'email' => 'nullable|email|unique:users,email',
                 'password' => 'required|string|min:8|confirmed',
@@ -346,6 +443,7 @@ class AdminController extends Controller
             'contact_number' => $request->contact_number,
             'username' => $request->username,
             'email' => $request->email,
+            'address' => $request->adress,
             'password' => Hash::make($request->password),
             'profile_picture' => $request->hasFile('profile_picture') ? $request->file('profile_picture')->store('profile_pictures', 'public') : null,
             'status' => $request->has('status') ? 'Active' : 'Inactive',
@@ -367,6 +465,7 @@ class AdminController extends Controller
                 'role' => 'required|string',
                 'contact_number' => 'required|string|max:20',
                 'email' => 'required|email|unique:users,email,' . $id,
+                'address' => 'required|string|max:255',
                 'username' => 'required|string|unique:users,username,' . $id,
                 'password' => 'nullable|string|min:6',
                 'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -385,6 +484,7 @@ class AdminController extends Controller
         $user->role = $request->role;
         $user->contact_number = $request->contact_number;
         $user->email = $request->email;
+        $user->address = $request->address;
         $user->username = $request->username;
         $user->status = $request->has('status') ? 'Active' : 'Inactive';
 
@@ -1107,10 +1207,14 @@ class AdminController extends Controller
 
     public function ingredient_management()
     {
-        $ingredients = DB::table('ingredients')->get();
+        $ingredients = ingredients::all()->map(function ($ingredient) {
+            if (strtolower($ingredient->unit) === 'pieces') {
+                $ingredient->unit = 'pcs';
+            }
+            return $ingredient;
+        });
         return view('admin.ingredient_management', compact('ingredients'));
     }
-
 
     public function addingredient()
     {
@@ -1484,14 +1588,28 @@ class AdminController extends Controller
         }
     }
 
-    public function others()
+    public function others(Request $request)
     {
         $hours = OperatingHour::all();
-        $discounts = MenuDiscount::with('menu')->get();
         $menus = Menu::whereNull('deleted_at')->get();
+        $discounts = MenuDiscount::with('menu')->paginate(6);
+        $stock_level = StockAlertLevel::with('ingredient')->paginate(6);
 
-        return view('admin.others', compact('hours', 'discounts', 'menus'));
+        if ($request->ajax()) {
+            $section = $request->get('section');
+
+            if ($section === 'discounts') {
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level'))->render();
+            }
+
+            if ($section === 'stock') {
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level'))->render();
+            }
+        }
+
+        return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level'));
     }
+
 
     public function storeOperatingHours(Request $request)
     {
@@ -1589,6 +1707,23 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Discount removed successfully!');
     }
 
+
+    public function updateStockLevel(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'low_stock' => 'required|numeric|min:0',
+            'critical_stock' => 'required|numeric|min:0',
+        ]);
+
+        if ($validated['critical_stock'] >= $validated['low_stock']) {
+            return back()->with('error', 'Critical stock level must be lower than low stock level.');
+        }
+
+        $stockLevel = StockAlertLevel::findOrFail($id);
+        $stockLevel->update($validated);
+
+        return back()->with('success', 'Stock level updated successfully!');
+    }
 
     public function ewallet_management()
     {

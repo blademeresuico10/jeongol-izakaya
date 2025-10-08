@@ -35,6 +35,7 @@
                                 <th>Name</th>
                                 <th>Role</th>
                                 <th>Contact</th>
+                                <th>Address</th>
                                 <th>Username</th>
                                 <th>Email</th>
                                 <th>Status</th>
@@ -58,6 +59,7 @@
                                         <span>{{ ucfirst($user->role) }}</span>
                                     </td>
                                     <td>{{ $user->contact_number }}</td>
+                                    <td>{{$user->address}}</td>
                                     <td>{{$user->username}}</td>
                                     <td>{{ $user->email }} </td>
                                     <td>
@@ -110,7 +112,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="addUserModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="addUserModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('storeUser') }}" method="POST" id="addUserForm"
                         enctype="multipart/form-data">
@@ -184,6 +186,12 @@
                                     <div class="invalid-feedback"></div>
                                 </div>
 
+                                <div class="form-group">
+                                    <label class="mt-2">Address <span class="text-danger">*</span></label>
+                                    <input type="address" name="address" class="form-control" required>
+                                    <div class="invalid-feedback"></div>
+                                </div>
+
                                 <div class="row mt-2">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -225,7 +233,7 @@
 
             @foreach ($users as $user)
                 @if(!$user->deleted_at)
-                    <div class="modal fade" id="editUserModal{{ $user->id }}" tabindex="-1" role="dialog">
+                    <div class="modal fade" id="editUserModal{{ $user->id }}" data-backdrop="static" data-keyboard="false">
                         <div class="modal-dialog" role="document">
                             <form action="{{ route('admin.updateuser', $user->id) }}" method="POST"
                                 enctype="multipart/form-data">
@@ -290,6 +298,10 @@
                                         <input type="email" name="email" value="{{ $user->email }}" class="form-control"
                                             required>
 
+                                        <label class="mt-2">Address</label>
+                                        <input type="address" name="address" value="{{ $user->address }}" class="form-control"
+                                            required>
+
                                         <label class="mt-2">Update Password</label>
                                         <input type="password" name="password" placeholder="Leave blank to keep current"
                                             class="form-control">
@@ -313,7 +325,7 @@
                 @endif
             @endforeach
 
-            <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="deleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-danger text-white">
@@ -337,7 +349,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="restoreConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="restoreConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
@@ -361,7 +373,7 @@
                 </div>
             </div>
 
-            <div class="modal fade" id="forceDeleteConfirmModal" tabindex="-1" role="dialog">
+            <div class="modal fade" id="forceDeleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content border-danger">
                         <div class="modal-header bg-danger text-white">
@@ -533,16 +545,13 @@
             confirmPassword.addEventListener('input', checkPasswordMatch);
         }
 
-        // Real-time validation for form fields
         $('#addUserForm input, #addUserForm select').on('blur input', function () {
             validateField(this);
 
-            // Special validation for passwords
             if (this.name === 'password' || this.name === 'password_confirmation') {
                 checkPasswordMatch();
             }
 
-            // Special validation for contact number (max 11 digits as per your backend)
             if (this.name === 'contact_number') {
                 this.value = this.value.replace(/\D/g, '');
                 if (this.value.length > 11) {
@@ -551,7 +560,13 @@
                 }
             }
 
-            // Special validation for username
+            if (this.name == 'address') {
+                if (this.value.length > 0 && !/^[a-zA-Z0-9\s.,#\-]+$/.test(this.value)) {
+                    validateField(this, 'Address can only contain letters, numbers, spaces, commas, periods, hyphens, and #');
+                }
+            }
+
+
             if (this.name === 'username') {
                 this.value = this.value.replace(/\s/g, '').toLowerCase();
                 if (this.value.length > 0 && !/^[a-zA-Z0-9_]+$/.test(this.value)) {
@@ -559,39 +574,33 @@
                 }
             }
 
-            // Special validation for names (firstname, lastname)
             if (this.name === 'firstname' || this.name === 'lastname') {
                 if (this.value.length > 0 && !/^[a-zA-Z\s]+$/.test(this.value)) {
                     validateField(this, 'Name can only contain letters and spaces');
                 }
             }
 
-            // Password minimum length validation (8 characters as per your backend)
             if (this.name === 'password' && this.value.length > 0 && this.value.length < 8) {
                 validateField(this, 'Password must be at least 8 characters');
             }
         });
 
-        // Enhanced form submission with validation
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
 
             let isValid = true;
             const form = this;
 
-            // Validate all required fields
             $(form).find('[required]').each(function () {
                 if (!validateField(this)) {
                     isValid = false;
                 }
             });
 
-            // Check password match
             if (!checkPasswordMatch()) {
                 isValid = false;
             }
 
-            // Additional custom validations
             const contactNumber = form.contact_number.value;
             if (contactNumber && contactNumber.length > 11) {
                 validateField(form.contact_number, 'Contact number cannot exceed 11 digits');
@@ -616,7 +625,13 @@
                 isValid = false;
             }
 
-            // Password minimum length check (matching your backend requirement)
+            const address = form.address.value;
+            if (this.name == 'address') {
+                if (this.value.length > 0 && !/^[a-zA-Z0-9\s.,#\-]+$/.test(this.value)) {
+                    validateField(this, 'Address can only contain letters, numbers, spaces, commas, periods, hyphens, and #');
+                }
+            }
+
             const passwordField = form.password;
             if (passwordField && passwordField.value && passwordField.value.length < 8) {
                 validateField(passwordField, 'Password must be at least 8 characters');
@@ -624,7 +639,6 @@
             }
 
             if (!isValid) {
-                // Scroll to first invalid field
                 const firstInvalid = $(form).find('.is-invalid').first();
                 if (firstInvalid.length) {
                     firstInvalid.focus();
@@ -642,11 +656,9 @@
                 return false;
             }
 
-            // If validation passes, submit the form via AJAX
             const submitButton = $('#submitBtn');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
 
-            // Submit form via AJAX
             const formData = new FormData(form);
 
             $.ajax({
@@ -669,7 +681,6 @@
                         timer: 3000,
                         showConfirmButton: false
                     });
-                    // Reload the page to show the new user
                     setTimeout(function () {
                         location.reload();
                     }, 1000);
@@ -678,14 +689,11 @@
                     submitButton.prop('disabled', false).html('Add User');
 
                     if (xhr.status === 422) {
-                        // Handle validation errors from server
                         const errors = xhr.responseJSON.errors;
 
-                        // Clear previous validations
                         $(form).find('.is-invalid').removeClass('is-invalid');
                         $(form).find('.invalid-feedback').text('');
 
-                        // Show server validation errors
                         $.each(errors, function (field, messages) {
                             const $field = $(form).find(`[name="${field}"]`);
                             const $feedback = $field.siblings('.invalid-feedback');
@@ -694,7 +702,6 @@
                             $feedback.text(messages[0]);
                         });
 
-                        // Focus on first error field
                         const firstErrorField = $(form).find('.is-invalid').first();
                         if (firstErrorField.length) {
                             firstErrorField.focus();
@@ -724,12 +731,10 @@
             });
         });
 
-        // Handle server-side validation errors display
         @if ($errors->any())
             $('#addUserModal').modal('show');
         @endif
 
-        // Modal reset functionality
         $('#addUserModal').on('hidden.bs.modal', function () {
             try {
                 $(this).find('form')[0].reset();
@@ -739,7 +744,6 @@
             }
         });
 
-        // Session message handling
         @if(session('success'))
             Swal.fire({
                 icon: 'success',
@@ -786,7 +790,6 @@
                 });
             @endif
 
-        // Update user form submission handling
         $('form[action*="updateuser"]').on('submit', function (e) {
             const submitButton = $(this).find('button[type="submit"]');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
@@ -796,26 +799,26 @@
             }, 3000);
         });
 
-        // Modal focus management
         $('#addUserModal').on('shown.bs.modal', function () {
             $('input[name="firstname"]').focus();
         });
 
-        // Input formatting for contact numbers (legacy support)
         $('input[name="contact"], input[name="contact_number"]').on('input', function () {
             this.value = this.value.replace(/\D/g, '');
         });
 
-        // Username formatting (legacy support)  
         $('input[name="username"]').on('input', function () {
             this.value = this.value.replace(/\s/g, '').toLowerCase();
         });
+
+        $('input[name="address"]').on('input', function () {
+            this.value = this.value.replace(/\s/g, '').toLowerCase();
+        })
 
     });
 </script>
 
 <style>
-    /* Enhanced validation styles */
     .form-control.is-invalid,
     .form-check-input.is-invalid {
         border-color: #dc3545;
@@ -843,7 +846,6 @@
         color: #dc3545 !important;
     }
 
-    /* Loading spinner styles */
     .fas.fa-spinner.fa-spin {
         animation: fa-spin 1s infinite linear;
     }
@@ -858,7 +860,6 @@
         }
     }
 
-    /* Enhanced modal styles */
     .modal-header.bg-success {
         background-color: #28a745 !important;
     }
@@ -871,14 +872,12 @@
         background-color: #dc3545 !important;
     }
 
-    /* Focus states */
     .form-control:focus {
         border-color: #80bdff;
         outline: 0;
         box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
     }
 
-    /* Required field indicator */
     .form-group label .text-danger {
         font-weight: bold;
     }

@@ -374,21 +374,19 @@
     window.menuPricesMap = {};
     const CASHIER_NAME = @json(auth()->user()->firstname . ' ' . auth()->user()->lastname);
 
-    if (Array.isArray(window.menuPriceData) && window.menuPriceData.length > 0) {
+    if (Array.isArray(window.menuPriceData)) {
         window.menuPriceData.forEach(item => {
             if (item && item.menu_item) {
                 window.menuPricesMap[item.menu_item] = {
-                    regular: parseFloat(item.regular) || 0,
-                    student: item.student !== null ? parseFloat(item.student) : null,
-                    govt_employee: item.govt_employee !== null ? parseFloat(item.govt_employee) : null,
-                    senior: item.senior !== null ? parseFloat(item.senior) : null,
-                    pwd: item.pwd !== null ? parseFloat(item.pwd) : null,
+                    regular: parseFloat(item.regular_price) || 0,
+                    student_percent: item.student_percent ? parseFloat(item.student_percent) : null,
+                    govt_percent: item.govt_percent ? parseFloat(item.govt_percent) : null,
+                    senior_percent: item.senior_percent ? parseFloat(item.senior_percent) : null,
+                    pwd_percent: item.pwd_percent ? parseFloat(item.pwd_percent) : null,
                     has_discount: item.has_discount === 1 || item.has_discount === true
                 };
             }
         });
-    } else {
-        window.menuPricesMap = {};
     }
 
     class CashierApp {
@@ -798,11 +796,19 @@
 
         getDiscountOptions(menuData) {
             let options = '<option value="none">No Discount</option>';
-            if (menuData.student > 0) options += '<option value="student">SD</option>';
-            if (menuData.govt_employee > 0) options += '<option value="govt_employee">GED</option>';
-            if (menuData.has_discount) options += '<option value="pwd_senior">PWD/SR</option>';
+
+            if (menuData.student_percent > 0)
+                options += '<option value="student">SD</option>';
+
+            if (menuData.govt_percent > 0)
+                options += '<option value="govt_employee">GED</option>';
+
+            if (menuData.senior_percent > 0 || menuData.pwd_percent > 0)
+                options += '<option value="pwd_senior">PWD/SR</option>';
+
             return options;
         }
+
 
         calculateSingleItemDiscount(selectElement) {
             const itemPrice = parseFloat(selectElement.dataset.itemPrice);
@@ -810,26 +816,33 @@
             const itemName = selectElement.dataset.itemName;
             const menuItemData = window.menuPricesMap[itemName] || {};
 
-            let discountedPrice = itemPrice;
+            let discountPercent = 0;
 
             switch (discountType) {
                 case 'student':
-                    if (menuItemData.student !== null && menuItemData.student !== undefined) {
-                        discountedPrice = parseFloat(menuItemData.student);
-                    }
+                    discountPercent = menuItemData.student_percent || 0;
                     break;
                 case 'govt_employee':
-                    if (menuItemData.govt_employee !== null && menuItemData.govt_employee !== undefined) {
-                        discountedPrice = parseFloat(menuItemData.govt_employee);
-                    }
+                    discountPercent = menuItemData.govt_percent || 0;
                     break;
                 case 'pwd_senior':
-                    discountedPrice = itemPrice * 0.8;
+                    discountPercent = menuItemData.pwd_percent || menuItemData.senior_percent;
                     break;
-                case 'none':
                 default:
-                    discountedPrice = itemPrice;
+                    discountPercent = 0;
             }
+
+            let discountedPrice = itemPrice * (1 - (discountPercent / 100));
+
+            const decimalPart = discountedPrice - Math.floor(discountedPrice);
+            if (decimalPart >= 0.5) {
+                discountedPrice = Math.ceil(discountedPrice);
+            } else {
+                discountedPrice = Math.floor(discountedPrice);
+            }
+
+            const discountAmount = itemPrice - discountedPrice;
+            selectElement.dataset.discountAmount = discountAmount.toFixed(2);
 
             const parentElement = selectElement.closest('.flex');
             if (parentElement) {
@@ -839,6 +852,7 @@
                 }
             }
         }
+
 
         updateTotalAfterDiscounts() {
             const itemTotals = document.querySelectorAll('.item-total');
@@ -1329,7 +1343,7 @@
                                     <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
                                         <div class="flex justify-between text-sm text-blue-800">
                                             <span>Subtotal:</span>
-                                            <span>₱${subtotal.toFixed(2)}</span>
+                                            <span>${subtotal.toFixed(2)}</span>
                                         </div>
                                         ${advancePayment > 0 ? `
                                         <div class="flex justify-between text-sm text-green-600 items-center">
@@ -1362,7 +1376,7 @@
                                         ` : ''}
                                         <div class="flex justify-between">
         <span class="text-sm text-blue-800">Amount Due:</span>
-        <span id="amountDue" class="text-2xl font-bold text-blue-600">₱${finalTotal.toFixed(2)}</span>
+        <span id="amountDue" class="text-2xl font-bold text-blue-600">${finalTotal.toFixed(2)}</span>
     </div>
 
                                     </div>
@@ -1499,7 +1513,6 @@
         processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData) {
             this.showProcessingModal();
 
-            // Print receipt first
             this.printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
 
             const discountInputs = document.querySelectorAll('.discount-input');
@@ -1581,11 +1594,17 @@
             const vatableSales = (subtotal / 1.12).toFixed(2);
             const vat = (subtotal - vatableSales).toFixed(2);
 
+            let discountAmount = 0;
+            document.querySelectorAll('.discount-type-select').forEach(select => {
+                const discountValue = parseFloat(select.dataset.discountAmount || 0);
+                discountAmount += discountValue;
+            });
+            discountAmount = parseFloat(discountAmount.toFixed(2));
+
+
             let orderItemsHTML = '';
             const itemGroups = {};
             let itemIndex = 0;
-
-            const discountSelects = document.querySelectorAll('.discount-type-select');
 
             currentReservationData.orders.forEach(order => {
                 const itemName = order.order_name;
@@ -1610,23 +1629,22 @@
                     }
                     itemGroups[groupKey].quantity += 1;
                     itemGroups[groupKey].totalAmount += finalPrice;
-
                     itemIndex++;
                 }
             });
 
-            // ✅ Build the table with Unit Price (regular) and Amount (discounted)
             Object.keys(itemGroups).forEach(itemName => {
                 const item = itemGroups[itemName];
                 orderItemsHTML += `
-                <tr>
-                    <td style="padding: 4px 8px; border-bottom: 1px solid #ddd;">${itemName}</td>
-                    <td style="padding: 4px 8px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-                    <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.regularPrice.toFixed(2)}</td>
-                    <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.totalAmount.toFixed(2)}</td>
-                </tr>
-            `;
+        <tr>
+            <td style="padding: 4px 8px; border-bottom: 1px solid #ddd;">${itemName}</td>
+            <td style="padding: 4px 8px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
+            <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.regularPrice.toFixed(2)}</td>
+            <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.totalAmount.toFixed(2)}</td>
+        </tr>
+        `;
             });
+
 
             const printHTML = `
         <!DOCTYPE html>
@@ -1710,20 +1728,9 @@
         <body>
             <div class="header">
                 <h3>Jeongol Izakaya Hotpot & Grill</h3>
-                <p>VAT Reg. TIN 295-774-127-00003</p>
                 <p>Koronadal City, South Cotabato, Philippines</p>
+                <p>VAT Reg. TIN 295-774-127-00003</p>
                 <p style="margin-top: 6px; font-weight: bold;">Receipt</p>
-            </div>
-
-            <div class="info-section">
-                <div class="info-row">
-                    <span>Date:</span>
-                    <span>${dateStr} ${timeStr}</span>
-                </div>
-                <div class="info-row">
-                    <span>Cashier:</span>
-                    <span>${CASHIER_NAME}</span>
-                </div>
             </div>
 
             <table>
@@ -1743,25 +1750,25 @@
             <div class="summary">
                 <div class="summary-row">
                     <span>VATable Sales:</span>
-                    <span>₱${vatableSales}</span>
+                    <span>${vatableSales}</span>
                 </div>
                 <div class="summary-row">
                     <span>VAT (12%):</span>
-                    <span>₱${vat}</span>
+                    <span>${vat}</span>
                 </div>
                 <div class="summary-row">
                     <span>Total Sales (VAT Inclusive):</span>
-                    <span>₱${subtotal.toFixed(2)}</span>
+                    <span>${subtotal.toFixed(2)}</span>
                 </div>
                 ${advancePayment > 0 ? `
                 <div class="summary-row">
                     <span>Advance Payment:</span>
-                    <span>₱${advancePayment.toFixed(2)}</span>
+                    <span>${advancePayment.toFixed(2)}</span>
                 </div>
                 ` : ''}
                 <div class="summary-row">
-                    <span>Discounted Person:</span>
-                    <span>${Object.keys(this.tempCustomerData).length}</span>
+                    <span>Discount:</span>
+                    <span>${discountAmount.toFixed(2)}</span>
                 </div>
                 <div class="summary-row total-row">
                     <span>TOTAL AMOUNT DUE:</span>
@@ -1769,11 +1776,22 @@
                 </div>
                 <div class="summary-row" style="margin-top: 8px;">
                     <span>Cash Received:</span>
-                    <span>₱${cashReceived.toFixed(2)}</span>
+                    <span>${cashReceived.toFixed(2)}</span>
                 </div>
                 <div class="summary-row">
                     <span>Change:</span>
-                    <span>₱${change.toFixed(2)}</span>
+                    <span>${change.toFixed(2)}</span>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-row">
+                    <span>Date:</span>
+                    <span>${dateStr} ${timeStr}</span>
+                </div>
+                <div class="info-row">
+                    <span>Cashier:</span>
+                    <span>${CASHIER_NAME}</span>
                 </div>
             </div>
 

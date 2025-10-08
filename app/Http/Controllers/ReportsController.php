@@ -61,7 +61,6 @@ class ReportsController extends Controller
                 return $transaction->reservation->pax ?? $transaction->walkin->pax ?? 0;
             });
 
-            // Collect all transaction details
             $allDetails = [];
             foreach ($transactions as $transaction) {
                 foreach ($transaction->transactionDetails as $detail) {
@@ -72,7 +71,6 @@ class ReportsController extends Controller
                 }
             }
 
-            // Group by item name
             $groupedSales = collect($allDetails)->groupBy('item_name')->map(function ($items, $itemName) {
                 return [
                     'item_name' => $itemName,
@@ -97,8 +95,7 @@ class ReportsController extends Controller
 
             return $pdf->download($filename);
         } catch (\Exception $e) {
-            \Log::error('PDF Generation Error: ' . $e->getMessage());
-            \Log::error($e->getTraceAsString());
+           
             return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
         }
     }

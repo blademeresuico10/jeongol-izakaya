@@ -122,14 +122,12 @@ class LoginController extends Controller
                     return back()->withErrors(['username' => 'This admin account no longer exists. Please contact support if you believe this is an error.']);
                 }
 
-                // Check if another admin is already logged in
                 if (User::isRoleActive('Admin', $user->id)) {
                     return back()->withErrors([
                         'username' => 'Another Admin is already logged in. Only one Admin can be active at a time.'
                     ])->withInput($request->only('username'));
                 }
 
-                // Generate session token and mark user as logged in
                 $sessionToken = Str::random(60);
                 $user->markAsLoggedIn($sessionToken);
 
@@ -160,7 +158,6 @@ class LoginController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        // Check if admin exists
         $admin = User::where('email', $request->email)
             ->where('role', 'Admin')
             ->where('status', 'Active')
@@ -173,10 +170,8 @@ class LoginController extends Controller
             ]);
         }
 
-        // Generate simple 6-digit code
         $code = rand(100000, 999999);
 
-        // Store code in database
         DB::table('password_reset_tokens')->updateOrInsert(
             ['email' => $request->email],
             [

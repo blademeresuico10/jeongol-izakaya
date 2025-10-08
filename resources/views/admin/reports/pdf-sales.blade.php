@@ -151,36 +151,38 @@
     </div>
 
     @if($groupedSales->count() > 0)
-        <table>
+        {{-- Sales Summary Table --}}
+        <table class="summary-table">
             <thead>
                 <tr>
                     <th>Gross Sales</th>
                     <th>Net Sales</th>
                     <th>Total Discounted</th>
-                    <th>Total Customer</th>
-                    <th>Item Name</th>
-                    <th>Quantity</th>
-                    <th class="text-right">Total (₱)</th>
+                    <th>Total Customers</th>
                 </tr>
             </thead>
-
             <tbody>
-                @foreach($groupedSales as $index => $sale)
+                <tr>
+                    <td class="text-right currency">{{ number_format($grossSales, 2) }}</td>
+                    <td class="text-right currency">{{ number_format($netSales, 2) }}</td>
+                    <td class="text-right currency">{{ number_format($totalDiscounts, 2) }}</td>
+                    <td class="text-center">{{ $totalCustomers }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 class="section-title">Order Details</h3>
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Quantity</th>
+                    <th class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($groupedSales as $sale)
                     <tr>
-                        @if($index === 0)
-                            <td rowspan="{{ $groupedSales->count() }}" class="text-right currency">
-                                {{ number_format($grossSales, 2) }}
-                            </td>
-                            <td rowspan="{{ $groupedSales->count() }}" class="text-right currency">
-                                {{ number_format($netSales, 2) }}
-                            </td>
-                            <td rowspan="{{ $groupedSales->count() }}" class="text-right currency">
-                                {{ number_format($totalDiscounts, 2) }}
-                            </td>
-                            <td rowspan="{{ $groupedSales->count() }}" class="text-center">
-                                {{ $totalCustomers }}
-                            </td>
-                        @endif
                         <td>{{ $sale['item_name'] }}</td>
                         <td class="text-center">{{ $sale['quantity'] }}</td>
                         <td class="text-right currency">{{ number_format($sale['total'], 2) }}</td>
@@ -191,7 +193,7 @@
     @else
         <div class="no-data">No transactions found for the selected period.</div>
     @endif
-
 </body>
+
 
 </html>

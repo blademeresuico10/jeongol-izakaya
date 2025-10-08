@@ -39,7 +39,7 @@
                                     <td class="border px-2 py-1">
                                         <span
                                             class="px-2 py-1 rounded text-xs 
-                                                                        {{ $gcash->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                                                                                                                {{ $gcash->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                                             {{ $gcash->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
@@ -93,7 +93,7 @@
                                     <td class="border px-2 py-1">
                                         <span
                                             class="px-2 py-1 rounded text-xs 
-                                                                        {{ $maya->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
+                                                                                                                                {{ $maya->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                                             {{ $maya->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
@@ -121,97 +121,93 @@
             </div>
         </div>
 
-        <!-- Receipt Submissions Table -->
-        <div class="flex justify-center mt-8 px-6 mb-8">
-            <div class="w-4/5 border rounded-lg">
-                <div class="bg-gray-200 flex justify-between items-center text-black px-4 py-2">
-                    <h6 class="font-semibold">Receipt Submissions</h6>
-                </div>
-
-                <div class="p-1">
-                    <table class="w-full text-sm border border-gray-300">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="border px-2 py-1">Receipt</th>
-                                <th class="border px-2 py-1">Customer Name</th>
-                                <th class="border px-2 py-1">DateTime Submitted</th>
+        <div class="p-4">
+            <div class="overflow-y-auto border border-gray-300 rounded-lg" style="max-height: 500px;">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-100 text-gray-700 sticky top-0 z-10">
+                        <tr>
+                            <th class="border px-3 py-2 text-center w-1/3 bg-gray-100">Receipt</th>
+                            <th class="border px-3 py-2 bg-gray-100">Customer Name</th>
+                            <th class="border px-3 py-2 bg-gray-100">Date Submitted</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($receipts as $receipt)
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="border px-3 py-2 text-center">
+                                    @if ($receipt->payment_proof)
+                                        <img src="{{ url('/file-serve/payment_proofs/' . basename($receipt->payment_proof)) }}"
+                                            alt="Receipt" class="receipt-thumb mx-auto rounded-lg cursor-pointer "
+                                            style="max-width: 3000px; max-height: 300px; object-fit: cover;">
+                                    @else
+                                        <span class="text-gray-400 italic">No Image</span>
+                                    @endif
+                                </td>
+                                <td class="border px-3 py-2 align-middle">{{ $receipt->customer_name }}</td>
+                                <td class="border px-3 py-2 align-middle">
+                                    {{ \Carbon\Carbon::parse($receipt->submitted_at)->format('M d, Y h:i A') }}
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($receipts as $receipt)
-                                <tr>
-                                    <td class="border px-2 py-1 text-center">
-                                        @if ($receipt->payment_proof)
-                                            <img src="{{ url('/file-serve/payment_proofs/' . basename($receipt->payment_proof)) }}"
-                                                alt="Receipt Image" class="mx-auto rounded shadow-md"
-                                                style="max-width: 120px; max-height: 120px; object-fit: cover;">
-                                        @else
-                                            <span class="text-gray-400 italic">No Image</span>
-                                        @endif
-                                    </td>
-                                    <td class="border px-2 py-1">{{ $receipt->customer_name }}</td>
-                                    <td class="border px-2 py-1">
-                                        {{ \Carbon\Carbon::parse($receipt->submitted_at)->format('M d, Y h:i A') }}
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="border px-2 py-1 text-center text-gray-500 italic">
-                                        No receipts submitted yet
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div id="addEwalletModal" class="hidden fixed inset-0 flex items-center justify-center z-50">
-            <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
-                <h2 class="text-lg font-semibold mb-4">Add E-Wallet</h2>
-                <form action="{{ route('ewallet.store') }}" method="POST">
-                    @csrf
-
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium text-gray-700">Payment Method</label>
-                        <p id="payment_method_display"
-                            class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm bg-gray-100"></p>
-                        <input type="hidden" id="payment_method" name="payment_method" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium text-gray-700">Wallet Registered Name</label>
-                        <input type="text" name="wallet_name" required
-                            class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium text-gray-700">Wallet Number</label>
-                        <input type="text" name="wallet_number" required
-                            class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="block text-sm font-medium text-gray-700">Status</label>
-                        <select name="is_active" class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                    </div>
-
-                    <div class="flex justify-end gap-2 mt-4">
-                        <button type="button" onclick="closeModal()"
-                            class="px-4 py-2 text-sm bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
-                        <button type="submit"
-                            class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
-                    </div>
-                </form>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="border px-3 py-4 text-center text-gray-500 italic">
+                                    No receipts submitted yet.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
 
     </div>
+</div>
+
+
+<div id="addEwalletModal" class="hidden fixed inset-0 flex items-center justify-center z-50">
+    <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
+        <h2 class="text-lg font-semibold mb-4">Add E-Wallet</h2>
+        <form action="{{ route('ewallet.store') }}" method="POST">
+            @csrf
+
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700">Payment Method</label>
+                <p id="payment_method_display"
+                    class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm bg-gray-100"></p>
+                <input type="hidden" id="payment_method" name="payment_method" required>
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700">Wallet Registered Name</label>
+                <input type="text" name="wallet_name" required
+                    class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700">Wallet Number</label>
+                <input type="text" name="wallet_number" required
+                    class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
+            </div>
+
+            <div class="mb-3">
+                <label class="block text-sm font-medium text-gray-700">Status</label>
+                <select name="is_active" class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="1">Active</option>
+                    <option value="0">Inactive</option>
+                </select>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4">
+                <button type="button" onclick="closeModal()"
+                    class="px-4 py-2 text-sm bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
+                <button type="submit"
+                    class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

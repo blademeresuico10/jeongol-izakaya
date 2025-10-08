@@ -28,7 +28,6 @@ class User extends Authenticatable
         'status',
         'profile_picture',
         'is_logged_in',
-        'last_login_at',
         'session_token',
     ];
 
@@ -47,7 +46,6 @@ class User extends Authenticatable
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'last_login_at' => 'datetime',
         'is_logged_in' => 'boolean',
         'password' => 'hashed',
     ];
@@ -94,7 +92,6 @@ class User extends Authenticatable
     {
         return $this->update([
             'is_logged_in' => true,
-            'last_login_at' => now(),
             'session_token' => $sessionToken
         ]);
     }

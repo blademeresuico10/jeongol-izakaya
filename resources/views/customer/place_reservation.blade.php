@@ -47,6 +47,7 @@
       text-decoration: none;
     }
 
+
     .table {
       width: 100%;
       aspect-ratio: 1 / 1;
@@ -394,37 +395,35 @@
   </header>
 
   <section class="mt-4">
-    <div class="max-w-fit mx-auto bg-white/90 text-black rounded-lg shadow-xl p-2 flex items-center gap-2">
-      <h2 class="text-md font-semibold text-center m-2">Choose Time</h2>
+    <div class="max-w-fit mx-auto bg-white/90 text-black rounded-lg shadow-xl p-5 flex flex-col items-center gap-3">
+      <h2 class="text-lg font-semibold text-center">Choose Time</h2>
 
-      <div class="flex items-center gap-0.5">
-        <label for="date" class="text-black text-[15px] ">Date:</label>
+      <div class="flex items-center gap-2">
+        <label for="date" class="text-black text-[16px] font-semibold">Date:</label>
         <input type="date" id="date" name="date"
-          class="px-1.5 py-1 rounded border border-black text-gray-500 text-[9px] focus:outline-none ">
+          class="px-2 py-1 rounded border border-black text-gray-600 text-[12px] focus:outline-none">
+
+        <label for="time" class="text-black text-[16px] font-semibold">Time:</label>
+        <input type="time" id="time" name="time"
+          class="px-2 py-1 rounded border border-black text-gray-600 text-[12px] focus:outline-none">
       </div>
 
-      <div class="flex items-center gap-0.5">
-        <label for="time" class="text-black text-[15px] ">Time:</label>
-        <input type="time" id="time" name="time"
-          class="px-1.5 py-1 rounded border border-black text-gray-500 text-[9px] focus:outline-none ">
-      </div>
     </div>
   </section>
 
   <div class="table-layout grid grid-cols-2 gap-4">
     @foreach($tables as $table)
-    <div class="table-link cursor-pointer" data-table-id="{{ $table->id }}"
+    <div class="table-link cursor-pointer pointer-events-none" data-table-id="{{ $table->id }}"
       data-table-number="{{ $table->table_number }}">
 
       <div class="table available relative flex flex-col items-center justify-center h-50 border rounded bg-green-100">
-
-      <div class="absolute top-1 text-xs ">{{ $table->capacity }} Pax</div>
-
+      <div class="absolute top-1 text-xs">{{ $table->capacity }} Pax</div>
       <div class="table-number text-lg font-semibold">Table {{ $table->table_number }}</div>
       </div>
     </div>
   @endforeach
   </div>
+
   <div id="tableModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
       <div class="p-3">
@@ -458,14 +457,14 @@
 
             <div>
               <label for="arrivalTimeInput">Arrival Time</label>
-              <input type="time" id="arrivalTimeInput" required class="w-full border rounded p-2" />
+              <input type="time" id="arrivalTimeInput" required class="w-full border rounded p-2" readonly />
             </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="reserved_date">Reservation Date</label>
-              <input type="date" id="reserved_date" required class="w-full border rounded p-2" />
+              <input type="date" id="reserved_date" required class="w-full border rounded p-2" readonly />
             </div>
             <div>
               <label for="advance_payment">Advance Payment <span class="text-red-600">(50% of your total
@@ -587,6 +586,7 @@
           this.initializeEventListeners();
           this.initializeAvailabilitySearch();
           this.updateOrderSummary();
+          this.initializeDatePicker();
 
         });
       }
@@ -615,10 +615,8 @@
           selectedOrdersContainer: document.getElementById('selectedOrdersContainer'),
           totalQuantity: document.getElementById('totalQuantity'),
           totalPrice: document.getElementById('totalPrice'),
-
           searchDateInput: document.getElementById('date'),
           searchTimeInput: document.getElementById('time'),
-
           tableLinks: document.querySelectorAll('.table-link')
         };
       }
@@ -637,6 +635,15 @@
 
         if (!searchDateInput || !searchTimeInput) return;
 
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const formattedDate = `${yyyy}-${mm}-${dd}`;
+
+        searchDateInput.value = formattedDate;
+        searchDateInput.min = formattedDate;
+
         searchDateInput.addEventListener('change', () => this.checkAvailability());
         searchTimeInput.addEventListener('change', () => this.checkAvailability());
 
@@ -645,6 +652,21 @@
           this.searchTimeout = setTimeout(() => this.checkAvailability(), 500);
         });
       }
+
+      initializeDatePicker() {
+        const dateInput = document.getElementById('date');
+        if (!dateInput) return;
+
+        const today = new Date();
+        const maxDate = new Date();
+        maxDate.setDate(today.getDate() + 2); 
+
+        const formatDate = (date) => date.toISOString().split('T')[0]; 
+
+        dateInput.min = formatDate(today);
+        dateInput.max = formatDate(maxDate);
+      }
+
 
       async checkAvailability() {
         const date = this.elements.searchDateInput?.value;
@@ -663,6 +685,7 @@
           }
 
           const data = await response.json();
+
           this.updateTableAvailability(data.tables);
 
         } catch (error) {
@@ -671,11 +694,33 @@
         }
       }
 
+      isAcceptableTime(dateValue, timeValue) {
+        if (!dateValue || !timeValue) return false;
+
+        const selectedDateTime = new Date(`${dateValue}T${timeValue}`);
+        const now = new Date();
+        const acceptableTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+        return selectedDateTime >= acceptableTime;
+      }
+
       updateTableAvailability(tables) {
+        const dateInput = this.elements.searchDateInput;
+        const timeInput = this.elements.searchTimeInput;
+        const date = dateInput?.value;
+        const time = timeInput?.value;
+        const allowClick = date && time && this.isAcceptableTime(date, time);
+
+        if (date && time && !allowClick) {
+          [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
+          this.showMessageBox('You can reserve a table 2 hours from now!', 'warning');
+        } else {
+          [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
+        }
+
         this.elements.tableLinks.forEach(link => {
           const tableId = parseInt(link.getAttribute('data-table-id'));
           const tableData = tables.find(t => t.id === tableId);
-
           if (!tableData) return;
 
           const tableDiv = link.querySelector('.table');
@@ -695,29 +740,39 @@
           } else {
             tableDiv.classList.remove('booked');
             tableDiv.classList.add('available', 'bg-green-100');
-            link.style.pointerEvents = 'auto';
+            link.style.pointerEvents = allowClick ? 'auto' : 'none';
 
-            if (existingLabel) {
-              existingLabel.remove();
-            }
+            if (existingLabel) existingLabel.remove();
           }
         });
       }
 
       resetTableAvailability() {
+        const dateInput = this.elements.searchDateInput;
+        const timeInput = this.elements.searchTimeInput;
+        const date = dateInput?.value;
+        const time = timeInput?.value;
+        const allowClick = date && time && this.isAcceptableTime(date, time);
+
+        if (date && time && !allowClick) {
+          [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
+          this.showMessageBox('Please select a time at least 2 hours from now.');
+        } else {
+          [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
+        }
+
         this.elements.tableLinks.forEach(link => {
           const tableDiv = link.querySelector('.table');
           const existingLabel = tableDiv.querySelector('.booked-label');
 
           tableDiv.classList.remove('booked');
           tableDiv.classList.add('available', 'bg-green-100');
-          link.style.pointerEvents = 'auto';
+          link.style.pointerEvents = allowClick ? 'auto' : 'none';
 
-          if (existingLabel) {
-            existingLabel.remove();
-          }
+          if (existingLabel) existingLabel.remove();
         });
       }
+
       initializeModals() {
         const {
           tableModal,
@@ -791,20 +846,42 @@
       const orders = Object.values(this.selectedOrders);
       const hasMain = orders.some(item => item.category === 'main');
 
-      if (!hasMain) {
-        this.showMessageBox('Please add at least one main menu item to continue.', 'error');
+      const nameInput = document.getElementById('customerName');
+      const emailInput = document.getElementById('email');
+      const dateInput = document.getElementById('reserved_date');
+      const timeInput = document.getElementById('arrivalTimeInput');
+      const paxInput = document.getElementById('pax');
+
+      [nameInput, emailInput, dateInput, timeInput, paxInput].forEach(f => f.classList.remove('border-red-500'));
+
+      const requiredFields = [nameInput, emailInput, dateInput, timeInput];
+      const emptyFields = requiredFields.filter(f => !f.value.trim());
+
+      if (emptyFields.length === requiredFields.length && !hasMain) {
+        emptyFields.forEach(f => f.classList.add('border-red-500'));
+        this.showMessageBox('You must fill out all required fields.', 'error');
         return;
       }
 
-      const paxInput = document.getElementById('pax');
-      const pax = parseInt(paxInput?.value || 0);
+      if (emptyFields.length > 0) {
+        emptyFields.forEach(f => f.classList.add('border-red-500'));
+        this.showMessageBox('Please fill out all required fields.', 'error');
+        return;
+      }
 
+      if (!hasMain) {
+        this.showMessageBox('You must choose at least one item in the main menu.', 'error');
+        return;
+      }
+
+      const pax = parseInt(paxInput?.value || 0);
       const mainCount = orders
         .filter(item => item.category === 'main')
         .reduce((sum, item) => sum + (item.quantity || 1), 0);
 
       if (mainCount !== pax) {
-        this.showMessageBox(`Match your main menu order to your pax.`, 'error');
+        paxInput.classList.add('border-red-500');
+        this.showMessageBox('Match your main menu order to your pax.', 'error');
         return;
       }
 
@@ -817,6 +894,7 @@
 
       this.showModal(paymentModal);
     });
+
 
     closePaymentModal.addEventListener('click', () => {
       this.hideModal(paymentModal);
@@ -1137,6 +1215,13 @@
       emailInput.addEventListener('input', () => {
         const value = emailInput.value.trim();
 
+        if (!value) {
+          emailError.textContent = 'Email is required';
+          emailError.classList.remove('hidden');
+          emailInput.classList.add('input-error');
+          return;
+        }
+
         if (!value.includes('@')) {
           emailError.textContent = 'Email must contain @';
           emailError.classList.remove('hidden');
@@ -1144,8 +1229,8 @@
           return;
         }
 
-        if (value && !this.validateEmail(value)) {
-          emailError.textContent = 'Enter a valid email address (e.g. name@example.com)';
+        if (!this.validateEmail(value)) {
+          emailError.textContent = 'Enter a valid email address!)';
           emailError.classList.remove('hidden');
           emailInput.classList.add('input-error');
         } else {
@@ -1155,6 +1240,12 @@
         }
       });
     }
+
+    validateEmail(email) {
+      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return re.test(email);
+    }
+
 
     validateEmail(email) {
       const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -1447,6 +1538,27 @@
       flyingImg.addEventListener('transitionend', () => {
         flyingImg.remove();
       });
+    }
+
+    alertMessageBox(message, type = 'alert') {
+      const box = document.getElementById('messageBox');
+      box.textContent = message;
+
+      const colors = {
+        success: '#4CAF50',
+        error: '#f44336',
+        warning: '#ff9800',
+        info: '#2196F3'
+      };
+
+      box.style.background = colors[type] || colors.success;
+      box.style.display = 'block';
+
+      const timeout = (type === 'error' || type === 'warning') ? 5000 : 3000;
+
+      setTimeout(() => {
+        box.style.display = 'none';
+      }, timeout);
     }
 
     showMessageBox(message, type = 'success') {

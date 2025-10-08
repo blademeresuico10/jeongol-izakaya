@@ -26,7 +26,7 @@ class transactionDetail extends Model
 
     public function orders()
     {
-        return $this->hasMany(orders::class);
+        return $this->belongsTo(orders::class, 'order_detail_id');
     }
 
     public function customer()

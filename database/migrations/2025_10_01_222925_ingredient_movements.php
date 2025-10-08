@@ -21,7 +21,6 @@ return new class extends Migration
             $table->decimal('stock_after', 8, 2);
             $table->text('notes')->nullable();
             $table->timestamps();
-
             $table->index('ingredient_id');
             $table->index('ingredient_batch_id');
             $table->index('type');
