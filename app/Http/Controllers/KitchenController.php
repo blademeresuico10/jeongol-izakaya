@@ -19,53 +19,7 @@ class KitchenController extends Controller
 {
     public function home()
     {
-        $pendingOrders = orders::with(['table', 'menu', 'reservation', 'walkin'])
-            ->whereNotNull('status')
-            ->orderBy('created_at', 'asc')
-            ->get()
-            ->groupBy(function ($order) {
-                if ($order->reservation_id) {
-                    return 'reservation_' . $order->reservation_id;
-                }
-                return 'walkin_' . $order->walk_in_id;
-            })
-            ->filter(function ($orderGroup) {
-                $order = $orderGroup->first();
-
-                $status = $order->reservation->status
-                    ?? $order->walkin->status
-                    ?? $order->status;
-
-                return $status !== 'Completed';
-            });
-
-
-        $ingredients = ingredients::all();
-
-        $tables = table::whereHas('reservation', function ($query) {
-            $query->whereRaw('LOWER(status) = ?', ['active'])
-                ->whereHas('orders');
-        })
-            ->orWhereHas('walkin', function ($query) {
-                $query->whereRaw('LOWER(status) = ?', ['active'])
-                    ->whereHas('orders');
-            })
-            ->with(['reservation' => function ($query) {
-                $query->whereRaw('LOWER(status) = ?', ['active']);
-            }, 'walkin' => function ($query) {
-                $query->whereRaw('LOWER(status) = ?', ['active']);
-            }])
-            ->get();
-
-        $unlimitedMenuIds = [1, 2, 3];
-
-        $unlimitedIngredients = ingredients::whereHas('menuIngredients', function ($query) use ($unlimitedMenuIds) {
-            $query->whereIn('menu_id', $unlimitedMenuIds);
-        })->get();
-
-        $aLaCarteMenus = menu::whereNotIn('id', $unlimitedMenuIds)->get();
-
-        return view('kitchen.home', compact('pendingOrders', 'ingredients', 'tables', 'unlimitedIngredients', 'aLaCarteMenus'));
+        return view('kitchen.home');
     }
 
     public function markAsServed(Request $request)

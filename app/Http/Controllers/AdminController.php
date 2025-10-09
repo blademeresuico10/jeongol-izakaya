@@ -443,7 +443,7 @@ class AdminController extends Controller
             'contact_number' => $request->contact_number,
             'username' => $request->username,
             'email' => $request->email,
-            'address' => $request->adress,
+            'address' => $request->address,
             'password' => Hash::make($request->password),
             'profile_picture' => $request->hasFile('profile_picture') ? $request->file('profile_picture')->store('profile_pictures', 'public') : null,
             'status' => $request->has('status') ? 'Active' : 'Inactive',
@@ -867,6 +867,7 @@ class AdminController extends Controller
     public function storeMenu(Request $request)
     {
         try {
+            // Validate input
             $request->validate(
                 [
                     'menu_item' => 'required|string|max:255|unique:menu,menu_item,NULL,id,deleted_at,NULL',
@@ -877,7 +878,7 @@ class AdminController extends Controller
                 ],
                 [
                     'menu_item.required' => 'Menu item name is required.',
-                    'menu_item.unique' => 'The menu is existing.',
+                    'menu_item.unique' => 'The menu already exists.',
                     'menu_item.max' => 'Menu item name cannot exceed 255 characters.',
                     'category.required' => 'Category is required.',
                     'category.in' => 'Category must be either Main or Add-ons.',
@@ -892,6 +893,7 @@ class AdminController extends Controller
                 ]
             );
 
+            // Handle image upload
             $imageName = null;
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
@@ -899,7 +901,7 @@ class AdminController extends Controller
                 $image->move(public_path('storage/jeongol_menu'), $imageName);
             }
 
-            menu::create([
+            $menu = Menu::create([
                 'menu_item' => $request->menu_item,
                 'category' => $request->category,
                 'regular_price' => $request->regular_price,
@@ -909,7 +911,7 @@ class AdminController extends Controller
             ]);
 
             return redirect()->route('admin.menu_management')
-                ->with('success', 'Menu item added successfully!');
+                ->with('success', 'Menu item "' . $menu->menu_item . '" added successfully!');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()
                 ->withInput()
@@ -921,6 +923,7 @@ class AdminController extends Controller
                 ->with('error', 'An error occurred while adding the menu item: ' . $e->getMessage());
         }
     }
+
 
     public function editMenu($id)
     {
@@ -1323,7 +1326,6 @@ class AdminController extends Controller
                 'quantity' => $request->quantity,
                 'stock_before' => $oldStock,
                 'stock_after' => $newStock,
-                'notes' => "Stock added via batch"
             ]);
 
             DB::commit();
@@ -1371,7 +1373,6 @@ class AdminController extends Controller
                 'quantity' => $difference,
                 'stock_before' => $stockBefore,
                 'stock_after' => $stockAfter,
-                'notes' => 'Manual stock adjustment',
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
@@ -1493,7 +1494,7 @@ class AdminController extends Controller
                 )
                 ->where('ingredient_batches.quantity', '>', 0)
                 ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
-                ->whereDate('ingredient_batches.expiration_date', '>', now()) // ✅ exclude expired
+                ->whereDate('ingredient_batches.expiration_date', '>', now())
                 ->orderBy('ingredient_batches.arrived_at', 'desc')
                 ->get()
                 ->map(function ($b) {
@@ -1548,7 +1549,6 @@ class AdminController extends Controller
                 'quantity' => $diff,
                 'stock_before' => $ingredient->stocks - $diff,
                 'stock_after' => $ingredient->stocks,
-                'notes' => "Batch updated"
             ]);
 
             DB::commit();
@@ -1575,7 +1575,6 @@ class AdminController extends Controller
                 'quantity' => -$batch->quantity,
                 'stock_before' => $ingredient->stocks + $batch->quantity,
                 'stock_after' => $ingredient->stocks,
-                'notes' => "Batch deleted"
             ]);
 
             $batch->delete();

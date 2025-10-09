@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Laravel\Fortify\Fortify;
+use App\Http\Livewire\TableLayout; // Import the TableLayout class
+use Livewire\Livewire; // Import the Livewire facade
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,9 +18,6 @@ class AppServiceProvider extends ServiceProvider
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
         Fortify::loginView(function () {

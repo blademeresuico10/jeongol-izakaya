@@ -11,6 +11,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 
+  @livewireStyles
   @vite('resources/css/app.css')
 
   <style>
@@ -566,529 +567,533 @@
   <div id="fly-animation-container"
     style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999;"></div>
 
-  <script>
-    class JeongolReservation {
-      constructor() {
-        this.selectedOrders = {};
-        this.selectedTableNumber = 0;
-        this.elements = {};
-        this.submissionInProgress = false;
-        this.init();
-      }
+  @livewireScripts
+</body>
+
+
+<script>
+  class JeongolReservation {
+    constructor() {
+      this.selectedOrders = {};
+      this.selectedTableNumber = 0;
+      this.elements = {};
+      this.submissionInProgress = false;
+      this.init();
+    }
+
+    init() {
+      document.addEventListener('DOMContentLoaded', () => {
+        this.initializeElements();
+        this.initializeTabs();
+        this.initializeModals();
+        this.initializeDateTimeInputs();
+        this.initializeEmailValidation();
+        this.initializeEventListeners();
+        this.initializeAvailabilitySearch();
+        this.updateOrderSummary();
+        this.initializeDatePicker();
 
-      init() {
-        document.addEventListener('DOMContentLoaded', () => {
-          this.initializeElements();
-          this.initializeTabs();
-          this.initializeModals();
-          this.initializeDateTimeInputs();
-          this.initializeEmailValidation();
-          this.initializeEventListeners();
-          this.initializeAvailabilitySearch();
-          this.updateOrderSummary();
-          this.initializeDatePicker();
-
-        });
-      }
-
-      initializeElements() {
-        this.elements = {
-          tableModal: document.getElementById('tableModal'),
-          paymentModal: document.getElementById('paymentModal'),
-
-          closeModal: document.getElementById('closeModal'),
-          closePaymentModal: document.getElementById('closePaymentModal'),
-
-          paymentBtn: document.getElementById('paymentBtn'),
-          submitBtn: document.getElementById('submitBtn'),
-          clearOrdersBtn: document.getElementById('clearOrdersBtn'),
-
-          emailInput: document.getElementById('email'),
-          nameInput: document.getElementById('customerName'),
-          paxInput: document.getElementById('pax'),
-          notesInput: document.getElementById('notesTextarea'),
-          dateInput: document.getElementById('reserved_date'),
-          timeInput: document.getElementById('arrivalTimeInput'),
-          advancePaymentInput: document.getElementById('advance_payment'),
-          selectedTableNumber: document.getElementById('selectedTableNumber'),
-
-          selectedOrdersContainer: document.getElementById('selectedOrdersContainer'),
-          totalQuantity: document.getElementById('totalQuantity'),
-          totalPrice: document.getElementById('totalPrice'),
-          searchDateInput: document.getElementById('date'),
-          searchTimeInput: document.getElementById('time'),
-          tableLinks: document.querySelectorAll('.table-link')
-        };
-      }
-
-      initializeEventListeners() {
-        this.elements.clearOrdersBtn?.addEventListener('click', () => this.clearOrders());
-
-        this.elements.submitBtn?.addEventListener('click', (e) => {
-          e.preventDefault();
-          this.submitReservation();
-        });
-      }
-
-      initializeAvailabilitySearch() {
-        const { searchDateInput, searchTimeInput } = this.elements;
-
-        if (!searchDateInput || !searchTimeInput) return;
-
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const formattedDate = `${yyyy}-${mm}-${dd}`;
-
-        searchDateInput.value = formattedDate;
-        searchDateInput.min = formattedDate;
-
-        searchDateInput.addEventListener('change', () => this.checkAvailability());
-        searchTimeInput.addEventListener('change', () => this.checkAvailability());
-
-        searchTimeInput.addEventListener('input', () => {
-          clearTimeout(this.searchTimeout);
-          this.searchTimeout = setTimeout(() => this.checkAvailability(), 500);
-        });
-      }
-
-      initializeDatePicker() {
-        const dateInput = document.getElementById('date');
-        if (!dateInput) return;
-
-        const today = new Date();
-        const maxDate = new Date();
-        maxDate.setDate(today.getDate() + 2); 
-
-        const formatDate = (date) => date.toISOString().split('T')[0]; 
-
-        dateInput.min = formatDate(today);
-        dateInput.max = formatDate(maxDate);
-      }
-
-
-      async checkAvailability() {
-        const date = this.elements.searchDateInput?.value;
-        const time = this.elements.searchTimeInput?.value;
-
-        if (!date || !time) {
-          this.resetTableAvailability();
-          return;
-        }
-
-        try {
-          const response = await fetch(`/customer/check-availability?date=${date}&time=${time}`);
-
-          if (!response.ok) {
-            throw new Error('Failed to check availability');
-          }
-
-          const data = await response.json();
-
-          this.updateTableAvailability(data.tables);
-
-        } catch (error) {
-          console.error('Error checking availability:', error);
-          this.showMessageBox('Failed to check table availability', 'error');
-        }
-      }
-
-      isAcceptableTime(dateValue, timeValue) {
-        if (!dateValue || !timeValue) return false;
-
-        const selectedDateTime = new Date(`${dateValue}T${timeValue}`);
-        const now = new Date();
-        const acceptableTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-
-        return selectedDateTime >= acceptableTime;
-      }
-
-      updateTableAvailability(tables) {
-        const dateInput = this.elements.searchDateInput;
-        const timeInput = this.elements.searchTimeInput;
-        const date = dateInput?.value;
-        const time = timeInput?.value;
-        const allowClick = date && time && this.isAcceptableTime(date, time);
-
-        if (date && time && !allowClick) {
-          [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
-          this.showMessageBox('You can reserve a table 2 hours from now!', 'warning');
-        } else {
-          [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
-        }
-
-        this.elements.tableLinks.forEach(link => {
-          const tableId = parseInt(link.getAttribute('data-table-id'));
-          const tableData = tables.find(t => t.id === tableId);
-          if (!tableData) return;
-
-          const tableDiv = link.querySelector('.table');
-          const existingLabel = tableDiv.querySelector('.booked-label');
-
-          if (!tableData.is_available) {
-            tableDiv.classList.remove('available', 'bg-green-100');
-            tableDiv.classList.add('booked');
-            link.style.pointerEvents = 'none';
-
-            if (!existingLabel) {
-              const bookedLabel = document.createElement('div');
-              bookedLabel.className = 'booked-label';
-              bookedLabel.textContent = 'Reserved';
-              tableDiv.appendChild(bookedLabel);
-            }
-          } else {
-            tableDiv.classList.remove('booked');
-            tableDiv.classList.add('available', 'bg-green-100');
-            link.style.pointerEvents = allowClick ? 'auto' : 'none';
-
-            if (existingLabel) existingLabel.remove();
-          }
-        });
-      }
-
-      resetTableAvailability() {
-        const dateInput = this.elements.searchDateInput;
-        const timeInput = this.elements.searchTimeInput;
-        const date = dateInput?.value;
-        const time = timeInput?.value;
-        const allowClick = date && time && this.isAcceptableTime(date, time);
-
-        if (date && time && !allowClick) {
-          [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
-          this.showMessageBox('Please select a time at least 2 hours from now.');
-        } else {
-          [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
-        }
-
-        this.elements.tableLinks.forEach(link => {
-          const tableDiv = link.querySelector('.table');
-          const existingLabel = tableDiv.querySelector('.booked-label');
-
-          tableDiv.classList.remove('booked');
-          tableDiv.classList.add('available', 'bg-green-100');
-          link.style.pointerEvents = allowClick ? 'auto' : 'none';
-
-          if (existingLabel) existingLabel.remove();
-        });
-      }
-
-      initializeModals() {
-        const {
-          tableModal,
-          closeModal,
-          paymentModal,
-          closePaymentModal,
-          paymentBtn,
-          tableLinks,
-          selectedTableNumber
-        } = this.elements;
-
-        const tableCapacities = {
-          @foreach($tables as $table)
-        {{ $table->id }}: {{ $table->capacity }},
-    @endforeach
-  };
-
-  tableLinks.forEach(link => {
-            link.addEventListener('click', e => {
-              e.preventDefault();
-
-              this.selectedTableNumber = parseInt(link.getAttribute('data-table-id'));
-              selectedTableNumber.value = this.selectedTableNumber;
-
-              const paxInput = document.getElementById('pax');
-              const capacity = tableCapacities[this.selectedTableNumber];
-
-              if (paxInput && capacity) {
-                paxInput.value = capacity;
-                paxInput.max = capacity;
-                paxInput.min = capacity - 1;
-                paxInput.readOnly = false;
-
-                paxInput.addEventListener('input', function () {
-                  const value = parseInt(this.value);
-                  if (value > capacity) {
-                    this.value = capacity;
-                  } else if (value < 1) {
-                    this.value = 1;
-                  }
-                });
-              }
-
-              const searchDate = this.elements.searchDateInput?.value;
-              const searchTime = this.elements.searchTimeInput?.value;
-
-              if (searchDate) {
-                const reservedDateInput = document.getElementById('reserved_date');
-                if (reservedDateInput) {
-                  reservedDateInput.value = searchDate;
-                }
-              }
-
-              if (searchTime) {
-                const arrivalTimeInput = document.getElementById('arrivalTimeInput');
-                if (arrivalTimeInput) {
-                  arrivalTimeInput.value = searchTime;
-                }
-              }
-
-              this.showModal(tableModal);
-            });
-  });
-
-    closeModal.addEventListener('click', () => {
-      this.hideModal(tableModal);
-      this.resetReservationForm();
-    });
-
-    paymentBtn.addEventListener('click', () => {
-      const orders = Object.values(this.selectedOrders);
-      const hasMain = orders.some(item => item.category === 'main');
-
-      const nameInput = document.getElementById('customerName');
-      const emailInput = document.getElementById('email');
-      const dateInput = document.getElementById('reserved_date');
-      const timeInput = document.getElementById('arrivalTimeInput');
-      const paxInput = document.getElementById('pax');
-
-      [nameInput, emailInput, dateInput, timeInput, paxInput].forEach(f => f.classList.remove('border-red-500'));
-
-      const requiredFields = [nameInput, emailInput, dateInput, timeInput];
-      const emptyFields = requiredFields.filter(f => !f.value.trim());
-
-      if (emptyFields.length === requiredFields.length && !hasMain) {
-        emptyFields.forEach(f => f.classList.add('border-red-500'));
-        this.showMessageBox('You must fill out all required fields.', 'error');
-        return;
-      }
-
-      if (emptyFields.length > 0) {
-        emptyFields.forEach(f => f.classList.add('border-red-500'));
-        this.showMessageBox('Please fill out all required fields.', 'error');
-        return;
-      }
-
-      if (!hasMain) {
-        this.showMessageBox('You must choose at least one item in the main menu.', 'error');
-        return;
-      }
-
-      const pax = parseInt(paxInput?.value || 0);
-      const mainCount = orders
-        .filter(item => item.category === 'main')
-        .reduce((sum, item) => sum + (item.quantity || 1), 0);
-
-      if (mainCount !== pax) {
-        paxInput.classList.add('border-red-500');
-        this.showMessageBox('Match your main menu order to your pax.', 'error');
-        return;
-      }
-
-      const advancePayment = parseFloat(this.elements.advancePaymentInput.value) || 0;
-      paymentModal.querySelectorAll('.tab-content .amount').forEach(input => {
-        input.value = advancePayment;
-        input.min = advancePayment;
-        input.readOnly = true;
       });
+    }
 
-      this.showModal(paymentModal);
-    });
+    initializeElements() {
+      this.elements = {
+        tableModal: document.getElementById('tableModal'),
+        paymentModal: document.getElementById('paymentModal'),
 
+        closeModal: document.getElementById('closeModal'),
+        closePaymentModal: document.getElementById('closePaymentModal'),
 
-    closePaymentModal.addEventListener('click', () => {
-      this.hideModal(paymentModal);
-    });
+        paymentBtn: document.getElementById('paymentBtn'),
+        submitBtn: document.getElementById('submitBtn'),
+        clearOrdersBtn: document.getElementById('clearOrdersBtn'),
 
-    document.querySelectorAll('[data-tab]').forEach(tabButton => {
-      tabButton.addEventListener('click', (e) => {
-        const targetTab = e.target.dataset.tab;
+        emailInput: document.getElementById('email'),
+        nameInput: document.getElementById('customerName'),
+        paxInput: document.getElementById('pax'),
+        notesInput: document.getElementById('notesTextarea'),
+        dateInput: document.getElementById('reserved_date'),
+        timeInput: document.getElementById('arrivalTimeInput'),
+        advancePaymentInput: document.getElementById('advance_payment'),
+        selectedTableNumber: document.getElementById('selectedTableNumber'),
 
-        document.querySelectorAll('[data-tab]').forEach(btn =>
-          btn.classList.remove('font-bold', 'border-b-2', 'border-blue-500')
-        );
-        e.target.classList.add('font-bold', 'border-b-2', 'border-blue-500');
+        selectedOrdersContainer: document.getElementById('selectedOrdersContainer'),
+        totalQuantity: document.getElementById('totalQuantity'),
+        totalPrice: document.getElementById('totalPrice'),
+        searchDateInput: document.getElementById('date'),
+        searchTimeInput: document.getElementById('time'),
+        tableLinks: document.querySelectorAll('.table-link')
+      };
+    }
 
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.toggle('hidden', content.id !== `tab-${targetTab}`);
-        });
+    initializeEventListeners() {
+      this.elements.clearOrdersBtn?.addEventListener('click', () => this.clearOrders());
+
+      this.elements.submitBtn?.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.submitReservation();
       });
-    });
-}
-
-    showModal(modal) {
-      modal.style.display = 'flex';
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
     }
 
-    hideModal(modal) {
-      modal.style.display = 'none';
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-    }
+    initializeAvailabilitySearch() {
+      const { searchDateInput, searchTimeInput } = this.elements;
 
-    initializeTabs() {
-      document.querySelectorAll('[data-tab]').forEach(tabBtn => {
-        tabBtn.addEventListener('click', () => {
-          document.querySelectorAll('[data-tab]').forEach(btn => {
-            btn.classList.remove('bg-gray-200', 'font-bold');
-            btn.classList.add('border-transparent');
-          });
+      if (!searchDateInput || !searchTimeInput) return;
 
-          tabBtn.classList.remove('border-transparent');
-          tabBtn.classList.add('bg-gray-200', 'font-bold', 'rounded');
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const formattedDate = `${yyyy}-${mm}-${dd}`;
 
-          const tabName = tabBtn.getAttribute('data-tab');
+      searchDateInput.value = formattedDate;
+      searchDateInput.min = formattedDate;
 
-          document.querySelectorAll('.tab-content').forEach(content => {
-            content.classList.add('hidden');
-          });
+      searchDateInput.addEventListener('change', () => this.checkAvailability());
+      searchTimeInput.addEventListener('change', () => this.checkAvailability());
 
-          const activeTab = document.getElementById(`tab-${tabName}`);
-          activeTab?.classList.remove('hidden');
-
-          if (activeTab) {
-            activeTab.querySelectorAll('input:not([type="hidden"]):not(.amount)').forEach(input => {
-              if (input.type !== 'file') {
-                input.value = '';
-              } else {
-                input.value = '';
-              }
-              input.classList.remove('input-error');
-            });
-          }
-
-          const ewalletEl = document.querySelector(`#tab-${tabName} .ewallet-id`);
-          document.getElementById('selectedPaymentMethod').value = ewalletEl ? ewalletEl.value : '';
-        });
+      searchTimeInput.addEventListener('input', () => {
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => this.checkAvailability(), 500);
       });
-
-      const active = document.querySelector('.payment-tab.active');
-      if (active) {
-        const tabName = active.dataset.tab;
-        const ewalletEl = document.querySelector(`#tab-${tabName} .ewallet-id`);
-        document.getElementById('selectedPaymentMethod').value = ewalletEl ? ewalletEl.value : '';
-      }
     }
 
-      async loadUnavailableTimes(tableId = null) {
-      try {
-        if (!tableId) {
-          const select = document.getElementById('unavailableTime');
-          select.innerHTML = '<option value="">Check unavailable time</option>';
-          return;
-        }
-
-        const response = await fetch(`/reservations/unavailable-times?table_id=${tableId}`);
-        if (!response.ok) throw new Error("Failed to fetch unavailable times");
-
-        const reservations = await response.json();
-        const select = document.getElementById('unavailableTime');
-
-        select.innerHTML = '<option value="">Check unavailable time</option>';
-
-        reservations.forEach(r => {
-          const option = document.createElement('option');
-          const start = new Date(r.reservation_time);
-          const end = new Date(r.reservation_end_time);
-
-          const startTime = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-          const endTime = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-
-          option.value = r.id;
-          option.textContent = `${startTime} - ${endTime}`;
-
-          select.appendChild(option);
-        });
-      } catch (err) {
-        console.error("Error loading unavailable times:", err);
-      }
-    }
-
-    initializeDateTimeInputs() {
-      const now = new Date();
-
-      if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
-        now.setDate(now.getDate() + 1);
-      }
-
-      this.elements.dateInput.value = now.toISOString().split('T')[0];
+    initializeDatePicker() {
+      const dateInput = document.getElementById('date');
+      if (!dateInput) return;
 
       const today = new Date();
       const maxDate = new Date();
       maxDate.setDate(today.getDate() + 2);
 
-      this.elements.dateInput.min = today.toISOString().split('T')[0];
-      this.elements.dateInput.max = maxDate.toISOString().split('T')[0];
+      const formatDate = (date) => date.toISOString().split('T')[0];
+
+      dateInput.min = formatDate(today);
+      dateInput.max = formatDate(maxDate);
     }
 
 
-    selectMenuItem(card) {
-      const img = card.querySelector('img');
-      if (img) {
-        this.animateFlyToCart(img, '#orderSummary');
-      }
+    async checkAvailability() {
+      const date = this.elements.searchDateInput?.value;
+      const time = this.elements.searchTimeInput?.value;
 
-      const id = card.dataset.id;
-      const name = card.dataset.name;
-      const category = card.dataset.category;
-      const price = parseFloat(card.dataset.price);
-
-      if (!this.selectedOrders[id]) {
-        this.selectedOrders[id] = {
-          id, name, category, price,
-          quantity: 1,
-          total: price,
-        };
-      } else {
-        this.selectedOrders[id].quantity += 1;
-        this.selectedOrders[id].total = this.selectedOrders[id].quantity * price;
-      }
-
-      this.updateOrderSummary();
-    }
-
-    updateOrderSummary() {
-      const container = this.elements.selectedOrdersContainer;
-      container.innerHTML = '';
-
-      const orderCount = Object.keys(this.selectedOrders).length;
-      if (orderCount === 0) {
-        container.innerHTML = 'No items selected';
-        this.updateAdvancePayment();
+      if (!date || !time) {
+        this.resetTableAvailability();
         return;
       }
 
-      this.createOrderHeader(container);
-      const { total, totalQuantity } = this.createOrderRows(container);
-      this.updateTotalDisplay(total, totalQuantity);
-      this.updateAdvancePayment();
+      try {
+        const response = await fetch(`/customer/check-availability?date=${date}&time=${time}`);
+
+        if (!response.ok) {
+          throw new Error('Failed to check availability');
+        }
+
+        const data = await response.json();
+
+        this.updateTableAvailability(data.tables);
+
+      } catch (error) {
+        console.error('Error checking availability:', error);
+        this.showMessageBox('Failed to check table availability', 'error');
+      }
     }
 
-    createOrderHeader(container) {
-      const header = document.createElement('li');
-      header.className = "grid grid-cols-3 mb-2 font-semibold border-b pb-1 text-sm";
-      header.innerHTML = `
+    isAcceptableTime(dateValue, timeValue) {
+      if (!dateValue || !timeValue) return false;
+
+      const selectedDateTime = new Date(`${dateValue}T${timeValue}`);
+      const now = new Date();
+      const acceptableTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+
+      return selectedDateTime >= acceptableTime;
+    }
+
+    updateTableAvailability(tables) {
+      const dateInput = this.elements.searchDateInput;
+      const timeInput = this.elements.searchTimeInput;
+      const date = dateInput?.value;
+      const time = timeInput?.value;
+      const allowClick = date && time && this.isAcceptableTime(date, time);
+
+      if (date && time && !allowClick) {
+        [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
+        this.showMessageBox('You can reserve a table 2 hours from now!', 'warning');
+      } else {
+        [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
+      }
+
+      this.elements.tableLinks.forEach(link => {
+        const tableId = parseInt(link.getAttribute('data-table-id'));
+        const tableData = tables.find(t => t.id === tableId);
+        if (!tableData) return;
+
+        const tableDiv = link.querySelector('.table');
+        const existingLabel = tableDiv.querySelector('.booked-label');
+
+        if (!tableData.is_available) {
+          tableDiv.classList.remove('available', 'bg-green-100');
+          tableDiv.classList.add('booked');
+          link.style.pointerEvents = 'none';
+
+          if (!existingLabel) {
+            const bookedLabel = document.createElement('div');
+            bookedLabel.className = 'booked-label';
+            bookedLabel.textContent = 'Reserved';
+            tableDiv.appendChild(bookedLabel);
+          }
+        } else {
+          tableDiv.classList.remove('booked');
+          tableDiv.classList.add('available', 'bg-green-100');
+          link.style.pointerEvents = allowClick ? 'auto' : 'none';
+
+          if (existingLabel) existingLabel.remove();
+        }
+      });
+    }
+
+    resetTableAvailability() {
+      const dateInput = this.elements.searchDateInput;
+      const timeInput = this.elements.searchTimeInput;
+      const date = dateInput?.value;
+      const time = timeInput?.value;
+      const allowClick = date && time && this.isAcceptableTime(date, time);
+
+      if (date && time && !allowClick) {
+        [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
+        this.showMessageBox('Please select a time at least 2 hours from now.');
+      } else {
+        [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
+      }
+
+      this.elements.tableLinks.forEach(link => {
+        const tableDiv = link.querySelector('.table');
+        const existingLabel = tableDiv.querySelector('.booked-label');
+
+        tableDiv.classList.remove('booked');
+        tableDiv.classList.add('available', 'bg-green-100');
+        link.style.pointerEvents = allowClick ? 'auto' : 'none';
+
+        if (existingLabel) existingLabel.remove();
+      });
+    }
+
+    initializeModals() {
+      const {
+        tableModal,
+        closeModal,
+        paymentModal,
+        closePaymentModal,
+        paymentBtn,
+        tableLinks,
+        selectedTableNumber
+      } = this.elements;
+
+      const tableCapacities = {
+        @foreach($tables as $table)
+      {{ $table->id }}: {{ $table->capacity }},
+    @endforeach
+  };
+
+  tableLinks.forEach(link => {
+          link.addEventListener('click', e => {
+            e.preventDefault();
+
+            this.selectedTableNumber = parseInt(link.getAttribute('data-table-id'));
+            selectedTableNumber.value = this.selectedTableNumber;
+
+            const paxInput = document.getElementById('pax');
+            const capacity = tableCapacities[this.selectedTableNumber];
+
+            if (paxInput && capacity) {
+              paxInput.value = capacity;
+              paxInput.max = capacity;
+              paxInput.min = capacity - 1;
+              paxInput.readOnly = false;
+
+              paxInput.addEventListener('input', function () {
+                const value = parseInt(this.value);
+                if (value > capacity) {
+                  this.value = capacity;
+                } else if (value < 1) {
+                  this.value = 1;
+                }
+              });
+            }
+
+            const searchDate = this.elements.searchDateInput?.value;
+            const searchTime = this.elements.searchTimeInput?.value;
+
+            if (searchDate) {
+              const reservedDateInput = document.getElementById('reserved_date');
+              if (reservedDateInput) {
+                reservedDateInput.value = searchDate;
+              }
+            }
+
+            if (searchTime) {
+              const arrivalTimeInput = document.getElementById('arrivalTimeInput');
+              if (arrivalTimeInput) {
+                arrivalTimeInput.value = searchTime;
+              }
+            }
+
+            this.showModal(tableModal);
+          });
+  });
+
+  closeModal.addEventListener('click', () => {
+    this.hideModal(tableModal);
+    this.resetReservationForm();
+  });
+
+  paymentBtn.addEventListener('click', () => {
+    const orders = Object.values(this.selectedOrders);
+    const hasMain = orders.some(item => item.category === 'main');
+
+    const nameInput = document.getElementById('customerName');
+    const emailInput = document.getElementById('email');
+    const dateInput = document.getElementById('reserved_date');
+    const timeInput = document.getElementById('arrivalTimeInput');
+    const paxInput = document.getElementById('pax');
+
+    [nameInput, emailInput, dateInput, timeInput, paxInput].forEach(f => f.classList.remove('border-red-500'));
+
+    const requiredFields = [nameInput, emailInput, dateInput, timeInput];
+    const emptyFields = requiredFields.filter(f => !f.value.trim());
+
+    if (emptyFields.length === requiredFields.length && !hasMain) {
+      emptyFields.forEach(f => f.classList.add('border-red-500'));
+      this.showMessageBox('You must fill out all required fields.', 'error');
+      return;
+    }
+
+    if (emptyFields.length > 0) {
+      emptyFields.forEach(f => f.classList.add('border-red-500'));
+      this.showMessageBox('Please fill out all required fields.', 'error');
+      return;
+    }
+
+    if (!hasMain) {
+      this.showMessageBox('You must choose at least one item in the main menu.', 'error');
+      return;
+    }
+
+    const pax = parseInt(paxInput?.value || 0);
+    const mainCount = orders
+      .filter(item => item.category === 'main')
+      .reduce((sum, item) => sum + (item.quantity || 1), 0);
+
+    if (mainCount !== pax) {
+      paxInput.classList.add('border-red-500');
+      this.showMessageBox('Match your main menu order to your pax.', 'error');
+      return;
+    }
+
+    const advancePayment = parseFloat(this.elements.advancePaymentInput.value) || 0;
+    paymentModal.querySelectorAll('.tab-content .amount').forEach(input => {
+      input.value = advancePayment;
+      input.min = advancePayment;
+      input.readOnly = true;
+    });
+
+    this.showModal(paymentModal);
+  });
+
+
+  closePaymentModal.addEventListener('click', () => {
+    this.hideModal(paymentModal);
+  });
+
+  document.querySelectorAll('[data-tab]').forEach(tabButton => {
+    tabButton.addEventListener('click', (e) => {
+      const targetTab = e.target.dataset.tab;
+
+      document.querySelectorAll('[data-tab]').forEach(btn =>
+        btn.classList.remove('font-bold', 'border-b-2', 'border-blue-500')
+      );
+      e.target.classList.add('font-bold', 'border-b-2', 'border-blue-500');
+
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.toggle('hidden', content.id !== `tab-${targetTab}`);
+      });
+    });
+  });
+}
+
+  showModal(modal) {
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  hideModal(modal) {
+    modal.style.display = 'none';
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  initializeTabs() {
+    document.querySelectorAll('[data-tab]').forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+          btn.classList.remove('bg-gray-200', 'font-bold');
+          btn.classList.add('border-transparent');
+        });
+
+        tabBtn.classList.remove('border-transparent');
+        tabBtn.classList.add('bg-gray-200', 'font-bold', 'rounded');
+
+        const tabName = tabBtn.getAttribute('data-tab');
+
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.add('hidden');
+        });
+
+        const activeTab = document.getElementById(`tab-${tabName}`);
+        activeTab?.classList.remove('hidden');
+
+        if (activeTab) {
+          activeTab.querySelectorAll('input:not([type="hidden"]):not(.amount)').forEach(input => {
+            if (input.type !== 'file') {
+              input.value = '';
+            } else {
+              input.value = '';
+            }
+            input.classList.remove('input-error');
+          });
+        }
+
+        const ewalletEl = document.querySelector(`#tab-${tabName} .ewallet-id`);
+        document.getElementById('selectedPaymentMethod').value = ewalletEl ? ewalletEl.value : '';
+      });
+    });
+
+    const active = document.querySelector('.payment-tab.active');
+    if (active) {
+      const tabName = active.dataset.tab;
+      const ewalletEl = document.querySelector(`#tab-${tabName} .ewallet-id`);
+      document.getElementById('selectedPaymentMethod').value = ewalletEl ? ewalletEl.value : '';
+    }
+  }
+
+      async loadUnavailableTimes(tableId = null) {
+    try {
+      if (!tableId) {
+        const select = document.getElementById('unavailableTime');
+        select.innerHTML = '<option value="">Check unavailable time</option>';
+        return;
+      }
+
+      const response = await fetch(`/reservations/unavailable-times?table_id=${tableId}`);
+      if (!response.ok) throw new Error("Failed to fetch unavailable times");
+
+      const reservations = await response.json();
+      const select = document.getElementById('unavailableTime');
+
+      select.innerHTML = '<option value="">Check unavailable time</option>';
+
+      reservations.forEach(r => {
+        const option = document.createElement('option');
+        const start = new Date(r.reservation_time);
+        const end = new Date(r.reservation_end_time);
+
+        const startTime = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const endTime = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+        option.value = r.id;
+        option.textContent = `${startTime} - ${endTime}`;
+
+        select.appendChild(option);
+      });
+    } catch (err) {
+      console.error("Error loading unavailable times:", err);
+    }
+  }
+
+  initializeDateTimeInputs() {
+    const now = new Date();
+
+    if (now.getHours() > 18 || (now.getHours() === 18 && now.getMinutes() >= 30)) {
+      now.setDate(now.getDate() + 1);
+    }
+
+    this.elements.dateInput.value = now.toISOString().split('T')[0];
+
+    const today = new Date();
+    const maxDate = new Date();
+    maxDate.setDate(today.getDate() + 2);
+
+    this.elements.dateInput.min = today.toISOString().split('T')[0];
+    this.elements.dateInput.max = maxDate.toISOString().split('T')[0];
+  }
+
+
+  selectMenuItem(card) {
+    const img = card.querySelector('img');
+    if (img) {
+      this.animateFlyToCart(img, '#orderSummary');
+    }
+
+    const id = card.dataset.id;
+    const name = card.dataset.name;
+    const category = card.dataset.category;
+    const price = parseFloat(card.dataset.price);
+
+    if (!this.selectedOrders[id]) {
+      this.selectedOrders[id] = {
+        id, name, category, price,
+        quantity: 1,
+        total: price,
+      };
+    } else {
+      this.selectedOrders[id].quantity += 1;
+      this.selectedOrders[id].total = this.selectedOrders[id].quantity * price;
+    }
+
+    this.updateOrderSummary();
+  }
+
+  updateOrderSummary() {
+    const container = this.elements.selectedOrdersContainer;
+    container.innerHTML = '';
+
+    const orderCount = Object.keys(this.selectedOrders).length;
+    if (orderCount === 0) {
+      container.innerHTML = 'No items selected';
+      this.updateAdvancePayment();
+      return;
+    }
+
+    this.createOrderHeader(container);
+    const { total, totalQuantity } = this.createOrderRows(container);
+    this.updateTotalDisplay(total, totalQuantity);
+    this.updateAdvancePayment();
+  }
+
+  createOrderHeader(container) {
+    const header = document.createElement('li');
+    header.className = "grid grid-cols-3 mb-2 font-semibold border-b pb-1 text-sm";
+    header.innerHTML = `
       <div>Menu</div>
       <div class="text-center">Qty</div>
       <div class="text-right">Subtotal</div>
     `;
-      container.appendChild(header);
-    }
+    container.appendChild(header);
+  }
 
-    createOrderRows(container) {
-      let total = 0;
-      let totalQuantity = 0;
+  createOrderRows(container) {
+    let total = 0;
+    let totalQuantity = 0;
 
-      Object.entries(this.selectedOrders).forEach(([id, item]) => {
-        const itemTotal = item.price * item.quantity;
-        total += itemTotal;
-        totalQuantity += item.quantity;
+    Object.entries(this.selectedOrders).forEach(([id, item]) => {
+      const itemTotal = item.price * item.quantity;
+      total += itemTotal;
+      totalQuantity += item.quantity;
 
-        const row = document.createElement('li');
-        row.className = "flex items-center justify-between mb-2 gap-2 py-1";
-        row.innerHTML = `
+      const row = document.createElement('li');
+      row.className = "flex items-center justify-between mb-2 gap-2 py-1";
+      row.innerHTML = `
         <div class="flex flex-col flex-1 min-w-0">
           <span class="truncate text-sm font-medium">${item.name}</span>
           <span class="text-xs text-gray-500">₱${item.price.toFixed(2)} each</span>
@@ -1108,493 +1113,493 @@
           </button>
         </div>
       `;
-        container.appendChild(row);
-      });
+      container.appendChild(row);
+    });
 
-      return { total, totalQuantity };
+    return { total, totalQuantity };
+  }
+
+  updateTotalDisplay(total, totalQuantity) {
+    const totalLabel = document.getElementById("orderTotalLabel");
+    const totalAmount = document.getElementById("orderTotalAmount");
+
+    if (totalLabel) {
+      totalLabel.textContent = `Total (${totalQuantity} items): `;
+    }
+    if (totalAmount) {
+      totalAmount.textContent = `₱${total.toFixed(2)}`;
+    }
+  }
+
+  updateAdvancePayment() {
+    const { total } = this.calculateTotals();
+    const advancePayment = total * 0.5;
+
+    const displayElement = document.getElementById('advance_payment_display');
+    if (displayElement) {
+      displayElement.textContent = `₱${advancePayment.toFixed(2)}`;
     }
 
-    updateTotalDisplay(total, totalQuantity) {
-      const totalLabel = document.getElementById("orderTotalLabel");
-      const totalAmount = document.getElementById("orderTotalAmount");
+    if (this.elements.advancePaymentInput) {
+      this.elements.advancePaymentInput.value = advancePayment.toFixed(2);
+    }
+  }
 
-      if (totalLabel) {
-        totalLabel.textContent = `Total (${totalQuantity} items): `;
-      }
-      if (totalAmount) {
-        totalAmount.textContent = `₱${total.toFixed(2)}`;
-      }
+  updateQuantity(input) {
+    const id = input.dataset.id;
+    const inputValue = input.value.trim();
+
+    if (!this.selectedOrders[id] || inputValue === '') return;
+
+    const newQuantity = parseInt(inputValue);
+
+    if (isNaN(newQuantity) || newQuantity < 1) {
+      input.value = this.selectedOrders[id].quantity;
+      return;
     }
 
-    updateAdvancePayment() {
-      const { total } = this.calculateTotals();
-      const advancePayment = total * 0.5;
+    this.selectedOrders[id].quantity = newQuantity;
+    this.selectedOrders[id].total = this.selectedOrders[id].quantity * this.selectedOrders[id].price;
 
-      const displayElement = document.getElementById('advance_payment_display');
-      if (displayElement) {
-        displayElement.textContent = `₱${advancePayment.toFixed(2)}`;
-      }
-
-      if (this.elements.advancePaymentInput) {
-        this.elements.advancePaymentInput.value = advancePayment.toFixed(2);
-      }
+    const subtotalSpan = input.closest('li').querySelector('.text-right');
+    if (subtotalSpan) {
+      subtotalSpan.textContent = `₱${this.selectedOrders[id].total.toFixed(2)}`;
     }
 
-    updateQuantity(input) {
-      const id = input.dataset.id;
-      const inputValue = input.value.trim();
+    this.updateRealTimeTotals();
+  }
 
-      if (!this.selectedOrders[id] || inputValue === '') return;
+  removeOrderItem(button) {
+    const id = button.dataset.id;
+    const listItem = button.closest('li');
 
-      const newQuantity = parseInt(inputValue);
+    if (this.selectedOrders[id]) {
+      delete this.selectedOrders[id];
+      listItem.remove();
 
-      if (isNaN(newQuantity) || newQuantity < 1) {
-        input.value = this.selectedOrders[id].quantity;
-        return;
-      }
-
-      this.selectedOrders[id].quantity = newQuantity;
-      this.selectedOrders[id].total = this.selectedOrders[id].quantity * this.selectedOrders[id].price;
-
-      const subtotalSpan = input.closest('li').querySelector('.text-right');
-      if (subtotalSpan) {
-        subtotalSpan.textContent = `₱${this.selectedOrders[id].total.toFixed(2)}`;
+      if (Object.keys(this.selectedOrders).length === 0) {
+        this.elements.selectedOrdersContainer.innerHTML = 'No items selected';
       }
 
       this.updateRealTimeTotals();
     }
+  }
 
-    removeOrderItem(button) {
-      const id = button.dataset.id;
-      const listItem = button.closest('li');
+  updateRealTimeTotals() {
+    const { total, totalQuantity } = this.calculateTotals();
+    this.updateTotalDisplay(total, totalQuantity);
+    this.updateAdvancePayment();
+  }
 
-      if (this.selectedOrders[id]) {
-        delete this.selectedOrders[id];
-        listItem.remove();
+  calculateTotals() {
+    let total = 0;
+    let totalQuantity = 0;
 
-        if (Object.keys(this.selectedOrders).length === 0) {
-          this.elements.selectedOrdersContainer.innerHTML = 'No items selected';
-        }
+    Object.values(this.selectedOrders).forEach(item => {
+      const itemTotal = item.price * item.quantity;
+      total += itemTotal;
+      totalQuantity += item.quantity;
+      item.total = itemTotal;
+    });
 
-        this.updateRealTimeTotals();
+    return { total, totalQuantity };
+  }
+
+  clearOrders() {
+    Object.keys(this.selectedOrders).forEach(k => delete this.selectedOrders[k]);
+    this.elements.selectedOrdersContainer.innerHTML = 'No items selected';
+    this.updateTotalDisplay(0, 0);
+    this.updateAdvancePayment();
+  }
+
+  initializeEmailValidation() {
+    const { emailInput } = this.elements;
+    const emailError = document.getElementById('emailError');
+    if (!emailInput || !emailError) return;
+
+    emailInput.addEventListener('input', () => {
+      const value = emailInput.value.trim();
+
+      if (!value) {
+        emailError.textContent = 'Email is required';
+        emailError.classList.remove('hidden');
+        emailInput.classList.add('input-error');
+        return;
       }
-    }
 
-    updateRealTimeTotals() {
-      const { total, totalQuantity } = this.calculateTotals();
-      this.updateTotalDisplay(total, totalQuantity);
-      this.updateAdvancePayment();
-    }
+      if (!value.includes('@')) {
+        emailError.textContent = 'Email must contain @';
+        emailError.classList.remove('hidden');
+        emailInput.classList.add('input-error');
+        return;
+      }
 
-    calculateTotals() {
-      let total = 0;
-      let totalQuantity = 0;
+      if (!this.validateEmail(value)) {
+        emailError.textContent = 'Enter a valid email address!)';
+        emailError.classList.remove('hidden');
+        emailInput.classList.add('input-error');
+      } else {
+        emailError.textContent = '';
+        emailError.classList.add('hidden');
+        emailInput.classList.remove('input-error');
+      }
+    });
+  }
 
-      Object.values(this.selectedOrders).forEach(item => {
-        const itemTotal = item.price * item.quantity;
-        total += itemTotal;
-        totalQuantity += item.quantity;
-        item.total = itemTotal;
-      });
-
-      return { total, totalQuantity };
-    }
-
-    clearOrders() {
-      Object.keys(this.selectedOrders).forEach(k => delete this.selectedOrders[k]);
-      this.elements.selectedOrdersContainer.innerHTML = 'No items selected';
-      this.updateTotalDisplay(0, 0);
-      this.updateAdvancePayment();
-    }
-
-    initializeEmailValidation() {
-      const { emailInput } = this.elements;
-      const emailError = document.getElementById('emailError');
-      if (!emailInput || !emailError) return;
-
-      emailInput.addEventListener('input', () => {
-        const value = emailInput.value.trim();
-
-        if (!value) {
-          emailError.textContent = 'Email is required';
-          emailError.classList.remove('hidden');
-          emailInput.classList.add('input-error');
-          return;
-        }
-
-        if (!value.includes('@')) {
-          emailError.textContent = 'Email must contain @';
-          emailError.classList.remove('hidden');
-          emailInput.classList.add('input-error');
-          return;
-        }
-
-        if (!this.validateEmail(value)) {
-          emailError.textContent = 'Enter a valid email address!)';
-          emailError.classList.remove('hidden');
-          emailInput.classList.add('input-error');
-        } else {
-          emailError.textContent = '';
-          emailError.classList.add('hidden');
-          emailInput.classList.remove('input-error');
-        }
-      });
-    }
-
-    validateEmail(email) {
-      const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return re.test(email);
-    }
+  validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  }
 
 
-    validateEmail(email) {
-      const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      return regex.test(email);
-    }
+  validateEmail(email) {
+    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return regex.test(email);
+  }
 
 
-    validateInputs() {
-      let hasError = false;
+  validateInputs() {
+    let hasError = false;
 
-      const requiredFields = [
-        this.elements.nameInput,
-        this.elements.emailInput,
-        this.elements.paxInput,
-        this.elements.timeInput,
-        this.elements.dateInput
-      ];
+    const requiredFields = [
+      this.elements.nameInput,
+      this.elements.emailInput,
+      this.elements.paxInput,
+      this.elements.timeInput,
+      this.elements.dateInput
+    ];
 
-      requiredFields.forEach(field => {
-        if (!field.value.trim()) {
-          field.classList.add('input-error');
+    requiredFields.forEach(field => {
+      if (!field.value.trim()) {
+        field.classList.add('input-error');
+        hasError = true;
+      } else {
+        field.classList.remove('input-error');
+      }
+    });
+
+    const activeTab = document.querySelector(".tab-content:not(.hidden)");
+    if (activeTab) {
+      const numberField = activeTab.querySelector(".gcash-number, .maya-number");
+      const nameField = activeTab.querySelector(".registered-name");
+      const amountField = activeTab.querySelector(".amount");
+      const proofField = activeTab.querySelector(".proof");
+
+      if (numberField) {
+        if (!numberField.value.trim()) {
+          numberField.classList.add('input-error');
           hasError = true;
         } else {
-          field.classList.remove('input-error');
-        }
-      });
-
-      const activeTab = document.querySelector(".tab-content:not(.hidden)");
-      if (activeTab) {
-        const numberField = activeTab.querySelector(".gcash-number, .maya-number");
-        const nameField = activeTab.querySelector(".registered-name");
-        const amountField = activeTab.querySelector(".amount");
-        const proofField = activeTab.querySelector(".proof");
-
-        if (numberField) {
-          if (!numberField.value.trim()) {
-            numberField.classList.add('input-error');
-            hasError = true;
-          } else {
-            numberField.classList.remove('input-error');
-          }
-        }
-
-        if (nameField) {
-          if (!nameField.value.trim()) {
-            nameField.classList.add('input-error');
-            hasError = true;
-          } else {
-            nameField.classList.remove('input-error');
-          }
-        }
-
-        if (amountField) {
-          if (!amountField.value.trim()) {
-            amountField.classList.add('input-error');
-            hasError = true;
-          } else {
-            amountField.classList.remove('input-error');
-          }
-        }
-
-        if (proofField) {
-          const hasFile = proofField.files && proofField.files.length > 0;
-          if (!hasFile) {
-            proofField.classList.add('input-error');
-            hasError = true;
-          } else {
-            proofField.classList.remove('input-error');
-          }
+          numberField.classList.remove('input-error');
         }
       }
 
-      return !hasError;
+      if (nameField) {
+        if (!nameField.value.trim()) {
+          nameField.classList.add('input-error');
+          hasError = true;
+        } else {
+          nameField.classList.remove('input-error');
+        }
+      }
+
+      if (amountField) {
+        if (!amountField.value.trim()) {
+          amountField.classList.add('input-error');
+          hasError = true;
+        } else {
+          amountField.classList.remove('input-error');
+        }
+      }
+
+      if (proofField) {
+        const hasFile = proofField.files && proofField.files.length > 0;
+        if (!hasFile) {
+          proofField.classList.add('input-error');
+          hasError = true;
+        } else {
+          proofField.classList.remove('input-error');
+        }
+      }
     }
 
-    gatherReservationData() {
-      const formData = new FormData();
-      const activeTab = document.querySelector(".tab-content:not(.hidden)");
-      if (!activeTab) return { formData, hasOrders: false };
+    return !hasError;
+  }
 
-      const method = activeTab.id.includes("gcash") ? "gcash" : "maya";
+  gatherReservationData() {
+    const formData = new FormData();
+    const activeTab = document.querySelector(".tab-content:not(.hidden)");
+    if (!activeTab) return { formData, hasOrders: false };
 
-      const orders = Object.values(this.selectedOrders);
-      const hasOrders = orders.length > 0;
+    const method = activeTab.id.includes("gcash") ? "gcash" : "maya";
 
-      if (hasOrders) {
-        const generalNotes = this.elements.notesInput.value.trim();
-        orders.forEach((item, index) => {
-          formData.append(`orders[${index}][menu_id]`, item.id);
-          formData.append(`orders[${index}][quantity]`, item.quantity);
-          formData.append(`orders[${index}][notes]`, generalNotes);
-        });
-      }
+    const orders = Object.values(this.selectedOrders);
+    const hasOrders = orders.length > 0;
 
-      const basicData = {
-        table_id: this.selectedTableNumber,
-        customer_name: this.elements.nameInput.value.trim(),
-        email: this.elements.emailInput.value.trim(),
-        pax: parseInt(this.elements.paxInput.value) || 1,
-        reserved_date: this.elements.dateInput.value,
-        arrival_time: this.elements.timeInput.value,
-        advance_payment: parseFloat(this.elements.advancePaymentInput.value.trim()) || 0,
-        payment_method: method
-      };
-
-      Object.entries(basicData).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && value !== '') {
-          formData.append(key, value);
-        }
+    if (hasOrders) {
+      const generalNotes = this.elements.notesInput.value.trim();
+      orders.forEach((item, index) => {
+        formData.append(`orders[${index}][menu_id]`, item.id);
+        formData.append(`orders[${index}][quantity]`, item.quantity);
+        formData.append(`orders[${index}][notes]`, generalNotes);
       });
-
-      const ewalletId = document.querySelector(`#tab-${method} .ewallet-id`)?.value;
-      if (ewalletId) {
-        formData.append('ewallet_id', ewalletId);
-      }
-
-      const registeredNumber = activeTab.querySelector(".gcash-number, .maya-number")?.value;
-      if (registeredNumber) {
-        formData.append('registered_number', registeredNumber.trim());
-      }
-
-      const registeredName = activeTab.querySelector(".registered-name")?.value;
-      if (registeredName) {
-        formData.append('registered_name', registeredName.trim());
-      }
-
-      const proofInput = activeTab.querySelector(".proof");
-      if (proofInput?.files?.[0]) {
-        formData.append('payment_proof', proofInput.files[0]);
-      }
-
-      return { formData, hasOrders };
     }
+
+    const basicData = {
+      table_id: this.selectedTableNumber,
+      customer_name: this.elements.nameInput.value.trim(),
+      email: this.elements.emailInput.value.trim(),
+      pax: parseInt(this.elements.paxInput.value) || 1,
+      reserved_date: this.elements.dateInput.value,
+      arrival_time: this.elements.timeInput.value,
+      advance_payment: parseFloat(this.elements.advancePaymentInput.value.trim()) || 0,
+      payment_method: method
+    };
+
+    Object.entries(basicData).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        formData.append(key, value);
+      }
+    });
+
+    const ewalletId = document.querySelector(`#tab-${method} .ewallet-id`)?.value;
+    if (ewalletId) {
+      formData.append('ewallet_id', ewalletId);
+    }
+
+    const registeredNumber = activeTab.querySelector(".gcash-number, .maya-number")?.value;
+    if (registeredNumber) {
+      formData.append('registered_number', registeredNumber.trim());
+    }
+
+    const registeredName = activeTab.querySelector(".registered-name")?.value;
+    if (registeredName) {
+      formData.append('registered_name', registeredName.trim());
+    }
+
+    const proofInput = activeTab.querySelector(".proof");
+    if (proofInput?.files?.[0]) {
+      formData.append('payment_proof', proofInput.files[0]);
+    }
+
+    return { formData, hasOrders };
+  }
 
 
       async submitReservation() {
 
-      if (this.submissionInProgress) {
-        this.showMessageBox('Please wait, processing your reservation...', 'warning');
-        return;
-      }
-
-      if (!this.validateInputs()) {
-        this.showMessageBox('Please complete all required fields.', 'error');
-        return;
-      }
-
-      const { formData, hasOrders } = this.gatherReservationData();
-      if (!hasOrders) {
-        this.showMessageBox('Please add at least one order before submitting.', 'error');
-        return;
-      }
-
-      const submitBtn = this.elements.submitBtn;
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Submitting...";
-      this.submissionInProgress = true;
-
-      try {
-        const response = await fetch("/customer/reserve", {
-          method: "POST",
-          headers: {
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-            "Accept": "application/json"
-          },
-          body: formData
-        });
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          this.showMessageBox("Server error: Invalid response format", "error");
-          return;
-        }
-
-        const json = await response.json();
-
-        if (response.ok && json.success) {
-          this.showMessageBox("Reservation successful!", "success");
-          this.resetReservationForm();
-          this.hideModal(this.elements.tableModal);
-          this.hideModal(this.elements.paymentModal);
-        } else if (response.status === 409) {
-          this.showMessageBox("Sorry! This time is already booked. Please select a different time.", "error");
-        } else {
-          const errors = json.errors || {};
-          const messages = Object.values(errors).flat().join("\n");
-          this.showMessageBox(messages || json.message || "Reservation failed", "error");
-        }
-
-      } catch (error) {
-        this.showMessageBox("Network error: " + error.message, "error");
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit Reservation";
-        this.submissionInProgress = false;
-      }
+    if (this.submissionInProgress) {
+      this.showMessageBox('Please wait, processing your reservation...', 'warning');
+      return;
     }
 
-    resetPaymentModal() {
-      document.querySelectorAll('.tab-content').forEach(tabContent => {
-        const inputs = tabContent.querySelectorAll('input:not([type="file"])');
-        inputs.forEach(input => {
-          input.value = '';
-          input.classList.remove('input-error');
-          input.readOnly = false;
-          input.removeAttribute('min');
-        });
-
-        const fileInputs = tabContent.querySelectorAll('input[type="file"]');
-        fileInputs.forEach(fileInput => {
-          fileInput.value = '';
-          fileInput.classList.remove('input-error');
-        });
-      });
+    if (!this.validateInputs()) {
+      this.showMessageBox('Please complete all required fields.', 'error');
+      return;
     }
 
-    resetReservationForm() {
-      [this.elements.nameInput, this.elements.emailInput, this.elements.dateInput,
-      this.elements.timeInput, this.elements.notesInput].forEach(el => {
-        if (el) {
-          el.value = '';
-          el.classList.remove('input-error');
-        }
+    const { formData, hasOrders } = this.gatherReservationData();
+    if (!hasOrders) {
+      this.showMessageBox('Please add at least one order before submitting.', 'error');
+      return;
+    }
+
+    const submitBtn = this.elements.submitBtn;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting...";
+    this.submissionInProgress = true;
+
+    try {
+      const response = await fetch("/customer/reserve", {
+        method: "POST",
+        headers: {
+          "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+          "Accept": "application/json"
+        },
+        body: formData
       });
 
-      if (this.elements.paxInput) {
-        this.elements.paxInput.value = '';
-        this.elements.paxInput.classList.remove('input-error');
-      }
-
-      this.selectedTableNumber = 0;
-      if (this.elements.selectedTableNumber) this.elements.selectedTableNumber.value = '';
-
-      Object.keys(this.selectedOrders).forEach(k => delete this.selectedOrders[k]);
-
-      this.elements.selectedOrdersContainer.innerHTML = 'No items selected';
-
-      this.updateTotalDisplay(0, 0);
-
-      if (this.elements.advancePaymentInput) {
-        this.elements.advancePaymentInput.value = '0.00';
-      }
-      const displayElement = document.getElementById('advance_payment_display');
-      if (displayElement) {
-        displayElement.textContent = '₱0.00';
-      }
-
-      this.resetPaymentModal();
-
-      this.initializeDateTimeInputs();
-    }
-
-    animateFlyToCart(imageEl, targetSelector) {
-      const imgRect = imageEl.getBoundingClientRect();
-      const targetEl = document.querySelector(targetSelector);
-
-      if (!targetEl) {
-        console.warn(`Target element ${targetSelector} not found`);
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        this.showMessageBox("Server error: Invalid response format", "error");
         return;
       }
 
-      const targetRect = targetEl.getBoundingClientRect();
-      const flyingImg = imageEl.cloneNode(true);
+      const json = await response.json();
 
+      if (response.ok && json.success) {
+        this.showMessageBox("Reservation successful!", "success");
+        this.resetReservationForm();
+        this.hideModal(this.elements.tableModal);
+        this.hideModal(this.elements.paymentModal);
+      } else if (response.status === 409) {
+        this.showMessageBox("Sorry! This time is already booked. Please select a different time.", "error");
+      } else {
+        const errors = json.errors || {};
+        const messages = Object.values(errors).flat().join("\n");
+        this.showMessageBox(messages || json.message || "Reservation failed", "error");
+      }
+
+    } catch (error) {
+      this.showMessageBox("Network error: " + error.message, "error");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit Reservation";
+      this.submissionInProgress = false;
+    }
+  }
+
+  resetPaymentModal() {
+    document.querySelectorAll('.tab-content').forEach(tabContent => {
+      const inputs = tabContent.querySelectorAll('input:not([type="file"])');
+      inputs.forEach(input => {
+        input.value = '';
+        input.classList.remove('input-error');
+        input.readOnly = false;
+        input.removeAttribute('min');
+      });
+
+      const fileInputs = tabContent.querySelectorAll('input[type="file"]');
+      fileInputs.forEach(fileInput => {
+        fileInput.value = '';
+        fileInput.classList.remove('input-error');
+      });
+    });
+  }
+
+  resetReservationForm() {
+    [this.elements.nameInput, this.elements.emailInput, this.elements.dateInput,
+    this.elements.timeInput, this.elements.notesInput].forEach(el => {
+      if (el) {
+        el.value = '';
+        el.classList.remove('input-error');
+      }
+    });
+
+    if (this.elements.paxInput) {
+      this.elements.paxInput.value = '';
+      this.elements.paxInput.classList.remove('input-error');
+    }
+
+    this.selectedTableNumber = 0;
+    if (this.elements.selectedTableNumber) this.elements.selectedTableNumber.value = '';
+
+    Object.keys(this.selectedOrders).forEach(k => delete this.selectedOrders[k]);
+
+    this.elements.selectedOrdersContainer.innerHTML = 'No items selected';
+
+    this.updateTotalDisplay(0, 0);
+
+    if (this.elements.advancePaymentInput) {
+      this.elements.advancePaymentInput.value = '0.00';
+    }
+    const displayElement = document.getElementById('advance_payment_display');
+    if (displayElement) {
+      displayElement.textContent = '₱0.00';
+    }
+
+    this.resetPaymentModal();
+
+    this.initializeDateTimeInputs();
+  }
+
+  animateFlyToCart(imageEl, targetSelector) {
+    const imgRect = imageEl.getBoundingClientRect();
+    const targetEl = document.querySelector(targetSelector);
+
+    if (!targetEl) {
+      console.warn(`Target element ${targetSelector} not found`);
+      return;
+    }
+
+    const targetRect = targetEl.getBoundingClientRect();
+    const flyingImg = imageEl.cloneNode(true);
+
+    Object.assign(flyingImg.style, {
+      position: 'fixed',
+      left: `${imgRect.left}px`,
+      top: `${imgRect.top}px`,
+      width: `${imgRect.width}px`,
+      height: `${imgRect.height}px`,
+      transition: 'all 0.8s ease-in-out',
+      filter: 'blur(2px)',
+      zIndex: '10000',
+      pointerEvents: 'none',
+      borderRadius: '10px'
+    });
+
+    document.getElementById('fly-animation-container').appendChild(flyingImg);
+
+    requestAnimationFrame(() => {
       Object.assign(flyingImg.style, {
-        position: 'fixed',
-        left: `${imgRect.left}px`,
-        top: `${imgRect.top}px`,
-        width: `${imgRect.width}px`,
-        height: `${imgRect.height}px`,
-        transition: 'all 0.8s ease-in-out',
-        filter: 'blur(2px)',
-        zIndex: '10000',
-        pointerEvents: 'none',
-        borderRadius: '10px'
+        left: `${targetRect.left + targetRect.width / 2}px`,
+        top: `${targetRect.top + targetRect.height / 2}px`,
+        width: '0px',
+        height: '0px',
+        opacity: '0.3'
       });
+    });
 
-      document.getElementById('fly-animation-container').appendChild(flyingImg);
+    flyingImg.addEventListener('transitionend', () => {
+      flyingImg.remove();
+    });
+  }
 
-      requestAnimationFrame(() => {
-        Object.assign(flyingImg.style, {
-          left: `${targetRect.left + targetRect.width / 2}px`,
-          top: `${targetRect.top + targetRect.height / 2}px`,
-          width: '0px',
-          height: '0px',
-          opacity: '0.3'
-        });
-      });
+  alertMessageBox(message, type = 'alert') {
+    const box = document.getElementById('messageBox');
+    box.textContent = message;
 
-      flyingImg.addEventListener('transitionend', () => {
-        flyingImg.remove();
-      });
-    }
-
-    alertMessageBox(message, type = 'alert') {
-      const box = document.getElementById('messageBox');
-      box.textContent = message;
-
-      const colors = {
-        success: '#4CAF50',
-        error: '#f44336',
-        warning: '#ff9800',
-        info: '#2196F3'
-      };
-
-      box.style.background = colors[type] || colors.success;
-      box.style.display = 'block';
-
-      const timeout = (type === 'error' || type === 'warning') ? 5000 : 3000;
-
-      setTimeout(() => {
-        box.style.display = 'none';
-      }, timeout);
-    }
-
-    showMessageBox(message, type = 'success') {
-      const box = document.getElementById('messageBox');
-      box.textContent = message;
-
-      const colors = {
-        success: '#4CAF50',
-        error: '#f44336',
-        warning: '#ff9800',
-        info: '#2196F3'
-      };
-
-      box.style.background = colors[type] || colors.success;
-      box.style.display = 'block';
-
-      const timeout = (type === 'error' || type === 'warning') ? 5000 : 3000;
-
-      setTimeout(() => {
-        box.style.display = 'none';
-      }, timeout);
-    }
-    }
-
-    window.customer_jeongolConfig = {
-      storeReservationUrl: "{{ route('customer.reserve') }}",
-      csrfToken: "{{ csrf_token() }}"
+    const colors = {
+      success: '#4CAF50',
+      error: '#f44336',
+      warning: '#ff9800',
+      info: '#2196F3'
     };
 
-    const reservationSystem = new JeongolReservation();
+    box.style.background = colors[type] || colors.success;
+    box.style.display = 'block';
 
-    window.selectMenuItem = function (card) {
-      reservationSystem.selectMenuItem(card);
+    const timeout = (type === 'error' || type === 'warning') ? 5000 : 3000;
+
+    setTimeout(() => {
+      box.style.display = 'none';
+    }, timeout);
+  }
+
+  showMessageBox(message, type = 'success') {
+    const box = document.getElementById('messageBox');
+    box.textContent = message;
+
+    const colors = {
+      success: '#4CAF50',
+      error: '#f44336',
+      warning: '#ff9800',
+      info: '#2196F3'
     };
 
-  </script>
-</body>
+    box.style.background = colors[type] || colors.success;
+    box.style.display = 'block';
+
+    const timeout = (type === 'error' || type === 'warning') ? 5000 : 3000;
+
+    setTimeout(() => {
+      box.style.display = 'none';
+    }, timeout);
+  }
+    }
+
+  window.customer_jeongolConfig = {
+    storeReservationUrl: "{{ route('customer.reserve') }}",
+    csrfToken: "{{ csrf_token() }}"
+  };
+
+  const reservationSystem = new JeongolReservation();
+
+  window.selectMenuItem = function (card) {
+    reservationSystem.selectMenuItem(card);
+  };
+
+</script>
+
 
 </html>

@@ -7,18 +7,17 @@ use Illuminate\Database\Eloquent\Model;
 class expiredIngredients extends Model
 {
     protected $fillable = [
-        'ingredient_id',
-        'ingredient_name',
-        'category',
         'quantity',
-        'unit',
-        'expiration_date',
         'expired_at',
-        'notes'
+        'ingredient_batch_id'
     ];
 
     public function ingredient()
     {
         return $this->belongsTo(ingredients::class);
+    }
+
+    public function ingredientBatch(){
+        return $this->belonsTo(ingredientBatch::class);
     }
 }

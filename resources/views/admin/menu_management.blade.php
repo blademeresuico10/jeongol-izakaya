@@ -3,6 +3,7 @@
 
 <div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
+
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">Menu Management</h1>
         </nav>
@@ -174,7 +175,7 @@
                                         <option value="0" {{ old('has_customer_discount', 1) == 0 ? 'selected' : '' }}>No
                                         </option>
                                     </select>
-                                   
+
                                 </div>
 
                             </div>
@@ -343,7 +344,7 @@
             @foreach ($menu as $item)
                 @if(!$item->deleted_at)
                     <div class="modal fade" id="editMenuModal{{ $item->id }}" data-backdrop="static" data-keyboard="false""
-                        aria-labelledby="editMenuModalLabel{{ $item->id }}" aria-hidden="true">
+                                aria-labelledby=" editMenuModalLabel{{ $item->id }}" aria-hidden="true">
                         <div class="modal-dialog" role="document">
                             <form action="{{ route('admin.updatemenu', $item->id) }}" method="POST">
                                 @csrf
@@ -436,7 +437,9 @@
                     toast: true,
                     position: 'top',
                     timer: 3000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    background: '#f8d7da',
+                    color: '#721c24'
                 });
             }
         } catch (error) {
@@ -462,7 +465,9 @@
                     toast: true,
                     position: 'top',
                     timer: 3000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    background: '#f8d7da',
+                    color: '#721c24'
                 });
             }
         } catch (error) {
@@ -488,7 +493,9 @@
                     toast: true,
                     position: 'top',
                     timer: 3000,
-                    showConfirmButton: false
+                    showConfirmButton: false,
+                    background: '#f8d7da',
+                    color: '#721c24'
                 });
             }
         } catch (error) {
@@ -501,7 +508,6 @@
 
         $('#menuIngredientsModal').on('show.bs.modal', function () {
             const content = document.getElementById('ingredientsContent');
-          ;
 
             fetch("{{ route('admin.menu_ingredients') }}")
                 .then(res => res.json())
@@ -614,20 +620,34 @@
             });
 
             if (hasError) {
-                Swal.fire('Invalid Input', 'Please enter valid quantities (greater than 0)', 'warning');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Input',
+                    text: 'Please enter valid quantities (greater than 0)',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
                 return;
             }
 
             if (updates.length === 0) {
-                Swal.fire('Warning', 'No ingredients to update', 'warning');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Changes',
+                    text: 'No ingredients to update',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
                 return;
             }
-
-            Swal.fire({
-                title: 'Saving...',
-                didOpen: () => Swal.showLoading(),
-                allowOutsideClick: false
-            });
 
             fetch('/menu_ingredients/update', {
                 method: 'POST',
@@ -640,22 +660,45 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
+                        $('#menuIngredientsModal').modal('hide');
+
                         Swal.fire({
                             icon: 'success',
-                            title: 'Success',
-                            text: 'Ingredients updated successfully',
-                            timer: 2000,
-                            showConfirmButton: false
-                        }).then(() => {
-                            $('#menuIngredientsModal').modal('hide');
+                            title: 'Ingredients updated successfully',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#d4edda',
+                            color: '#155724'
                         });
                     } else {
-                        Swal.fire('Error', data.message || 'Failed to update', 'error');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'Failed to update',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#f8d7da',
+                            color: '#721c24'
+                        });
                     }
                 })
                 .catch(err => {
                     console.error(err);
-                    Swal.fire('Error', 'Failed to update ingredients', 'error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to update ingredients',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
+                    });
                 });
         });
 
@@ -696,20 +739,44 @@
                                 `);
                                     }
                                 });
+
                                 Swal.fire({
                                     icon: 'success',
-                                    title: 'Removed',
-                                    text: 'Ingredient removed successfully',
-                                    timer: 1500,
-                                    showConfirmButton: false
+                                    title: 'Ingredient removed successfully',
+                                    toast: true,
+                                    position: 'top',
+                                    timer: 3000,
+                                    showConfirmButton: false,
+                                    background: '#d4edda',
+                                    color: '#155724'
                                 });
                             } else {
-                                Swal.fire('Error', data.message || 'Failed to remove', 'error');
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message || 'Failed to remove',
+                                    toast: true,
+                                    position: 'top',
+                                    timer: 3000,
+                                    showConfirmButton: false,
+                                    background: '#f8d7da',
+                                    color: '#721c24'
+                                });
                             }
                         })
                         .catch(err => {
                             console.error(err);
-                            Swal.fire('Error', 'Failed to remove ingredient', 'error');
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Failed to remove ingredient',
+                                toast: true,
+                                position: 'top',
+                                timer: 3000,
+                                showConfirmButton: false,
+                                background: '#f8d7da',
+                                color: '#721c24'
+                            });
                         });
                 }
             });
@@ -722,19 +789,21 @@
             $('#menuNameLabel').text(menuName);
             $('#ingredientQty').val('');
 
-            Swal.fire({
-                title: 'Loading ingredients...',
-                didOpen: () => Swal.showLoading(),
-                allowOutsideClick: false
-            });
-
             fetch("{{ route('ingredients.list') }}")
                 .then(res => res.json())
                 .then(data => {
-                    Swal.close();
-
                     if (!data.ingredients || data.ingredients.length === 0) {
-                        Swal.fire('No Ingredients', 'No ingredients available', 'info');
+                        Swal.fire({
+                            icon: 'info',
+                            title: 'No Ingredients',
+                            text: 'No ingredients available',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#d1ecf1',
+                            color: '#0c5460'
+                        });
                         return;
                     }
 
@@ -760,7 +829,17 @@
                 })
                 .catch(err => {
                     console.error('Error loading ingredients:', err);
-                    Swal.fire('Error', 'Failed to load ingredients', 'error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to load ingredients',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
+                    });
                 });
         });
 
@@ -777,20 +856,34 @@
             const quantity = $('#ingredientQty').val();
 
             if (!ingredientId) {
-                Swal.fire('Error', 'Please select an ingredient', 'warning');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Missing Selection',
+                    text: 'Please select an ingredient',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
                 return;
             }
 
             if (!quantity || parseFloat(quantity) <= 0) {
-                Swal.fire('Error', 'Please enter a valid quantity', 'warning');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Quantity',
+                    text: 'Please enter a valid quantity',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
                 return;
             }
-
-            Swal.fire({
-                title: 'Adding ingredient...',
-                didOpen: () => Swal.showLoading(),
-                allowOutsideClick: false
-            });
 
             fetch(`/menu/${currentMenuId}/add-ingredient`, {
                 method: 'POST',
@@ -812,10 +905,13 @@
 
                         Swal.fire({
                             icon: 'success',
-                            title: 'Success',
-                            text: 'Ingredient added successfully',
-                            timer: 1500,
-                            showConfirmButton: false
+                            title: 'Ingredient added successfully',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#d4edda',
+                            color: '#155724'
                         });
 
                         const content = document.getElementById('ingredientsContent');
@@ -902,12 +998,32 @@
                                 content.innerHTML = html;
                             });
                     } else {
-                        Swal.fire('Error', data.message || 'Failed to add ingredient', 'error');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'Failed to add ingredient',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#f8d7da',
+                            color: '#721c24'
+                        });
                     }
                 })
                 .catch(err => {
                     console.error('Error adding ingredient:', err);
-                    Swal.fire('Error', 'Failed to add ingredient', 'error');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Failed to add ingredient',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
+                    });
                 });
         });
 
@@ -933,4 +1049,29 @@
     }
 `;
     document.head.appendChild(style);
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: '{{ session('success') }}',
+            toast: true,
+            position: 'top',
+            timer: 3000,
+            showConfirmButton: false,
+            background: '#d4edda',
+            color: '#155724'
+        });
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: '{{ session('error') }}',
+            toast: true,
+            position: 'top',
+            timer: 3000,
+            showConfirmButton: false,
+            background: '#f8d7da',
+            color: '#721c24'
+        });
+    @endif
 </script>

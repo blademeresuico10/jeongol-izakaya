@@ -149,7 +149,6 @@
                                                 <th>Ingredient</th>
                                                 <th>Quantity</th>
                                                 <th>Expired at</th>
-                                                <th>Notes</th>
                                             </tr>
                                         </thead>
                                         <tbody id="expiredTableBody"></tbody>
@@ -234,7 +233,7 @@
     </div>
 
     {{-- Add Ingredient Modal --}}
-<div class="modal fade" id="addIngredientModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal fade" id="addIngredientModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-info text-white">
@@ -333,10 +332,22 @@
         $('a[href="#lastweek"]').on('shown.bs.tab', () => loadBatches('lastweek'));
         $('a[href="#expired"]').on('shown.bs.tab', loadExpired);
 
-        $('#addStockForm').on('submit', function (e) { e.preventDefault(); submitForm(this, '/ingredient_management/add-stock', 'Stock added'); });
-        $('#updateStockForm').on('submit', function (e) { e.preventDefault(); submitForm(this, '/ingredient_management/update-stock', 'Stock updated'); });
-        $('#addIngredientForm').on('submit', function (e) { e.preventDefault(); submitForm(this, '/ingredient_management/storeIngredient', 'Ingredient added'); });
-        $('#editBatchForm').on('submit', function (e) { e.preventDefault(); updateBatch(); });
+        $('#addStockForm').on('submit', function (e) { 
+            e.preventDefault(); 
+            submitForm(this, '/ingredient_management/add-stock', 'Stock added successfully'); 
+        });
+        $('#updateStockForm').on('submit', function (e) { 
+            e.preventDefault(); 
+            submitForm(this, '/ingredient_management/update-stock', 'Stock updated successfully'); 
+        });
+        $('#addIngredientForm').on('submit', function (e) { 
+            e.preventDefault(); 
+            submitForm(this, '/ingredient_management/storeIngredient', 'Ingredient added successfully'); 
+        });
+        $('#editBatchForm').on('submit', function (e) { 
+            e.preventDefault(); 
+            updateBatch(); 
+        });
 
         function loadIngredients(selector, showStock = false) {
             $.get('/ingredient_management/addStockForm', data => {
@@ -387,10 +398,8 @@
                     data.expired_items.forEach(i => $tb.append(`
                         <tr>
                             <td>${i.ingredient_name}</td>
-                            <td>${parseFloat(i.quantity).toFixed(2)}</td>
-                            <td>${i.unit}</td>
+                            <td>${parseFloat(i.quantity).toFixed(2)} ${i.unit}</td>
                             <td>${new Date(i.expiration_date).toLocaleDateString()}</td>
-                            <td>${i.notes || 'N/A'}</td>
                         </tr>
                     `));
                 } else $('#expiredEmpty').removeClass('d-none');
@@ -399,12 +408,42 @@
 
         function submitForm(form, url, msg) {
             $.ajax({
-                url, method: 'POST',
+                url, 
+                method: 'POST',
                 data: JSON.stringify($(form).serializeArray().reduce((o, i) => (o[i.name] = i.value, o), {})),
                 contentType: 'application/json',
                 headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
-                success: () => { Swal.fire('Success', msg, 'success'); $(form).closest('.modal').modal('hide'); location.reload(); },
-                error: () => Swal.fire('Error', 'Operation failed', 'error')
+                success: (response) => {
+                    if (response.success) {
+                        $(form).closest('.modal').modal('hide');
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: msg,
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#d4edda',
+                            color: '#155724'
+                        });
+                        
+                        setTimeout(() => location.reload(), 1000);
+                    }
+                },
+                error: (xhr) => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: xhr.responseJSON?.message || 'Operation failed',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
+                    });
+                }
             });
         }
 
@@ -420,8 +459,39 @@
                 }),
                 contentType: 'application/json',
                 headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
-                success: () => { Swal.fire('Success', 'Batch updated', 'success'); $('#editBatchModal').modal('hide'); loadBatches($('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek'); },
-                error: () => Swal.fire('Error', 'Update failed', 'error')
+                success: (response) => {
+                    if (response.success) {
+                        $('#editBatchModal').modal('hide');
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Batch updated successfully',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#d4edda',
+                            color: '#155724'
+                        });
+                        
+                        setTimeout(() => {
+                            loadBatches($('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek');
+                        }, 1000);
+                    }
+                },
+                error: (xhr) => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: xhr.responseJSON?.message || 'Update failed',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
+                    });
+                }
             });
         }
 
@@ -449,8 +519,37 @@
                         url: `/ingredient_management/batches/${id}`,
                         method: 'DELETE',
                         headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
-                        success: () => { Swal.fire('Deleted', 'Batch removed', 'success'); loadBatches($('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek'); },
-                        error: () => Swal.fire('Error', 'Delete failed', 'error')
+                        success: (response) => {
+                            if (response.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Batch removed successfully',
+                                    toast: true,
+                                    position: 'top',
+                                    timer: 3000,
+                                    showConfirmButton: false,
+                                    background: '#d4edda',
+                                    color: '#155724'
+                                });
+                                
+                                setTimeout(() => {
+                                    loadBatches($('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek');
+                                }, 1000);
+                            }
+                        },
+                        error: (xhr) => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: xhr.responseJSON?.message || 'Delete failed',
+                                toast: true,
+                                position: 'top',
+                                timer: 3000,
+                                showConfirmButton: false,
+                                background: '#f8d7da',
+                                color: '#721c24'
+                            });
+                        }
                     });
                 }
             });

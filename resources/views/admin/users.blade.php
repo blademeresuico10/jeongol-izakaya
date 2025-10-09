@@ -430,7 +430,9 @@
                         toast: true,
                         position: 'top',
                         timer: 3000,
-                        showConfirmButton: false
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
                     });
                 }
             } catch (error) {
@@ -456,7 +458,9 @@
                         toast: true,
                         position: 'top',
                         timer: 3000,
-                        showConfirmButton: false
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
                     });
                 }
             } catch (error) {
@@ -482,7 +486,9 @@
                         toast: true,
                         position: 'top',
                         timer: 3000,
-                        showConfirmButton: false
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
                     });
                 }
             } catch (error) {
@@ -490,179 +496,151 @@
             }
         };
 
-        function validateField(field, errorMessage = '') {
-            const $field = $(field);
-            const $feedback = $field.siblings('.invalid-feedback');
+        // Password strength calculator
+        function calculatePasswordStrength(password) {
+            const checks = {
+                length: password.length >= 8,
+                lowercase: /[a-z]/.test(password),
+                uppercase: /[A-Z]/.test(password),
+                numbers: /\d/.test(password),
+                special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+            };
 
-            if (!field.checkValidity() || errorMessage) {
-                $field.removeClass('is-valid').addClass('is-invalid');
-                $feedback.text(errorMessage || field.validationMessage);
-                return false;
-            } else {
-                $field.removeClass('is-invalid').addClass('is-valid');
-                $feedback.text('');
-                return true;
-            }
+            const strength = Object.values(checks).filter(Boolean).length * 20;
+
+            let level, color;
+            if (strength >= 80) { level = 'Strong'; color = 'success'; }
+            else if (strength >= 60) { level = 'Good'; color = 'warning'; }
+            else if (strength >= 40) { level = 'Fair'; color = 'info'; }
+            else { level = 'Weak'; color = 'danger'; }
+
+            return { strength, level, color, checks };
         }
 
-        function clearValidation() {
-            $('#addUserForm .form-control, #addUserForm .form-check-input').removeClass('is-invalid is-valid');
-            $('#addUserForm .invalid-feedback').text('');
-            $('#password-warning').hide();
-            $('#submitBtn').prop('disabled', false);
-        }
+        // Initialize password validation
+        function initializePasswordValidation() {
+            const passwordInput = document.getElementById('password');
+            const confirmPasswordInput = document.getElementById('confirm_password');
 
-        const password = document.getElementById('password');
-        const confirmPassword = document.getElementById('confirm_password');
-        const warning = document.getElementById('password-warning');
-        const submitBtn = document.getElementById('submitBtn');
+            if (!passwordInput || !confirmPasswordInput) return;
 
-        function checkPasswordMatch() {
-            if (!password || !confirmPassword) return true;
+            // Create strength indicator
+            const strengthContainer = $(`
+                <div id="strengthContainer" class="mt-2" style="display: none;">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="progress flex-grow-1 mr-2" style="height: 8px;">
+                            <div id="strengthProgress" class="progress-bar bg-danger" style="width: 0%"></div>
+                        </div>
+                        <span id="strengthText" class="badge badge-secondary">Weak</span>
+                    </div>
+                    <div id="strengthChecks" class="small text-muted"></div>
+                </div>
+            `);
 
-            if (!password.value || !confirmPassword.value) {
-                warning.style.display = 'none';
-                submitBtn.disabled = false;
-                return true;
-            }
+            $(passwordInput).after(strengthContainer);
 
-            if (password.value !== confirmPassword.value) {
-                warning.style.display = 'block';
-                validateField(confirmPassword, 'Passwords do not match');
-                submitBtn.disabled = true;
-                return false;
-            } else {
-                warning.style.display = 'none';
-                validateField(password);
-                validateField(confirmPassword);
-                submitBtn.disabled = false;
-                return true;
-            }
-        }
+            // Password input validation
+            $(passwordInput).on('input', function() {
+                const password = this.value;
 
-        if (password && confirmPassword) {
-            password.addEventListener('input', checkPasswordMatch);
-            confirmPassword.addEventListener('input', checkPasswordMatch);
-        }
-
-        $('#addUserForm input, #addUserForm select').on('blur input', function () {
-            validateField(this);
-
-            if (this.name === 'password' || this.name === 'password_confirmation') {
-                checkPasswordMatch();
-            }
-
-            if (this.name === 'contact_number') {
-                this.value = this.value.replace(/\D/g, '');
-                if (this.value.length > 11) {
-                    this.value = this.value.substring(0, 11);
-                    validateField(this, 'Contact number cannot exceed 11 digits');
+                if (password.length === 0) {
+                    $('#strengthContainer').hide();
+                    $(this).removeClass('is-invalid is-valid');
+                    return;
                 }
-            }
 
-            if (this.name == 'address') {
-                if (this.value.length > 0 && !/^[a-zA-Z0-9\s.,#\-]+$/.test(this.value)) {
-                    validateField(this, 'Address can only contain letters, numbers, spaces, commas, periods, hyphens, and #');
+                const result = calculatePasswordStrength(password);
+                $('#strengthContainer').show();
+
+                // Update progress bar
+                const progressBar = $('#strengthProgress');
+                progressBar.css('width', `${result.strength}%`);
+                progressBar.removeClass('bg-danger bg-warning bg-info bg-success');
+                progressBar.addClass(`bg-${result.color}`);
+
+                // Update strength text
+                const strengthText = $('#strengthText');
+                strengthText.text(result.level);
+                strengthText.removeClass('badge-danger badge-warning badge-info badge-success');
+                strengthText.addClass(`badge-${result.color}`);
+
+                // Update validation visual
+                $(this).removeClass('is-invalid is-valid');
+                if (result.strength >= 60) {
+                    $(this).addClass('is-valid');
+                } else if (result.strength < 40) {
+                    $(this).addClass('is-invalid');
                 }
-            }
 
+                // Update checks
+                const checksHtml = [
+                    ['length', 'At least 8 characters'],
+                    ['uppercase', 'Uppercase letter'],
+                    ['lowercase', 'Lowercase letter'],
+                    ['numbers', 'Number'],
+                    ['special', 'Special character']
+                ].map(([key, label]) => `
+                    <div class="d-flex align-items-center">
+                        <span class="mr-1 ${result.checks[key] ? 'text-success' : 'text-danger'}">
+                            ${result.checks[key] ? '✓' : '✗'}
+                        </span>
+                        <span>${label}</span>
+                    </div>
+                `).join('');
+                $('#strengthChecks').html(checksHtml);
 
-            if (this.name === 'username') {
-                this.value = this.value.replace(/\s/g, '').toLowerCase();
-                if (this.value.length > 0 && !/^[a-zA-Z0-9_]+$/.test(this.value)) {
-                    validateField(this, 'Username can only contain letters, numbers, and underscores');
-                }
-            }
-
-            if (this.name === 'firstname' || this.name === 'lastname') {
-                if (this.value.length > 0 && !/^[a-zA-Z\s]+$/.test(this.value)) {
-                    validateField(this, 'Name can only contain letters and spaces');
-                }
-            }
-
-            if (this.name === 'password' && this.value.length > 0 && this.value.length < 8) {
-                validateField(this, 'Password must be at least 8 characters');
-            }
-        });
-
-        $('#addUserForm').on('submit', function (e) {
-            e.preventDefault();
-
-            let isValid = true;
-            const form = this;
-
-            $(form).find('[required]').each(function () {
-                if (!validateField(this)) {
-                    isValid = false;
+                // Check password match if confirm field has value
+                if (confirmPasswordInput.value) {
+                    validatePasswordMatch();
                 }
             });
 
-            if (!checkPasswordMatch()) {
-                isValid = false;
-            }
+            // Confirm password validation
+            function validatePasswordMatch() {
+                const newPassword = passwordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
 
-            const contactNumber = form.contact_number.value;
-            if (contactNumber && contactNumber.length > 11) {
-                validateField(form.contact_number, 'Contact number cannot exceed 11 digits');
-                isValid = false;
-            }
+                $(confirmPasswordInput).removeClass('is-invalid is-valid');
 
-            const username = form.username.value;
-            if (username && !/^[a-zA-Z0-9_]+$/.test(username)) {
-                validateField(form.username, 'Username can only contain letters, numbers, and underscores');
-                isValid = false;
-            }
-
-            const firstname = form.firstname.value;
-            if (firstname && !/^[a-zA-Z\s]+$/.test(firstname)) {
-                validateField(form.firstname, 'First name can only contain letters and spaces');
-                isValid = false;
-            }
-
-            const lastname = form.lastname.value;
-            if (lastname && !/^[a-zA-Z\s]+$/.test(lastname)) {
-                validateField(form.lastname, 'Last name can only contain letters and spaces');
-                isValid = false;
-            }
-
-            const address = form.address.value;
-            if (this.name == 'address') {
-                if (this.value.length > 0 && !/^[a-zA-Z0-9\s.,#\-]+$/.test(this.value)) {
-                    validateField(this, 'Address can only contain letters, numbers, spaces, commas, periods, hyphens, and #');
+                if (!confirmPassword) {
+                    return;
+                } else if (newPassword === confirmPassword) {
+                    $(confirmPasswordInput).addClass('is-valid');
+                    confirmPasswordInput.setCustomValidity('');
+                } else {
+                    $(confirmPasswordInput).addClass('is-invalid');
+                    confirmPasswordInput.setCustomValidity('Passwords do not match');
                 }
             }
 
-            const passwordField = form.password;
-            if (passwordField && passwordField.value && passwordField.value.length < 8) {
-                validateField(passwordField, 'Password must be at least 8 characters');
-                isValid = false;
-            }
+            $(confirmPasswordInput).on('input', validatePasswordMatch);
+        }
 
-            if (!isValid) {
-                const firstInvalid = $(form).find('.is-invalid').first();
-                if (firstInvalid.length) {
-                    firstInvalid.focus();
-                }
+        // Input formatting
+        $('input[name="contact_number"]').on('input', function () {
+            this.value = this.value.replace(/\D/g, '').substring(0, 11);
+        });
 
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Validation Error',
-                    text: 'Please fix the highlighted errors before submitting.',
-                    toast: true,
-                    position: 'top',
-                    timer: 3000,
-                    showConfirmButton: false
-                });
-                return false;
-            }
+        $('input[name="username"]').on('input', function () {
+            this.value = this.value.replace(/\s/g, '').toLowerCase();
+        });
+
+        // Block numbers in name fields
+        $('input[name="firstname"], input[name="lastname"]').on('input', function () {
+            this.value = this.value.replace(/[0-9]/g, '');
+        });
+
+        // Form submission
+        $('#addUserForm').on('submit', function (e) {
+            e.preventDefault();
 
             const submitButton = $('#submitBtn');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
 
-            const formData = new FormData(form);
+            const formData = new FormData(this);
 
             $.ajax({
-                url: form.action,
+                url: this.action,
                 method: 'POST',
                 data: formData,
                 processData: false,
@@ -672,49 +650,37 @@
                 },
                 success: function (response) {
                     $('#addUserModal').modal('hide');
+                    
                     Swal.fire({
                         icon: 'success',
-                        title: 'Success!',
-                        text: response.message || 'User added successfully.',
+                        title: 'User added successfully',
                         toast: true,
                         position: 'top',
                         timer: 3000,
-                        showConfirmButton: false
+                        showConfirmButton: false,
+                        background: '#d4edda',
+                        color: '#155724'
                     });
-                    setTimeout(function () {
-                        location.reload();
-                    }, 1000);
+                    
+                    setTimeout(() => location.reload(), 1000);
                 },
                 error: function (xhr) {
                     submitButton.prop('disabled', false).html('Add User');
 
                     if (xhr.status === 422) {
                         const errors = xhr.responseJSON.errors;
-
-                        $(form).find('.is-invalid').removeClass('is-invalid');
-                        $(form).find('.invalid-feedback').text('');
-
-                        $.each(errors, function (field, messages) {
-                            const $field = $(form).find(`[name="${field}"]`);
-                            const $feedback = $field.siblings('.invalid-feedback');
-
-                            $field.addClass('is-invalid');
-                            $feedback.text(messages[0]);
-                        });
-
-                        const firstErrorField = $(form).find('.is-invalid').first();
-                        if (firstErrorField.length) {
-                            firstErrorField.focus();
-                        }
-
+                        let errorMsg = Object.values(errors).flat().join('<br>');
+                        
                         Swal.fire({
                             icon: 'error',
-                            title: 'Validation Failed',
-                            text: 'Please check the highlighted fields and try again.',
+                            title: 'Validation Error',
+                            html: errorMsg,
                             toast: true,
                             position: 'top',
                             timer: 4000,
-                            showConfirmButton: false
+                            showConfirmButton: false,
+                            background: '#f8d7da',
+                            color: '#721c24'
                         });
                     } else {
                         Swal.fire({
@@ -724,26 +690,29 @@
                             toast: true,
                             position: 'top',
                             timer: 3000,
-                            showConfirmButton: false
+                            showConfirmButton: false,
+                            background: '#f8d7da',
+                            color: '#721c24'
                         });
                     }
                 }
             });
         });
 
-        @if ($errors->any())
-            $('#addUserModal').modal('show');
-        @endif
-
-        $('#addUserModal').on('hidden.bs.modal', function () {
-            try {
-                $(this).find('form')[0].reset();
-                clearValidation();
-            } catch (error) {
-                console.error('Error resetting form:', error);
-            }
+        // Modal events
+        $('#addUserModal').on('shown.bs.modal', function () {
+            initializePasswordValidation();
+            $('input[name="firstname"]').focus();
         });
 
+        $('#addUserModal').on('hidden.bs.modal', function () {
+            $('#addUserForm')[0].reset();
+            $('#submitBtn').prop('disabled', false).html('Add User');
+            $('#strengthContainer').remove();
+            $('input').removeClass('is-invalid is-valid');
+        });
+
+        // Session messages
         @if(session('success'))
             Swal.fire({
                 icon: 'success',
@@ -771,49 +740,31 @@
             });
         @endif
 
-            @if($errors->any())
-                let errorMessages = [];
-                @foreach($errors->all() as $error)
-                    errorMessages.push({!! json_encode($error) !!});
-                @endforeach
+        @if($errors->any())
+            let errorMessages = [];
+            @foreach($errors->all() as $error)
+                errorMessages.push({!! json_encode($error) !!});
+            @endforeach
 
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Validation Errors',
-                    html: errorMessages.join('<br>'),
-                    toast: true,
-                    position: 'top',
-                    timer: 5000,
-                    showConfirmButton: false,
-                    background: '#fff3cd',
-                    color: '#856404'
-                });
-            @endif
+            Swal.fire({
+                icon: 'warning',
+                title: 'Validation Errors',
+                html: errorMessages.join('<br>'),
+                toast: true,
+                position: 'top',
+                timer: 5000,
+                showConfirmButton: false,
+                background: '#fff3cd',
+                color: '#856404'
+            });
+            
+            $('#addUserModal').modal('show');
+        @endif
 
         $('form[action*="updateuser"]').on('submit', function (e) {
             const submitButton = $(this).find('button[type="submit"]');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
-
-            setTimeout(function () {
-                submitButton.prop('disabled', false).html('Update User');
-            }, 3000);
         });
-
-        $('#addUserModal').on('shown.bs.modal', function () {
-            $('input[name="firstname"]').focus();
-        });
-
-        $('input[name="contact"], input[name="contact_number"]').on('input', function () {
-            this.value = this.value.replace(/\D/g, '');
-        });
-
-        $('input[name="username"]').on('input', function () {
-            this.value = this.value.replace(/\s/g, '').toLowerCase();
-        });
-
-        $('input[name="address"]').on('input', function () {
-            this.value = this.value.replace(/\s/g, '').toLowerCase();
-        })
 
     });
 </script>

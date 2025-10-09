@@ -135,7 +135,7 @@ Route::middleware('auth')->group(function () {
         // Add this to your routes/web.php inside the admin middleware group
 
         Route::put('/stock-levels/{id}', [AdminController::class, 'updateStockLevel'])->name('admin.stock_levels.update');
-        
+
         // Operating Hours Management
         Route::put('/operating-hours/default', [AdminController::class, 'updateDefaultHours'])->name('admin.operating_hours.update_default');
         Route::post('/operating-hours', [AdminController::class, 'storeOperatingHours'])->name('admin.operating_hours.store');

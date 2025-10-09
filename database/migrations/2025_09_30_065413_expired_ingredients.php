@@ -13,14 +13,9 @@ return new class extends Migration
     {
         Schema::create('expired_ingredients', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
-            $table->string('ingredient_name'); 
-            $table->string('category'); 
             $table->decimal('quantity', 8, 2);
-            $table->string('unit');
-            $table->date('expiration_date');
             $table->date('expired_at');
-            $table->text('notes')->nullable();
+            $table->foreignId('ingredient_batch_id')->constrained('ingredient_batches')->onDelete('cascade');
             $table->timestamps(); 
         });
     }
