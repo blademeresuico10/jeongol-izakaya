@@ -1,3 +1,4 @@
+@vite(['resources/css/app.css', 'resources/js/app.js'])
 <div>
   <div x-data="{ 
     show: false, 
@@ -46,14 +47,14 @@
     </div>
   </div>
 
-  <div class="border-b border-gray-300 mb-6"></div>
+  <div  class="border-b border-gray-300 mb-6"></div>
 
   <div class="flex gap-6 max-w-9xl mx-auto items-start">
 
-    <!-- Left Side: Orders with Tabs -->
-    <div class="bg-white border rounded-xl shadow-lg w-1/2 flex flex-col">
+   
+    <div  class="bg-white border rounded-xl shadow-lg w-1/2 flex flex-col">
 
-      <!-- Tabs Header -->
+      
       <div class="border-b bg-gray-100 rounded-t-xl flex">
         <button wire:click="$set('activeTab', 'pending')"
           class="flex-1 p-4 text-lg font-semibold transition-colors {{ $activeTab === 'pending' ? 'bg-white border-b-2 border-orange-600 text-orange-600' : 'text-gray-600 hover:bg-gray-50' }}">

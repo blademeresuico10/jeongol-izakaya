@@ -22,7 +22,25 @@ class KitchenDashboard extends Component
     public $orderQuantity = 1;
     public $selectedIngredients = [];
 
-    protected $listeners = ['refreshDashboard' => '$refresh'];
+    protected $listeners = [
+        'echo:kitchen,order.created' => 'refreshDashboard',
+        'echo:kitchen,order.status.updated' => 'refreshDashboard',
+    ];
+
+    public function refreshDashboard()
+    {
+        $this->dispatch('$refresh');
+    }
+
+    public function handleOrderCreated($event)
+    {
+        $this->dispatch('notify', type: 'info', message: 'New order received!');
+    }
+
+    public function handleOrderStatusUpdated($event)
+    {
+        $this->dispatch('notify', type: 'success', message: 'Order status updated!');
+    }
 
     public function mount() {}
 
@@ -74,7 +92,7 @@ class KitchenDashboard extends Component
                     $ingredient->deductStock(
                         $quantityNeeded,
                         $singleOrder->id,
-                        auth()->id(),
+                        Auth::id(),
                         ($isAddon ? "Add-on" : "Main") . ": " . ($isAddon ? "{$singleOrder->quantity} x " : "") . "{$singleOrder->menu->menu_item}"
                     );
 
@@ -156,7 +174,7 @@ class KitchenDashboard extends Component
 
                 ingredientMovements::create([
                     'ingredient_id' => $ingredient->id,
-                    'user_id' => auth()->id(),
+                    'user_id' => Auth::id(),
                     'type' => 'used',
                     'quantity' => $quantity,
                     'stock_before' => $stockBefore,
@@ -249,7 +267,7 @@ class KitchenDashboard extends Component
 
                 ingredientMovements::create([
                     'ingredient_id' => $ingredient->id,
-                    'user_id' => auth()->id(),
+                    'user_id' => Auth::id(),
                     'order_id' => $order->id,
                     'type' => 'used',
                     'quantity' => $quantityNeeded,
@@ -289,15 +307,12 @@ class KitchenDashboard extends Component
                 return 'walkin_' . $order->walk_in_id;
             });
 
-        // Only show tables where ALL orders are served (not pending)
         $tables = table::whereHas('reservation', function ($query) {
             $query->where('status', 'Active')
                 ->whereHas('orders', function ($q) {
-                    // Table must have at least one order
                     $q->whereNotNull('id');
                 })
                 ->whereDoesntHave('orders', function ($q) {
-                    // But NO pending orders
                     $q->where('status', 'Pending');
                 });
         })

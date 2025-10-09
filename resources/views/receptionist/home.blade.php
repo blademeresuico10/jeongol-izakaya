@@ -7,6 +7,8 @@
   <title>Receptionist Page</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
 
   @include('receptionist.components.css')
   @vite('resources/css/app.css')
@@ -568,7 +570,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-        {{ $table->id }}: {{ $table->capacity }},
+      {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 

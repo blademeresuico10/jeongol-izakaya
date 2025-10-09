@@ -5,9 +5,9 @@
   <meta charset="UTF-8">
   <title>Kitchen Dashboard</title>
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  @vite('resources/css/app.css')
-
- 
+  
+  {{-- Load Vite compiled assets (includes bootstrap.js) --}}
+  @vite(['resources/css/app.css', 'resources/js/app.js'])
 
   <style>
     body {
@@ -32,6 +32,7 @@
   @livewire('kitchen-dashboard')
 
   @livewireScripts
-</body>
 
+
+</body>
 </html>

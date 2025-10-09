@@ -15,6 +15,8 @@ use App\Models\orders;
 use App\Models\reservationPayment;
 use App\Models\walkin;
 use App\Models\table;
+use App\Events\OrderCreated;
+use App\Events\OrderStatusUpdated;
 
 class ReceptionistController extends Controller
 {
@@ -162,7 +164,7 @@ class ReceptionistController extends Controller
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if (!$menu) continue;
 
-                orders::create([
+                $newOrder = orders::create([
                     'reservation_id' => $reservation->id,
                     'menu_id'        => $menu->id,
                     'quantity'       => $order['quantity'],
@@ -170,6 +172,8 @@ class ReceptionistController extends Controller
                     'notes'          => $order['notes'] ?? null,
                     'status'         => 'Pending',
                 ]);
+
+                event(new OrderCreated($newOrder));
             }
 
             return response()->json(['success' => true]);
@@ -253,7 +257,7 @@ class ReceptionistController extends Controller
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if (!$menu) continue;
 
-                orders::create([
+                $newOrder = orders::create([
                     'walk_in_id'     => $walkin->id,
                     'menu_id'        => $menu->id,
                     'quantity'       => $order['quantity'],
@@ -261,6 +265,8 @@ class ReceptionistController extends Controller
                     'notes'          => $order['notes'] ?? null,
                     'status'         => 'Pending',
                 ]);
+
+                event(new OrderCreated($newOrder));
             }
 
             return response()->json(['success' => true]);

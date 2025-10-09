@@ -35,4 +35,17 @@ class orders extends Model
     {
         return $this->belongsTo(menu::class, 'menu_id');
     }
+
+    public function getLinkedTableAttribute()
+    {
+        if ($this->reservation) {
+            return $this->reservation->table;
+        }
+
+        if ($this->walkin) {
+            return $this->walkin->table;
+        }
+
+        return null;
+    }
 }
