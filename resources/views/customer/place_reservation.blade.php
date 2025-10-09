@@ -65,6 +65,11 @@
       transform: scale(1.03);
     }
 
+    .table.pending {
+      background-color: #64a0ea !important;
+      cursor: pointer;
+    }
+
     .table.booked {
       background-color: #6c757d !important;
       cursor: not-allowed !important;
@@ -440,7 +445,8 @@
             <div>
               <label for="customerName">Customer</label>
               <input type="text" id="customerName" name="customer_name" placeholder="Enter your name" required
-                class="w-full border rounded p-2" />
+                class="w-full border rounded p-2" onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)"
+                oninput="this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '')" />
             </div>
             <div>
               <label for="email">Email</label>
@@ -453,7 +459,9 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="pax">Pax</label>
-              <input type="number" id="pax" name="pax" class="w-full border rounded p-2" required>
+              <input type="text" id="pax" name="pax" class="w-full border rounded p-2" required
+                onkeypress="return /[0-9]/i.test(event.key)" oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                pattern="[0-9]+" inputmode="numeric" />
             </div>
 
             <div>
@@ -465,7 +473,7 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label for="reserved_date">Reservation Date</label>
-              <input type="date" id="reserved_date" required class="w-full border rounded p-2" readonly />
+              <input type="input" id="reserved_date" required class="w-full border rounded p-2" readonly />
             </div>
             <div>
               <label for="advance_payment">Advance Payment <span class="text-red-600">(50% of your total
@@ -531,8 +539,9 @@
 
       <div class="flex border-b mb-4">
         <button type="button" data-tab="gcash"
-          class="payment-tab flex-1 text-center py-2 font-semibold active">GCash</button>
-        <button type="button" data-tab="maya" class="payment-tab flex-1 text-center py-2 font-semibold">Maya</button>
+          class="payment-tab flex-1 text-center py-2 font-semibold text-gray-500">GCash</button>
+        <button type="button" data-tab="maya"
+          class="payment-tab flex-1 text-center py-2 font-semibold text-gray-500">Maya</button>
       </div>
 
       <input type="hidden" name="ewallet_number" id="selectedPaymentMethod" />
@@ -548,7 +557,6 @@
       </button>
     </div>
   </div>
-
 
 
   <div id="messageBox" style="
@@ -691,6 +699,8 @@
 
         const data = await response.json();
 
+        this.currentTableData = data.tables;
+
         this.updateTableAvailability(data.tables);
 
       } catch (error) {
@@ -729,25 +739,43 @@
         if (!tableData) return;
 
         const tableDiv = link.querySelector('.table');
-        const existingLabel = tableDiv.querySelector('.booked-label');
+        let existingLabel = tableDiv.querySelector('.booked-label');
 
-        if (!tableData.is_available) {
-          tableDiv.classList.remove('available', 'bg-green-100');
-          tableDiv.classList.add('booked');
+        // Remove all status classes first
+        tableDiv.classList.remove('booked', 'pending', 'available', 'bg-green-100', 'bg-gray-300', 'bg-blue-200');
+
+        if (tableData.is_pending) {
+          // PENDING status - Blue background, clickable
+          tableDiv.classList.add('pending', 'bg-blue-200');
+          link.style.pointerEvents = 'auto';
+
+          if (!existingLabel) {
+            existingLabel = document.createElement('div');
+            existingLabel.className = 'booked-label';
+            tableDiv.appendChild(existingLabel);
+          }
+          existingLabel.textContent = 'Processing';
+
+        } else if (tableData.is_active) {
+          // ACTIVE/WALKIN status - Gray background, not clickable
+          tableDiv.classList.add('booked', 'bg-gray-300');
           link.style.pointerEvents = 'none';
 
           if (!existingLabel) {
-            const bookedLabel = document.createElement('div');
-            bookedLabel.className = 'booked-label';
-            bookedLabel.textContent = 'Reserved';
-            tableDiv.appendChild(bookedLabel);
+            existingLabel = document.createElement('div');
+            existingLabel.className = 'booked-label';
+            tableDiv.appendChild(existingLabel);
           }
+          existingLabel.textContent = 'Reserved';
+
         } else {
-          tableDiv.classList.remove('booked');
+          // AVAILABLE - Green background
           tableDiv.classList.add('available', 'bg-green-100');
           link.style.pointerEvents = allowClick ? 'auto' : 'none';
 
-          if (existingLabel) existingLabel.remove();
+          if (existingLabel) {
+            existingLabel.remove();
+          }
         }
       });
     }
@@ -791,7 +819,7 @@
 
       const tableCapacities = {
         @foreach($tables as $table)
-      {{ $table->id }}: {{ $table->capacity }},
+        {{ $table->id }}: {{ $table->capacity }},
     @endforeach
   };
 
@@ -799,7 +827,16 @@
           link.addEventListener('click', e => {
             e.preventDefault();
 
-            this.selectedTableNumber = parseInt(link.getAttribute('data-table-id'));
+            const tableId = parseInt(link.getAttribute('data-table-id'));
+
+            const tableData = this.currentTableData?.find(t => t.id === tableId);
+
+            if (tableData && tableData.is_pending) {
+              this.showMessageBox("This table is currently being processed for reservation. Please select a different time or table.", "warning");
+              return;
+            }
+
+            this.selectedTableNumber = tableId;
             selectedTableNumber.value = this.selectedTableNumber;
 
             const paxInput = document.getElementById('pax');
@@ -840,7 +877,7 @@
 
             this.showModal(tableModal);
           });
-  });
+});
 
   closeModal.addEventListener('click', () => {
     this.hideModal(tableModal);
@@ -1362,10 +1399,8 @@
       }
     });
 
-    const ewalletId = document.querySelector(`#tab-${method} .ewallet-id`)?.value;
-    if (ewalletId) {
-      formData.append('ewallet_id', ewalletId);
-    }
+    const ewalletId = document.querySelector(`#tab-${method} .ewallet-id`)?.value || '';
+    formData.append('ewallet_id', ewalletId);
 
     const registeredNumber = activeTab.querySelector(".gcash-number, .maya-number")?.value;
     if (registeredNumber) {
@@ -1433,7 +1468,7 @@
         this.hideModal(this.elements.tableModal);
         this.hideModal(this.elements.paymentModal);
       } else if (response.status === 409) {
-        this.showMessageBox("Sorry! This time is already booked. Please select a different time.", "error");
+        this.showMessageBox("This table is currently being processed for reservation. Please select a different time or table..", "warning");
       } else {
         const errors = json.errors || {};
         const messages = Object.values(errors).flat().join("\n");

@@ -64,37 +64,46 @@ class CustomerController extends Controller
         }
 
         $searchDateTime = \Carbon\Carbon::parse("$date $time");
+        $now = \Carbon\Carbon::now();
 
         $tables = table::all();
-
         $availabilityData = [];
 
         foreach ($tables as $table) {
-            $isBookedReservation = reservation::where('table_id', $table->id)
-                ->where('status', '!=', 'cancelled')
-                ->where(function ($query) use ($searchDateTime) {
-                    $query->where(function ($q) use ($searchDateTime) {
-                        $q->where('started_at', '<=', $searchDateTime)
-                            ->where('ended_at', '>=', $searchDateTime);
-                    });
-                })
+            // Check if currently occupied (Active status, ongoing right now)
+            $isCurrentlyOccupied = reservation::where('table_id', $table->id)
+                ->where('status', 'Active')
+                ->where('started_at', '<=', $now)
+                ->where('ended_at', '>=', $now)
+                ->exists();
+
+            // Check if reserved for the searched time
+            $isActiveReservation = reservation::where('table_id', $table->id)
+                ->where('status', 'Active')
+                ->where('started_at', '<=', $searchDateTime)
+                ->where('ended_at', '>=', $searchDateTime)
+                ->exists();
+
+            $isPendingReservation = reservation::where('table_id', $table->id)
+                ->where('status', 'Pending')
+                ->where('started_at', '<=', $searchDateTime)
+                ->where('ended_at', '>=', $searchDateTime)
                 ->exists();
 
             $isBookedWalkin = walkin::where('table_id', $table->id)
                 ->where('status', 'active')
-                ->where(function ($query) use ($searchDateTime) {
-                    $query->where(function ($q) use ($searchDateTime) {
-                        $q->where('started_at', '<=', $searchDateTime)
-                            ->where('ended_at', '>=', $searchDateTime);
-                    });
-                })
+                ->where('started_at', '<=', $searchDateTime)
+                ->where('ended_at', '>=', $searchDateTime)
                 ->exists();
 
             $availabilityData[] = [
                 'id' => $table->id,
                 'table_number' => $table->table_number,
                 'capacity' => $table->capacity,
-                'is_available' => !($isBookedReservation || $isBookedWalkin)
+                'is_available' => !($isActiveReservation || $isBookedWalkin || $isPendingReservation),
+                'is_pending' => $isPendingReservation,
+                'is_active' => $isActiveReservation || $isBookedWalkin,
+                'is_currently_occupied' => $isCurrentlyOccupied // For debugging
             ];
         }
 
@@ -114,7 +123,7 @@ class CustomerController extends Controller
             'payment_method'     => 'required|in:gcash,maya,cash',
             'email'              => 'required|email|max:255',
             'payment_proof'      => 'required|file|mimes:jpg,jpeg,png|max:5120',
-            'ewallet_id'         => 'required|exists:ewallet_details,id',
+            'ewallet_id'         => 'nullable|exists:ewallet_details,id',
             'registered_number'  => 'required_if:payment_method,gcash,maya|string',
             'registered_name'    => 'required_if:payment_method,gcash,maya|string',
             'orders'             => 'required|array|min:1',

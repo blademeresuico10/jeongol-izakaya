@@ -9,9 +9,12 @@
 @endphp
 
 <div id="tab-{{ $method }}" class="tab-content {{ $method === 'maya' ? 'hidden' : '' }}">
+    <input type="hidden" class="ewallet-id" 
+    name="ewallet_id" 
+    value="{{ $ewalletDetail->id }}" 
+    data-method="{{ $method }}">
+
     @if($ewalletDetail)
-    <input type="hidden" class="ewallet-id" name="ewallet_id" value="{{ $ewalletDetail->id }}" data-method="{{ $method }}">
-    
     <div class="mb-2">
         <label class="block text-sm font-medium">
             {{ ucfirst($method) }} Wallet:
@@ -45,7 +48,9 @@
         name="registered_number"
         pattern="[0-9]{11}"      
         maxlength="11"
-        inputmode="numeric"       
+        inputmode="numeric"
+        onkeypress="return /[0-9]/i.test(event.key)"
+        oninput="this.value = this.value.replace(/[^0-9]/g, '')"       
         class="{{ $method }}-number w-full border rounded px-3 py-2 mb-1" 
         placeholder="09XXXXXXXXX"
         value="{{ $data['registered_number'] ?? '' }}" 
@@ -59,16 +64,20 @@
         name="registered_name"
         class="registered-name w-full border rounded px-3 py-2 mb-1" 
         placeholder="Full Name"
-        value="{{ $data['registered_name'] ?? '' }}" 
+        value="{{ $data['registered_name'] ?? '' }}"
+        onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)"
+        oninput="this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '')" 
         required>
     <span class="error text-red-500 text-sm hidden"></span>
 
     <label class="block text-sm font-medium">Amount</label>
-    <input type="number" 
+    <input type="text" 
         name="amount"
         class="amount w-full border rounded px-3 py-2 mb-1" 
         placeholder="Enter amount"
-        value="{{ $data['amount'] ?? '' }}" 
+        value="{{ $data['amount'] ?? '' }}"
+        onkeydown="return !['e', 'E', '+', '-'].includes(event.key)"
+        oninput="this.value = this.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')" 
         readonly> 
     <span class="error text-red-500 text-sm hidden"></span>
 
@@ -119,6 +128,15 @@ document.addEventListener('DOMContentLoaded', function () {
                     showError = true;
                 } else if (value.length !== 11) {
                     error.textContent = 'Must be 11 digits';
+                    showError = true;
+                }
+            } else if (input.classList.contains('registered-name')) {
+                const nameRegex = /^[a-zA-Z\s\-'\.]+$/;
+                if (!nameRegex.test(value)) {
+                    error.textContent = 'Name can only contain letters';
+                    showError = true;
+                } else if (value.length < 2) {
+                    error.textContent = 'Name must be at least 2 characters';
                     showError = true;
                 }
             } else if (!input.checkValidity()) {

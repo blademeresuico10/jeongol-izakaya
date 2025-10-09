@@ -7,8 +7,6 @@
   <title>Receptionist Page</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
   @include('receptionist.components.css')
   @vite('resources/css/app.css')
@@ -161,7 +159,7 @@
             <p><strong>Table number</strong> <span id="tableNumber">N/A</span></p>
             <div>
               <p><strong>Transaction Receipt</strong></p>
-              <img id="paymentProof" class="w-50 h-50 rounded border">
+              <img id="paymentProof" class="rounded border object-cover" style="width: 190px; height: 310px;">
             </div>
             <p><strong>Required Amount:</strong> <span id="requiredAmount">N/A</span></p>
             <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
@@ -364,245 +362,245 @@
 </body>
 
 
-    <script>
-      class ReceptionistDashboard {
-        constructor() {
-          this.selectedTableId = null;
-          this.isPlacingOrder = false;
-          this.selectedOrders = {};
-          this.reservationId = null;
-          this.selectedPaymentMethod = null;
+<script>
+  class ReceptionistDashboard {
+    constructor() {
+      this.selectedTableId = null;
+      this.isPlacingOrder = false;
+      this.selectedOrders = {};
+      this.reservationId = null;
+      this.selectedPaymentMethod = null;
 
-          this.elements = {};
-          this.init();
+      this.elements = {};
+      this.init();
+    }
+
+    init() {
+      document.addEventListener('DOMContentLoaded', () => {
+        this.initializeElements();
+        this.initializeEventListeners();
+        this.initializeNotifications();
+      });
+    }
+
+    initializeElements() {
+      this.elements = {
+        userBtn: document.getElementById('userBtn'),
+        userMenu: document.getElementById('userMenu'),
+        notifBtn: document.getElementById('notifBtn'),
+        notifModal: document.getElementById('notifModal'),
+        notifClose: document.getElementById('notifClose'),
+        notifList: document.getElementById('notifList'),
+        badgeProfile: document.getElementById('notifBadgeProfile'),
+        badgeLink: document.getElementById('notifBadgeLink'),
+        tableModal: document.getElementById('tableModal'),
+        paymentModal: document.getElementById('paymentModal'),
+        defaultModal: document.getElementById('default-modal'),
+        successModal: document.getElementById('successModal'),
+        closeModal: document.getElementById('closeModal'),
+        acceptForm: document.getElementById('acceptForm'),
+        submitBtn: document.getElementById('submitBtn'),
+        cancelReservationBtn: document.getElementById('cancelReservationBtn'),
+        clearOrdersBtn: document.getElementById('clearOrdersBtn'),
+        viewOrdersBtn: document.getElementById('viewOrdersBtn'),
+        customerName: document.getElementById('customerName'),
+        contactNumber: document.getElementById('contactNumber'),
+        numberOfPax: document.getElementById('numberOfPax'),
+        customerNotes: document.getElementById('customerNotes'),
+        reservedDate: document.getElementById('reserved_date'),
+        arrivalTimeInput: document.getElementById('arrivalTimeInput'),
+        advancePayment: document.getElementById('advance_payment'),
+        selectedOrdersContainer: document.getElementById('selectedOrdersContainer'),
+        totalQuantity: document.getElementById('totalQuantity'),
+        timeFrameDisplay: document.getElementById('timeFrameDisplay'),
+        reservationInfoGroup: document.getElementById('reservationInfoGroup'),
+        contactInput: document.getElementById('contactinput'),
+        tableLinks: document.querySelectorAll('.table-link')
+      };
+    }
+
+    initializeEventListeners() {
+      this.setupUserMenuEvents();
+      this.setupNotificationEvents();
+      this.setupModalEvents();
+      this.setupFormEvents();
+      this.setupTableEvents();
+    }
+
+    setupUserMenuEvents() {
+      if (this.elements.userBtn && this.elements.userMenu) {
+        this.elements.userBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.elements.userMenu.classList.toggle('hidden');
+        });
+
+        this.elements.userMenu.addEventListener('click', (e) => e.stopPropagation());
+        document.addEventListener('click', () => this.elements.userMenu.classList.add('hidden'));
+      }
+    }
+
+    setupNotificationEvents() {
+      if (this.elements.notifBtn && this.elements.notifModal) {
+        this.elements.notifBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.elements.notifModal.classList.remove('hidden');
+        });
+      }
+
+      if (this.elements.notifClose) {
+        this.elements.notifClose.addEventListener('click', () => {
+          this.elements.notifModal.classList.add('hidden');
+        });
+      }
+
+      if (this.elements.notifModal) {
+        this.elements.notifModal.addEventListener('click', () => {
+          this.elements.notifModal.classList.add('hidden');
+        });
+
+        const notifContent = this.elements.notifModal.querySelector('div');
+        if (notifContent) {
+          notifContent.addEventListener('click', (e) => e.stopPropagation());
         }
+      }
+    }
 
-        init() {
-          document.addEventListener('DOMContentLoaded', () => {
-            this.initializeElements();
-            this.initializeEventListeners();
-            this.initializeNotifications();
+    setupModalEvents() {
+      if (this.elements.closeModal) {
+        this.elements.closeModal.onclick = () => {
+          this.elements.tableModal.style.display = 'none';
+        };
+      }
+
+      const closePaymentBtn = document.getElementById('closePaymentBtn');
+      if (closePaymentBtn) {
+        closePaymentBtn.addEventListener('click', () => {
+          this.elements.paymentModal.classList.add('hidden');
+        });
+      }
+
+      const successOkBtn = document.getElementById('successOkBtn');
+      if (successOkBtn) {
+        successOkBtn.addEventListener('click', () => this.closeSuccessModal());
+      }
+
+      if (this.elements.successModal) {
+        this.elements.successModal.addEventListener('click', (e) => {
+          if (e.target === e.currentTarget) this.closeSuccessModal();
+        });
+      }
+
+      if (this.elements.viewOrdersBtn && this.elements.defaultModal) {
+        const backdrop = document.getElementById('modalBackdrop');
+        const closeOrdersPanel = document.getElementById('closeOrdersPanel');
+
+        this.elements.viewOrdersBtn.addEventListener('click', () => {
+          this.elements.defaultModal.classList.remove('translate-x-full');
+          if (backdrop) {
+            backdrop.classList.remove('pointer-events-none', 'opacity-0');
+            backdrop.classList.add('opacity-100');
+          }
+          document.body.style.overflow = 'hidden';
+        });
+
+        if (closeOrdersPanel) {
+          closeOrdersPanel.addEventListener('click', () => {
+            this.closeOrdersPanel();
           });
         }
 
-        initializeElements() {
-          this.elements = {
-            userBtn: document.getElementById('userBtn'),
-            userMenu: document.getElementById('userMenu'),
-            notifBtn: document.getElementById('notifBtn'),
-            notifModal: document.getElementById('notifModal'),
-            notifClose: document.getElementById('notifClose'),
-            notifList: document.getElementById('notifList'),
-            badgeProfile: document.getElementById('notifBadgeProfile'),
-            badgeLink: document.getElementById('notifBadgeLink'),
-            tableModal: document.getElementById('tableModal'),
-            paymentModal: document.getElementById('paymentModal'),
-            defaultModal: document.getElementById('default-modal'),
-            successModal: document.getElementById('successModal'),
-            closeModal: document.getElementById('closeModal'),
-            acceptForm: document.getElementById('acceptForm'),
-            submitBtn: document.getElementById('submitBtn'),
-            cancelReservationBtn: document.getElementById('cancelReservationBtn'),
-            clearOrdersBtn: document.getElementById('clearOrdersBtn'),
-            viewOrdersBtn: document.getElementById('viewOrdersBtn'),
-            customerName: document.getElementById('customerName'),
-            contactNumber: document.getElementById('contactNumber'),
-            numberOfPax: document.getElementById('numberOfPax'),
-            customerNotes: document.getElementById('customerNotes'),
-            reservedDate: document.getElementById('reserved_date'),
-            arrivalTimeInput: document.getElementById('arrivalTimeInput'),
-            advancePayment: document.getElementById('advance_payment'),
-            selectedOrdersContainer: document.getElementById('selectedOrdersContainer'),
-            totalQuantity: document.getElementById('totalQuantity'),
-            timeFrameDisplay: document.getElementById('timeFrameDisplay'),
-            reservationInfoGroup: document.getElementById('reservationInfoGroup'),
-            contactInput: document.getElementById('contactinput'),
-            tableLinks: document.querySelectorAll('.table-link')
-          };
-        }
+        const confirmButtons = this.elements.defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
+        confirmButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.closeOrdersPanel();
+          });
+        });
+      }
 
-        initializeEventListeners() {
-          this.setupUserMenuEvents();
-          this.setupNotificationEvents();
-          this.setupModalEvents();
-          this.setupFormEvents();
-          this.setupTableEvents();
-        }
+    }
 
-        setupUserMenuEvents() {
-          if (this.elements.userBtn && this.elements.userMenu) {
-            this.elements.userBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              this.elements.userMenu.classList.toggle('hidden');
-            });
+    closeOrdersPanel() {
+      if (this.elements.defaultModal) {
+        this.elements.defaultModal.classList.add('translate-x-full');
+      }
 
-            this.elements.userMenu.addEventListener('click', (e) => e.stopPropagation());
-            document.addEventListener('click', () => this.elements.userMenu.classList.add('hidden'));
-          }
-        }
+      const backdrop = document.getElementById('modalBackdrop');
+      if (backdrop) {
+        backdrop.classList.add('pointer-events-none', 'opacity-0');
+        backdrop.classList.remove('opacity-100');
+      }
 
-        setupNotificationEvents() {
-          if (this.elements.notifBtn && this.elements.notifModal) {
-            this.elements.notifBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              this.elements.notifModal.classList.remove('hidden');
-            });
-          }
+      document.body.style.overflow = '';
+    }
 
-          if (this.elements.notifClose) {
-            this.elements.notifClose.addEventListener('click', () => {
-              this.elements.notifModal.classList.add('hidden');
-            });
-          }
+    setupFormEvents() {
+      if (this.elements.acceptForm) {
+        this.elements.acceptForm.addEventListener('submit', (e) => {
+          this.handleAcceptReservation(e);
+        });
+      }
 
-          if (this.elements.notifModal) {
-            this.elements.notifModal.addEventListener('click', () => {
-              this.elements.notifModal.classList.add('hidden');
-            });
+      if (this.elements.submitBtn) {
+        this.elements.submitBtn.addEventListener('click', () => {
+          this.handleSubmitReservation();
+        });
+      }
 
-            const notifContent = this.elements.notifModal.querySelector('div');
-            if (notifContent) {
-              notifContent.addEventListener('click', (e) => e.stopPropagation());
-            }
-          }
-        }
+      if (this.elements.cancelReservationBtn) {
+        this.elements.cancelReservationBtn.addEventListener('click', () => {
+          this.handleCancelReservation();
+        });
+      }
 
-        setupModalEvents() {
-          if (this.elements.closeModal) {
-            this.elements.closeModal.onclick = () => {
-              this.elements.tableModal.style.display = 'none';
-            };
-          }
+      if (this.elements.clearOrdersBtn) {
+        this.elements.clearOrdersBtn.addEventListener('click', () => {
+          this.clearOrders();
+        });
+      }
 
-          const closePaymentBtn = document.getElementById('closePaymentBtn');
-          if (closePaymentBtn) {
-            closePaymentBtn.addEventListener('click', () => {
-              this.elements.paymentModal.classList.add('hidden');
-            });
-          }
+      if (this.elements.arrivalTimeInput) {
+        this.elements.arrivalTimeInput.addEventListener('input', () => {
+          this.updateTimeFrameDisplay();
+        });
+      }
+    }
 
-          const successOkBtn = document.getElementById('successOkBtn');
-          if (successOkBtn) {
-            successOkBtn.addEventListener('click', () => this.closeSuccessModal());
-          }
-
-          if (this.elements.successModal) {
-            this.elements.successModal.addEventListener('click', (e) => {
-              if (e.target === e.currentTarget) this.closeSuccessModal();
-            });
-          }
-
-          if (this.elements.viewOrdersBtn && this.elements.defaultModal) {
-            const backdrop = document.getElementById('modalBackdrop');
-            const closeOrdersPanel = document.getElementById('closeOrdersPanel');
-
-            this.elements.viewOrdersBtn.addEventListener('click', () => {
-              this.elements.defaultModal.classList.remove('translate-x-full');
-              if (backdrop) {
-                backdrop.classList.remove('pointer-events-none', 'opacity-0');
-                backdrop.classList.add('opacity-100');
-              }
-              document.body.style.overflow = 'hidden';
-            });
-
-            if (closeOrdersPanel) {
-              closeOrdersPanel.addEventListener('click', () => {
-                this.closeOrdersPanel();
-              });
-            }
-
-            const confirmButtons = this.elements.defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
-            confirmButtons.forEach(btn => {
-              btn.addEventListener('click', () => {
-                this.closeOrdersPanel();
-              });
-            });
-          }
-
-        }
-
-        closeOrdersPanel() {
-          if (this.elements.defaultModal) {
-            this.elements.defaultModal.classList.add('translate-x-full');
-          }
-
-          const backdrop = document.getElementById('modalBackdrop');
-          if (backdrop) {
-            backdrop.classList.add('pointer-events-none', 'opacity-0');
-            backdrop.classList.remove('opacity-100');
-          }
-
-          document.body.style.overflow = '';
-        }
-
-        setupFormEvents() {
-          if (this.elements.acceptForm) {
-            this.elements.acceptForm.addEventListener('submit', (e) => {
-              this.handleAcceptReservation(e);
-            });
-          }
-
-          if (this.elements.submitBtn) {
-            this.elements.submitBtn.addEventListener('click', () => {
-              this.handleSubmitReservation();
-            });
-          }
-
-          if (this.elements.cancelReservationBtn) {
-            this.elements.cancelReservationBtn.addEventListener('click', () => {
-              this.handleCancelReservation();
-            });
-          }
-
-          if (this.elements.clearOrdersBtn) {
-            this.elements.clearOrdersBtn.addEventListener('click', () => {
-              this.clearOrders();
-            });
-          }
-
-          if (this.elements.arrivalTimeInput) {
-            this.elements.arrivalTimeInput.addEventListener('input', () => {
-              this.updateTimeFrameDisplay();
-            });
-          }
-        }
-
-        setupTableEvents() {
-          const tableCapacities = {
-            @foreach($tables as $table)
+    setupTableEvents() {
+      const tableCapacities = {
+        @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
     this.elements.tableLinks.forEach(link => {
-              link.addEventListener('click', (e) => {
-                e.preventDefault();
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
 
-                const tableId = parseInt(link.getAttribute('data-table-id'));
-                const capacity = tableCapacities[tableId];
+            const tableId = parseInt(link.getAttribute('data-table-id'));
+            const capacity = tableCapacities[tableId];
 
-                this.selectedTableCapacity = capacity;
-                this.selectedTableId = tableId;
+            this.selectedTableCapacity = capacity;
+            this.selectedTableId = tableId;
 
-                this.handleTableClick(link);
+            this.handleTableClick(link);
 
-                const paxInput = document.getElementById('numberOfPax');
-                if (paxInput && capacity) {
-                  paxInput.max = capacity;
-                  paxInput.min = 1;
-                  paxInput.placeholder = `Max ${capacity} people`;
-                  paxInput.value = '';
-                  paxInput.readOnly = false;
+            const paxInput = document.getElementById('numberOfPax');
+            if (paxInput && capacity) {
+              paxInput.max = capacity;
+              paxInput.min = 1;
+              paxInput.placeholder = `Max ${capacity} people`;
+              paxInput.value = '';
+              paxInput.readOnly = false;
 
-                  paxInput.addEventListener('input', function () {
-                    const maxCapacity = parseInt(this.max);
-                    const currentValue = parseInt(this.value);
+              paxInput.addEventListener('input', function () {
+                const maxCapacity = parseInt(this.max);
+                const currentValue = parseInt(this.value);
 
-                    if (currentValue > maxCapacity) {
-                      this.value = maxCapacity;
-                      const toast = document.createElement('div');
-                      toast.textContent = `Maximum ${maxCapacity} people allowed for this table`;
-                      toast.style.cssText = `
+                if (currentValue > maxCapacity) {
+                  this.value = maxCapacity;
+                  const toast = document.createElement('div');
+                  toast.textContent = `Maximum ${maxCapacity} people allowed for this table`;
+                  toast.style.cssText = `
                 position: fixed;
                 top: 20px;
                 right: 20px;
@@ -614,71 +612,71 @@
                 font-size: 14px;
                 max-width: 250px;
               `;
-                      document.body.appendChild(toast);
-                      setTimeout(() => {
-                        if (document.body.contains(toast)) {
-                          document.body.removeChild(toast);
-                        }
-                      }, 2000);
+                  document.body.appendChild(toast);
+                  setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                      document.body.removeChild(toast);
                     }
-                  });
+                  }, 2000);
                 }
               });
-            });
-
-      setTimeout(() => {
-        document.querySelectorAll('.make-walkin-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const tableId = parseInt(btn.getAttribute('data-table-id'));
-            this.walkIn(tableId);
+            }
           });
         });
 
-        document.querySelectorAll('.make-reservation-btn').forEach(btn => {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const tableId = parseInt(btn.getAttribute('data-table-id'));
-            this.makeReservation(tableId);
-          });
-        });
-      }, 0);
+  setTimeout(() => {
+    document.querySelectorAll('.make-walkin-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tableId = parseInt(btn.getAttribute('data-table-id'));
+        this.walkIn(tableId);
+      });
+    });
+
+    document.querySelectorAll('.make-reservation-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tableId = parseInt(btn.getAttribute('data-table-id'));
+        this.makeReservation(tableId);
+      });
+    });
+  }, 0);
   }
 
-      initializeNotifications() {
-        this.fetchNotifications();
-        setInterval(() => this.fetchNotifications(), 3000);
+  initializeNotifications() {
+    this.fetchNotifications();
+    setInterval(() => this.fetchNotifications(), 3000);
+  }
+
+  fetchNotifications() {
+    fetch('/receptionist/notifications')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const notifications = data.notifications ?? [];
+          const pendingCount = notifications.filter(n => n.reservation_status === "Pending").length;
+
+          this.updateNotificationBadges(pendingCount);
+          this.renderNotifications(notifications);
+        }
+      })
+      .catch(err => console.error('Notification fetch error:', err));
+  }
+
+  updateNotificationBadges(count) {
+    [this.elements.badgeProfile, this.elements.badgeLink].forEach(badge => {
+      if (badge) {
+        badge.textContent = count;
+        badge.style.display = count ? 'inline-flex' : 'none';
       }
+    });
+  }
 
-      fetchNotifications() {
-        fetch('/receptionist/notifications')
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              const notifications = data.notifications ?? [];
-              const pendingCount = notifications.filter(n => n.reservation_status === "Pending").length;
+  renderNotifications(notifications) {
+    if (!this.elements.notifList) return;
 
-              this.updateNotificationBadges(pendingCount);
-              this.renderNotifications(notifications);
-            }
-          })
-          .catch(err => console.error('Notification fetch error:', err));
-      }
-
-      updateNotificationBadges(count) {
-        [this.elements.badgeProfile, this.elements.badgeLink].forEach(badge => {
-          if (badge) {
-            badge.textContent = count;
-            badge.style.display = count ? 'inline-flex' : 'none';
-          }
-        });
-      }
-
-      renderNotifications(notifications) {
-        if (!this.elements.notifList) return;
-
-        if (!notifications.length) {
-          this.elements.notifList.innerHTML = `
+    if (!notifications.length) {
+      this.elements.notifList.innerHTML = `
             <li class="p-8 text-center">
                 <svg class="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
@@ -687,80 +685,80 @@
                 <p class="text-gray-500 font-medium">No notifications</p>
             </li>
         `;
-          return;
-        }
+      return;
+    }
 
-        this.elements.notifList.innerHTML = '';
+    this.elements.notifList.innerHTML = '';
 
-        notifications.sort((a, b) => {
-          const order = { "Pending": 1, "Active": 2, "Rejected": 3 };
-          return (order[a.reservation_status] || 4) - (order[b.reservation_status] || 4);
-        });
+    notifications.sort((a, b) => {
+      const order = { "Pending": 1, "Active": 2, "Rejected": 3 };
+      return (order[a.reservation_status] || 4) - (order[b.reservation_status] || 4);
+    });
 
-        notifications.forEach(notification => {
-          this.renderNotificationItem(notification);
-        });
-      }
+    notifications.forEach(notification => {
+      this.renderNotificationItem(notification);
+    });
+  }
 
-      renderNotificationItem(notification) {
-        const li = document.createElement('li');
-        li.className = 'p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150';
-        li.dataset.reservationId = notification.reservation_id;
-        li.dataset.notification = JSON.stringify(notification);
-        li.onclick = () => this.openNotificationModalDirect(notification);
+  renderNotificationItem(notification) {
+    const li = document.createElement('li');
+    li.className = 'p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150';
+    li.dataset.reservationId = notification.reservation_id;
+    li.dataset.notification = JSON.stringify(notification);
+    li.onclick = () => this.openNotificationModalDirect(notification);
 
-        let badgeClass = "bg-gray-100 text-gray-700";
-        let badgeText = notification.reservation_status;
+    let badgeClass = "bg-gray-100 text-gray-700";
+    let badgeText = notification.reservation_status;
 
-        if (notification.reservation_status === "Active") {
-          badgeClass = "bg-green-100 text-green-700";
-          badgeText = "Accepted"
-        } else if (notification.reservation_status === "Rejected") {
-          badgeClass = "bg-red-100 text-red-700";
-        } else if (notification.reservation_status === "Pending") {
-          badgeClass = "bg-yellow-100 text-yellow-700";
-        }
+    if (notification.reservation_status === "Active") {
+      badgeClass = "bg-green-100 text-green-700";
+      badgeText = "Accepted"
+    } else if (notification.reservation_status === "Rejected") {
+      badgeClass = "bg-red-100 text-red-700";
+    } else if (notification.reservation_status === "Pending") {
+      badgeClass = "bg-yellow-100 text-yellow-700";
+    }
 
-        const formatReservationTime = (startDateTime, endDateTime) => {
-          if (!startDateTime || !endDateTime) return 'N/A';
+    const formatReservationTime = (startDateTime, endDateTime) => {
+      if (!startDateTime || !endDateTime) return 'N/A';
 
-          const startDate = new Date(startDateTime);
-          const endDate = new Date(endDateTime);
+      const startDate = new Date(startDateTime);
+      const endDate = new Date(endDateTime);
 
-          const dateStr = startDate.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          });
+      const dateStr = startDate.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
 
-          const startTime = startDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }).toLowerCase();
+      const startTime = startDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).toLowerCase();
 
-          const endTime = endDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-            hour12: true
-          }).toLowerCase();
+      const endTime = endDate.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).toLowerCase();
 
-          return { dateStr, timeRange: `${startTime} - ${endTime}` };
-        };
+      return { dateStr, timeRange: `${startTime} - ${endTime}` };
+    };
 
-        const { dateStr, timeRange } = formatReservationTime(
-          notification.started_at,
-          notification.ended_at
-        );
+    const { dateStr, timeRange } = formatReservationTime(
+      notification.started_at,
+      notification.ended_at
+    );
 
-        li.innerHTML = `
+    li.innerHTML = `
         <div class="flex items-start gap-3">
             <!-- Status Indicator -->
             <div class="flex-shrink-0 mt-1">
                 <div class="w-2 h-2 rounded-full ${notification.reservation_status === "Pending" ? "bg-yellow-500 animate-pulse" :
-            notification.reservation_status === "Active" ? "bg-green-500" :
-              "bg-gray-400"
-          }"></div>
+        notification.reservation_status === "Active" ? "bg-green-500" :
+          "bg-gray-400"
+      }"></div>
             </div>
             
             <!-- Content -->
@@ -794,316 +792,316 @@
         </div>
     `;
 
-        this.elements.notifList.appendChild(li);
+    this.elements.notifList.appendChild(li);
+  }
+
+  openNotificationModalDirect(notification) {
+    this.reservationId = notification.reservation_id;
+    this.elements.paymentModal.classList.remove('hidden');
+    this.elements.acceptForm.action = `/receptionist/accept-reservation/${notification.reservation_id}`;
+
+    this.updatePaymentModalFromNotification(notification);
+  }
+
+  updatePaymentModalFromNotification(notification) {
+    const paymentProof = document.getElementById('paymentProof');
+    if (paymentProof) {
+      if (notification.payment_proof) {
+        let filename = notification.payment_proof.includes('/')
+          ? notification.payment_proof.split('/').pop()
+          : notification.payment_proof;
+        paymentProof.src = `/file-serve/payment_proofs/${filename}`;
+        paymentProof.style.display = 'block';
+      } else {
+        paymentProof.style.display = 'none';
       }
+    }
+    this.updateElementText('customername', notification.customer_name || 'N/A');
+    this.updateElementText('tableNumber', notification.table_number || 'N/A');
+    this.updateElementText('requiredAmount', notification.advance_payment ? `₱${parseFloat(notification.advance_payment).toFixed(2)}` : 'N/A');
+    this.updateElementText('paxCount', notification.pax || 'N/A');
+    this.updateElementText('paymentStatus', notification.reservation_status || 'N/A');
+    const actionButtons = document.getElementById('actionButtons');
+    if (actionButtons) {
+      const shouldHideButtons = notification.reservation_status === "Active" || notification.reservation_status === "Rejected";
+      actionButtons.style.display = shouldHideButtons ? "none" : "flex";
+    }
+  }
 
-      openNotificationModalDirect(notification) {
-        this.reservationId = notification.reservation_id;
-        this.elements.paymentModal.classList.remove('hidden');
-        this.elements.acceptForm.action = `/receptionist/accept-reservation/${notification.reservation_id}`;
+  openNotificationModal(id) {
+    this.reservationId = id;
+    this.elements.paymentModal.classList.remove('hidden');
+    this.elements.acceptForm.action = `/receptionist/accept-reservation/${id}`;
 
-        this.updatePaymentModalFromNotification(notification);
-      }
+    this.fetchPaymentDetails(id);
+  }
 
-      updatePaymentModalFromNotification(notification) {
-        const paymentProof = document.getElementById('paymentProof');
-        if (paymentProof) {
-          if (notification.payment_proof) {
-            let filename = notification.payment_proof.includes('/')
-              ? notification.payment_proof.split('/').pop()
-              : notification.payment_proof;
-            paymentProof.src = `/file-serve/payment_proofs/${filename}`;
-            paymentProof.style.display = 'block';
-          } else {
-            paymentProof.style.display = 'none';
-          }
+  fetchPaymentDetails(id) {
+    fetch(`/receptionist/payments/${id}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-        this.updateElementText('customername', notification.customer_name || 'N/A');
-        this.updateElementText('tableNumber', notification.table_number || 'N/A');
-        this.updateElementText('requiredAmount', notification.advance_payment ? `₱${parseFloat(notification.advance_payment).toFixed(2)}` : 'N/A');
-        this.updateElementText('paxCount', notification.pax || 'N/A');
-        this.updateElementText('paymentStatus', notification.reservation_status || 'N/A');
-        const actionButtons = document.getElementById('actionButtons');
-        if (actionButtons) {
-          const shouldHideButtons = notification.reservation_status === "Active" || notification.reservation_status === "Rejected";
-          actionButtons.style.display = shouldHideButtons ? "none" : "flex";
-        }
+        return response.json();
+      })
+      .then(data => {
+        this.updatePaymentModal(data);
+      })
+      .catch(error => {
+        console.error('Error fetching payment details:', error);
+        alert('Failed to load payment details: ' + error.message);
+      });
+  }
+
+  updatePaymentModal(data) {
+    const paymentProof = document.getElementById('paymentProof');
+    if (paymentProof) {
+      if (data.payment?.proof_path) {
+        let path = data.payment.proof_path;
+        let filename = path.includes('/') ? path.split('/').pop() : path;
+        paymentProof.src = `/file-serve/payment_proofs/${filename}`;
+        paymentProof.style.display = 'block';
+      } else {
+        paymentProof.style.display = 'none';
       }
+    }
+    this.updateElementText('customername', data.name || 'N/A')
+    this.updateElementText('tableNumber', data.table_id || 'N/A');
+    this.updateElementText('requiredAmount', data.advance_payment || 'N/A');
+    this.updateElementText('paxCount', data.pax || 'N/A');
+    this.updateElementText('paymentStatus', data.payment?.status || 'N/A');
+    const actionButtons = document.getElementById('actionButtons');
+    if (actionButtons) {
+      const reservationStatus = data.reservation?.status;
+      const shouldHideButtons = reservationStatus === "Active" || reservationStatus === "Rejected";
+      actionButtons.style.display = shouldHideButtons ? "none" : "flex";
+    }
+  }
 
-      openNotificationModal(id) {
-        this.reservationId = id;
-        this.elements.paymentModal.classList.remove('hidden');
-        this.elements.acceptForm.action = `/receptionist/accept-reservation/${id}`;
+  updateElementText(elementId, text) {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.textContent = text;
+    }
+  }
 
-        this.fetchPaymentDetails(id);
+  handleAcceptReservation(e) {
+    e.preventDefault();
+    if (!this.reservationId) return;
+
+    fetch(this.elements.acceptForm.action, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
       }
-
-      fetchPaymentDetails(id) {
-        fetch(`/receptionist/payments/${id}`)
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then(data => {
-            this.updatePaymentModal(data);
-          })
-          .catch(error => {
-            console.error('Error fetching payment details:', error);
-            alert('Failed to load payment details: ' + error.message);
-          });
-      }
-
-      updatePaymentModal(data) {
-        const paymentProof = document.getElementById('paymentProof');
-        if (paymentProof) {
-          if (data.payment?.proof_path) {
-            let path = data.payment.proof_path;
-            let filename = path.includes('/') ? path.split('/').pop() : path;
-            paymentProof.src = `/file-serve/payment_proofs/${filename}`;
-            paymentProof.style.display = 'block';
-          } else {
-            paymentProof.style.display = 'none';
-          }
-        }
-        this.updateElementText('customername', data.name || 'N/A')
-        this.updateElementText('tableNumber', data.table_id || 'N/A');
-        this.updateElementText('requiredAmount', data.advance_payment || 'N/A');
-        this.updateElementText('paxCount', data.pax || 'N/A');
-        this.updateElementText('paymentStatus', data.payment?.status || 'N/A');
-        const actionButtons = document.getElementById('actionButtons');
-        if (actionButtons) {
-          const reservationStatus = data.reservation?.status;
-          const shouldHideButtons = reservationStatus === "Active" || reservationStatus === "Rejected";
-          actionButtons.style.display = shouldHideButtons ? "none" : "flex";
-        }
-      }
-
-      updateElementText(elementId, text) {
-        const element = document.getElementById(elementId);
-        if (element) {
-          element.textContent = text;
-        }
-      }
-
-      handleAcceptReservation(e) {
-        e.preventDefault();
-        if (!this.reservationId) return;
-
-        fetch(this.elements.acceptForm.action, {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
-          }
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              this.elements.paymentModal.classList.add('hidden');
-              this.updateNotificationBadges(data.unread_count);
-              this.updateNotificationStatus(data.reservationId, data.status);
-              this.reservationId = null;
-            } else {
-              alert(data.message || 'Failed to accept reservation');
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            alert('Server error');
-          });
-      }
-
-      handleCancelReservation() {
-        if (!this.reservationId) return;
-
-        fetch(`/receptionist/cancel-reservation/${this.reservationId}`, {
-          method: 'POST',
-          headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
-          }
-        })
-          .then(res => res.json())
-          .then(data => {
-            if (data.success) {
-              this.elements.paymentModal.classList.add('hidden');
-              const li = this.elements.notifList.querySelector(`[data-reservation-id="${this.reservationId}"]`);
-              if (li) {
-                li.classList.add("text-red-600", "font-semibold");
-                li.innerHTML += '<p class="text-xs">Cancelled</p>';
-              }
-              this.reservationId = null;
-            } else {
-              alert(data.message || "Failed to cancel reservation");
-            }
-          })
-          .catch(err => {
-            console.error(err);
-            alert("Server error while cancelling reservation.");
-          });
-      }
-
-      updateNotificationStatus(reservationId, status) {
-        const li = this.elements.notifList.querySelector(`[data-reservation-id="${reservationId}"]`);
-        if (li) {
-          const statusSpan = li.querySelector('span');
-          if (statusSpan) {
-            statusSpan.textContent = status;
-            const badgeClass = status === "Active" ? "bg-green-100 text-green-700" :
-              status === "Rejected" ? "bg-red-100 text-red-700" :
-                "bg-gray-300 text-gray-700";
-            statusSpan.className = `px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`;
-          }
-        }
-      }
-
-      handleTableClick(link) {
-        document.querySelectorAll('.inline-options').forEach(opt => opt.style.display = 'none');
-        const options = link.querySelector('.inline-options');
-        if (options) options.style.display = 'block';
-      }
-
-      makeReservation(tableId) {
-        this.selectedTableId = tableId;
-        this.isPlacingOrder = false;
-        this.elements.tableModal.style.display = 'flex';
-
-        this.setupReservationForm();
-        this.resetForm();
-        this.updateTimeFrameDisplay();
-      }
-
-      walkIn(tableId) {
-        this.selectedTableId = tableId;
-        this.isPlacingOrder = true;
-        this.elements.tableModal.style.display = 'flex';
-
-        this.setupOrderForm();
-        this.resetForm();
-      }
-
-      setupOrderForm() {
-        const now = new Date();
-        this.elements.reservedDate.value = now.toISOString().substring(0, 10);
-        this.elements.reservedDate.disabled = true;
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
-        this.elements.arrivalTimeInput.disabled = true;
-        this.elements.reservationInfoGroup.style.display = 'none';
-        this.elements.contactInput.style.display = 'none';
-        this.elements.advancePayment.parentElement.style.display = 'none';
-
-      }
-
-      setupReservationForm() {
-        const now = new Date();
-        this.elements.reservationInfoGroup.style.display = '';
-        this.elements.reservedDate.disabled = false;
-        this.elements.arrivalTimeInput.disabled = false;
-        this.elements.advancePayment.parentElement.style.display = '';
-        this.elements.contactInput.style.display = '';
-
-        const today = now.getFullYear() + '-' +
-          String(now.getMonth() + 1).padStart(2, '0') + '-' +
-          String(now.getDate()).padStart(2, '0');
-        this.elements.reservedDate.value = today;
-
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
-      }
-
-      selectMenuItem(element) {
-        const id = element.dataset.id;
-        const name = element.dataset.name;
-        const price = parseFloat(element.dataset.price);
-        const category = element.dataset.category;
-        const image = element.dataset.image;
-
-        const imgElement = element.querySelector('img');
-        const imgSrc = imgElement ? imgElement.src : '';
-        const imageFilename = imgSrc ? imgSrc.split('/').pop() : '';
-
-        if (this.selectedOrders[id]) {
-          this.selectedOrders[id].quantity += 1;
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          this.elements.paymentModal.classList.add('hidden');
+          this.updateNotificationBadges(data.unread_count);
+          this.updateNotificationStatus(data.reservationId, data.status);
+          this.reservationId = null;
         } else {
-          this.selectedOrders[id] = {
-            name: name,
-            quantity: 1,
-            price: price,
-            category: category,
-            image: image || imageFilename
-          };
-          element.classList.add("selected");
+          alert(data.message || 'Failed to accept reservation');
         }
+      })
+      .catch(err => {
+        console.error(err);
+        alert('Server error');
+      });
+  }
 
-        const img = element.querySelector('img');
-        if (img) this.animateFlyToCart(img, '#viewOrdersBtn');
-        this.renderOrderSummary();
+  handleCancelReservation() {
+    if (!this.reservationId) return;
+
+    fetch(`/receptionist/cancel-reservation/${this.reservationId}`, {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        'Accept': 'application/json'
       }
-
-      updateQuantity(input) {
-        const id = input.dataset.id;
-        const newQuantity = parseInt(input.value);
-
-        if (this.selectedOrders[id] && newQuantity > 0) {
-          this.selectedOrders[id].quantity = newQuantity;
-          this.renderOrderSummary();
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          this.elements.paymentModal.classList.add('hidden');
+          const li = this.elements.notifList.querySelector(`[data-reservation-id="${this.reservationId}"]`);
+          if (li) {
+            li.classList.add("text-red-600", "font-semibold");
+            li.innerHTML += '<p class="text-xs">Cancelled</p>';
+          }
+          this.reservationId = null;
+        } else {
+          alert(data.message || "Failed to cancel reservation");
         }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Server error while cancelling reservation.");
+      });
+  }
+
+  updateNotificationStatus(reservationId, status) {
+    const li = this.elements.notifList.querySelector(`[data-reservation-id="${reservationId}"]`);
+    if (li) {
+      const statusSpan = li.querySelector('span');
+      if (statusSpan) {
+        statusSpan.textContent = status;
+        const badgeClass = status === "Active" ? "bg-green-100 text-green-700" :
+          status === "Rejected" ? "bg-red-100 text-red-700" :
+            "bg-gray-300 text-gray-700";
+        statusSpan.className = `px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`;
       }
+    }
+  }
 
-      clearOrders() {
-        Object.keys(this.selectedOrders).forEach(key => {
-          delete this.selectedOrders[key];
-        });
+  handleTableClick(link) {
+    document.querySelectorAll('.inline-options').forEach(opt => opt.style.display = 'none');
+    const options = link.querySelector('.inline-options');
+    if (options) options.style.display = 'block';
+  }
 
-        document.querySelectorAll('.menu-card').forEach(card => {
-          card.classList.remove('selected');
-          const qtyInput = card.querySelector('input[type="number"]');
-          if (qtyInput) qtyInput.value = 1;
-        });
+  makeReservation(tableId) {
+    this.selectedTableId = tableId;
+    this.isPlacingOrder = false;
+    this.elements.tableModal.style.display = 'flex';
 
-        this.elements.selectedOrdersContainer.innerHTML = '';
-        this.elements.advancePayment.value = '';
-        this.renderOrderSummary();
-      }
+    this.setupReservationForm();
+    this.resetForm();
+    this.updateTimeFrameDisplay();
+  }
 
-      renderOrderSummary() {
-        const container = this.elements.selectedOrdersContainer;
-        const emptyState = document.getElementById('emptyState');
-        const orderTotal = document.getElementById('orderTotal');
-        const totalItemsCount = document.getElementById('totalItemsCount');
-        const totalQuantityEl = document.getElementById('totalQuantity');
-        const grandTotalEl = document.getElementById('grandTotal');
+  walkIn(tableId) {
+    this.selectedTableId = tableId;
+    this.isPlacingOrder = true;
+    this.elements.tableModal.style.display = 'flex';
 
-        container.innerHTML = '';
+    this.setupOrderForm();
+    this.resetForm();
+  }
 
-        let total = 0;
-        let totalQuantity = 0;
-        const hasItems = Object.keys(this.selectedOrders).length > 0;
+  setupOrderForm() {
+    const now = new Date();
+    this.elements.reservedDate.value = now.toISOString().substring(0, 10);
+    this.elements.reservedDate.disabled = true;
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
+    this.elements.arrivalTimeInput.disabled = true;
+    this.elements.reservationInfoGroup.style.display = 'none';
+    this.elements.contactInput.style.display = 'none';
+    this.elements.advancePayment.parentElement.style.display = 'none';
 
-        if (hasItems) {
-          if (emptyState) emptyState.classList.add('hidden');
-          if (orderTotal) orderTotal.classList.remove('hidden');
+  }
 
-          Object.entries(this.selectedOrders).forEach(([id, item]) => {
-            total += item.price * item.quantity;
-            totalQuantity += item.quantity;
+  setupReservationForm() {
+    const now = new Date();
+    this.elements.reservationInfoGroup.style.display = '';
+    this.elements.reservedDate.disabled = false;
+    this.elements.arrivalTimeInput.disabled = false;
+    this.elements.advancePayment.parentElement.style.display = '';
+    this.elements.contactInput.style.display = '';
 
-            const getImagePath = () => {
-              if (item.image && item.image !== 'default.jpg') {
-                return `/storage/jeongol_menu/${item.image}`;
-              }
-              return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NEg0NEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPHBhdGggZD0iTTI4IDI4SDM2VjM2SDI4VjI4WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
-            };
+    const today = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+    this.elements.reservedDate.value = today;
 
-            const defaultImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NEg0NEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPHBhdGggZD0iTTI4IDI4SDM2VjM2SDI4VjI4WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
+  }
 
-            const orderItem = document.createElement('div');
-            orderItem.innerHTML = `
+  selectMenuItem(element) {
+    const id = element.dataset.id;
+    const name = element.dataset.name;
+    const price = parseFloat(element.dataset.price);
+    const category = element.dataset.category;
+    const image = element.dataset.image;
+
+    const imgElement = element.querySelector('img');
+    const imgSrc = imgElement ? imgElement.src : '';
+    const imageFilename = imgSrc ? imgSrc.split('/').pop() : '';
+
+    if (this.selectedOrders[id]) {
+      this.selectedOrders[id].quantity += 1;
+    } else {
+      this.selectedOrders[id] = {
+        name: name,
+        quantity: 1,
+        price: price,
+        category: category,
+        image: image || imageFilename
+      };
+      element.classList.add("selected");
+    }
+
+    const img = element.querySelector('img');
+    if (img) this.animateFlyToCart(img, '#viewOrdersBtn');
+    this.renderOrderSummary();
+  }
+
+  updateQuantity(input) {
+    const id = input.dataset.id;
+    const newQuantity = parseInt(input.value);
+
+    if (this.selectedOrders[id] && newQuantity > 0) {
+      this.selectedOrders[id].quantity = newQuantity;
+      this.renderOrderSummary();
+    }
+  }
+
+  clearOrders() {
+    Object.keys(this.selectedOrders).forEach(key => {
+      delete this.selectedOrders[key];
+    });
+
+    document.querySelectorAll('.menu-card').forEach(card => {
+      card.classList.remove('selected');
+      const qtyInput = card.querySelector('input[type="number"]');
+      if (qtyInput) qtyInput.value = 1;
+    });
+
+    this.elements.selectedOrdersContainer.innerHTML = '';
+    this.elements.advancePayment.value = '';
+    this.renderOrderSummary();
+  }
+
+  renderOrderSummary() {
+    const container = this.elements.selectedOrdersContainer;
+    const emptyState = document.getElementById('emptyState');
+    const orderTotal = document.getElementById('orderTotal');
+    const totalItemsCount = document.getElementById('totalItemsCount');
+    const totalQuantityEl = document.getElementById('totalQuantity');
+    const grandTotalEl = document.getElementById('grandTotal');
+
+    container.innerHTML = '';
+
+    let total = 0;
+    let totalQuantity = 0;
+    const hasItems = Object.keys(this.selectedOrders).length > 0;
+
+    if (hasItems) {
+      if (emptyState) emptyState.classList.add('hidden');
+      if (orderTotal) orderTotal.classList.remove('hidden');
+
+      Object.entries(this.selectedOrders).forEach(([id, item]) => {
+        total += item.price * item.quantity;
+        totalQuantity += item.quantity;
+
+        const getImagePath = () => {
+          if (item.image && item.image !== 'default.jpg') {
+            return `/storage/jeongol_menu/${item.image}`;
+          }
+          return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NEg0NEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPHBhdGggZD0iTTI4IDI4SDM2VjM2SDI4VjI4WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+        };
+
+        const defaultImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NEg0NEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPHBhdGggZD0iTTI4IDI4SDM2VjM2SDI4VjI4WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+
+        const orderItem = document.createElement('div');
+        orderItem.innerHTML = `
         <div class="order-item-card bg-white rounded-xl p-4 border border-gray-200">
           <div class="flex items-start gap-3">
             <div class="flex-shrink-0">
@@ -1145,130 +1143,130 @@
           </div>
         </div>
       `;
-            container.appendChild(orderItem);
-          });
+        container.appendChild(orderItem);
+      });
 
-          if (totalItemsCount) {
-            totalItemsCount.textContent = `${totalQuantity} item${totalQuantity !== 1 ? 's' : ''}`;
-          }
-          if (totalQuantityEl) {
-            totalQuantityEl.textContent = totalQuantity;
-          }
-          if (grandTotalEl) {
-            grandTotalEl.textContent = `₱${total.toFixed(2)}`;
-          }
-        } else {
-          if (emptyState) emptyState.classList.remove('hidden');
-          if (orderTotal) orderTotal.classList.add('hidden');
-          if (totalItemsCount) {
-            totalItemsCount.textContent = '0 items';
-          }
-        }
-
-        if (!this.isPlacingOrder && this.elements.advancePayment) {
-          const halfTotal = (total / 2).toFixed(2);
-          this.elements.advancePayment.value = halfTotal;
-        }
-
-        if (this.elements.totalQuantity) {
-          this.elements.totalQuantity.textContent = totalQuantity;
-        }
+      if (totalItemsCount) {
+        totalItemsCount.textContent = `${totalQuantity} item${totalQuantity !== 1 ? 's' : ''}`;
       }
-
-      removeOrderItem(id) {
-        if (this.selectedOrders[id]) {
-          delete this.selectedOrders[id];
-        }
-
-        const menuCard = document.querySelector(`.menu-card[data-id="${id}"]`);
-        if (menuCard) {
-          menuCard.classList.remove('selected');
-
-          const qtyInput = menuCard.querySelector('input[type="number"]');
-          if (qtyInput) {
-            qtyInput.value = 1;
-          }
-        }
-
-        this.renderOrderSummary();
+      if (totalQuantityEl) {
+        totalQuantityEl.textContent = totalQuantity;
       }
-
-      resetForm() {
-        const fieldsToReset = [
-          this.elements.customerName,
-          this.elements.contactNumber,
-          this.elements.numberOfPax,
-          this.elements.customerNotes,
-          this.elements.advancePayment
-        ];
-
-        this.clearOrders();
+      if (grandTotalEl) {
+        grandTotalEl.textContent = `₱${total.toFixed(2)}`;
       }
+    } else {
+      if (emptyState) emptyState.classList.remove('hidden');
+      if (orderTotal) orderTotal.classList.add('hidden');
+      if (totalItemsCount) {
+        totalItemsCount.textContent = '0 items';
+      }
+    }
+
+    if (!this.isPlacingOrder && this.elements.advancePayment) {
+      const halfTotal = (total / 2).toFixed(2);
+      this.elements.advancePayment.value = halfTotal;
+    }
+
+    if (this.elements.totalQuantity) {
+      this.elements.totalQuantity.textContent = totalQuantity;
+    }
+  }
+
+  removeOrderItem(id) {
+    if (this.selectedOrders[id]) {
+      delete this.selectedOrders[id];
+    }
+
+    const menuCard = document.querySelector(`.menu-card[data-id="${id}"]`);
+    if (menuCard) {
+      menuCard.classList.remove('selected');
+
+      const qtyInput = menuCard.querySelector('input[type="number"]');
+      if (qtyInput) {
+        qtyInput.value = 1;
+      }
+    }
+
+    this.renderOrderSummary();
+  }
+
+  resetForm() {
+    const fieldsToReset = [
+      this.elements.customerName,
+      this.elements.contactNumber,
+      this.elements.numberOfPax,
+      this.elements.customerNotes,
+      this.elements.advancePayment
+    ];
+
+    this.clearOrders();
+  }
 
       async handleSubmitReservation() {
-        if (this.elements.submitBtn.disabled) return;
+    if (this.elements.submitBtn.disabled) return;
 
-        const name = this.elements.customerName.value.trim();
-        const contact = this.elements.contactNumber.value.trim();
-        const paxInput = document.getElementById('numberOfPax');
-        const dateInput = document.getElementById('reserved_date');
-        const timeInput = document.getElementById('arrivalTimeInput');
+    const name = this.elements.customerName.value.trim();
+    const contact = this.elements.contactNumber.value.trim();
+    const paxInput = document.getElementById('numberOfPax');
+    const dateInput = document.getElementById('reserved_date');
+    const timeInput = document.getElementById('arrivalTimeInput');
 
-        const paxCount = parseInt(paxInput?.value) || 0;
-        const date = dateInput?.value;
-        const time = timeInput?.value;
+    const paxCount = parseInt(paxInput?.value) || 0;
+    const date = dateInput?.value;
+    const time = timeInput?.value;
 
-        const emptyFields = [];
-        if (!name) emptyFields.push(this.elements.customerName);
-        if (!this.isPlacingOrder && !contact) emptyFields.push(this.elements.contactNumber);
-        if (!paxCount) emptyFields.push(paxInput);
-        if (!date) emptyFields.push(dateInput);
-        if (!time) emptyFields.push(timeInput);
+    const emptyFields = [];
+    if (!name) emptyFields.push(this.elements.customerName);
+    if (!this.isPlacingOrder && !contact) emptyFields.push(this.elements.contactNumber);
+    if (!paxCount) emptyFields.push(paxInput);
+    if (!date) emptyFields.push(dateInput);
+    if (!time) emptyFields.push(timeInput);
 
-        if (emptyFields.length > 0) {
-          emptyFields.forEach(f => f.classList.add('border-red-500'));
-          this.showErrorToast('Please fill in all required fields.');
-          return;
-        }
+    if (emptyFields.length > 0) {
+      emptyFields.forEach(f => f.classList.add('border-red-500'));
+      this.showErrorToast('Please fill in all required fields.');
+      return;
+    }
 
-        const selectedDate = new Date(`${date}T${time}`);
-        const now = new Date();
+    const selectedDate = new Date(`${date}T${time}`);
+    const now = new Date();
 
-        if (selectedDate < now.setHours(0, 0, 0, 0)) {
-          this.showErrorToast('You cannot select a past date.');
-          dateInput.classList.add('border-red-500');
-          return;
-        }
+    if (selectedDate < now.setHours(0, 0, 0, 0)) {
+      this.showErrorToast('You cannot select a past date.');
+      dateInput.classList.add('border-red-500');
+      return;
+    }
 
-        const orders = Object.values(this.selectedOrders || {});
-        const hasMain = orders.some(item => item.category === 'main');
+    const orders = Object.values(this.selectedOrders || {});
+    const hasMain = orders.some(item => item.category === 'main');
 
-        if (!hasMain) {
-          this.showErrorToast('You must order at least one main menu item.');
-          return;
-        }
+    if (!hasMain) {
+      this.showErrorToast('You must order at least one main menu item.');
+      return;
+    }
 
-        const mainMenuOrders = orders.filter(item => item.category === 'main');
-        const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
+    const mainMenuOrders = orders.filter(item => item.category === 'main');
+    const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
 
-        if (totalMainMenuQuantity !== paxCount) {
-          this.showErrorToast('Match your main menu order quantity to your number of pax.');
-          return;
-        }
+    if (totalMainMenuQuantity !== paxCount) {
+      this.showErrorToast('Match your main menu order quantity to your number of pax.');
+      return;
+    }
 
-        this.elements.submitBtn.disabled = true;
-        this.elements.submitBtn.textContent = "Submitting...";
+    this.elements.submitBtn.disabled = true;
+    this.elements.submitBtn.textContent = "Submitting...";
 
-        const data = this.prepareSubmissionData();
-        this.submitOrder(data);
-      }
+    const data = this.prepareSubmissionData();
+    this.submitOrder(data);
+  }
 
 
 
-      showErrorToast(message) {
-        const toast = document.createElement('div');
-        toast.textContent = message;
-        toast.style.cssText = `
+  showErrorToast(message) {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `
       position: fixed;
       top: 20px;
       right: 20px;
@@ -1281,136 +1279,136 @@
       max-width: 300px;
     `;
 
-        document.body.appendChild(toast);
+    document.body.appendChild(toast);
 
-        setTimeout(() => {
-          document.body.removeChild(toast);
-        }, 3000);
-      }
+    setTimeout(() => {
+      document.body.removeChild(toast);
+    }, 3000);
+  }
 
-      prepareSubmissionData() {
-        const baseData = {
-          customer_name: this.elements.customerName.value.trim(),
-          contact_number: this.elements.contactNumber.value.trim(),
-          pax: this.elements.numberOfPax.value.trim(),
-          table_id: this.selectedTableId,
-          orders: Object.entries(this.selectedOrders).map(([id, item]) => ({
-            menu_id: id,
-            quantity: item.quantity,
-            price: item.price,
-            notes: this.elements.customerNotes.value.trim()
-          }))
-        };
+  prepareSubmissionData() {
+    const baseData = {
+      customer_name: this.elements.customerName.value.trim(),
+      contact_number: this.elements.contactNumber.value.trim(),
+      pax: this.elements.numberOfPax.value.trim(),
+      table_id: this.selectedTableId,
+      orders: Object.entries(this.selectedOrders).map(([id, item]) => ({
+        menu_id: id,
+        quantity: item.quantity,
+        price: item.price,
+        notes: this.elements.customerNotes.value.trim()
+      }))
+    };
 
-        if (this.isPlacingOrder) {
-          baseData.started_at = this.elements.arrivalTimeInput.value;
+    if (this.isPlacingOrder) {
+      baseData.started_at = this.elements.arrivalTimeInput.value;
+    } else {
+      baseData.reserved_date = this.elements.reservedDate.value;
+      baseData.arrival_time = this.elements.arrivalTimeInput.value;
+      baseData.advance_payment = this.elements.advancePayment.value.trim() || 0;
+    }
+
+    return baseData;
+  }
+
+  submitOrder(data) {
+    const storeUrl = this.isPlacingOrder
+      ? '/receptionist/store-walkin'
+      : '/receptionist/store-reservation';
+
+    fetch(storeUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
+        "Accept": "application/json"
+      },
+      body: JSON.stringify(data)
+    })
+      .then(async res => {
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('Server error:', errorText);
+          throw new Error(`Server responded with ${res.status}: ${errorText}`);
+        }
+        return res.json();
+      })
+      .then(response => {
+        if (response.success) {
+          this.elements.tableModal.classList.add('hidden');
+          this.showSuccessModal(this.isPlacingOrder ? 'order' : 'reservation');
         } else {
-          baseData.reserved_date = this.elements.reservedDate.value;
-          baseData.arrival_time = this.elements.arrivalTimeInput.value;
-          baseData.advance_payment = this.elements.advancePayment.value.trim() || 0;
+          this.showErrorModal(response.message || "Failed to save reservation.");
         }
+      })
+      .catch(error => {
+        console.error("Reservation Error:", error);
+        alert("An error occurred while submitting the reservation: " + error.message);
+      })
+      .finally(() => {
+        this.elements.submitBtn.disabled = false;
+        this.elements.submitBtn.textContent = "Submit";
+      });
+  }
 
-        return baseData;
-      }
+  updateTimeFrameDisplay() {
+    const timeFrameDisplay = this.elements.timeFrameDisplay;
+    if (!timeFrameDisplay || !this.elements.arrivalTimeInput.value) {
+      if (timeFrameDisplay) timeFrameDisplay.textContent = '';
+      return;
+    }
 
-      submitOrder(data) {
-        const storeUrl = this.isPlacingOrder
-          ? '/receptionist/store-walkin'
-          : '/receptionist/store-reservation';
+    const [hours, minutes] = this.elements.arrivalTimeInput.value.split(':').map(Number);
+    const start = new Date();
+    start.setHours(hours, minutes, 0, 0);
 
-        fetch(storeUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]').content,
-            "Accept": "application/json"
-          },
-          body: JSON.stringify(data)
-        })
-          .then(async res => {
-            if (!res.ok) {
-              const errorText = await res.text();
-              console.error('Server error:', errorText);
-              throw new Error(`Server responded with ${res.status}: ${errorText}`);
-            }
-            return res.json();
-          })
-          .then(response => {
-            if (response.success) {
-              this.elements.tableModal.classList.add('hidden');
-              this.showSuccessModal(this.isPlacingOrder ? 'order' : 'reservation');
-            } else {
-              this.showErrorModal(response.message || "Failed to save reservation.");
-            }
-          })
-          .catch(error => {
-            console.error("Reservation Error:", error);
-            alert("An error occurred while submitting the reservation: " + error.message);
-          })
-          .finally(() => {
-            this.elements.submitBtn.disabled = false;
-            this.elements.submitBtn.textContent = "Submit";
-          });
-      }
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
 
-      updateTimeFrameDisplay() {
-        const timeFrameDisplay = this.elements.timeFrameDisplay;
-        if (!timeFrameDisplay || !this.elements.arrivalTimeInput.value) {
-          if (timeFrameDisplay) timeFrameDisplay.textContent = '';
-          return;
-        }
+    const options = { hour: 'numeric', minute: '2-digit', hour12: true };
+    const startStr = start.toLocaleTimeString('en-US', options);
+    const endStr = end.toLocaleTimeString('en-US', options);
 
-        const [hours, minutes] = this.elements.arrivalTimeInput.value.split(':').map(Number);
-        const start = new Date();
-        start.setHours(hours, minutes, 0, 0);
+    timeFrameDisplay.textContent = `${startStr} - ${endStr}`;
+  }
 
-        const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+  showSuccessModal(type) {
+    const modal = this.elements.successModal;
+    const title = document.getElementById('successTitle');
 
-        const options = { hour: 'numeric', minute: '2-digit', hour12: true };
-        const startStr = start.toLocaleTimeString('en-US', options);
-        const endStr = end.toLocaleTimeString('en-US', options);
+    if (title) {
+      title.textContent = type === 'order' ? 'Order Placed!' : 'Reservation Created!';
+    }
 
-        timeFrameDisplay.textContent = `${startStr} - ${endStr}`;
-      }
+    if (modal) {
+      modal.classList.remove('hidden');
+    }
+  }
 
-      showSuccessModal(type) {
-        const modal = this.elements.successModal;
-        const title = document.getElementById('successTitle');
+  closeSuccessModal() {
+    if (this.elements.successModal) {
+      this.elements.successModal.classList.add('hidden');
+    }
 
-        if (title) {
-          title.textContent = type === 'order' ? 'Order Placed!' : 'Reservation Created!';
-        }
+    if (this.elements.tableModal) {
+      this.elements.tableModal.style.display = 'none';
+    }
+  }
 
-        if (modal) {
-          modal.classList.remove('hidden');
-        }
-      }
+  showErrorModal(message) {
+    let errorModal = document.getElementById('errorModal');
+    if (!errorModal) {
+      errorModal = this.createErrorModal();
+    }
 
-      closeSuccessModal() {
-        if (this.elements.successModal) {
-          this.elements.successModal.classList.add('hidden');
-        }
+    document.getElementById('errorMessage').textContent = message;
+    errorModal.classList.remove('hidden');
+  }
 
-        if (this.elements.tableModal) {
-          this.elements.tableModal.style.display = 'none';
-        }
-      }
-
-      showErrorModal(message) {
-        let errorModal = document.getElementById('errorModal');
-        if (!errorModal) {
-          errorModal = this.createErrorModal();
-        }
-
-        document.getElementById('errorMessage').textContent = message;
-        errorModal.classList.remove('hidden');
-      }
-
-      createErrorModal() {
-        const errorModal = document.createElement('div');
-        errorModal.id = 'errorModal';
-        errorModal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
-        errorModal.innerHTML = `
+  createErrorModal() {
+    const errorModal = document.createElement('div');
+    errorModal.id = 'errorModal';
+    errorModal.className = 'fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50';
+    errorModal.innerHTML = `
       <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
           <div class="mb-4">
               <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -1424,91 +1422,91 @@
             </button>
       </div>
     `;
-        document.body.appendChild(errorModal);
+    document.body.appendChild(errorModal);
 
-        document.getElementById('errorOkBtn').addEventListener('click', () => {
-          errorModal.classList.add('hidden');
-        });
-        errorModal.addEventListener('click', (e) => {
-          if (e.target === e.currentTarget) errorModal.classList.add('hidden');
-        });
+    document.getElementById('errorOkBtn').addEventListener('click', () => {
+      errorModal.classList.add('hidden');
+    });
+    errorModal.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) errorModal.classList.add('hidden');
+    });
 
-        return errorModal;
-      }
+    return errorModal;
+  }
 
-      animateFlyToCart(imageEl, targetSelector) {
-        const imgRect = imageEl.getBoundingClientRect();
-        const targetEl = document.querySelector(targetSelector);
+  animateFlyToCart(imageEl, targetSelector) {
+    const imgRect = imageEl.getBoundingClientRect();
+    const targetEl = document.querySelector(targetSelector);
 
-        if (!targetEl) {
-          console.warn(`Target element ${targetSelector} not found`);
-          return;
-        }
+    if (!targetEl) {
+      console.warn(`Target element ${targetSelector} not found`);
+      return;
+    }
 
-        const targetRect = targetEl.getBoundingClientRect();
-        const flyingImg = imageEl.cloneNode(true);
+    const targetRect = targetEl.getBoundingClientRect();
+    const flyingImg = imageEl.cloneNode(true);
 
-        Object.assign(flyingImg.style, {
-          position: 'fixed',
-          left: `${imgRect.left}px`,
-          top: `${imgRect.top}px`,
-          width: `${imgRect.width}px`,
-          height: `${imgRect.height}px`,
-          transition: 'all 0.8s ease-in-out',
-          filter: 'blur(2px)',
-          zIndex: '10000',
-          pointerEvents: 'none',
-          borderRadius: '10px'
-        });
+    Object.assign(flyingImg.style, {
+      position: 'fixed',
+      left: `${imgRect.left}px`,
+      top: `${imgRect.top}px`,
+      width: `${imgRect.width}px`,
+      height: `${imgRect.height}px`,
+      transition: 'all 0.8s ease-in-out',
+      filter: 'blur(2px)',
+      zIndex: '10000',
+      pointerEvents: 'none',
+      borderRadius: '10px'
+    });
 
-        const container = document.getElementById('fly-animation-container');
-        if (container) {
-          container.appendChild(flyingImg);
-        } else {
-          document.body.appendChild(flyingImg);
-        }
+    const container = document.getElementById('fly-animation-container');
+    if (container) {
+      container.appendChild(flyingImg);
+    } else {
+      document.body.appendChild(flyingImg);
+    }
 
-        requestAnimationFrame(() => {
-          Object.assign(flyingImg.style, {
-            left: `${targetRect.left + targetRect.width / 2}px`,
-            top: `${targetRect.top + targetRect.height / 2}px`,
-            width: '0px',
-            height: '0px',
-            opacity: '0.3'
-          });
-        });
+    requestAnimationFrame(() => {
+      Object.assign(flyingImg.style, {
+        left: `${targetRect.left + targetRect.width / 2}px`,
+        top: `${targetRect.top + targetRect.height / 2}px`,
+        width: '0px',
+        height: '0px',
+        opacity: '0.3'
+      });
+    });
 
-        flyingImg.addEventListener('transitionend', () => {
-          flyingImg.remove();
-        });
-      }
+    flyingImg.addEventListener('transitionend', () => {
+      flyingImg.remove();
+    });
+  }
 }
 
 
-      const dashboard = new ReceptionistDashboard();
+  const dashboard = new ReceptionistDashboard();
 
-      window.selectMenuItem = function (element) {
-        dashboard.selectMenuItem(element);
-      };
+  window.selectMenuItem = function (element) {
+    dashboard.selectMenuItem(element);
+  };
 
-      window.updateQuantity = function (input) {
-        dashboard.updateQuantity(input);
-      };
+  window.updateQuantity = function (input) {
+    dashboard.updateQuantity(input);
+  };
 
-      window.walkIn = function (tableId) {
-        dashboard.walkIn(tableId);
-      };
+  window.walkIn = function (tableId) {
+    dashboard.walkIn(tableId);
+  };
 
-      window.makeReservation = function (tableId) {
-        dashboard.makeReservation(tableId);
-      };
+  window.makeReservation = function (tableId) {
+    dashboard.makeReservation(tableId);
+  };
 
-      window.openNotifModal = function (id) {
-        dashboard.openNotificationModal(id);
-      };
+  window.openNotifModal = function (id) {
+    dashboard.openNotificationModal(id);
+  };
 
-      window.dashboard = dashboard;
-    </script>
-  </div>
+  window.dashboard = dashboard;
+</script>
+</div>
 
 </html>

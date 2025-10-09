@@ -2,9 +2,8 @@
 
 namespace App\Livewire;
 
-
 use Livewire\Component;
-use App\Models\table;
+use App\Models\Table;
 use Carbon\Carbon;
 
 class TableLayout extends Component
@@ -20,16 +19,27 @@ class TableLayout extends Component
     {
         $currentTime = Carbon::now();
 
-        $this->tables = table::with(['reservation', 'walkin'])
-            ->get()
-            ->map(function ($table) use ($currentTime) {
-                $table->is_occupied = $table->reservation->isNotEmpty() || $table->walkin->isNotEmpty();
-                return $table;
-            });
+        $this->tables = table::with([
+            'reservation' => function ($query) use ($currentTime) {
+                $query->where('status', 'Active')
+                      ->where('started_at', '<=', $currentTime)
+                      ->where('ended_at', '>=', $currentTime);
+            },
+            'walkin' => function ($query) use ($currentTime) {
+                $query->where('status', 'Active')
+                      ->where('started_at', '<=', $currentTime)
+                      ->where('ended_at', '>=', $currentTime);
+            },
+        ])->get()->map(function ($table) {
+            $table->is_occupied = $table->reservation->isNotEmpty() || $table->walkin->isNotEmpty();
+            return $table;
+        });
     }
 
     public function render()
     {
-        return view('livewire.table-layout');
+        return view('livewire.table-layout', [
+            'tables' => $this->tables
+        ]);
     }
 }

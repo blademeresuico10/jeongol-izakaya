@@ -21,13 +21,10 @@ class KitchenDashboard extends Component
     public $selectedMenuId;
     public $orderQuantity = 1;
     public $selectedIngredients = [];
-    
+
     protected $listeners = ['refreshDashboard' => '$refresh'];
 
-    public function mount()
-    {
-        // Initialize component
-    }
+    public function mount() {}
 
     public function markAsServed($orderId)
     {
@@ -109,24 +106,16 @@ class KitchenDashboard extends Component
 
     public function addUnlimitedRefill()
     {
-        // Validate table selection
         if (!$this->selectedTableUnlimited) {
             session()->flash('error', 'Please select a table.');
             return;
         }
 
-        // Check if at least one ingredient has a quantity entered
         $hasQuantity = false;
         $ingredientsToProcess = [];
 
         foreach ($this->selectedIngredients as $ingredientId => $data) {
             if (isset($data['quantity']) && !empty($data['quantity']) && $data['quantity'] > 0) {
-                // Validate minimum quantity
-                if ($data['quantity'] < 50) {
-                    session()->flash('error', 'Minimum quantity is 50 grams per ingredient.');
-                    return;
-                }
-                
                 $hasQuantity = true;
                 $ingredientsToProcess[$ingredientId] = $data['quantity'];
             }
@@ -150,12 +139,11 @@ class KitchenDashboard extends Component
             foreach ($ingredientsToProcess as $ingredientId => $quantity) {
                 $ingredient = ingredients::findOrFail($ingredientId);
 
-                // Check stock availability
                 if ($ingredient->stocks < $quantity) {
                     $available = $ingredient->unit === 'kg'
                         ? number_format($ingredient->stocks / 1000, 2) . ' kg'
                         : $ingredient->stocks . ' pieces';
-                    
+
                     DB::rollBack();
                     session()->flash('error', "Insufficient {$ingredient->name}! Only {$available} available.");
                     return;
@@ -189,11 +177,11 @@ class KitchenDashboard extends Component
 
             DB::commit();
 
-            session()->flash('success', "Successfully added {$refillCount} refill(s)!");
+            $this->dispatch('notify', type: 'success', message: 'Stock updated.');
             $this->reset(['selectedTableUnlimited', 'selectedIngredients']);
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Failed to add refills: ' . $e->getMessage());
+            $this->dispatch('notify', type: 'error', message: 'Failed to add refills: ' . $e->getMessage());
         }
     }
 
@@ -222,7 +210,6 @@ class KitchenDashboard extends Component
 
         $menuIngredients = MenuIngredient::where('menu_id', $menu->id)->get();
 
-        // Check stock availability first
         foreach ($menuIngredients as $menuIngredient) {
             $ingredient = ingredients::find($menuIngredient->ingredient_id);
             $quantityNeeded = $menuIngredient->quantity * $this->orderQuantity;
@@ -272,13 +259,12 @@ class KitchenDashboard extends Component
             }
 
             DB::commit();
-
-            session()->flash('success', 'Additional order added successfully!');
+            $this->dispatch('notify', type: 'success', message: 'Additional order added successfully!');
             $this->reset(['selectedTableOrder', 'selectedMenuId', 'orderQuantity']);
             $this->orderQuantity = 1;
         } catch (\Exception $e) {
             DB::rollBack();
-            session()->flash('error', 'Failed to add order: ' . $e->getMessage());
+            $this->dispatch('notify', type: 'error', message: 'Failed to add order: ' . $e->getMessage());
         }
     }
 
@@ -286,6 +272,14 @@ class KitchenDashboard extends Component
     {
         $pendingOrders = orders::with(['table', 'menu', 'reservation', 'walkin'])
             ->whereNotNull('status')
+            ->where(function ($query) {
+                $query->whereHas('reservation', function ($q) {
+                    $q->where('status', 'Active');
+                })
+                    ->orWhereHas('walkin', function ($q) {
+                        $q->where('status', 'active');
+                    });
+            })
             ->orderBy('created_at', 'asc')
             ->get()
             ->groupBy(function ($order) {
@@ -293,27 +287,33 @@ class KitchenDashboard extends Component
                     return 'reservation_' . $order->reservation_id;
                 }
                 return 'walkin_' . $order->walk_in_id;
-            })
-            ->filter(function ($orderGroup) {
-                $order = $orderGroup->first();
-                $status = $order->reservation->status
-                    ?? $order->walkin->status
-                    ?? $order->status;
-                return $status !== 'Completed';
             });
 
+        // Only show tables where ALL orders are served (not pending)
         $tables = table::whereHas('reservation', function ($query) {
-            $query->whereRaw('LOWER(status) = ?', ['active'])
-                ->whereHas('orders');
+            $query->where('status', 'Active')
+                ->whereHas('orders', function ($q) {
+                    // Table must have at least one order
+                    $q->whereNotNull('id');
+                })
+                ->whereDoesntHave('orders', function ($q) {
+                    // But NO pending orders
+                    $q->where('status', 'Pending');
+                });
         })
             ->orWhereHas('walkin', function ($query) {
-                $query->whereRaw('LOWER(status) = ?', ['active'])
-                    ->whereHas('orders');
+                $query->where('status', 'active')
+                    ->whereHas('orders', function ($q) {
+                        $q->whereNotNull('id');
+                    })
+                    ->whereDoesntHave('orders', function ($q) {
+                        $q->where('status', 'Pending');
+                    });
             })
             ->with(['reservation' => function ($query) {
-                $query->whereRaw('LOWER(status) = ?', ['active']);
+                $query->where('status', 'Active');
             }, 'walkin' => function ($query) {
-                $query->whereRaw('LOWER(status) = ?', ['active']);
+                $query->where('status', 'active');
             }])
             ->get();
 

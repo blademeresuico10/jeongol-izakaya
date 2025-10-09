@@ -1,17 +1,23 @@
 <div>
-  @if(session('success'))
-    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 2000)"
-    class="fixed top-4 right-4 p-4 rounded shadow-lg text-white z-50 bg-green-500">
-    {{ session('success') }}
-    </div>
-  @endif
-
-  @if(session('error'))
-    <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 2000)"
-    class="fixed top-4 right-4 p-4 rounded shadow-lg text-white z-50 bg-red-500">
-    {{ session('error') }}
-    </div>
-  @endif
+  <div x-data="{ 
+    show: false, 
+    type: 'success', 
+    message: '' 
+}" @notify.window="
+        show = true; 
+        type = $event.detail.type; 
+        message = $event.detail.message;
+        setTimeout(() => show = false, 3000);
+     " x-show="show" x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 transform translate-x-full"
+    x-transition:enter-end="opacity-100 transform translate-x-0" x-transition:leave="transition ease-in duration-300"
+    x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" :class="{
+        'bg-green-500': type === 'success',
+        'bg-red-500': type === 'error',
+        'bg-yellow-500': type === 'warning'
+     }" class="fixed top-4 right-4 p-4 rounded shadow-lg text-white z-50" style="display: none;">
+    <span x-text="message"></span>
+  </div>
 
   <div class="flex justify-between items-center mb-3 px-4">
     <div class="flex items-center gap-2">
@@ -59,7 +65,6 @@
         </button>
       </div>
 
-      <!-- Pending Orders Tab -->
       @if($activeTab === 'pending')
       <div class="overflow-y-auto max-h-[75vh] p-4 space-y-4">
       @php
@@ -234,8 +239,8 @@
             <span class="font-medium">{{ $ingredient->name }}</span>
             </span>
 
-            <input type="number" wire:model="selectedIngredients.{{ $ingredient->id }}.quantity" min="1" placeholder="Grams"
-            class="w-24 px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-blue-500">
+            <input type="number" wire:model="selectedIngredients.{{ $ingredient->id }}.quantity" min="1"
+            placeholder="Grams" class="w-24 px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-blue-500">
           </div>
         @endforeach
               </div>

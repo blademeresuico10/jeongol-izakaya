@@ -23,7 +23,7 @@ class ReceptionistController extends Controller
     {
         $currentTime = Carbon::now();
 
-        $tables = Table::with([
+        $tables = table::with([
             'reservation' => function ($query) use ($currentTime) {
                 $query->where('status', 'Active')
                     ->where('started_at', '<=', $currentTime)
