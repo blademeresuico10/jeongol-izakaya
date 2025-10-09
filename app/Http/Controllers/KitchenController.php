@@ -28,7 +28,6 @@ class KitchenController extends Controller
 
         $order = orders::findOrFail($orderId);
 
-        // Get all pending orders for the same reservation or walk-in
         if ($order->reservation_id) {
             $orders = orders::where('reservation_id', $order->reservation_id)
                 ->where('status', 'pending')
@@ -55,7 +54,6 @@ class KitchenController extends Controller
 
             $processedIngredients = [];
 
-            // Helper function to process stock deduction
             $processIngredients = function ($singleOrder, $isAddon = false) use (&$processedIngredients) {
                 $menuIngredients = MenuIngredient::where('menu_id', $singleOrder->menu_id)->get();
 
@@ -63,14 +61,12 @@ class KitchenController extends Controller
                     $ingredient = ingredients::find($menuIngredient->ingredient_id);
                     if (!$ingredient) continue;
 
-                    // Avoid deducting the same main ingredient multiple times
                     if (!$isAddon && in_array($ingredient->id, $processedIngredients)) continue;
 
                     $quantityNeeded = $isAddon
                         ? $menuIngredient->quantity * $singleOrder->quantity
                         : $menuIngredient->quantity;
 
-                    // Use your deductStock helper
                     $ingredient->deductStock(
                         $quantityNeeded,
                         $singleOrder->id,
@@ -87,12 +83,10 @@ class KitchenController extends Controller
                 $singleOrder->save();
             };
 
-            // Process main orders
             foreach ($mainOrders as $singleOrder) {
                 $processIngredients($singleOrder);
             }
 
-            // Process add-on orders
             foreach ($addonOrders as $singleOrder) {
                 $processIngredients($singleOrder, true);
             }
@@ -156,7 +150,6 @@ class KitchenController extends Controller
                     'quantity' => $quantity,
                     'stock_before' => $stockBefore,
                     'stock_after' => $stockAfter,
-                    'notes' => 'Unlimited refill deduction for table ' . $table->id,
                 ]);
 
                 UnlimitedMeatLog::create([
@@ -247,7 +240,6 @@ class KitchenController extends Controller
                     'quantity' => $quantityNeeded,
                     'stock_before' => $stockBefore,
                     'stock_after' => $stockAfter,
-                    'notes' => "Additional order for table {$table->id}, menu: {$menu->menu_item}",
                 ]);
             }
         });
