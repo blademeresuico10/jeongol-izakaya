@@ -105,10 +105,12 @@ Route::middleware('auth')->group(function () {
         Route::delete('/deletetable/{id}', [AdminController::class, 'deleteTable'])->name('admin.deleteTable');
         Route::patch('/restoretable/{id}', [AdminController::class, 'restoreTable'])->name('admin.restoreTable');
         Route::delete('/forcedeletetable/{id}', [AdminController::class, 'forceDeleteTable'])->name('admin.forceDeleteTable');
+        Route::get('/table_management/tables', [AdminController::class, 'getTables'])->name('admin.getTables');
 
         // Ingredient Management
         Route::prefix('ingredient_management')->group(function () {
             Route::get('/', [AdminController::class, 'ingredient_management'])->name('admin.ingredient_management');
+            Route::get('/stocks', [AdminController::class, 'getStocks'])->name('ingredient.stocks'); // ← ADD THIS LINE
             Route::post('/storeIngredient', [AdminController::class, 'storeIngredient'])->name('storeIngredient');
             Route::post('/add-stock', [AdminController::class, 'addStock'])->name('ingredient.addStock');
             Route::post('/update-stock', [AdminController::class, 'updateStock'])->name('ingredient.updateStock');
@@ -152,9 +154,9 @@ Route::middleware('auth')->group(function () {
 
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
-        Route::get('/reports/sales/pdf', [ReportsController::class, 'salesReportPdf'])->name('admin.sales_report.pdf');
+        Route::get('/reports/sales', [ReportsController::class, 'salesReportPdf'])->name('admin.sales_report.pdf');
         Route::get('/reports/transaction', [ReportsController::class, 'transactionReport'])->name('admin.transaction_reports');
-        Route::get('/reports/stock', [ReportsController::class, 'stockReport'])->name('admin.stock_reports');
+        Route::get('/reports/stock', [ReportsController::class, 'stockReport'])->name('admin.stock_report');
         Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');
         Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('admin.reports.export-csv');
     });

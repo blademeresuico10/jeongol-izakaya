@@ -42,7 +42,6 @@
                 <div class="card-body">
                     <div class="tab-content">
 
-                        {{-- Stocks Tab --}}
                         <div class="tab-pane fade show active" id="stocks" role="tabpanel">
                             <div class="table-responsive">
                                 <table class="table table-bordered">
@@ -53,30 +52,14 @@
                                             <th>Stocks</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        @forelse ($ingredients as $ingredient)
-                                            <tr>
-                                                <td class="font-weight-bold">{{ $ingredient->name }}</td>
-                                                <td class="text-capitalize">{{ $ingredient->category }}</td>
-                                                <td>
-                                                    <span
-                                                        class="badge badge-{{ $ingredient->stocks > 0 ? 'success' : 'danger' }}">
-                                                        {{ $ingredient->stocks }}
-                                                    </span>
-                                                    <span>{{ $ingredient->unit }}</span>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="4" class="text-center text-muted">No ingredients available</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
+                                    <tbody id="stocksTableBody"></tbody>
                                 </table>
+                            </div>
+                            <div class="mt-3 d-flex justify-content-center">
+                                <div id="stocksPagination"></div>
                             </div>
                         </div>
 
-                        {{-- Stock Batches Tab --}}
                         <div class="tab-pane fade" id="batch" role="tabpanel">
                             <ul class="nav nav-pills mb-3" role="tablist">
                                 <li class="nav-item">
@@ -109,6 +92,9 @@
                                                 <tbody id="thisWeekTableBody"></tbody>
                                             </table>
                                         </div>
+                                        <div class="mt-3 d-flex justify-content-center">
+                                            <div id="thisweekPagination"></div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -130,6 +116,9 @@
                                                 </thead>
                                                 <tbody id="lastWeekTableBody"></tbody>
                                             </table>
+                                        </div>
+                                        <div class="mt-3 d-flex justify-content-center">
+                                            <div id="lastweekPagination"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -154,6 +143,9 @@
                                         <tbody id="expiredTableBody"></tbody>
                                     </table>
                                 </div>
+                                <div class="mt-3 d-flex justify-content-center">
+                                    <div id="expiredPagination"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -162,7 +154,6 @@
             </div>
         </div>
     </div>
-
     {{-- Add Stock Modal --}}
     <div class="modal fade" id="addStockModal" tabindex="-1">
         <div class="modal-dialog">
@@ -313,7 +304,6 @@
 @include('admin.layouts.script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-
     $('#addStockModal, #updateStockModal, #addIngredientModal, #editBatchModal').modal({
         backdrop: 'static',
         keyboard: false,
@@ -324,29 +314,291 @@
         const today = new Date().toISOString().split('T')[0];
         $('input[name="expiration_date"]').attr('min', today);
 
+        // Track current pages for each section
+        let currentPages = {
+            stocks: 1,
+            thisweek: 1,
+            lastweek: 1,
+            expired: 1
+        };
+
+        // Load stocks with pagination
+        function loadStocks(page = 1) {
+            currentPages.stocks = page;
+
+            // Only show loading on initial load
+            if (page === 1 && $('#stocksTableBody').is(':empty')) {
+                $('#stocksLoading').removeClass('d-none');
+                $('#stocksContent').addClass('d-none');
+            }
+
+            $.get(`/ingredient_management/stocks?page=${page}`, function (data) {
+                if ($('#stocksLoading').is(':visible')) {
+                    $('#stocksLoading').addClass('d-none');
+                    $('#stocksContent').removeClass('d-none');
+                }
+
+                const $tbody = $('#stocksTableBody').empty();
+                if (data.ingredients.data.length) {
+                    data.ingredients.data.forEach(i => {
+                        $tbody.append(`
+                        <tr>
+                            <td class="font-weight-bold">${i.name}</td>
+                            <td class="text-capitalize">${i.category}</td>
+                            <td>
+                                <span class="badge badge-${i.stocks > 0 ? 'success' : 'danger'}">
+                                    ${i.stocks}
+                                </span>
+                                <span>${i.unit}</span>
+                            </td>
+                        </tr>
+                    `);
+                    });
+                } else {
+                    $tbody.append('<tr><td colspan="3" class="text-center text-muted">No ingredients available</td></tr>');
+                }
+
+                renderPagination('#stocksPagination', data.ingredients, 'stocks');
+            });
+        }
+
+        // Load batches with pagination
+        function loadBatches(period, page = 1) {
+            const pre = period === 'thisweek' ? 'thisWeek' : 'lastWeek';
+            currentPages[period] = page;
+
+            // Only show loading on initial load
+            if (page === 1 && $(`#${pre}TableBody`).is(':empty')) {
+                $(`#${pre}Loading`).removeClass('d-none');
+                $(`#${pre}Empty, #${pre}Content`).addClass('d-none');
+            }
+
+            $.get(`/ingredient_management/stock-batches?period=${period}&page=${page}`, function (data) {
+                if ($(`#${pre}Loading`).is(':visible')) {
+                    $(`#${pre}Loading`).addClass('d-none');
+                }
+
+                if (data.batches.data && data.batches.data.length) {
+                    $(`#${pre}Content`).removeClass('d-none');
+                    $(`#${pre}Empty`).addClass('d-none');
+                    const $tb = $(`#${pre}TableBody`).empty();
+
+                    data.batches.data.forEach(b => {
+                        $tb.append(`
+                        <tr>
+                            <td>${b.ingredient_name}</td>
+                            <td>${parseFloat(b.quantity).toFixed(2)} ${b.unit}</td>
+                            <td>${new Date(b.arrived_at).toLocaleDateString()}</td>
+                            <td>${new Date(b.expiration_date).toLocaleDateString()}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-warning btn-edit-batch" data-id="${b.id}" 
+                                    data-qty="${b.quantity}" data-arrived="${b.arrived_at}" data-exp="${b.expiration_date}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger btn-del-batch" data-id="${b.id}" data-name="${b.ingredient_name}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `);
+                    });
+
+                    renderPagination(`#${period}Pagination`, data.batches, period);
+                } else {
+                    $(`#${pre}Empty`).removeClass('d-none');
+                    $(`#${pre}Content`).addClass('d-none');
+                }
+            });
+        }
+
+        // Load expired with pagination
+        function loadExpired(page = 1) {
+            currentPages.expired = page;
+
+            // Only show loading on initial load
+            if (page === 1 && $('#expiredTableBody').is(':empty')) {
+                $('#expiredLoading').removeClass('d-none');
+                $('#expiredEmpty, #expiredContent').addClass('d-none');
+            }
+
+            $.get(`/ingredient_management/expired-only?page=${page}`, function (data) {
+                if ($('#expiredLoading').is(':visible')) {
+                    $('#expiredLoading').addClass('d-none');
+                }
+
+                if (data.expired_items.data && data.expired_items.data.length) {
+                    $('#expiredContent').removeClass('d-none');
+                    $('#expiredEmpty').addClass('d-none');
+                    const $tb = $('#expiredTableBody').empty();
+
+                    data.expired_items.data.forEach(i => {
+                        $tb.append(`
+                        <tr>
+                            <td>${i.ingredient_name}</td>
+                            <td>${parseFloat(i.quantity).toFixed(2)} ${i.unit}</td>
+                            <td>${new Date(i.expiration_date).toLocaleDateString()}</td>
+                        </tr>
+                    `);
+                    });
+
+                    renderPagination('#expiredPagination', data.expired_items, 'expired');
+                } else {
+                    $('#expiredEmpty').removeClass('d-none');
+                    $('#expiredContent').addClass('d-none');
+                }
+            });
+        }
+
+        // Render pagination controls - Always visible and static
+        function renderPagination(selector, data, section) {
+            const $pagination = $(selector);
+
+            // Don't clear if pagination already exists - just update it
+            $pagination.empty();
+
+            if (data.last_page <= 1) return;
+
+            const nav = $('<nav><ul class="pagination pagination-sm justify-content-center mb-0"></ul></nav>');
+            const ul = nav.find('ul');
+
+            // Previous button (chevron left)
+            ul.append(`
+            <li class="page-item ${data.current_page <= 1 ? 'disabled' : ''}">
+                <a class="page-link ${data.current_page <= 1 ? 'disabled' : ''}" 
+                   href="#" 
+                   data-page="${data.current_page - 1}" 
+                   data-section="${section}"
+                   ${data.current_page <= 1 ? 'tabindex="-1"' : ''}>
+                    ‹
+                </a>
+            </li>
+        `);
+
+            // Page numbers - show current page and 2 neighbors on each side
+            let startPage = Math.max(1, data.current_page - 1);
+            let endPage = Math.min(data.last_page, data.current_page + 1);
+
+            // Always show at least 3 pages if available
+            if (endPage - startPage < 2) {
+                if (startPage === 1) {
+                    endPage = Math.min(3, data.last_page);
+                } else if (endPage === data.last_page) {
+                    startPage = Math.max(1, data.last_page - 2);
+                }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                ul.append(`
+                <li class="page-item ${i === data.current_page ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}" data-section="${section}">${i}</a>
+                </li>
+            `);
+            }
+
+            // Next button (chevron right)
+            ul.append(`
+            <li class="page-item ${data.current_page >= data.last_page ? 'disabled' : ''}">
+                <a class="page-link ${data.current_page >= data.last_page ? 'disabled' : ''}" 
+                   href="#" 
+                   data-page="${data.current_page + 1}" 
+                   data-section="${section}"
+                   ${data.current_page >= data.last_page ? 'tabindex="-1"' : ''}>
+                    ›
+                </a>
+            </li>
+        `);
+
+            $pagination.html(nav);
+        }
+
+        // Handle pagination clicks
+        $(document).on('click', '.page-link:not(.disabled)', function (e) {
+            e.preventDefault();
+            const page = $(this).data('page');
+            const section = $(this).data('section');
+
+            if (!page || !section || $(this).hasClass('disabled')) return;
+
+            switch (section) {
+                case 'stocks':
+                    loadStocks(page);
+                    break;
+                case 'thisweek':
+                case 'lastweek':
+                    loadBatches(section, page);
+                    break;
+                case 'expired':
+                    loadExpired(page);
+                    break;
+            }
+        });
+
+        // Initial load
+        loadStocks(1);
+
+        // Tab events - load on first visit only
+        let tabsLoaded = {
+            stocks: true,
+            batch: false,
+            expired: false
+        };
+
+        $('a[href="#stocks"]').on('shown.bs.tab', function () {
+            if (!tabsLoaded.stocks) {
+                loadStocks(currentPages.stocks);
+                tabsLoaded.stocks = true;
+            }
+        });
+
+        $('a[href="#batch"]').on('shown.bs.tab', function () {
+            if (!tabsLoaded.batch) {
+                loadBatches('thisweek', currentPages.thisweek);
+                tabsLoaded.batch = true;
+            }
+        });
+
+        $('a[href="#thisweek"]').on('shown.bs.tab', () => {
+            if (tabsLoaded.batch && $(`#thisWeekTableBody`).is(':empty')) {
+                loadBatches('thisweek', currentPages.thisweek);
+            }
+        });
+
+        $('a[href="#lastweek"]').on('shown.bs.tab', () => {
+            if (tabsLoaded.batch && $(`#lastWeekTableBody`).is(':empty')) {
+                loadBatches('lastweek', currentPages.lastweek);
+            }
+        });
+
+        $('a[href="#expired"]').on('shown.bs.tab', function () {
+            if (!tabsLoaded.expired) {
+                loadExpired(currentPages.expired);
+                tabsLoaded.expired = true;
+            }
+        });
+
+        // Modal events
         $('#addStockModal').on('show.bs.modal', () => loadIngredients('#addStockForm select[name="ingredient_id"]'));
         $('#updateStockModal').on('show.bs.modal', () => loadIngredients('#updateStockForm select[name="ingredient_id"]', true));
 
-        $('a[href="#batch"]').on('shown.bs.tab', () => loadBatches('thisweek'));
-        $('a[href="#thisweek"]').on('shown.bs.tab', () => loadBatches('thisweek'));
-        $('a[href="#lastweek"]').on('shown.bs.tab', () => loadBatches('lastweek'));
-        $('a[href="#expired"]').on('shown.bs.tab', loadExpired);
+        // Form submissions - NO PAGE REFRESH
+        $('#addStockForm').on('submit', function (e) {
+            e.preventDefault();
+            submitForm(this, '/ingredient_management/add-stock', 'Stock added successfully', 'stocks');
+        });
 
-        $('#addStockForm').on('submit', function (e) { 
-            e.preventDefault(); 
-            submitForm(this, '/ingredient_management/add-stock', 'Stock added successfully'); 
+        $('#updateStockForm').on('submit', function (e) {
+            e.preventDefault();
+            submitForm(this, '/ingredient_management/update-stock', 'Stock updated successfully', 'stocks');
         });
-        $('#updateStockForm').on('submit', function (e) { 
-            e.preventDefault(); 
-            submitForm(this, '/ingredient_management/update-stock', 'Stock updated successfully'); 
+
+        $('#addIngredientForm').on('submit', function (e) {
+            e.preventDefault();
+            submitForm(this, '/ingredient_management/storeIngredient', 'Ingredient added successfully', 'stocks');
         });
-        $('#addIngredientForm').on('submit', function (e) { 
-            e.preventDefault(); 
-            submitForm(this, '/ingredient_management/storeIngredient', 'Ingredient added successfully'); 
-        });
-        $('#editBatchForm').on('submit', function (e) { 
-            e.preventDefault(); 
-            updateBatch(); 
+
+        $('#editBatchForm').on('submit', function (e) {
+            e.preventDefault();
+            updateBatch();
         });
 
         function loadIngredients(selector, showStock = false) {
@@ -356,59 +608,9 @@
             });
         }
 
-        function loadBatches(period) {
-            const pre = period === 'thisweek' ? 'thisWeek' : 'lastWeek';
-            $(`#${pre}Loading`).removeClass('d-none');
-            $(`#${pre}Empty, #${pre}Content`).addClass('d-none');
-
-            $.get(`/ingredient_management/stock-batches?period=${period}`, data => {
-                $(`#${pre}Loading`).addClass('d-none');
-                if (data.batches.length) {
-                    $(`#${pre}Content`).removeClass('d-none');
-                    const $tb = $(`#${pre}TableBody`).empty();
-                    data.batches.forEach(b => $tb.append(`
-                        <tr>
-                            <td>${b.ingredient_name}</td>
-                            <td>${parseFloat(b.quantity).toFixed(2)} ${b.unit}</td>
-                            <td>${new Date(b.arrived_at).toLocaleDateString()}</td>
-                            <td>${new Date(b.expiration_date).toLocaleDateString()}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-warning btn-edit-batch" data-id="${b.id}" data-qty="${b.quantity}" data-arrived="${b.arrived_at}" data-exp="${b.expiration_date}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger btn-del-batch" data-id="${b.id}" data-name="${b.ingredient_name}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `));
-                } else $(`#${pre}Empty`).removeClass('d-none');
-            });
-        }
-
-        function loadExpired() {
-            $('#expiredLoading').removeClass('d-none');
-            $('#expiredEmpty, #expiredContent').addClass('d-none');
-
-            $.get('/ingredient_management/expired-only', data => {
-                $('#expiredLoading').addClass('d-none');
-                if (data.expired_items.length) {
-                    $('#expiredContent').removeClass('d-none');
-                    const $tb = $('#expiredTableBody').empty();
-                    data.expired_items.forEach(i => $tb.append(`
-                        <tr>
-                            <td>${i.ingredient_name}</td>
-                            <td>${parseFloat(i.quantity).toFixed(2)} ${i.unit}</td>
-                            <td>${new Date(i.expiration_date).toLocaleDateString()}</td>
-                        </tr>
-                    `));
-                } else $('#expiredEmpty').removeClass('d-none');
-            });
-        }
-
-        function submitForm(form, url, msg) {
+        function submitForm(form, url, msg, refreshSection) {
             $.ajax({
-                url, 
+                url,
                 method: 'POST',
                 data: JSON.stringify($(form).serializeArray().reduce((o, i) => (o[i.name] = i.value, o), {})),
                 contentType: 'application/json',
@@ -416,7 +618,6 @@
                 success: (response) => {
                     if (response.success) {
                         $(form).closest('.modal').modal('hide');
-                        
                         Swal.fire({
                             icon: 'success',
                             title: msg,
@@ -427,8 +628,11 @@
                             background: '#d4edda',
                             color: '#155724'
                         });
-                        
-                        setTimeout(() => location.reload(), 1000);
+
+                        // Just reload the current page of the current tab - NO RESET TO PAGE 1
+                        if (refreshSection === 'stocks') {
+                            loadStocks(currentPages.stocks);
+                        }
                     }
                 },
                 error: (xhr) => {
@@ -462,7 +666,6 @@
                 success: (response) => {
                     if (response.success) {
                         $('#editBatchModal').modal('hide');
-                        
                         Swal.fire({
                             icon: 'success',
                             title: 'Batch updated successfully',
@@ -473,10 +676,10 @@
                             background: '#d4edda',
                             color: '#155724'
                         });
-                        
-                        setTimeout(() => {
-                            loadBatches($('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek');
-                        }, 1000);
+
+                        // Reload current page - NO RESET
+                        const period = $('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek';
+                        loadBatches(period, currentPages[period]);
                     }
                 },
                 error: (xhr) => {
@@ -531,10 +734,10 @@
                                     background: '#d4edda',
                                     color: '#155724'
                                 });
-                                
-                                setTimeout(() => {
-                                    loadBatches($('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek');
-                                }, 1000);
+
+                                // Reload current page - NO RESET
+                                const period = $('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek';
+                                loadBatches(period, currentPages[period]);
                             }
                         },
                         error: (xhr) => {

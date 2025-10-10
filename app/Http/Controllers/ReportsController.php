@@ -3,6 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\ingredients;
+use App\Models\ingredientBatch;
+use App\Models\ingredientMovements;
+use App\Models\expiredIngredients;
 use Illuminate\Http\Request;
 use App\Models\transaction;
 use App\Models\transactionDetail;
@@ -10,6 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\orders;
 
 class ReportsController extends Controller
 {
@@ -20,147 +24,238 @@ class ReportsController extends Controller
         return view('admin.reports');
     }
 
+
+
+
     public function salesReportPdf(Request $request)
     {
-        try {
-            $filter = $request->query('filter', 'daily');
+        $filter = $request->query('filter');
 
-            switch ($filter) {
-                case 'weekly':
-                    $dateFrom = now()->startOfWeek();
-                    $dateTo = now()->endOfWeek();
-                    $filterDate = $dateFrom->format('M d, Y') . ' - ' . $dateTo->format('M d, Y');
-                    break;
-                case 'monthly':
-                    $dateFrom = now()->startOfMonth();
-                    $dateTo = now()->endOfMonth();
-                    $filterDate = $dateFrom->format('F Y');
-                    break;
-                case 'yearly':
-                    $dateFrom = now()->startOfYear();
-                    $dateTo = now()->endOfYear();
-                    $filterDate = $dateFrom->format('Y');
-                    break;
-                default:
-                    $dateFrom = now()->startOfDay();
-                    $dateTo = now()->endOfDay();
-                    $filterDate = $dateFrom->format('F j, Y');
-                    break;
-            }
-
-            $transactions = transaction::with(['customer', 'reservation', 'walkin', 'cashier', 'transactionDetails'])
-                ->whereBetween('created_at', [$dateFrom, $dateTo])
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            $grossSales = $transactions->sum('orders_total') ?? 0;
-            $netSales = $transactions->sum('grand_total') ?? 0;
-            $totalDiscounts = $transactions->sum('discount_total') ?? 0;
-
-            $totalCustomers = $transactions->sum(function ($transaction) {
-                return $transaction->reservation->pax ?? $transaction->walkin->pax ?? 0;
-            });
-
-            $allDetails = [];
-            foreach ($transactions as $transaction) {
-                foreach ($transaction->transactionDetails as $detail) {
-                    $allDetails[] = [
-                        'item_name' => $detail->item_name,
-                        'quantity' => $detail->quantity,
-                    ];
-                }
-            }
-
-            $groupedSales = collect($allDetails)->groupBy('item_name')->map(function ($items, $itemName) {
-                return [
-                    'item_name' => $itemName,
-                    'quantity' => $items->sum('quantity'),
-                    'total' => 0,
-                ];
-            })->values();
-
-            $pdf = Pdf::loadView('admin.reports.pdf-sales', compact(
-                'filter',
-                'filterDate',
-                'groupedSales',
-                'grossSales',
-                'netSales',
-                'totalDiscounts',
-                'totalCustomers',
-                'dateFrom',
-                'dateTo'
-            ))->setPaper('a4', 'landscape');
-
-            $filename = 'sales-report-' . $dateFrom->format('Y-m-d') . '-to-' . $dateTo->format('Y-m-d') . '.pdf';
-
-            return $pdf->download($filename);
-        } catch (\Exception $e) {
-           
-            return back()->with('error', 'Failed to generate PDF: ' . $e->getMessage());
+        switch ($filter) {
+            case 'weekly':
+                $dateFrom = now()->startOfWeek();
+                $dateTo = now()->endOfWeek();
+                $filterDate = 'As of This Week';
+                break;
+            case 'monthly':
+                $dateFrom = now()->startOfMonth();
+                $dateTo = now()->endOfMonth();
+                $filterDate = 'As of This Month';
+                break;
+            case 'yearly':
+                $dateFrom = now()->startOfYear();
+                $dateTo = now()->endOfYear();
+                $filterDate = 'As of This Year';
+                break;
+            default:
+                $dateFrom = now()->startOfDay();
+                $dateTo = now()->endOfDay();
+                $filterDate = 'As of Today';
+                break;
         }
+
+        $transactions = transaction::with(['transactionDetails.orders', 'reservation', 'walkin'])
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->get();
+
+        $grossSales = $transactions->sum('orders_total');
+        $netSales = $transactions->sum('grand_total');
+        $totalDiscounts = $transactions->sum('discount_total');
+        $totalCustomers = $transactions->sum(fn($t) => $t->reservation->pax ?? $t->walkin->pax ?? 0);
+
+        $allDetails = [];
+        foreach ($transactions as $t) {
+            foreach ($t->transactionDetails as $d) {
+                $price = $d->orders->price ?? 0;
+                $quantity = $d->quantity ?? 0;
+                $discount = $d->discount_amount ?? 0;
+                $computedTotal = max(0, ($price * $quantity) - abs($discount));
+
+
+                $allDetails[] = [
+                    'item_name' => $d->item_name,
+                    'quantity' => $d->quantity,
+                    'total' => $computedTotal,
+                ];
+            }
+        }
+
+        $groupedSales = collect($allDetails)
+            ->groupBy('item_name')
+            ->map(fn($items, $name) => [
+                'item_name' => $name,
+                'quantity' => $items->sum('quantity'),
+                'total' => $items->sum('total'),
+            ])
+            ->values();
+
+        $pdf = Pdf::loadView('admin.reports.pdf-sales', [
+            'groupedSales' => $groupedSales,
+            'grossSales' => $grossSales,
+            'netSales' => $netSales,
+            'totalDiscounts' => $totalDiscounts,
+            'totalCustomers' => $totalCustomers,
+            'filterDate' => $filterDate,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('Sales_Report_' . now()->format('Ymd_His') . '.pdf');
     }
+
 
     public function transactionReport(Request $request)
     {
-        try {
-            $filter = $request->get('filter', 'daily');
+        $filter = $request->query('filter');
 
-            $query = DB::table('transactions')
-                ->join('users', 'transactions.cashier_id', '=', 'users.id')
-                ->select(
-                    DB::raw("CONCAT(users.firstname, ' ', users.lastname) as cashier_name"),
-                    DB::raw('COUNT(transactions.id) as transactions'),
-                    DB::raw('SUM(transactions.total) as total_sales')
-                )
-                ->groupBy('transactions.cashier_id', 'users.firstname', 'users.lastname');
+        switch ($filter) {
+            case 'daily':
+            case 'today':
+                $dateFrom = now()->startOfDay();
+                $dateTo = now()->endOfDay();
+                break;
 
-            switch ($filter) {
-                case 'daily':
-                    $query->whereDate('transactions.created_at', now());
-                    break;
-                case 'weekly':
-                    $query->whereBetween('transactions.created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-                    break;
-                case 'monthly':
-                    $query->whereYear('transactions.created_at', now()->year)
-                        ->whereMonth('transactions.created_at', now()->month);
-                    break;
-                case 'yearly':
-                    $query->whereYear('transactions.created_at', now()->year);
-                    break;
-            }
+            case 'weekly':
+                $dateFrom = now()->startOfWeek();
+                $dateTo = now()->endOfWeek();
+                break;
 
-            $cashiers = $query->get()->map(function ($row) {
-                return [
-                    'cashier_name'    => $row->cashier_name,
-                    'transactions'    => $row->transactions,
-                    'total_sales'     => $row->total_sales,
-                    'avg_transaction' => $row->transactions > 0
-                        ? round($row->total_sales / $row->transactions, 2)
-                        : 0,
+            case 'monthly':
+                $dateFrom = now()->startOfMonth();
+                $dateTo = now()->endOfMonth();
+                break;
+
+            case 'yearly':
+                $dateFrom = now()->startOfYear();
+                $dateTo = now()->endOfYear();
+                break;
+
+            default:
+                $dateFrom = now()->startOfMonth();
+                $dateTo = now()->endOfMonth();
+                break;
+        }
+
+        $transactions = transaction::with([
+            'cashier',
+            'customer',
+            'walkin',
+            'reservation',
+            'transactionDetails',
+        ])
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->get()
+            ->map(function ($t) {
+                $pax = 0;
+                if ($t->reservation) {
+                    $pax = $t->reservation->pax;
+                } elseif ($t->walkin) {
+                    $pax = $t->walkin->pax;
+                }
+
+                return (object) [
+                    'transaction_no' => $t->transaction_no,
+                    'date' => $t->created_at->format('M d, Y g:i A'),
+                    'staff_name' => $t->cashier ? trim($t->cashier->firstname . ' ' . $t->cashier->lastname) : '[Deleted User]',
+                    'customer_name' => $t->customer?->name ?? 'N/A',
+                    'payment_method' => ucfirst($t->payment_method ?? 'Cash'),
+                    'total_amount' => $t->grand_total,
+                    'pax' => $pax,
                 ];
             });
 
-            return response()->json(['cashierPerformance' => $cashiers]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to generate staff report'], 500);
+        $groupedTransactions = $transactions->groupBy('staff_name');
+
+        $pdf = PDF::loadView('admin.reports.pdf-transaction', [
+            'groupedTransactions' => $groupedTransactions,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'generatedAt' => now(),
+        ])->setPaper('A4', 'portrait');
+
+        return $pdf->download('Transaction_Report_' . now()->format('Ymd_His') . '.pdf');
+    }
+
+
+    public function stockReport(Request $request)
+{
+    try {
+        $filter = $request->query('filter');
+
+        switch ($filter) {
+            case 'daily':
+            case 'today':
+                $dateFrom = now()->startOfDay();
+                $dateTo = now()->endOfDay();
+                break;
+
+            case 'weekly':
+                $dateFrom = now()->startOfWeek();
+                $dateTo = now()->endOfWeek();
+                break;
+
+            case 'monthly':
+                $dateFrom = now()->startOfMonth();
+                $dateTo = now()->endOfMonth();
+                break;
+
+            case 'yearly':
+                $dateFrom = now()->startOfYear();
+                $dateTo = now()->endOfYear();
+                break;
+
+            default:
+                $dateFrom = now()->startOfMonth();
+                $dateTo = now()->endOfMonth();
+                break;
         }
+
+        // Get current stocks (all ingredients) - removed eager loading
+        $currentStocks = ingredients::all();
+
+        // Stock IN (arrivals) - ingredient batches that arrived in date range
+        $stockIns = ingredientBatch::with('ingredient')
+            ->whereBetween('arrived_at', [$dateFrom, $dateTo])
+            ->get();
+
+        // Consumed stocks (used) - ingredient movements that were used
+        $consumedStocks = ingredientMovements::with(['ingredient', 'order'])
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->where('type', 'used')
+            ->get();
+
+        // Expired stocks
+        $expiredStocks = expiredIngredients::with(['ingredient', 'ingredientBatch'])
+            ->whereBetween('expired_at', [$dateFrom, $dateTo])
+            ->get();
+
+        $pdf = PDF::loadView('admin.reports.pdf-stock', [
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+            'generatedAt' => now(),
+            'currentStocks' => $currentStocks,
+            'consumedStocks' => $consumedStocks,
+            'stockIns' => $stockIns,
+            'expiredStocks' => $expiredStocks,
+        ])->setPaper('A4', 'portrait');
+
+        return $pdf->download('Stocks_Report_' . now()->format('Ymd_His') . '.pdf');
+        
+    } catch (\Exception $e) {
+        return response()->make("
+            <script>
+                console.error('=== STOCK REPORT ERROR ===');
+                console.error('Message: " . addslashes($e->getMessage()) . "');
+                console.error('File: " . addslashes($e->getFile()) . "');
+                console.error('Line: " . $e->getLine() . "');
+                console.error('=== END ERROR ===');
+            </script>
+            <h1>Error occurred - Check browser console (F12)</h1>
+            <p><strong>Message:</strong> {$e->getMessage()}</p>
+            <p><strong>File:</strong> {$e->getFile()}</p>
+            <p><strong>Line:</strong> {$e->getLine()}</p>
+        ", 500);
     }
-
-    public function stockReport()
-    {
-        $stocks = ingredients::all();
-
-        $stockData = $stocks->map(function ($stock) {
-            return [
-                'stock_name' => $stock->stock_name,
-                'initial_stock' => $stock->stock_quantity,
-                'used_today' => 0,
-                'remaining_stock' => $stock->stock_quantity,
-                'updated_at' => $stock->updated_at,
-            ];
-        });
-
-        return response()->json(['stockData' => $stockData]);
-    }
+}
 }

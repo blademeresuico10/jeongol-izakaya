@@ -18,6 +18,6 @@ class expiredIngredients extends Model
     }
 
     public function ingredientBatch(){
-        return $this->belonsTo(ingredientBatch::class);
+        return $this->belongsTo(ingredientBatch::class);
     }
 }

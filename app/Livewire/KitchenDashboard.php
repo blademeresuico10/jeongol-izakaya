@@ -29,8 +29,9 @@ class KitchenDashboard extends Component
 
     public function refreshDashboard()
     {
-        $this->dispatch('$refresh');
+        $this->emit('$refresh'); 
     }
+
 
     public function handleOrderCreated($event)
     {

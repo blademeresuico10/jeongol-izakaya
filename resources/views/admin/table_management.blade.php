@@ -21,11 +21,9 @@
 
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Tables {{ request()->has('show_deleted') ? '(Deleted)' : '' }}</h5>
-                    @if(!request()->has('show_deleted'))
-                        <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addTableModal">Add
-                            Table</button>
-                    @endif
+                    <h5 class="mb-0">Tables <span id="tableStatusLabel"></span></h5>
+                    <button class="btn btn-sm btn-success" id="addTableBtn" data-toggle="modal"
+                        data-target="#addTableModal">Add Table</button>
                 </div>
                 <div class="card-body">
                     <table class="table table-bordered table-sm text-start">
@@ -36,48 +34,14 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse ($tables as $table)
-                                <tr>
-                                    <td>{{ $table->table_number }}</td>
-                                    <td>{{ $table->capacity }}</td>
-                                    <td>
-                                        @if($table->deleted_at)
-                                            <button type="button" class="btn btn-sm btn-success"
-                                                onclick="showRestoreModal({{ $table->id }}, '{{ addslashes($table->table_number) }}')"
-                                                title="Restore">
-                                                <i class="fas fa-undo"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-danger"
-                                                onclick="showForceDeleteModal({{ $table->id }}, '{{ addslashes($table->table_number) }}')"
-                                                title="Delete Permanently">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        @else
-                                            <a href="#" title="Edit" data-toggle="modal"
-                                                data-target="#editTableModal{{ $table->id }}"
-                                                style="all: unset; cursor: pointer;">
-                                                <i class="fas fa-edit text-primary"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-link p-0 ml-2"
-                                                onclick="showDeleteModal({{ $table->id }}, '{{ addslashes($table->table_number) }}')"
-                                                title="Delete" style="all: unset; cursor: pointer;">
-                                                <i class="fas fa-trash text-danger"></i>
-                                            </button>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="3" class="text-center">
-                                        {{ request()->has('show_deleted') ? 'No deleted tables found' : 'No tables found' }}
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
+                        <tbody id="tablesTableBody"></tbody>
                     </table>
+                    <div class="mt-3 d-flex justify-content-center">
+                        <div id="tablesPagination"></div>
+                    </div>
                 </div>
             </div>
+
 
             <div class="modal fade" id="addTableModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
@@ -116,8 +80,9 @@
 
             @foreach ($tables as $item)
                 @if(!$item->deleted_at)
-                    <div class="modal fade" id="editTableModal{{ $item->id }}" tabindex="-1" data-backdrop="static" data-keyboard="false"">
-                        <div class="modal-dialog" role="document">
+                        <div class="modal fade" id="editTableModal{{ $item->id }}" tabindex="-1" data-backdrop="static"
+                            data-keyboard="false"">
+                                    <div class=" modal-dialog" role="document">
                             <form action="{{ route('admin.updatetable', $item->id) }}" method="POST">
                                 @csrf
                                 @method('PUT')
@@ -147,88 +112,88 @@
                 @endif
             @endforeach
 
-            <div class="modal fade" id="deleteConfirmModal" data-backdrop="static" data-keyboard="false">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h5>
-                            <button type="button" class="close text-white"
-                                data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>Are you sure you want to delete table <strong><span id="deleteItemName"></span></strong>
-                                from
-                                the list?</p>
-                        </div>
-                        <div class="modal-footer">
-                            <form id="deleteForm" method="POST">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger">Delete</button>
-                            </form>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        </div>
+        <div class="modal fade" id="deleteConfirmModal" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Delete</h5>
+                        <button type="button" class="close text-white"
+                            data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete table <strong><span id="deleteItemName"></span></strong>
+                            from
+                            the list?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <form id="deleteForm" method="POST">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                     </div>
                 </div>
             </div>
-
-            <div class="modal fade" id="restoreConfirmModal" data-backdrop="static" data-keyboard="false">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title"><i class="fas fa-undo"></i> Restore Table</h5>
-                            <button type="button" class="close text-white"
-                                data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body">
-                            <p>Are you sure you want to restore table <strong><span
-                                        id="restoreItemName"></span></strong>?</p>
-                        </div>
-                        <div class="modal-footer">
-                            <form id="restoreForm" method="POST">
-                                @csrf
-                                @method('PATCH')
-                                <button type="submit" class="btn btn-success">Restore</button>
-                            </form>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal fade" id="forceDeleteConfirmModal" data-backdrop="static" data-keyboard="false">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content border-danger">
-                        <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> CRITICAL WARNING
-                            </h5>
-                            <button type="button" class="close text-white"
-                                data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <div class="modal-body bg-light">
-                            <div class="alert alert-danger border-danger">
-                                <p class="text-center">Are you sure you want to <strong class="text-danger">permanently
-                                        delete table </strong>
-                                    <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
-                                </p>
-                            </div>
-
-                        </div>
-                        <div class="modal-footer">
-                            <form id="forceDeleteForm" method="POST">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger text-white border-danger">Delete
-                                    Permanently</button>
-                            </form>
-                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
         </div>
+
+        <div class="modal fade" id="restoreConfirmModal" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title"><i class="fas fa-undo"></i> Restore Table</h5>
+                        <button type="button" class="close text-white"
+                            data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to restore table <strong><span id="restoreItemName"></span></strong>?
+                        </p>
+                    </div>
+                    <div class="modal-footer">
+                        <form id="restoreForm" method="POST">
+                            @csrf
+                            @method('PATCH')
+                            <button type="submit" class="btn btn-success">Restore</button>
+                        </form>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="forceDeleteConfirmModal" data-backdrop="static" data-keyboard="false">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content border-danger">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="fas fa-exclamation-circle"></i> CRITICAL WARNING
+                        </h5>
+                        <button type="button" class="close text-white"
+                            data-dismiss="modal"><span>&times;</span></button>
+                    </div>
+                    <div class="modal-body bg-light">
+                        <div class="alert alert-danger border-danger">
+                            <p class="text-center">Are you sure you want to <strong class="text-danger">permanently
+                                    delete table </strong>
+                                <span class="badge badge-danger" id="forceDeleteItemName"></span> ?
+                            </p>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <form id="forceDeleteForm" method="POST">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger text-white border-danger">Delete
+                                Permanently</button>
+                        </form>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
+</div>
 </div>
 
 @include('admin.layouts.script')
@@ -236,226 +201,437 @@
 
 <script>
     $(document).ready(function () {
+    let currentPage = 1;
+    let showDeleted = {{ request()->has('show_deleted') ? 'true' : 'false' }};
 
-        window.showDeleteModal = function (id, itemName) {
-            try {
-                const deleteItemNameElement = document.getElementById('deleteItemName');
-                const deleteFormElement = document.getElementById('deleteForm');
+    // Load tables with pagination
+    function loadTables(page = 1) {
+        currentPage = page;
 
-                if (deleteItemNameElement && deleteFormElement) {
-                    deleteItemNameElement.textContent = itemName;
-                    deleteFormElement.action = "{{ url('deletetable') }}/" + id;
-                    $('#deleteConfirmModal').modal('show');
+        $.ajax({
+            url: `/table_management/tables?page=${page}&show_deleted=${showDeleted}`,
+            method: 'GET',
+            success: function (data) {
+                const $tbody = $('#tablesTableBody').empty();
+                
+                // Update status label
+                $('#tableStatusLabel').text(showDeleted ? '(Deleted)' : '');
+                
+                // Show/hide add button
+                if (showDeleted) {
+                    $('#addTableBtn').hide();
                 } else {
-                    console.error('Delete modal elements not found');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Unable to show delete confirmation. Please refresh the page.',
-                        toast: true,
-                        position: 'top',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
+                    $('#addTableBtn').show();
+                    // Update next table number in add modal
+                    $('input[name="table_number"]').val(data.nextTableNumber);
                 }
-            } catch (error) {
-                console.error('Error showing delete modal:', error);
-            }
-        };
+                
+                if (data.tables.data && data.tables.data.length) {
+                    // Clear existing edit modals
+                    $('.edit-table-modal').remove();
+                    
+                    data.tables.data.forEach(table => {
+                        let actionsHtml = '';
+                        
+                        if (table.deleted_at) {
+                            // Deleted table actions
+                            actionsHtml = `
+                                <button type="button" class="btn btn-sm btn-success"
+                                    onclick="showRestoreModal(${table.id}, '${escapeHtml(table.table_number)}')"
+                                    title="Restore">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-danger"
+                                    onclick="showForceDeleteModal(${table.id}, '${escapeHtml(table.table_number)}')"
+                                    title="Delete Permanently">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            `;
+                        } else {
+                            // Active table actions
+                            actionsHtml = `
+                                <a href="#" title="Edit" data-toggle="modal"
+                                    data-target="#editTableModal${table.id}"
+                                    style="all: unset; cursor: pointer;">
+                                    <i class="fas fa-edit text-primary"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-link p-0 ml-2"
+                                    onclick="showDeleteModal(${table.id}, '${escapeHtml(table.table_number)}')"
+                                    title="Delete" style="all: unset; cursor: pointer;">
+                                    <i class="fas fa-trash text-danger"></i>
+                                </button>
+                            `;
+                            
+                            // Create edit modal for this table
+                            const editModalHtml = `
+                                <div class="modal fade edit-table-modal" id="editTableModal${table.id}" tabindex="-1" data-backdrop="static" data-keyboard="false">
+                                    <div class="modal-dialog" role="document">
+                                        <form action="/updatetable/${table.id}" method="POST" class="update-table-form">
+                                            <input type="hidden" name="_token" value="${$('meta[name="csrf-token"]').attr('content')}">
+                                            <input type="hidden" name="_method" value="PUT">
+                                            <div class="modal-content">
+                                                <div class="modal-header bg-primary text-white">
+                                                    <h5 class="modal-title">Edit Table</h5>
+                                                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <label>Table Number</label>
+                                                    <input type="text" name="table_number" value="${escapeHtml(table.table_number)}" class="form-control" required>
 
-        window.showRestoreModal = function (id, itemName) {
-            try {
-                const restoreItemNameElement = document.getElementById('restoreItemName');
-                const restoreFormElement = document.getElementById('restoreForm');
-
-                if (restoreItemNameElement && restoreFormElement) {
-                    restoreItemNameElement.textContent = itemName;
-                    restoreFormElement.action = "{{ url('restoretable') }}/" + id;
-                    $('#restoreConfirmModal').modal('show');
+                                                    <label class="mt-2">Capacity</label>
+                                                    <input type="number" name="capacity" value="${table.capacity}" class="form-control" required>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="submit" class="btn btn-primary">Update</button>
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            // Append edit modal to body
+                            $('body').append(editModalHtml);
+                        }
+                        
+                        $tbody.append(`
+                            <tr>
+                                <td>${escapeHtml(table.table_number)}</td>
+                                <td>${table.capacity}</td>
+                                <td>${actionsHtml}</td>
+                            </tr>
+                        `);
+                    });
+                    
+                    // Bind submit event to dynamically created update forms
+                    $('.update-table-form').on('submit', function (e) {
+                        const submitButton = $(this).find('button[type="submit"]');
+                        submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+                    });
                 } else {
-                    console.error('Restore modal elements not found');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Unable to show restore confirmation. Please refresh the page.',
-                        toast: true,
-                        position: 'top',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
+                    const emptyMessage = showDeleted ? 'No deleted tables found' : 'No tables found';
+                    $tbody.append(`<tr><td colspan="3" class="text-center">${emptyMessage}</td></tr>`);
                 }
-            } catch (error) {
-                console.error('Error showing restore modal:', error);
-            }
-        };
 
-        window.showForceDeleteModal = function (id, itemName) {
-            try {
-                const forceDeleteItemNameElement = document.getElementById('forceDeleteItemName');
-                const forceDeleteFormElement = document.getElementById('forceDeleteForm');
-
-                if (forceDeleteItemNameElement && forceDeleteFormElement) {
-                    forceDeleteItemNameElement.textContent = itemName;
-                    forceDeleteFormElement.action = "{{ url('forcedeletetable') }}/" + id;
-                    $('#forceDeleteConfirmModal').modal('show');
-                } else {
-                    console.error('Force delete modal elements not found');
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: 'Unable to show permanent delete confirmation. Please refresh the page.',
-                        toast: true,
-                        position: 'top',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            } catch (error) {
-                console.error('Error showing force delete modal:', error);
-            }
-        };
-
-        @if ($errors->any())
-            $('#addTableModal').modal('show');
-        @endif
-
-        $('#addTableModal').on('hidden.bs.modal', function () {
-            try {
-                $(this).find('form')[0].reset();
-            } catch (error) {
-                console.error('Error resetting form:', error);
+                renderPagination(data.tables);
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading tables:', error);
+                console.error('Response:', xhr.responseText);
+                $('#tablesTableBody').html(`
+                    <tr>
+                        <td colspan="3" class="text-center text-danger">
+                            Error loading tables. Please check console for details.
+                        </td>
+                    </tr>
+                `);
             }
         });
+    }
 
-        @if(session('success'))
-            Swal.fire({
-                icon: 'success',
-                title: {!! json_encode(session('success')) !!},
-                toast: true,
-                position: 'top',
-                timer: 3000,
-                showConfirmButton: false,
-                background: '#d4edda',
-                color: '#155724'
-            });
-        @endif
+    // Render pagination
+    function renderPagination(data) {
+        const $pagination = $('#tablesPagination').empty();
 
-        @if(session('error'))
+        if (data.last_page <= 1) return;
+
+        const nav = $('<nav><ul class="pagination pagination-sm justify-content-center mb-0"></ul></nav>');
+        const ul = nav.find('ul');
+
+        // Previous button
+        ul.append(`
+            <li class="page-item ${data.current_page <= 1 ? 'disabled' : ''}">
+                <a class="page-link ${data.current_page <= 1 ? 'disabled' : ''}" 
+                   href="#" 
+                   data-page="${data.current_page - 1}"
+                   ${data.current_page <= 1 ? 'tabindex="-1"' : ''}>
+                    ‹
+                </a>
+            </li>
+        `);
+
+        // Page numbers
+        let startPage = Math.max(1, data.current_page - 1);
+        let endPage = Math.min(data.last_page, data.current_page + 1);
+
+        if (endPage - startPage < 2) {
+            if (startPage === 1) {
+                endPage = Math.min(3, data.last_page);
+            } else if (endPage === data.last_page) {
+                startPage = Math.max(1, data.last_page - 2);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            ul.append(`
+                <li class="page-item ${i === data.current_page ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>
+            `);
+        }
+
+        // Next button
+        ul.append(`
+            <li class="page-item ${data.current_page >= data.last_page ? 'disabled' : ''}">
+                <a class="page-link ${data.current_page >= data.last_page ? 'disabled' : ''}" 
+                   href="#" 
+                   data-page="${data.current_page + 1}"
+                   ${data.current_page >= data.last_page ? 'tabindex="-1"' : ''}>
+                    ›
+                </a>
+            </li>
+        `);
+
+        $pagination.html(nav);
+    }
+
+    // Handle pagination clicks
+    $(document).on('click', '#tablesPagination .page-link:not(.disabled)', function (e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        if (page) loadTables(page);
+    });
+
+    // Handle tab switching
+    $('a[href*="table_management"]').on('click', function(e) {
+        e.preventDefault();
+        const href = $(this).attr('href');
+        showDeleted = href.includes('show_deleted=true');
+        
+        // Update button states
+        if (showDeleted) {
+            $('a[href*="table_management"]').removeClass('btn-primary btn-secondary').addClass('btn-outline-primary btn-outline-secondary');
+            $(this).removeClass('btn-outline-secondary').addClass('btn-secondary');
+        } else {
+            $('a[href*="table_management"]').removeClass('btn-primary btn-secondary').addClass('btn-outline-primary btn-outline-secondary');
+            $(this).removeClass('btn-outline-primary').addClass('btn-primary');
+        }
+        
+        loadTables(1);
+    });
+
+    // Escape HTML helper
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Initial load
+    loadTables(1);
+
+    // Keep all your existing modal functions
+    window.showDeleteModal = function (id, itemName) {
+        try {
+            const deleteItemNameElement = document.getElementById('deleteItemName');
+            const deleteFormElement = document.getElementById('deleteForm');
+
+            if (deleteItemNameElement && deleteFormElement) {
+                deleteItemNameElement.textContent = itemName;
+                deleteFormElement.action = "{{ url('deletetable') }}/" + id;
+                $('#deleteConfirmModal').modal('show');
+            } else {
+                console.error('Delete modal elements not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to show delete confirmation. Please refresh the page.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error showing delete modal:', error);
+        }
+    };
+
+    window.showRestoreModal = function (id, itemName) {
+        try {
+            const restoreItemNameElement = document.getElementById('restoreItemName');
+            const restoreFormElement = document.getElementById('restoreForm');
+
+            if (restoreItemNameElement && restoreFormElement) {
+                restoreItemNameElement.textContent = itemName;
+                restoreFormElement.action = "{{ url('restoretable') }}/" + id;
+                $('#restoreConfirmModal').modal('show');
+            } else {
+                console.error('Restore modal elements not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to show restore confirmation. Please refresh the page.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error showing restore modal:', error);
+        }
+    };
+
+    window.showForceDeleteModal = function (id, itemName) {
+        try {
+            const forceDeleteItemNameElement = document.getElementById('forceDeleteItemName');
+            const forceDeleteFormElement = document.getElementById('forceDeleteForm');
+
+            if (forceDeleteItemNameElement && forceDeleteFormElement) {
+                forceDeleteItemNameElement.textContent = itemName;
+                forceDeleteFormElement.action = "{{ url('forcedeletetable') }}/" + id;
+                $('#forceDeleteConfirmModal').modal('show');
+            } else {
+                console.error('Force delete modal elements not found');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Unable to show permanent delete confirmation. Please refresh the page.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        } catch (error) {
+            console.error('Error showing force delete modal:', error);
+        }
+    };
+
+    @if ($errors->any())
+        $('#addTableModal').modal('show');
+    @endif
+
+    $('#addTableModal').on('hidden.bs.modal', function () {
+        try {
+            $(this).find('form')[0].reset();
+        } catch (error) {
+            console.error('Error resetting form:', error);
+        }
+    });
+
+    @if(session('success'))
+        Swal.fire({
+            icon: 'success',
+            title: {!! json_encode(session('success')) !!},
+            toast: true,
+            position: 'top',
+            timer: 3000,
+            showConfirmButton: false,
+            background: '#d4edda',
+            color: '#155724'
+        });
+        // Reload current page after showing success message
+        setTimeout(() => loadTables(currentPage), 500);
+    @endif
+
+    @if(session('error'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: {!! json_encode(session('error')) !!},
+            toast: true,
+            position: 'top',
+            timer: 4000,
+            showConfirmButton: false,
+            background: '#f8d7da',
+            color: '#721c24'
+        });
+    @endif
+
+    @if($errors->has('table_number'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Duplicate Table Number',
+            text: {!! json_encode($errors->first('table_number')) !!},
+            toast: true,
+            position: 'top',
+            timer: 5000,
+            showConfirmButton: false,
+            background: '#f8d7da',
+            color: '#721c24'
+        });
+    @endif
+
+    @if($errors->any() && !$errors->has('table_number'))
+        let errorMessages = [];
+        @foreach($errors->all() as $error)
+            errorMessages.push({!! json_encode($error) !!});
+        @endforeach
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'Validation Errors',
+            html: errorMessages.join('<br>'),
+            toast: true,
+            position: 'top',
+            timer: 5000,
+            showConfirmButton: false,
+            background: '#fff3cd',
+            color: '#856404'
+        });
+    @endif
+
+    // Handle add table form submission
+    $('form[action="{{ route('storeTable') }}"]').on('submit', function (e) {
+        const submitButton = $(this).find('button[type="submit"]');
+        submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
+    });
+
+    $('#addTableModal').on('shown.bs.modal', function () {
+        $('input[name="capacity"]').focus();
+    });
+
+    // Input validations
+    $(document).on('input', 'input[type="number"]', function () {
+        if (this.name === 'table_number' || this.name === 'capacity') {
+            this.value = this.value.replace(/\D/g, '');
+        }
+
+        if (this.value && parseInt(this.value) < 1) {
+            this.value = 1;
+        }
+    });
+
+    $(document).on('blur', 'input[name="table_number"], input[name="capacity"]', function () {
+        if (this.value && !isNaN(this.value)) {
+            this.value = Math.max(1, parseInt(this.value) || 1);
+        }
+    });
+
+    $(document).on('blur', 'input[name="capacity"]', function () {
+        if (this.value && parseInt(this.value) > 20) {
             Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: {!! json_encode(session('error')) !!},
+                icon: 'warning',
+                title: 'Large Capacity',
+                text: 'Are you sure this table can seat ' + this.value + ' people? That seems quite large.',
                 toast: true,
                 position: 'top',
                 timer: 4000,
                 showConfirmButton: false,
-                background: '#f8d7da',
-                color: '#721c24'
+                background: '#fff3cd',
+                color: '#856404'
             });
-        @endif
+        }
+    });
 
-        @if($errors->has('table_number'))
+    $(document).on('blur', 'input[name="table_number"]', function () {
+        if (this.value && parseInt(this.value) > 999) {
             Swal.fire({
-                icon: 'error',
-                title: 'Duplicate Table Number',
-                text: {!! json_encode($errors->first('table_number')) !!},
+                icon: 'warning',
+                title: 'High Table Number',
+                text: 'Table number ' + this.value + ' seems quite high. Are you sure this is correct?',
                 toast: true,
                 position: 'top',
-                timer: 5000,
+                timer: 4000,
                 showConfirmButton: false,
-                background: '#f8d7da',
-                color: '#721c24'
+                background: '#fff3cd',
+                color: '#856404'
             });
-        @endif
-
-            @if($errors->any() && !$errors->has('table_number'))
-                let errorMessages = [];
-                @foreach($errors->all() as $error)
-                    errorMessages.push({!! json_encode($error) !!});
-                @endforeach
-
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Validation Errors',
-                    html: errorMessages.join('<br>'),
-                    toast: true,
-                    position: 'top',
-                    timer: 5000,
-                    showConfirmButton: false,
-                    background: '#fff3cd',
-                    color: '#856404'
-                });
-            @endif
-
-        $('form[action="{{ route('storeTable') }}"]').on('submit', function (e) {
-            const submitButton = $(this).find('button[type="submit"]');
-            submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
-
-            setTimeout(function () {
-                submitButton.prop('disabled', false).html('<i class="fas fa-save"></i> Add');
-            }, 3000);
-        });
-
-        $('form[action*="updatetable"]').on('submit', function (e) {
-            const submitButton = $(this).find('button[type="submit"]');
-            submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
-
-            setTimeout(function () {
-                submitButton.prop('disabled', false).html('<i class="fas fa-save"></i> Update');
-            }, 3000);
-        });
-
-        $('#addTableModal').on('shown.bs.modal', function () {
-            $('input[name="table_number"]').focus();
-        });
-
-        $('input[type="number"]').on('input', function () {
-            if (this.name === 'table_number' || this.name === 'capacity') {
-                this.value = this.value.replace(/\D/g, '');
-            }
-
-            if (this.value && parseInt(this.value) < 1) {
-                this.value = 1;
-            }
-        });
-
-        $('input[name="table_number"], input[name="capacity"]').on('blur', function () {
-            if (this.value && !isNaN(this.value)) {
-                this.value = Math.max(1, parseInt(this.value) || 1);
-            }
-        });
-
-        $('input[name="capacity"]').on('blur', function () {
-            if (this.value && parseInt(this.value) > 20) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Large Capacity',
-                    text: 'Are you sure this table can seat ' + this.value + ' people? That seems quite large.',
-                    toast: true,
-                    position: 'top',
-                    timer: 4000,
-                    showConfirmButton: false,
-                    background: '#fff3cd',
-                    color: '#856404'
-                });
-            }
-        });
-
-        $('input[name="table_number"]').on('blur', function () {
-            if (this.value && parseInt(this.value) > 999) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'High Table Number',
-                    text: 'Table number ' + this.value + ' seems quite high. Are you sure this is correct?',
-                    toast: true,
-                    position: 'top',
-                    timer: 4000,
-                    showConfirmButton: false,
-                    background: '#fff3cd',
-                    color: '#856404'
-                });
-            }
-        });
-
+        }
     });
+});
 </script>

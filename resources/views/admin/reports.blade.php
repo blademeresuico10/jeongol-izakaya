@@ -1,5 +1,24 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
+<style>
+    button[disabled] {
+        transition: all 0.3s ease;
+    }
+
+    .fa-spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
+    }
+</style>
 
 <div id="content-wrapper" class="d-flex flex-column">
     <div id="content">
@@ -84,19 +103,30 @@
             const routes = {
                 sales: "{{ route('admin.sales_report.pdf') }}",
                 transaction: "{{ route('admin.transaction_reports') }}",
-                stock: "{{ route('admin.stock_reports') }}"
+                stock: "{{ route('admin.stock_report') }}"
             };
 
-            if (routes[type]) {
-                const iframe = document.createElement('iframe');
-                iframe.style.display = 'none';
-                iframe.src = `${routes[type]}?filter=${filter}`;
-                document.body.appendChild(iframe);
-                
-                setTimeout(() => {
-                    document.body.removeChild(iframe);
-                }, 5000);
-            }
+            if (!routes[type]) return;
+
+            const originalHTML = button.innerHTML;
+
+            button.disabled = true;
+            button.classList.add('opacity-70', 'cursor-not-allowed');
+            button.innerHTML = `
+                <i class="fas fa-spinner fa-spin mr-2"></i> Generating...
+            `;
+
+            const iframe = document.createElement('iframe');
+            iframe.style.display = 'none';
+            iframe.src = `${routes[type]}?filter=${filter}`;
+            document.body.appendChild(iframe);
+
+            setTimeout(() => {
+                button.disabled = false;
+                button.classList.remove('opacity-70', 'cursor-not-allowed');
+                button.innerHTML = originalHTML;
+                document.body.removeChild(iframe);
+            }, 4000);
         });
     });
 </script>

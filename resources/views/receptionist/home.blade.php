@@ -31,7 +31,6 @@
       background: #a0aec0;
     }
 
-    /* Slide-in animation for order items */
     #selectedOrdersContainer>div {
       animation: slideInOrder 0.3s ease-out;
     }
@@ -48,7 +47,6 @@
       }
     }
 
-    /* Order item hover effect */
     .order-item-card {
       transition: all 0.2s ease;
     }
@@ -204,7 +202,8 @@
         <div class="modal-section">
           <label><strong>Customer</strong></label>
           <input type="text" id="customerName" placeholder="Customer's name" required
-            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full" />
+            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full"
+            oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '')" />
         </div>
 
         <div class="modal-section" id="contactinput">
@@ -218,7 +217,8 @@
           <div class="modal-column">
             <label><strong>Pax</strong></label>
             <input id="numberOfPax" type="number" required
-              class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" />
+              class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
           </div>
           <div class="modal-column" id="reservationInfoGroup">
             <label class="mb-1"><strong>Reserved Now</strong></label>
@@ -471,7 +471,18 @@
       if (this.elements.closeModal) {
         this.elements.closeModal.onclick = () => {
           this.elements.tableModal.style.display = 'none';
+          this.resetForm(); // Clear inputs when closing
         };
+      }
+
+      // Close modal when clicking outside
+      if (this.elements.tableModal) {
+        this.elements.tableModal.addEventListener('click', (e) => {
+          if (e.target === this.elements.tableModal) {
+            this.elements.tableModal.style.display = 'none';
+            this.resetForm(); // Clear inputs when closing
+          }
+        });
       }
 
       const closePaymentBtn = document.getElementById('closePaymentBtn');
@@ -518,7 +529,6 @@
           });
         });
       }
-
     }
 
     closeOrdersPanel() {
@@ -570,7 +580,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-      {{ $table->id }}: {{ $table->capacity }},
+        {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
@@ -1006,10 +1016,13 @@
     this.elements.advancePayment.parentElement.style.display = '';
     this.elements.contactInput.style.display = '';
 
-    const today = now.getFullYear() + '-' +
-      String(now.getMonth() + 1).padStart(2, '0') + '-' +
-      String(now.getDate()).padStart(2, '0');
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const today = `${year}-${month}-${day}`;
+
     this.elements.reservedDate.value = today;
+    this.elements.reservedDate.min = today;
 
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -1194,15 +1207,63 @@
   }
 
   resetForm() {
-    const fieldsToReset = [
+    // Clear text inputs
+    if (this.elements.customerName) {
+      this.elements.customerName.value = '';
+    }
+    if (this.elements.contactNumber) {
+      this.elements.contactNumber.value = '';
+    }
+    if (this.elements.numberOfPax) {
+      this.elements.numberOfPax.value = '';
+    }
+    if (this.elements.customerNotes) {
+      this.elements.customerNotes.value = '';
+    }
+    if (this.elements.advancePayment) {
+      this.elements.advancePayment.value = '';
+    }
+
+    // Reset date/time inputs to current values
+    const now = new Date();
+    if (this.elements.reservedDate) {
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      this.elements.reservedDate.value = `${year}-${month}-${day}`;
+    }
+
+    if (this.elements.arrivalTimeInput) {
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
+    }
+
+    // Clear error highlights
+    [
       this.elements.customerName,
       this.elements.contactNumber,
       this.elements.numberOfPax,
-      this.elements.customerNotes,
-      this.elements.advancePayment
-    ];
+      this.elements.reservedDate,
+      this.elements.arrivalTimeInput
+    ].forEach(el => {
+      if (el) el.classList.remove('border-red-500');
+    });
 
+    // Clear time frame display
+    if (this.elements.timeFrameDisplay) {
+      this.elements.timeFrameDisplay.textContent = '';
+    }
+
+    // Clear orders
     this.clearOrders();
+
+    // Close the orders panel if open
+    this.closeOrdersPanel();
+
+    // Reset selected table
+    this.selectedTableId = null;
+    this.selectedTableCapacity = null;
   }
 
       async handleSubmitReservation() {
@@ -1218,44 +1279,130 @@
     const date = dateInput?.value;
     const time = timeInput?.value;
 
+    // Clear previous error highlights
+    [this.elements.customerName, this.elements.contactNumber, paxInput, dateInput, timeInput].forEach(el => {
+      if (el) el.classList.remove('border-red-500');
+    });
+
+    // === VALIDATION 1: Required Fields ===
     const emptyFields = [];
-    if (!name) emptyFields.push(this.elements.customerName);
-    if (!this.isPlacingOrder && !contact) emptyFields.push(this.elements.contactNumber);
-    if (!paxCount) emptyFields.push(paxInput);
-    if (!date) emptyFields.push(dateInput);
-    if (!time) emptyFields.push(timeInput);
+    if (!name) {
+      emptyFields.push({ field: this.elements.customerName, message: 'Customer name is required' });
+    }
+
+    // Only validate contact for reservations (not walk-ins)
+    if (!this.isPlacingOrder && !contact) {
+      emptyFields.push({ field: this.elements.contactNumber, message: 'Contact number is required' });
+    }
+
+    if (!paxCount) {
+      emptyFields.push({ field: paxInput, message: 'Number of pax is required' });
+    }
+
+    if (!date) {
+      emptyFields.push({ field: dateInput, message: 'Date is required' });
+    }
+
+    if (!time) {
+      emptyFields.push({ field: timeInput, message: 'Time is required' });
+    }
 
     if (emptyFields.length > 0) {
-      emptyFields.forEach(f => f.classList.add('border-red-500'));
+      emptyFields.forEach(item => item.field.classList.add('border-red-500'));
       this.showErrorToast('Please fill in all required fields.');
       return;
     }
 
-    const selectedDate = new Date(`${date}T${time}`);
-    const now = new Date();
-
-    if (selectedDate < now.setHours(0, 0, 0, 0)) {
-      this.showErrorToast('You cannot select a past date.');
-      dateInput.classList.add('border-red-500');
+    // === VALIDATION 2: Customer Name Format ===
+    if (!/^[a-zA-Z\s]+$/.test(name)) {
+      this.elements.customerName.classList.add('border-red-500');
+      this.showErrorToast('Customer name should only contain letters and spaces.');
       return;
     }
 
-    const orders = Object.values(this.selectedOrders || {});
-    const hasMain = orders.some(item => item.category === 'main');
+    // === VALIDATION 3: Contact Number (only for reservations) ===
+    if (!this.isPlacingOrder) {
+      if (contact.length !== 11) {
+        this.elements.contactNumber.classList.add('border-red-500');
+        this.showErrorToast('Contact number must be exactly 11 digits.');
+        return;
+      }
 
+      if (!contact.startsWith('09')) {
+        this.elements.contactNumber.classList.add('border-red-500');
+        this.showErrorToast('Contact number must start with 09.');
+        return;
+      }
+
+      if (!/^\d+$/.test(contact)) {
+        this.elements.contactNumber.classList.add('border-red-500');
+        this.showErrorToast('Contact number must contain only digits.');
+        return;
+      }
+    }
+
+    // === VALIDATION 4: Pax Count ===
+    const maxCapacity = this.selectedTableCapacity || 10;
+    if (paxCount < 1) {
+      paxInput.classList.add('border-red-500');
+      this.showErrorToast('Number of pax must be at least 1.');
+      return;
+    }
+
+    if (paxCount > maxCapacity) {
+      paxInput.classList.add('border-red-500');
+      this.showErrorToast(`Number of pax cannot exceed ${maxCapacity} for this table.`);
+      return;
+    }
+
+    // === VALIDATION 5: Date/Time (Future Check) ===
+    const selectedDateTime = new Date(`${date}T${time}`);
+    const oneMinuteFromNow = new Date(Date.now() + 60000);
+
+    if (selectedDateTime < oneMinuteFromNow) {
+      dateInput.classList.add('border-red-500');
+      timeInput.classList.add('border-red-500');
+      this.showErrorToast('Selected date/time must be at least 1 minute from now.');
+      return;
+    }
+
+    // === VALIDATION 6: Business Hours ===
+    const [hours, minutes] = time.split(':').map(Number);
+    const timeInMinutes = hours * 60 + minutes;
+    const startTime = 11 * 60 + 30; // 11:30 AM
+    const endTime = 18 * 60; // 6:00 PM
+
+    if (timeInMinutes < startTime || timeInMinutes > endTime) {
+      timeInput.classList.add('border-red-500');
+      this.showErrorToast('Reservation time must be between 11:30 AM and 6:00 PM.');
+      return;
+    }
+
+    // === VALIDATION 7: Orders Exist ===
+    const orders = Object.values(this.selectedOrders || {});
+
+    if (orders.length === 0) {
+      this.showErrorToast('Please add at least one item to your order.');
+      return;
+    }
+
+    // === VALIDATION 8: Main Menu Required ===
+    const hasMain = orders.some(item => item.category === 'main');
     if (!hasMain) {
       this.showErrorToast('You must order at least one main menu item.');
       return;
     }
 
+    // === VALIDATION 9: Main Menu Quantity = Pax ===
     const mainMenuOrders = orders.filter(item => item.category === 'main');
     const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
 
     if (totalMainMenuQuantity !== paxCount) {
-      this.showErrorToast('Match your main menu order quantity to your number of pax.');
+      this.showErrorToast(`Main menu quantity (${totalMainMenuQuantity}) must match number of pax (${paxCount}).`);
       return;
     }
 
+    // All validations passed - proceed with submission
     this.elements.submitBtn.disabled = true;
     this.elements.submitBtn.textContent = "Submitting...";
 
@@ -1263,28 +1410,29 @@
     this.submitOrder(data);
   }
 
-
-
   showErrorToast(message) {
     const toast = document.createElement('div');
     toast.textContent = message;
     toast.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background-color: #ef4444;
-      color: white;
-      padding: 12px 16px;
-      border-radius: 6px;
-      z-index: 9999;
-      font-size: 14px;
-      max-width: 300px;
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background-color: #ef4444;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 6px;
+        z-index: 9999;
+        font-size: 14px;
+        max-width: 300px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     `;
 
     document.body.appendChild(toast);
 
     setTimeout(() => {
-      document.body.removeChild(toast);
+      if (document.body.contains(toast)) {
+        document.body.removeChild(toast);
+      }
     }, 3000);
   }
 
@@ -1292,7 +1440,7 @@
     const baseData = {
       customer_name: this.elements.customerName.value.trim(),
       contact_number: this.elements.contactNumber.value.trim(),
-      pax: this.elements.numberOfPax.value.trim(),
+      pax: parseInt(this.elements.numberOfPax.value),
       table_id: this.selectedTableId,
       orders: Object.entries(this.selectedOrders).map(([id, item]) => ({
         menu_id: id,
@@ -1307,7 +1455,7 @@
     } else {
       baseData.reserved_date = this.elements.reservedDate.value;
       baseData.arrival_time = this.elements.arrivalTimeInput.value;
-      baseData.advance_payment = this.elements.advancePayment.value.trim() || 0;
+      baseData.advance_payment = parseFloat(this.elements.advancePayment.value) || 0;
     }
 
     return baseData;
@@ -1394,6 +1542,8 @@
     if (this.elements.tableModal) {
       this.elements.tableModal.style.display = 'none';
     }
+
+    this.resetForm();
   }
 
   showErrorModal(message) {

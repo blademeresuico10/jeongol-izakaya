@@ -16,8 +16,8 @@
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">User Feedback</h6>
                     <form id="searchForm" class="d-flex" style="max-width: 300px;">
-                        <input type="text" name="search" value="{{ request('search') }}" 
-                               class="form-control form-control-sm me-2" placeholder="Search messages...">
+                        <input type="text" name="search" value="{{ request('search') }}"
+                            class="form-control form-control-sm me-2" placeholder="Search messages...">
                         <button type="submit" class="btn btn-sm btn-primary">Search</button>
                     </form>
                 </div>
@@ -38,6 +38,11 @@
                         <p class="text-center text-muted">No feedback available.</p>
                     @endif
                 </div>
+                @if($feedbacks->hasPages())
+                    <div class="mt-3 d-flex justify-content-center">
+                        {{ $feedbacks->onEachSide(1)->links('pagination::bootstrap-4') }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>
@@ -46,24 +51,24 @@
 @include('admin.layouts.script')
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-    const searchInput = document.querySelector('input[name="search"]');
-    const feedbackList = document.getElementById('feedback-list');
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.querySelector('input[name="search"]');
+        const feedbackList = document.getElementById('feedback-list');
 
-    searchInput.addEventListener('input', function () {
-        const query = this.value;
+        searchInput.addEventListener('input', function () {
+            const query = this.value;
 
-        fetch(`{{ route('admin.feedback') }}?search=${query}`, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            feedbackList.innerHTML = data.feedbacks;
+            fetch(`{{ route('admin.feedback') }}?search=${query}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    feedbackList.innerHTML = data.feedbacks;
+                });
+        });
+
+        document.getElementById('searchForm').addEventListener('submit', function (e) {
+            e.preventDefault();
         });
     });
-
-    document.getElementById('searchForm').addEventListener('submit', function(e){
-        e.preventDefault();
-    });
-});
 </script>

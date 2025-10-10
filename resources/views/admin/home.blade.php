@@ -560,6 +560,7 @@
             }
         });
     });
+
 </script>
 
 @include('admin.layouts.script')

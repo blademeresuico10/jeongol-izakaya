@@ -3,75 +3,50 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Transaction Report - {{ $dateFrom->format('M d, Y') }} to {{ $dateTo->format('M d, Y') }}</title>
+    <title>Transaction Report</title>
     <style>
         body {
             font-size: 12px;
-            line-height: 1.4;
-            color: #333;
-            margin: 0;
+            font-family: Arial, sans-serif;
             padding: 20px;
-            font-family: Arial, 'DejaVu Sans', sans-serif;
+            color: #333;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-        }
-
-        .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #2c3e50;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
         }
 
         .report-title {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
-            margin-bottom: 5px;
+            color: #2c3e50;
         }
 
-        .date-range {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .generated-info {
-            font-size: 10px;
-            color: #888;
-        }
-
-        .section-title {
+        .company-name {
             font-size: 16px;
             font-weight: bold;
-            margin-bottom: 10px;
-            color: #2c3e50;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            margin-top: 5px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 11px;
+            margin-bottom: 25px;
         }
 
         th,
         td {
             border: 1px solid #ddd;
             padding: 6px;
-            text-align: left;
+            font-size: 11px;
         }
 
         th {
-            background-color: #f8f9fa;
-            font-weight: bold;
-            color: #2c3e50;
+            background-color: #f4f4f4;
+            text-align: left;
         }
 
         .text-right {
@@ -82,64 +57,89 @@
             text-align: center;
         }
 
-        .no-data {
-            text-align: center;
-            color: #666;
-            font-style: italic;
-            padding: 20px;
+        .section-title {
+            font-weight: bold;
+            margin: 15px 0 5px;
+            font-size: 13px;
+            border-bottom: 1px solid #ddd;
         }
 
         .footer {
-            margin-top: 30px;
             text-align: center;
             font-size: 10px;
-            color: #888;
+            color: #777;
             border-top: 1px solid #ddd;
-            padding-top: 10px;
+            padding-top: 5px;
         }
     </style>
 </head>
 
 <body>
-    <!-- Header -->
     <div class="header">
-        <div class="company-name">JEONGOL IZAKAYA</div>
-        <div class="report-title">Transaction Report</div>
-        <div class="date-range">{{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}</div>
-        <div class="generated-info">Generated on {{ $generatedAt->format('F j, Y \a\t g:i A') }}</div>
+        <div class="report-title">TRANSACTION REPORT</div>
+        <div class=".company-name">JEONGOL IZAKAYA</div>
+        <div class="report-period">
+            @php
+                $asOfLabel = match (request('filter')) {
+                    'daily' => 'As of Today',
+                    'weekly' => 'As of This Week',
+                    'monthly' => 'As of This Month',
+                    'yearly' => 'As of This Year',
+                    default => 'As of ' . $dateFrom->format('F j, Y') . ' - ' . $dateTo->format('F j, Y'),
+                };
+            @endphp
+
+            <strong>{{ $asOfLabel }}</strong>
+        </div>
+        <div class="generated-info">
+            <strong>Generated on:</strong> {{ $generatedAt->format('F j, Y g:i A') }}
+        </div>
     </div>
 
-    <!-- Transaction Details -->
-    <div class="section-title">Transaction Details</div>
-    @if($transactions->count() > 0)
+
+    @forelse($groupedTransactions as $cashier => $transactions)
         <table>
             <thead>
                 <tr>
                     <th>#</th>
+                    <th>Cashier</th>
                     <th>Date</th>
-                    <th>Staff</th>
+                    <th>Transaction No.</th>
                     <th>Customer</th>
                     <th>Payment Method</th>
-                    <th>Total (₱)</th>
+                    <th class="text-center">Pax</th>
+                    <th class="text-right">Total</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($transactions as $index => $t)
+                @php $staffTotal = 0; @endphp
+                @foreach($transactions as $i => $t)
                     <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $t->created_at->format('M d, Y g:i A') }}</td>
-                        <td>{{ $t->staff_name ?? 'N/A' }}</td>
-                        <td>{{ $t->customer_name ?? 'N/A' }}</td>
-                        <td>{{ ucfirst($t->payment_method ?? 'cash') }}</td>
+                        <td>{{ $i + 1 }}</td>
+                        <td>{{ $cashier }}</td>
+                        <td>{{ $t->date }}</td>
+                        <td>{{ $t->transaction_no }}</td>
+                        <td>{{ $t->customer_name }}</td>
+                        <td>{{ $t->payment_method }}</td>
+                        <td class="text-center">{{ $t->pax }}</td>
                         <td class="text-right">{{ number_format($t->total_amount, 2) }}</td>
                     </tr>
+                    @php $staffTotal += $t->total_amount; @endphp
                 @endforeach
+                <tr>
+                    <td></td>
+                    <td colspan="6" class="text-right"><strong>Total</strong></td>
+                    <td class="text-right"><strong>{{ number_format($staffTotal, 2) }}</strong></td>
+                </tr>
             </tbody>
         </table>
-    @else
-        <div class="no-data">No transactions found for this period.</div>
-    @endif
+    @empty
+        <p style="text-align:center; color:#777;">No transactions found for this period.</p>
+    @endforelse
 
+    <div class="footer">
+        JEONGOL IZAKAYA • Transaction Report • {{ now()->format('F j, Y') }}
+    </div>
 </body>
 
 </html>

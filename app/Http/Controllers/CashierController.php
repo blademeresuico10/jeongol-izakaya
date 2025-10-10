@@ -383,8 +383,10 @@ class CashierController extends Controller
                 }
             }
 
+            // FIX: Only fetch advance payment for reservations, NOT walk-ins
             $advancePayment = 0;
             if (!$isWalkIn) {
+                // Only process advance payment for reservations
                 $advancePayment = floatval($request->advance_payment ?? 0);
                 if ($advancePayment == 0) {
                     $paymentDetail = DB::table('reservation_payment_details')
@@ -393,6 +395,7 @@ class CashierController extends Controller
                     $advancePayment = floatval($paymentDetail->advance_payment ?? 0);
                 }
             }
+            // For walk-ins, advance payment stays 0
 
             $grandTotal     = $ordersTotal - $totalDiscountAmount;
             $toPay          = max(0, $grandTotal - $advancePayment);
@@ -404,7 +407,7 @@ class CashierController extends Controller
                 'orders_total'    => $ordersTotal,
                 'discount_total'  => $totalDiscountAmount,
                 'grand_total'     => $grandTotal,
-                'advance_payment' => $advancePayment,
+                'advance_payment' => $advancePayment, // Will be 0 for walk-ins
                 'to_pay'          => $toPay,
                 'cash_received'   => $cashReceived,
                 'change'          => $change,

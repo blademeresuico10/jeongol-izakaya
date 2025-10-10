@@ -226,16 +226,19 @@ class AdminController extends Controller
                         $ingredient->badge_class = 'bg-danger';
                         $ingredient->badge_text = 'Critical';
                         $ingredient->badge_icon = 'fa-exclamation-triangle';
+                        $ingredient->sort_order = 1; // Highest priority
                     } elseif ($ingredient->stocks <= ($alertLevel->low_stock ?? 0)) {
                         $ingredient->status = 'low';
                         $ingredient->badge_class = 'bg-warning';
                         $ingredient->badge_text = 'Low Stock';
                         $ingredient->badge_icon = 'fa-exclamation-circle';
+                        $ingredient->sort_order = 2;
                     } else {
                         $ingredient->status = 'good';
                         $ingredient->badge_class = 'bg-success';
                         $ingredient->badge_text = 'Good';
                         $ingredient->badge_icon = 'fa-check-circle';
+                        $ingredient->sort_order = 3;
                     }
                 } else {
                     if ($ingredient->stocks < 10) {
@@ -243,21 +246,26 @@ class AdminController extends Controller
                         $ingredient->badge_class = 'bg-danger';
                         $ingredient->badge_text = 'Low Stock';
                         $ingredient->badge_icon = 'fa-exclamation-triangle';
+                        $ingredient->sort_order = 1;
                     } elseif ($ingredient->stocks < 50) {
                         $ingredient->status = 'medium';
                         $ingredient->badge_class = 'bg-warning';
                         $ingredient->badge_text = 'Medium';
                         $ingredient->badge_icon = 'fa-exclamation-circle';
+                        $ingredient->sort_order = 2;
                     } else {
                         $ingredient->status = 'good';
                         $ingredient->badge_class = 'bg-success';
                         $ingredient->badge_text = 'Good';
                         $ingredient->badge_icon = 'fa-check-circle';
+                        $ingredient->sort_order = 3;
                     }
                 }
 
                 return $ingredient;
-            });
+            })
+            ->sortBy('sort_order') 
+            ->values(); 
 
         return view('admin.home', compact(
             'totalGrossSales',
@@ -596,7 +604,7 @@ class AdminController extends Controller
 
     public function getIngredients($id)
     {
-        $menu = Menu::findOrFail($id);
+        $menu = menu::findOrFail($id);
 
         $ingredients = DB::table('menu_ingredients')
             ->join('ingredients', 'menu_ingredients.ingredient_id', '=', 'ingredients.id')
@@ -829,40 +837,7 @@ class AdminController extends Controller
         return response()->json(['expired' => $expired]);
     }
 
-    public function getExpiredOnly()
-    {
-        try {
-            $expiredItems = DB::table('ingredient_batches')
-                ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
-                ->whereDate('ingredient_batches.expiration_date', '<=', now())
-                ->where('ingredient_batches.quantity', '>', 0)
-                ->select(
-                    'ingredient_batches.id as batch_id',
-                    'ingredients.name as ingredient_name',
-                    'ingredient_batches.quantity',
-                    'ingredients.unit',
-                    'ingredient_batches.expiration_date'
-                )
-                ->orderBy('ingredient_batches.expiration_date', 'desc')
-                ->get()
-                ->map(function ($b) {
-                    return [
-                        'ingredient_name' => $b->ingredient_name,
-                        'quantity' => $b->quantity,
-                        'unit' => $b->unit,
-                        'expiration_date' => $b->expiration_date,
-                        'notes' => 'Batch expired'
-                    ];
-                });
 
-            return response()->json(['expired_items' => $expiredItems]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load expired ingredients: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 
     public function storeMenu(Request $request)
     {
@@ -1089,21 +1064,45 @@ class AdminController extends Controller
 
     public function table_management(Request $request)
     {
+        $tables = collect([]);
         $showDeleted = $request->has('show_deleted');
 
-        if ($showDeleted) {
-            $tables = DB::table('tables')
-                ->whereNotNull('deleted_at')
-                ->get();
-        } else {
-            $tables = DB::table('tables')
-                ->whereNull('deleted_at')
-                ->get();
+        $lastTableNumber = DB::table('tables')->max('table_number') ?? 0;
+        $nextTableNumber = $lastTableNumber + 1;
+
+        return view('admin.table_management', compact('tables', 'nextTableNumber', 'showDeleted'));
+    }
+
+    public function getTables(Request $request)
+    {
+        try {
+            $showDeleted = $request->get('show_deleted', 'false');
+            $showDeleted = ($showDeleted === 'true' || $showDeleted === true);
+
+            $query = DB::table('tables');
+
+            if ($showDeleted) {
+                $query->whereNotNull('deleted_at');
+            } else {
+                $query->whereNull('deleted_at');
+            }
+
+            $tables = $query->orderBy('table_number', 'asc')
+                ->paginate(10);
+
+            $lastTableNumber = DB::table('tables')->max('table_number') ?? 0;
+            $nextTableNumber = $lastTableNumber + 1;
+
+            return response()->json([
+                'tables' => $tables,
+                'nextTableNumber' => $nextTableNumber
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load tables: ' . $e->getMessage()
+            ], 500);
         }
-
-        $nextTableNumber = $this->getNextTableNumber();
-
-        return view('admin.table_management', compact('tables', 'nextTableNumber'));
     }
 
     public function addtable()
@@ -1208,15 +1207,122 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Table permanently deleted!');
     }
 
-    public function ingredient_management()
+    public function ingredient_management(Request $request)
     {
-        $ingredients = ingredients::all()->map(function ($ingredient) {
-            if (strtolower($ingredient->unit) === 'pieces') {
-                $ingredient->unit = 'pcs';
-            }
-            return $ingredient;
-        });
+        // For initial page load, just return empty data
+        // The JavaScript will load the actual data via AJAX
+        $ingredients = collect([]); // Empty collection for initial load
+
         return view('admin.ingredient_management', compact('ingredients'));
+    }
+
+    // Add this new method for AJAX stock requests
+    public function getStocks(Request $request)
+    {
+        try {
+            $ingredients = ingredients::orderBy('name', 'asc')
+                ->paginate(10)
+                ->through(function ($ingredient) {
+                    if (strtolower($ingredient->unit) === 'pieces') {
+                        $ingredient->unit = 'pcs';
+                    }
+                    return $ingredient;
+                });
+
+            return response()->json([
+                'ingredients' => $ingredients
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load ingredients: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Update your existing getStockBatches to add pagination
+    public function getStockBatches(Request $request)
+    {
+        try {
+            $period = $request->get('period', 'thisweek');
+
+            $startDate = $period === 'thisweek'
+                ? now()->startOfWeek()
+                : now()->subWeek()->startOfWeek();
+
+            $endDate = $period === 'thisweek'
+                ? now()->endOfWeek()
+                : now()->subWeek()->endOfWeek();
+
+            $batches = DB::table('ingredient_batches')
+                ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
+                ->select(
+                    'ingredient_batches.id',
+                    'ingredients.name as ingredient_name',
+                    'ingredient_batches.quantity',
+                    'ingredient_batches.expiration_date',
+                    'ingredients.unit',
+                    'ingredient_batches.arrived_at'
+                )
+                ->where('ingredient_batches.quantity', '>', 0)
+                ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
+                ->whereDate('ingredient_batches.expiration_date', '>', now())
+                ->orderBy('ingredient_batches.arrived_at', 'desc')
+                ->paginate(10) // Changed from get() to paginate(10)
+                ->through(function ($b) {
+                    return [
+                        'id' => $b->id,
+                        'ingredient_name' => $b->ingredient_name,
+                        'quantity' => $b->quantity,
+                        'unit' => $b->unit,
+                        'arrived_at' => \Carbon\Carbon::parse($b->arrived_at)->format('Y-m-d'),
+                        'expiration_date' => \Carbon\Carbon::parse($b->expiration_date)->format('Y-m-d')
+                    ];
+                });
+
+            return response()->json(['batches' => $batches]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load stock batches: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Update your existing getExpiredOnly to add pagination
+    public function getExpiredOnly(Request $request)
+    {
+        try {
+            $expiredItems = DB::table('ingredient_batches')
+                ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
+                ->whereDate('ingredient_batches.expiration_date', '<=', now())
+                ->where('ingredient_batches.quantity', '>', 0)
+                ->select(
+                    'ingredient_batches.id as batch_id',
+                    'ingredients.name as ingredient_name',
+                    'ingredient_batches.quantity',
+                    'ingredients.unit',
+                    'ingredient_batches.expiration_date'
+                )
+                ->orderBy('ingredient_batches.expiration_date', 'desc')
+                ->paginate(10)
+                ->through(function ($b) {
+                    return [
+                        'ingredient_name' => $b->ingredient_name,
+                        'quantity' => $b->quantity,
+                        'unit' => $b->unit,
+                        'expiration_date' => $b->expiration_date,
+                        'notes' => 'Batch expired'
+                    ];
+                });
+
+            return response()->json(['expired_items' => $expiredItems]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load expired ingredients: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function addingredient()
@@ -1469,53 +1575,7 @@ class AdminController extends Controller
         }
     }
 
-    public function getStockBatches(Request $request)
-    {
-        try {
-            $period = $request->get('period', 'thisweek');
 
-            $startDate = $period === 'thisweek'
-                ? now()->startOfWeek()
-                : now()->subWeek()->startOfWeek();
-
-            $endDate = $period === 'thisweek'
-                ? now()->endOfWeek()
-                : now()->subWeek()->endOfWeek();
-
-            $batches = DB::table('ingredient_batches')
-                ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
-                ->select(
-                    'ingredient_batches.id',
-                    'ingredients.name as ingredient_name',
-                    'ingredient_batches.quantity',
-                    'ingredient_batches.expiration_date',
-                    'ingredients.unit',
-                    'ingredient_batches.arrived_at'
-                )
-                ->where('ingredient_batches.quantity', '>', 0)
-                ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
-                ->whereDate('ingredient_batches.expiration_date', '>', now())
-                ->orderBy('ingredient_batches.arrived_at', 'desc')
-                ->get()
-                ->map(function ($b) {
-                    return [
-                        'id' => $b->id,
-                        'ingredient_name' => $b->ingredient_name,
-                        'quantity' => $b->quantity,
-                        'unit' => $b->unit,
-                        'arrived_at' => \Carbon\Carbon::parse($b->arrived_at)->format('Y-m-d'),
-                        'expiration_date' => \Carbon\Carbon::parse($b->expiration_date)->format('Y-m-d')
-                    ];
-                });
-
-            return response()->json(['batches' => $batches]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load stock batches: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 
     public function updateBatch(Request $request, $id)
     {
@@ -1590,7 +1650,7 @@ class AdminController extends Controller
     public function others(Request $request)
     {
         $hours = OperatingHour::all();
-        $menus = Menu::whereNull('deleted_at')->get();
+        $menus = menu::whereNull('deleted_at')->get();
         $discounts = MenuDiscount::with('menu')->paginate(6);
         $stock_level = StockAlertLevel::with('ingredient')->paginate(6);
 
@@ -1810,21 +1870,22 @@ class AdminController extends Controller
             $query->where('message', 'like', '%' . $request->search . '%');
         }
 
-        $feedbacks = $query->orderBy('created_at', 'desc')->get();
+        $feedbacks = $query->orderBy('created_at', 'desc')->paginate(10);
 
         if ($request->ajax()) {
             $html = '';
-            if ($feedbacks->count()) {
-                $html .= '<ul class="list-unstyled">';
-                foreach ($feedbacks as $feedback) {
-                    $html .= '<li class="mb-3 p-3 border rounded shadow-sm bg-white">';
-                    $html .= '<p class="mb-1"><strong>Message:</strong> ' . $feedback->message . '</p>';
-                    $html .= '<p class="text-muted mb-0"><strong>Submitted At:</strong> ' . $feedback->created_at->format('d M Y, h:i A') . '</p>';
-                    $html .= '</li>';
-                }
-                $html .= '</ul>';
-            } else {
-                $html = '<p class="text-center text-muted">No feedback available.</p>';
+
+            foreach ($feedbacks as $fb) {
+                $html .= "<div class='mb-3 p-3 border rounded shadow-sm bg-white'>";
+                $html .= "<p><strong>Message:</strong> {$fb->message}</p>";
+                $html .= "<p class='text-muted'><strong>Submitted At:</strong> {$fb->created_at->format('d M Y, h:i A')}</p>";
+                $html .= "</div>";
+            }
+
+            if ($feedbacks->hasPages()) {
+                $html .= "<div class='mt-3 d-flex justify-content-center'>";
+                $html .= $feedbacks->links('pagination::bootstrap-4');
+                $html .= "</div>";
             }
 
             return response()->json(['feedbacks' => $html]);

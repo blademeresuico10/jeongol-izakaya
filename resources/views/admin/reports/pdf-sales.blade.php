@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Sales Report</title>
+    <title>Stock Report</title>
     <style>
         body {
             font-size: 12px;
@@ -14,93 +14,52 @@
             font-family: Arial, 'DejaVu Sans', sans-serif;
         }
 
-        .currency {
-            font-family: DejaVu Sans, 'Courier New', monospace;
-        }
-
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-        }
-
-        .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #2c3e50;
+            padding-bottom: 10px;
         }
 
         .report-title {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
-            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+
+        .company-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 5px;
         }
 
         .date-range {
-            font-size: 14px;
-            color: #666;
+            font-size: 13px;
+            color: #555;
             margin-bottom: 5px;
-        }
-
-        .generated-info {
-            font-size: 10px;
-            color: #888;
-        }
-
-        .summary-section {
-            margin-bottom: 25px;
         }
 
         .section-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
+            color: #2c3e50;
+            border-bottom: 1px solid #ccc;
+            margin-top: 25px;
             margin-bottom: 10px;
-            color: #2c3e50;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .summary-card {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            padding: 12px;
-            border-radius: 5px;
-            text-align: center;
-        }
-
-        .summary-label {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .summary-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #2c3e50;
+            padding-bottom: 3px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 12px;
             margin-bottom: 20px;
-            font-size: 11px;
         }
 
         th,
         td {
             border: 1px solid #ddd;
             padding: 6px;
-            text-align: left;
         }
 
         th {
@@ -115,10 +74,6 @@
 
         .text-center {
             text-align: center;
-        }
-
-        .page-break {
-            page-break-before: always;
         }
 
         .footer {
@@ -136,64 +91,151 @@
             font-style: italic;
             padding: 20px;
         }
-
-        .currency {
-            font-family: 'Courier New', monospace;
-        }
     </style>
 </head>
 
 <body>
     <div class="header">
-        <div class="report-title">Sales Report</div>
-        <div class="company-name">JEONGOL IZAKAYA</div>
-        <div class="date-range">As of {{ $filterDate }}</div>
+        <div class="report-title">STOCK REPORT</div>
+        <div class="report-title">JEONGOL IZAKAYA</div>
+        <div class="report-period">
+            @php
+                $asOfLabel = match (request('filter')) {
+                    'daily' => 'As of Today',
+                    'weekly' => 'As of This Week',
+                    'monthly' => 'As of This Month',
+                    'yearly' => 'As of This Year',
+                    default => 'As of ' . $dateFrom->format('F j, Y') . ' - ' . $dateTo->format('F j, Y'),
+                };
+            @endphp
+
+            <strong>{{ $asOfLabel }}</strong>
+        </div>
+        <div class="generated-info">
+            <strong>Generated on:</strong> {{ $generatedAt->format('F j, Y g:i A') }}
+        </div>
     </div>
 
-    @if($groupedSales->count() > 0)
-        {{-- Sales Summary Table --}}
-        <table class="summary-table">
+    {{-- Current Stock --}}
+    @if($currentStocks->count() > 0)
+        <div class="section-title">Current Stocks</div>
+        <table>
             <thead>
                 <tr>
-                    <th>Gross Sales</th>
-                    <th>Net Sales</th>
-                    <th>Total Discounted</th>
-                    <th>Total Customers</th>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th class="text-right">Stock Left</th>
+                    <th class="text-center">Unit</th>
+                    <th class="text-center">Date Added</th>
+                    <th class="text-center">Batch</th>
+                    <th class="text-center">Expiry</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td class="text-right currency">{{ number_format($grossSales, 2) }}</td>
-                    <td class="text-right currency">{{ number_format($netSales, 2) }}</td>
-                    <td class="text-right currency">{{ number_format($totalDiscounts, 2) }}</td>
-                    <td class="text-center">{{ $totalCustomers }}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <h3 class="section-title">Order Details</h3>
-        <table class="orders-table">
-            <thead>
-                <tr>
-                    <th>Item Name</th>
-                    <th>Quantity</th>
-                    <th class="text-right">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($groupedSales as $sale)
+                @foreach($currentStocks as $stock)
                     <tr>
-                        <td>{{ $sale['item_name'] }}</td>
-                        <td class="text-center">{{ $sale['quantity'] }}</td>
-                        <td class="text-right currency">{{ number_format($sale['total'], 2) }}</td>
+                        <td>{{ $stock->name }}</td>
+                        <td>{{ $stock->category }}</td>
+                        <td class="text-right">{{ $stock->stock_left }}</td>
+                        <td class="text-center">{{ $stock->unit }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($stock->date_added)->format('m-d-Y') }}</td>
+                        <td class="text-center">{{ $stock->batch }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($stock->expiry)->format('m-d-Y') }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
-    @else
-        <div class="no-data">No transactions found for the selected period.</div>
     @endif
-</body>
 
+    {{-- Stock Consumed --}}
+    @if($consumedStocks->count() > 0)
+        <div class="section-title">Stock Consumed (Today)</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stock Name</th>
+                    <th>Category</th>
+                    <th class="text-right">Consumed</th>
+                    <th class="text-center">Unit</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($consumedStocks as $item)
+                    <tr>
+                        <td>{{ $item->name }}</td>
+                        <td>{{ $item->category }}</td>
+                        <td class="text-right">{{ $item->consumed }}</td>
+                        <td class="text-center">{{ $item->unit }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
+    {{-- Stock In --}}
+    @if($stockIns->count() > 0)
+        <div class="section-title">Stock-In</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stock Name</th>
+                    <th>Category</th>
+                    <th class="text-right">Quantity Added</th>
+                    <th class="text-center">Unit</th>
+                    <th class="text-center">Date Added</th>
+                    <th class="text-center">Batch</th>
+                    <th class="text-center">Expiry Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($stockIns as $in)
+                    <tr>
+                        <td>{{ $in->name }}</td>
+                        <td>{{ $in->category }}</td>
+                        <td class="text-right">{{ $in->quantity_added }}</td>
+                        <td class="text-center">{{ $in->unit }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($in->date_added)->format('m-d-Y') }}</td>
+                        <td class="text-center">{{ $in->batch }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($in->expiry_date)->format('m-d-Y') }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
+    @if($expiredStocks->count() > 0)
+        <div class="section-title">Expired Stocks</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Stock Name</th>
+                    <th>Category</th>
+                    <th class="text-right">Loss</th>
+                    <th class="text-center">Date Added</th>
+                    <th class="text-center">Batch</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($expiredStocks as $expired)
+                    <tr>
+                        <td>{{ $expired->name }}</td>
+                        <td>{{ $expired->category }}</td>
+                        <td class="text-right">{{ $expired->loss }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($expired->date_added)->format('m-d-Y') }}</td>
+                        <td class="text-center">{{ $expired->batch }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @endif
+
+    @if($currentStocks->isEmpty() && $consumedStocks->isEmpty() && $stockIns->isEmpty() && $expiredStocks->isEmpty())
+        <div class="no-data">Empty.</div>
+    @endif
+
+    <div class="footer">
+        JEONGOL IZAKAYA • Stock Report • {{ now()->format('F j, Y') }}
+    </div>
+</body>
 
 </html>

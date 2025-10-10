@@ -3,7 +3,7 @@
 namespace App\Livewire;
 
 use Livewire\Component;
-use App\Models\Table;
+use App\Models\table;
 use Carbon\Carbon;
 
 class TableLayout extends Component

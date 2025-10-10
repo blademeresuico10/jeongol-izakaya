@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Stock Report - {{ $dateFrom->format('M d, Y') }} to {{ $dateTo->format('M d, Y') }}</title>
+    <title>Stocks Report</title>
     <style>
         body {
             font-size: 12px;
@@ -16,56 +16,44 @@
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
             border-bottom: 2px solid #333;
-            padding-bottom: 15px;
-        }
-
-        .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #2c3e50;
+            padding-bottom: 10px;
         }
 
         .report-title {
-            font-size: 18px;
+            font-size: 22px;
             font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .date-range {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .generated-info {
-            font-size: 10px;
-            color: #888;
+            color: #2c3e50;
         }
 
         .section-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: bold;
-            margin-bottom: 10px;
             color: #2c3e50;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            border-bottom: 1px solid #ccc;
+            margin-top: 25px;
+            margin-bottom: 10px;
+            padding-bottom: 3px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 12px;
             margin-bottom: 20px;
-            font-size: 11px;
+            page-break-inside: auto;
+        }
+
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
         }
 
         th,
         td {
             border: 1px solid #ddd;
-            padding: 6px;
-            text-align: left;
+            padding: 8px;
         }
 
         th {
@@ -82,13 +70,6 @@
             text-align: center;
         }
 
-        .no-data {
-            text-align: center;
-            color: #666;
-            font-style: italic;
-            padding: 20px;
-        }
-
         .footer {
             margin-top: 30px;
             text-align: center;
@@ -97,63 +78,149 @@
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
+
+        .no-data {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+        }
     </style>
 </head>
 
 <body>
     <div class="header">
-        <div class="report-title">Stock Report</div>
-        <div class="company-name">JEONGOL IZAKAYA</div>
-        <div class="date-range">{{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}</div>
+        <div class="report-title">STOCKS REPORT</div>
+        <div class="report-title">JEONGOL IZAKAYA</div>
+        <div class="report-period">
+            @php
+                $asOfLabel = match (request('filter')) {
+                    'daily' => 'As of Today',
+                    'weekly' => 'As of This Week',
+                    'monthly' => 'As of This Month',
+                    'yearly' => 'As of This Year',
+                    default => 'As of ' . $dateFrom->format('F j, Y') . ' - ' . $dateTo->format('F j, Y'),
+                };
+            @endphp
+
+            <strong>{{ $asOfLabel }}</strong>
+        </div>
+        <div class="generated-info">
+            <strong>Generated on:</strong> {{ $generatedAt->format('F j, Y g:i A') }}
+        </div>
     </div>
 
-    <div class="section-title">Stock Overview</div>
-    <table>
-        <tr>
-            <th>Total Items</th>
-            <td>{{ $totalItems }}</td>
-        </tr>
-        <tr>
-            <th>Total Quantity</th>
-            <td>{{ number_format($totalQuantity, 2) }} kg</td>
-        </tr>
-        <tr>
-            <th>Items Below Threshold</th>
-            <td>{{ $lowStockCount }}</td>
-        </tr>
-    </table>
-
-    <div class="section-title">Item Details</div>
-    @if($stocks->count() > 0)
+    <!-- Current Stocks Section -->
+    <div class="section-title">Current Stocks</div>
+    @if($currentStocks && $currentStocks->count() > 0)
         <table>
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th>Item Name</th>
-                    <th>Category</th>
-                    <th>Unit</th>
-                    <th>Quantity (kg)</th>
-                    <th>Last Updated</th>
+                    <th style="width: 35%;">Ingredient Name</th>
+                    <th style="width: 25%;">Category</th>
+                    <th class="text-center" style="width: 15%;">Unit</th>
+                    <th class="text-right" style="width: 25%;">Current Stock</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($stocks as $index => $stock)
+                @foreach($currentStocks as $stock)
                     <tr>
-                        <td>{{ $index + 1 }}</td>
-                        <td>{{ $stock->item_name }}</td>
-                        <td>{{ ucfirst($stock->category ?? 'General') }}</td>
-                        <td>{{ $stock->unit ?? 'pcs' }}</td>
-                        <td class="text-right">{{ number_format($stock->quantity, 2) }}</td>
-                        <td>{{ $stock->updated_at->format('M d, Y') }}</td>
+                        <td>{{ $stock->name }}</td>
+                        <td>{{ $stock->category }}</td>
+                        <td class="text-center">{{ $stock->unit }}</td>
+                        <td class="text-right">{{ number_format($stock->stocks, 2) }}</td>
                     </tr>
                 @endforeach
             </tbody>
         </table>
     @else
-        <div class="no-data">No stock records found for the selected range.</div>
+        <div class="no-data">No stock data available.</div>
     @endif
 
- 
+    <!-- Stock In Section -->
+    <div class="section-title">Stock In (Arrivals)</div>
+    @if($stockIns && $stockIns->count() > 0)
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Ingredient Name</th>
+                    <th class="text-center" style="width: 20%;">Arrived Date</th>
+                    <th class="text-center" style="width: 20%;">Expiration Date</th>
+                    <th class="text-right" style="width: 25%;">Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($stockIns as $stockIn)
+                    <tr>
+                        <td>{{ $stockIn->ingredient->name ?? 'N/A' }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($stockIn->arrived_at)->format('M d, Y') }}</td>
+                        <td class="text-center">
+                            {{ $stockIn->expiration_date ? \Carbon\Carbon::parse($stockIn->expiration_date)->format('M d, Y') : 'N/A' }}
+                        </td>
+                        <td class="text-right">{{ number_format($stockIn->quantity, 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @else
+        <div class="no-data">No stock arrivals in this period.</div>
+    @endif
+
+    <!-- Consumed Stocks Section -->
+    <div class="section-title">Consumed Stocks</div>
+    @if($consumedStocks && $consumedStocks->count() > 0)
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 35%;">Ingredient Name</th>
+                    <th class="text-center" style="width: 20%;">Date Used</th>
+                    <th style="width: 20%;">Order #</th>
+                    <th class="text-right" style="width: 25%;">Quantity Used</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($consumedStocks as $consumed)
+                    <tr>
+                        <td>{{ $consumed->ingredient->name ?? 'N/A' }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($consumed->created_at)->format('M d, Y') }}</td>
+                        <td>{{ $consumed->order_id ? '#' . $consumed->order_id : 'N/A' }}</td>
+                        <td class="text-right">{{ number_format($consumed->quantity, 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @else
+        <div class="no-data">No stocks consumed in this period.</div>
+    @endif
+
+    <!-- Expired Stocks Section -->
+    <div class="section-title">Expired Stocks</div>
+    @if($expiredStocks && $expiredStocks->count() > 0)
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50%;">Ingredient Name</th>
+                    <th class="text-center" style="width: 25%;">Expired Date</th>
+                    <th class="text-right" style="width: 25%;">Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($expiredStocks as $expired)
+                    <tr>
+                        <td>{{ $expired->ingredient->name ?? 'N/A' }}</td>
+                        <td class="text-center">{{ \Carbon\Carbon::parse($expired->expired_at)->format('M d, Y') }}</td>
+                        <td class="text-right">{{ number_format($expired->quantity, 2) }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    @else
+        <div class="no-data">No expired stocks in this period.</div>
+    @endif
+
+    <div class="footer">
+        JEONGOL IZAKAYA • Stocks Report • {{ now()->format('F j, Y') }}
+    </div>
 </body>
 
 </html>

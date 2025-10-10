@@ -8,6 +8,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Cashier</title>
+    @livewireStyles
     @vite('resources/css/app.css')
 
     <style>
@@ -222,76 +223,8 @@
             </div>
 
         </div>
+        <livewire:cashier-table-layout />
 
-        <div id="dineInContent" class="flex justify-center m-5">
-            <div class="table-layout grid lg:grid-cols-5 gap-10 justify-center">
-                @foreach($tables as $table)
-                    @php
-                        $isOccupied = in_array($table->table_number, $occupiedTables);
-                        $reservationId = $table->current_reservation_id ?? $table->current_session_id ?? '';
-                    @endphp
-                    <div class="table-link cursor-pointer" data-reservation-id="{{ $reservationId }}"
-                        data-table-number="{{ $table->table_number }}" data-table-capacity="{{ $table->capacity }}"
-                        data-occupied="{{ $isOccupied ? '1' : '0' }}">
-                        <div class="flex justify-center">
-                            <div
-                                class="relative h-40 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center {{ $isOccupied ? 'table-occupied' : 'table-available' }}">
-                                <div class="absolute mt-2 -top-1 px-3 bg-gray-200 text-black text-xs rounded-full shadow">
-                                    {{ $table->capacity }} Pax
-                                </div>
-
-                                <div class="flex flex-col items-center mt-6">
-                                    <div
-                                        class="w-20 h-20 rounded-full {{ $isOccupied ? 'bg-red-600' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
-                                        <span class="text-lg font-semibold">T-{{ $table->table_number }}</span>
-                                    </div>
-
-                                    @if($isOccupied)
-                                        @if(isset($table->remaining_seconds) && $table->remaining_seconds > 0)
-                                                                <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                    </svg>
-                                                                    <span class="countdown" data-seconds="{{ $table->remaining_seconds }}">
-                                                                        {{ sprintf(
-                                                '%02d:%02d:%02d',
-                                                floor($table->remaining_seconds / 3600),
-                                                floor(($table->remaining_seconds % 3600) / 60),
-                                                $table->remaining_seconds % 60
-                                            ) }}
-                                                                    </span>
-                                                                </span>
-                                        @elseif(isset($table->elapsed_seconds))
-                                                                <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
-                                                                        viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round"
-                                                                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                                    </svg>
-                                                                    <span class="countup" data-seconds="{{ $table->elapsed_seconds }}">
-                                                                        {{ sprintf(
-                                                '%02d:%02d:%02d',
-                                                floor($table->elapsed_seconds / 3600),
-                                                floor(($table->elapsed_seconds % 3600) / 60),
-                                                $table->elapsed_seconds % 60
-                                            ) }}
-                                                                    </span>
-                                                                </span>
-                                        @else
-                                            <span class="text-red-600 font-medium mt-2">Occupied</span>
-                                        @endif
-                                    @else
-                                        <span class="text-green-600 font-medium mt-2">Available</span>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
 
         <div id="payment-modal" tabindex="-1" aria-hidden="true"
             class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto h-full bg-black bg-opacity-50 flex justify-center items-center">
@@ -367,7 +300,7 @@
             <span id="toast-message">Something went wrong</span>
         </div>
     </div>
-
+    @livewireScripts
 </body>
 <script>
     window.menuPriceData = @json($menuData);
@@ -1229,9 +1162,7 @@
             const totalText = document.getElementById("payment_total").textContent;
             const subtotal = parseFloat(totalText.replace('₱', '').replace(',', ''));
 
-
-            const advancePayment = parseFloat(currentReservationData.advance_payment || 0);
-
+            const advancePayment = currentReservationData.order_type === 'walkin' ? 0 : parseFloat(currentReservationData.advance_payment || 0);
 
             const finalTotal = Math.max(0, subtotal - advancePayment);
 
@@ -1333,97 +1264,103 @@
         }
 
         showCashHandlingModal(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData) {
+            const isWalkIn = currentReservationData.order_type === 'walkin';
+            const displayAdvancePayment = isWalkIn ? 0 : parseFloat(advancePayment || 0);
+            const displayFinalTotal = isWalkIn ? subtotal : finalTotal;
+
             const modalHtml = `
-                        <div id="cashHandlingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-                            <div class="bg-white rounded-lg p-6 w-80 max-w-sm mx-4 shadow-2xl">
-                                <div class="text-center mb-6">
-                                    <h2 class="text-xl font-bold text-gray-800 mb-4">Cash Payment</h2>
-                                    
-                                    <!-- Payment Breakdown -->
-                                    <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
-                                        <div class="flex justify-between text-sm text-blue-800">
-                                            <span>Subtotal:</span>
-                                            <span>${subtotal.toFixed(2)}</span>
-                                        </div>
-                                        ${advancePayment > 0 ? `
-                                        <div class="flex justify-between text-sm text-green-600 items-center">
-                                            <label for="advancePayment" class="mr-2">Advance Payment:</label>
-                                            <input 
-                                                type="number" 
-                                                id="advancePayment" 
-                                                name="advancePayment" 
-                                                value="${advancePayment.toFixed(2)}"
-                                                class="w-24 text-green-600 border border-green-600 rounded px-1 py-0.5 text-right"
-                                                step="0.01"
-                                                min="0"
-                                                oninput="
-                                                    const newAdvance = parseFloat(this.value)||0;
-                                                    const newAmountDue = ${subtotal} - newAdvance;
-                                                    document.getElementById('amountDue').textContent = '₱'+newAmountDue.toFixed(2);
-                                                    fetch('/cashier/update-advance/${currentReservationData.reservation_id}', {
-                                                        method: 'POST',
-                                                        headers: {
-                                                            'Content-Type': 'application/json',
-                                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                                        },
-                                                        body: JSON.stringify({ advance_payment: newAdvance })
-                                                    });
-                                                "
-                                            >
-                                        </div>
-
-                                        <hr class="border-blue-200">
-                                        ` : ''}
-                                        <div class="flex justify-between">
-        <span class="text-sm text-blue-800">Amount Due:</span>
-        <span id="amountDue" class="text-2xl font-bold text-blue-600">${finalTotal.toFixed(2)}</span>
-    </div>
-
-                                    </div>
-                                </div>
-
-                                <form id="cashPaymentForm" class="space-y-4">
-                                    <div>
-                                        <label for="cashReceived" class="block text-sm font-medium text-gray-700 mb-2">
-                                            Cash Received
-                                        </label>
-                                        <div class="relative">
-                                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
-                                            <input 
-                                                type="number" 
-                                                id="cashReceived" 
-                                                name="cashReceived" 
-                                                step="0.01" 
-                                                min="${finalTotal}"
-                                                class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-lg font-mono"
-                                                placeholder="0.00"
-                                                required
-                                                autocomplete="off">
-                                        </div>
-                                        <div id="cashError" class="text-red-500 text-xs mt-1 hidden">
-                                            Insufficient amount
-                                        </div>
-                                    </div>
-
-                                    <div class="flex justify-between space-x-3 mt-6">
-                                        <button 
-                                            type="button" 
-                                            id="cancelCashPayment" 
-                                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
-                                            Cancel
-                                        </button>
-                                        <button 
-                                            type="submit" 
-                                            id="completeCashPayment"
-                                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                                            disabled>
-                                            Submit
-                                            </button>
-                                    </div>
-                                </form>
-                            </div>
+        <div id="cashHandlingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 w-80 max-w-sm mx-4 shadow-2xl">
+                <div class="text-center mb-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Cash Payment</h2>
+                    
+                    <!-- Payment Breakdown -->
+                    <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
+                        <div class="flex justify-between text-sm text-blue-800">
+                            <span>Subtotal:</span>
+                            <span>₱${subtotal.toFixed(2)}</span>
                         </div>
-                    `;
+                        ${!isWalkIn && displayAdvancePayment > 0 ? `
+                        <div class="flex justify-between text-sm text-green-600 items-center">
+                            <label for="advancePayment" class="mr-2">Advance Payment:</label>
+                            <input 
+                                type="number" 
+                                id="advancePayment" 
+                                name="advancePayment" 
+                                value="${displayAdvancePayment.toFixed(2)}"
+                                class="w-24 text-green-600 border border-green-600 rounded px-1 py-0.5 text-right"
+                                step="0.01"
+                                min="0"
+                                max="${subtotal}"
+                                oninput="
+                                    const newAdvance = Math.min(parseFloat(this.value) || 0, ${subtotal});
+                                    this.value = newAdvance.toFixed(2);
+                                    const newAmountDue = Math.max(0, ${subtotal} - newAdvance);
+                                    document.getElementById('amountDue').textContent = '₱' + newAmountDue.toFixed(2);
+                                    document.getElementById('cashReceived').setAttribute('min', newAmountDue.toFixed(2));
+                                    
+                                    fetch('/cashier/update-advance/${currentReservationData.reservation_id}', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
+                                        },
+                                        body: JSON.stringify({ advance_payment: newAdvance })
+                                    }).catch(err => console.error('Failed to update advance payment:', err));
+                                "
+                            >
+                        </div>
+                        <hr class="border-blue-200">
+                        ` : ''}
+                        <div class="flex justify-between">
+                            <span class="text-sm text-blue-800">Amount Due:</span>
+                            <span id="amountDue" class="text-2xl font-bold text-blue-600">₱${displayFinalTotal.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="cashPaymentForm" class="space-y-4">
+                    <div>
+                        <label for="cashReceived" class="block text-sm font-medium text-gray-700 mb-2">
+                            Cash Received
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
+                            <input 
+                                type="number" 
+                                id="cashReceived" 
+                                name="cashReceived" 
+                                step="0.01" 
+                                min="${displayFinalTotal}"
+                                class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-lg font-mono"
+                                placeholder="0.00"
+                                required
+                                autocomplete="off">
+                        </div>
+                        <div id="cashError" class="text-red-500 text-xs mt-1 hidden">
+                            Insufficient amount
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between space-x-3 mt-6">
+                        <button 
+                            type="button" 
+                            id="cancelCashPayment" 
+                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            id="completeCashPayment"
+                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                            disabled>
+                            Submit
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
 
             const existingModal = document.getElementById('cashHandlingModal');
             if (existingModal) {
@@ -1431,11 +1368,15 @@
             }
 
             document.body.insertAdjacentHTML('beforeend', modalHtml);
-            this.setupCashHandlingEvents(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData);
+            this.setupCashHandlingEvents(displayFinalTotal, subtotal, displayAdvancePayment, currentReservationData, allCustomerData);
         }
 
 
         setupCashHandlingEvents(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData) {
+            // CRITICAL: Force advance payment to 0 for walk-ins
+            const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
+            const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
+
             const modal = document.getElementById('cashHandlingModal');
             const cashInput = document.getElementById('cashReceived');
             const completeButton = document.getElementById('completeCashPayment');
@@ -1448,7 +1389,7 @@
                 const cashReceived = parseFloat(cashInput.value) || 0;
                 cashError.classList.add('hidden');
 
-                if (cashReceived >= finalTotal) {
+                if (cashReceived >= actualFinalTotal) {
                     completeButton.disabled = false;
                 } else {
                     completeButton.disabled = true;
@@ -1464,10 +1405,11 @@
 
                 const cashReceived = parseFloat(cashInput.value) || 0;
 
-                if (cashReceived >= finalTotal) {
-                    const change = cashReceived - finalTotal;
+                if (cashReceived >= actualFinalTotal) {
+                    const change = cashReceived - actualFinalTotal;
                     modal.remove();
-                    this.processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData);
+                    // Pass actualAdvancePayment and actualFinalTotal
+                    this.processFinalPayment(actualFinalTotal, subtotal, actualAdvancePayment, cashReceived, change, currentReservationData, allCustomerData);
                 } else {
                     cashError.classList.remove('hidden');
                 }
@@ -1489,6 +1431,7 @@
                 }
             });
         }
+
         showProcessingModal() {
             const modalHtml = `
                     <div id="processingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -1513,7 +1456,11 @@
         processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData) {
             this.showProcessingModal();
 
-            this.printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData);
+            // CRITICAL: Force advance payment to 0 for walk-ins
+            const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
+            const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
+
+            this.printFinalReceipt(actualFinalTotal, subtotal, actualAdvancePayment, cashReceived, change, currentReservationData);
 
             const discountInputs = document.querySelectorAll('.discount-input');
             const discountedPersons = {};
@@ -1540,8 +1487,8 @@
                 reservation_id: currentReservationData.reservation_id,
                 order_type: currentReservationData.order_type,
                 subtotal: subtotal,
-                advance_payment: advancePayment,
-                total: finalTotal,
+                advance_payment: actualAdvancePayment, // ALWAYS 0 for walk-ins
+                total: actualFinalTotal, // Correct total
                 orders: ordersData,
                 discounted_persons: discountedPersons,
                 customer_data: allCustomerData,
@@ -1591,6 +1538,9 @@
             const dateStr = today.toLocaleDateString('en-PH', { year: 'numeric', month: '2-digit', day: '2-digit' });
             const timeStr = today.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
 
+            // CRITICAL FIX: Force advance payment to 0 for walk-ins
+            const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
+
             const vatableSales = (subtotal / 1.12).toFixed(2);
             const vat = (subtotal - vatableSales).toFixed(2);
 
@@ -1600,7 +1550,6 @@
                 discountAmount += discountValue;
             });
             discountAmount = parseFloat(discountAmount.toFixed(2));
-
 
             let orderItemsHTML = '';
             const itemGroups = {};
@@ -1644,7 +1593,6 @@
         </tr>
         `;
             });
-
 
             const printHTML = `
         <!DOCTYPE html>
@@ -1750,25 +1698,25 @@
             <div class="summary">
                 <div class="summary-row">
                     <span>VATable Sales:</span>
-                    <span>${vatableSales}</span>
+                    <span>₱${vatableSales}</span>
                 </div>
                 <div class="summary-row">
                     <span>VAT (12%):</span>
-                    <span>${vat}</span>
+                    <span>₱${vat}</span>
                 </div>
                 <div class="summary-row">
                     <span>Total Sales (VAT Inclusive):</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>₱${subtotal.toFixed(2)}</span>
                 </div>
-                ${advancePayment > 0 ? `
+                ${actualAdvancePayment > 0 ? `
                 <div class="summary-row">
                     <span>Advance Payment:</span>
-                    <span>${advancePayment.toFixed(2)}</span>
+                    <span>₱${actualAdvancePayment.toFixed(2)}</span>
                 </div>
                 ` : ''}
                 <div class="summary-row">
                     <span>Discount:</span>
-                    <span>${discountAmount.toFixed(2)}</span>
+                    <span>₱${discountAmount.toFixed(2)}</span>
                 </div>
                 <div class="summary-row total-row">
                     <span>TOTAL AMOUNT DUE:</span>
@@ -1776,11 +1724,11 @@
                 </div>
                 <div class="summary-row" style="margin-top: 8px;">
                     <span>Cash Received:</span>
-                    <span>${cashReceived.toFixed(2)}</span>
+                    <span>₱${cashReceived.toFixed(2)}</span>
                 </div>
                 <div class="summary-row">
                     <span>Change:</span>
-                    <span>${change.toFixed(2)}</span>
+                    <span>₱${change.toFixed(2)}</span>
                 </div>
             </div>
 
@@ -1802,6 +1750,7 @@
         </body>
         </html>
         `;
+
             const printWindow = window.open('', '_blank', 'width=400,height=600');
             if (!printWindow) {
                 this.showToast('Unable to open print window. Please check popup settings.', 'error');
