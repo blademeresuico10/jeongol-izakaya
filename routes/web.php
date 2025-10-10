@@ -110,20 +110,18 @@ Route::middleware('auth')->group(function () {
         // Ingredient Management
         Route::prefix('ingredient_management')->group(function () {
             Route::get('/', [AdminController::class, 'ingredient_management'])->name('admin.ingredient_management');
-            Route::get('/stocks', [AdminController::class, 'getStocks'])->name('ingredient.stocks'); // ← ADD THIS LINE
+            Route::get('/stocks', [AdminController::class, 'getStocks'])->name('ingredient.stocks');
             Route::post('/storeIngredient', [AdminController::class, 'storeIngredient'])->name('storeIngredient');
             Route::post('/add-stock', [AdminController::class, 'addStock'])->name('ingredient.addStock');
             Route::post('/update-stock', [AdminController::class, 'updateStock'])->name('ingredient.updateStock');
             Route::get('/addStockForm', [AdminController::class, 'addStockForm'])->name('ingredient.addStockForm');
-            Route::put('/update-batch/{id}', [AdminController::class, 'updateBatch'])->name('batch.update');
-            Route::delete('/delete-batch/{id}', [AdminController::class, 'deleteBatch'])->name('batch.delete');
             Route::get('/updateStockForm', [AdminController::class, 'updateStockForm'])->name('ingredient.updateStockForm');
             Route::get('/stock-batches', [AdminController::class, 'getStockBatches'])->name('ingredient.stockBatches');
             Route::get('/expiry-data', [AdminController::class, 'expiryData'])->name('ingredients.expiry_data');
             Route::get('/expired-only', [AdminController::class, 'getExpiredOnly'])->name('ingredients.expired_only');
             Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
             Route::put('/batches/{id}', [AdminController::class, 'updateBatch'])->name('batches.update');
-            Route::delete('/batches/{id}', [AdminController::class, 'deleteBatch'])->name('batches.delete');
+            Route::delete('/batches/delete', [AdminController::class, 'deleteBatch'])->name('batches.delete'); // Fixed path
         });
 
         // E-Wallet Management

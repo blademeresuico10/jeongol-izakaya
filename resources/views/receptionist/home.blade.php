@@ -1097,6 +1097,7 @@
 
   setupOrderForm() {
     const now = new Date();
+
     this.elements.reservedDate.value = now.toISOString().substring(0, 10);
     this.elements.reservedDate.disabled = true;
     const hours = now.getHours().toString().padStart(2, '0');
@@ -1106,8 +1107,8 @@
     this.elements.reservationInfoGroup.style.display = 'none';
     this.elements.contactInput.style.display = 'none';
     this.elements.advancePayment.parentElement.style.display = 'none';
-
   }
+
 
   setupReservationForm() {
     const now = new Date();
@@ -1345,11 +1346,14 @@
     const selectedDate = new Date(`${date}T${time}`);
     const now = new Date();
 
-    if (selectedDate < now.setHours(0, 0, 0, 0)) {
-      this.showErrorToast('You cannot select a past date.');
-      dateInput.classList.add('border-red-500');
-      return;
+    if (!this.isPlacingOrder) {
+      if (selectedDate < now.setHours(0, 0, 0, 0)) {
+        this.showErrorToast('You cannot select a past date.');
+        dateInput.classList.add('border-red-500');
+        return;
+      }
     }
+
 
     const orders = Object.values(this.selectedOrders || {});
     const hasMain = orders.some(item => item.category === 'main');

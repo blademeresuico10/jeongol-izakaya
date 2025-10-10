@@ -552,19 +552,20 @@
 
         $('a[href="#batch"]').on('shown.bs.tab', function () {
             if (!tabsLoaded.batch) {
-                loadBatches('thisweek', currentPages.thisweek);
+                const activePeriod = $('#thisweek-tab').hasClass('active') ? 'thisweek' : 'lastweek';
+                loadBatches(activePeriod, currentPages[activePeriod]);
                 tabsLoaded.batch = true;
             }
         });
 
         $('a[href="#thisweek"]').on('shown.bs.tab', () => {
-            if (tabsLoaded.batch && $(`#thisWeekTableBody`).is(':empty')) {
+            if (tabsLoaded.batch && $('#thisWeekTableBody').is(':empty')) {
                 loadBatches('thisweek', currentPages.thisweek);
             }
         });
 
         $('a[href="#lastweek"]').on('shown.bs.tab', () => {
-            if (tabsLoaded.batch && $(`#lastWeekTableBody`).is(':empty')) {
+            if (tabsLoaded.batch && $('#lastWeekTableBody').is(':empty')) {
                 loadBatches('lastweek', currentPages.lastweek);
             }
         });
@@ -699,10 +700,14 @@
         }
 
         $(document).on('click', '.btn-edit-batch', function () {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const minDate = tomorrow.toISOString().split('T')[0];
+
             $('#editBatchId').val($(this).data('id'));
             $('#editBatchQty').val($(this).data('qty'));
             $('#editBatchArrived').val($(this).data('arrived'));
-            $('#editBatchExpiry').val($(this).data('exp'));
+            $('#editBatchExpiry').val($(this).data('exp')).attr('min', minDate);
             $('#editBatchModal').modal('show');
         });
 
@@ -719,8 +724,10 @@
             }).then(r => {
                 if (r.isConfirmed) {
                     $.ajax({
-                        url: `/ingredient_management/batches/${id}`,
+                        url: `/ingredient_management/batches/delete`,
                         method: 'DELETE',
+                        data: JSON.stringify({ batch_id: id }),
+                        contentType: 'application/json',
                         headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
                         success: (response) => {
                             if (response.success) {
@@ -735,7 +742,6 @@
                                     color: '#155724'
                                 });
 
-                                // Reload current page - NO RESET
                                 const period = $('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek';
                                 loadBatches(period, currentPages[period]);
                             }

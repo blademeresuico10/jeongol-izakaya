@@ -29,7 +29,7 @@ class KitchenDashboard extends Component
 
     public function refreshDashboard()
     {
-        $this->emit('$refresh'); 
+        $this->emit('$refresh');
     }
 
 
@@ -289,14 +289,18 @@ class KitchenDashboard extends Component
 
     public function render()
     {
+        $today = now()->toDateString(); 
+
         $pendingOrders = orders::with(['table', 'menu', 'reservation', 'walkin'])
             ->whereNotNull('status')
-            ->where(function ($query) {
-                $query->whereHas('reservation', function ($q) {
-                    $q->where('status', 'Active');
+            ->where(function ($query) use ($today) {
+                $query->whereHas('reservation', function ($q) use ($today) {
+                    $q->where('status', 'Active')
+                        ->whereDate('started_at', $today); 
                 })
-                    ->orWhereHas('walkin', function ($q) {
-                        $q->where('status', 'active');
+                    ->orWhereHas('walkin', function ($q) use ($today) {
+                        $q->where('status', 'active')
+                            ->whereDate('started_at', $today); 
                     });
             })
             ->orderBy('created_at', 'asc')
@@ -308,8 +312,9 @@ class KitchenDashboard extends Component
                 return 'walkin_' . $order->walk_in_id;
             });
 
-        $tables = table::whereHas('reservation', function ($query) {
+        $tables = table::whereHas('reservation', function ($query) use ($today) {
             $query->where('status', 'Active')
+                ->whereDate('started_at', $today) 
                 ->whereHas('orders', function ($q) {
                     $q->whereNotNull('id');
                 })
@@ -317,8 +322,9 @@ class KitchenDashboard extends Component
                     $q->where('status', 'Pending');
                 });
         })
-            ->orWhereHas('walkin', function ($query) {
+            ->orWhereHas('walkin', function ($query) use ($today) {
                 $query->where('status', 'active')
+                    ->whereDate('started_at', $today)
                     ->whereHas('orders', function ($q) {
                         $q->whereNotNull('id');
                     })
@@ -326,10 +332,12 @@ class KitchenDashboard extends Component
                         $q->where('status', 'Pending');
                     });
             })
-            ->with(['reservation' => function ($query) {
-                $query->where('status', 'Active');
-            }, 'walkin' => function ($query) {
-                $query->where('status', 'active');
+            ->with(['reservation' => function ($query) use ($today) {
+                $query->where('status', 'Active')
+                    ->whereDate('started_at', $today);
+            }, 'walkin' => function ($query) use ($today) {
+                $query->where('status', 'active')
+                    ->whereDate('started_at', $today);
             }])
             ->get();
 

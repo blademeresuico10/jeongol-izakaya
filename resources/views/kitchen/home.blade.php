@@ -6,7 +6,6 @@
   <title>Kitchen Dashboard</title>
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
   
-  {{-- Load Vite compiled assets (includes bootstrap.js) --}}
   @vite(['resources/css/app.css', 'resources/js/app.js'])
 
   <style>

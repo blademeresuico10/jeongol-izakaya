@@ -1266,7 +1266,7 @@ class AdminController extends Controller
                 ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
                 ->whereDate('ingredient_batches.expiration_date', '>', now())
                 ->orderBy('ingredient_batches.arrived_at', 'desc')
-                ->paginate(10) // Changed from get() to paginate(10)
+                ->paginate(10)
                 ->through(function ($b) {
                     return [
                         'id' => $b->id,
@@ -1287,7 +1287,6 @@ class AdminController extends Controller
         }
     }
 
-    // Update your existing getExpiredOnly to add pagination
     public function getExpiredOnly(Request $request)
     {
         try {
@@ -1358,7 +1357,6 @@ class AdminController extends Controller
         }
     }
 
-
     public function editIngredient($id)
     {
         $ingredient = DB::table('ingredients')->where('id', $id)->first();
@@ -1391,7 +1389,6 @@ class AdminController extends Controller
         return redirect()->route('admin.ingredient_management')
             ->with('success', 'Ingredient updated successfully');
     }
-
 
     public function addStockForm()
     {
@@ -1627,8 +1624,21 @@ class AdminController extends Controller
             DB::beginTransaction();
 
             $batch = ingredientBatch::findOrFail($request->batch_id);
+            $ingredient = $batch->ingredient;
 
-            $batch->delete(); 
+            $ingredient->decrement('stocks', $batch->quantity);
+
+            ingredientMovements::create([
+                'ingredient_id' => $batch->ingredient_id,
+                'ingredient_batch_id' => $batch->id,
+                'user_id' => Auth::id(),
+                'type' => 'stock_out',
+                'quantity' => $batch->quantity,
+                'stock_before' => $ingredient->stocks + $batch->quantity,
+                'stock_after' => $ingredient->stocks,
+            ]);
+
+            $batch->delete();
 
             DB::commit();
 
