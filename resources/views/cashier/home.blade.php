@@ -1373,7 +1373,6 @@
 
 
         setupCashHandlingEvents(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData) {
-            // CRITICAL: Force advance payment to 0 for walk-ins
             const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
             const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
 
@@ -1408,7 +1407,6 @@
                 if (cashReceived >= actualFinalTotal) {
                     const change = cashReceived - actualFinalTotal;
                     modal.remove();
-                    // Pass actualAdvancePayment and actualFinalTotal
                     this.processFinalPayment(actualFinalTotal, subtotal, actualAdvancePayment, cashReceived, change, currentReservationData, allCustomerData);
                 } else {
                     cashError.classList.remove('hidden');
@@ -1456,7 +1454,6 @@
         processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData) {
             this.showProcessingModal();
 
-            // CRITICAL: Force advance payment to 0 for walk-ins
             const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
             const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
 
@@ -1487,8 +1484,8 @@
                 reservation_id: currentReservationData.reservation_id,
                 order_type: currentReservationData.order_type,
                 subtotal: subtotal,
-                advance_payment: actualAdvancePayment, // ALWAYS 0 for walk-ins
-                total: actualFinalTotal, // Correct total
+                advance_payment: actualAdvancePayment, 
+                total: actualFinalTotal, 
                 orders: ordersData,
                 discounted_persons: discountedPersons,
                 customer_data: allCustomerData,
@@ -1538,7 +1535,6 @@
             const dateStr = today.toLocaleDateString('en-PH', { year: 'numeric', month: '2-digit', day: '2-digit' });
             const timeStr = today.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            // CRITICAL FIX: Force advance payment to 0 for walk-ins
             const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
 
             const vatableSales = (subtotal / 1.12).toFixed(2);
@@ -1601,75 +1597,165 @@
             <title>Jeongol Receipt</title>
             <style>
                 @media print { 
-                    @page { size: 80mm auto; margin: 0; } 
-                    body { margin: 0; padding: 0; }
+                    @page { 
+                        size: auto;
+                        margin: 0; 
+                    } 
+                    body { 
+                        margin: 0; 
+                        padding: 0; 
+                    }
+                }
+                * {
+                    box-sizing: border-box;
                 }
                 body { 
                     font-family: 'Courier New', monospace;
-                    font-size: 11px;
-                    width: 300px;
-                    margin: 0 auto;
-                    padding: 10px;
+                    font-size: 10px;
+                    width: 100%;
+                    max-width: 100%;
+                    margin: 0;
+                    padding: 8px;
+                    line-height: 1.3;
                 }
                 .header {
                     text-align: center;
                     border-bottom: 1px dashed #000;
-                    padding-bottom: 8px;
-                    margin-bottom: 8px;
+                    padding-bottom: 6px;
+                    margin-bottom: 6px;
+                    word-wrap: break-word;
                 }
                 .header h3 {
                     margin: 2px 0;
-                    font-size: 13px;
+                    font-size: clamp(11px, 3.5vw, 14px);
+                    font-weight: bold;
                 }
                 .header p {
                     margin: 1px 0;
-                    font-size: 9px;
+                    font-size: clamp(8px, 2.5vw, 10px);
                 }
                 .info-section {
-                    margin: 8px 0;
-                    font-size: 10px;
+                    margin: 6px 0;
+                    font-size: clamp(8px, 2.5vw, 10px);
                 }
                 .info-row {
                     display: flex;
                     justify-content: space-between;
                     margin: 2px 0;
+                    gap: 4px;
+                }
+                .info-row span:first-child {
+                    flex-shrink: 0;
+                }
+                .info-row span:last-child {
+                    text-align: right;
+                    word-break: break-word;
                 }
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 8px 0;
-                    font-size: 10px;
+                    margin: 6px 0;
+                    font-size: clamp(8px, 2.5vw, 10px);
                 }
                 th {
                     border-top: 1px solid #000;
                     border-bottom: 1px solid #000;
-                    padding: 4px 8px;
+                    padding: 3px 2px;
                     text-align: left;
                     font-weight: bold;
+                    font-size: clamp(8px, 2.5vw, 10px);
+                }
+                td {
+                    padding: 2px;
+                    vertical-align: top;
+                    word-wrap: break-word;
+                }
+                .item-desc {
+                    width: 40%;
+                    min-width: 80px;
+                }
+                .item-qty {
+                    width: 15%;
+                    text-align: center;
+                    min-width: 25px;
+                }
+                .item-price {
+                    width: 22%;
+                    text-align: right;
+                    min-width: 40px;
+                }
+                .item-amount {
+                    width: 23%;
+                    text-align: right;
+                    min-width: 45px;
                 }
                 .summary {
-                    margin-top: 8px;
+                    margin-top: 6px;
                     border-top: 1px dashed #000;
-                    padding-top: 8px;
+                    padding-top: 6px;
                 }
                 .summary-row {
                     display: flex;
                     justify-content: space-between;
-                    margin: 3px 0;
+                    margin: 2px 0;
+                    font-size: clamp(8px, 2.5vw, 10px);
+                    gap: 4px;
+                }
+                .summary-row span:first-child {
+                    flex: 1;
+                }
+                .summary-row span:last-child {
+                    text-align: right;
+                    white-space: nowrap;
                 }
                 .total-row {
                     font-weight: bold;
-                    font-size: 12px;
+                    font-size: clamp(10px, 3vw, 12px);
                     border-top: 1px solid #000;
                     padding-top: 4px;
                     margin-top: 4px;
                 }
                 .footer {
                     text-align: center;
-                    margin-top: 12px;
+                    margin-top: 8px;
                     border-top: 1px dashed #000;
-                    padding-top: 8px;
-                    font-size: 10px;
+                    padding-top: 6px;
+                    font-size: clamp(8px, 2.5vw, 10px);
+                }
+                .footer p {
+                    margin: 2px 0;
+                }
+                
+                /* Adjustments for very small printers (58mm) */
+                @media (max-width: 220px) {
+                    body {
+                        padding: 4px;
+                        font-size: 8px;
+                    }
+                    .header h3 {
+                        font-size: 10px;
+                    }
+                    th, td {
+                        padding: 1px;
+                    }
+                }
+                
+                /* Adjustments for medium printers (80mm) */
+                @media (min-width: 221px) and (max-width: 320px) {
+                    body {
+                        padding: 8px;
+                        font-size: 10px;
+                    }
+                }
+                
+                /* Adjustments for larger printers (> 80mm) */
+                @media (min-width: 321px) {
+                    body {
+                        max-width: 320px;
+                        margin: 0 auto;
+                        padding: 10px;
+                        font-size: 11px;
+                    }
                 }
             </style>
         </head>
@@ -1684,10 +1770,10 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="text-align: left;">Item Description</th>
-                        <th style="text-align: center; width: 40px;">Qty</th>
-                        <th style="text-align: right; width: 60px;">Unit Price</th>
-                        <th style="text-align: right; width: 70px;">Amount</th>
+                        <th class="item-desc">Item</th>
+                        <th class="item-qty">Qty</th>
+                        <th class="item-price">Price</th>
+                        <th class="item-amount">Amount</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1722,7 +1808,7 @@
                     <span>TOTAL AMOUNT DUE:</span>
                     <span>₱${finalTotal.toFixed(2)}</span>
                 </div>
-                <div class="summary-row" style="margin-top: 8px;">
+                <div class="summary-row" style="margin-top: 6px;">
                     <span>Cash Received:</span>
                     <span>₱${cashReceived.toFixed(2)}</span>
                 </div>
