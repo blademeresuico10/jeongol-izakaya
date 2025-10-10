@@ -66,7 +66,7 @@
     <li @class(['nav-item', 'active' => request()->is('miscelanious*')])>
         <a class="nav-link" href="{{ route('admin.others') }}">
             <i class="fas fa-layer-group"></i>
-            <span>Miscelanious</span>
+            <span>Miscellaneous</span>
         </a>
     </li>
 

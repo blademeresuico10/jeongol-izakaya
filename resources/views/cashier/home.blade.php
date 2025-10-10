@@ -1484,8 +1484,8 @@
                 reservation_id: currentReservationData.reservation_id,
                 order_type: currentReservationData.order_type,
                 subtotal: subtotal,
-                advance_payment: actualAdvancePayment, 
-                total: actualFinalTotal, 
+                advance_payment: actualAdvancePayment,
+                total: actualFinalTotal,
                 orders: ordersData,
                 discounted_persons: discountedPersons,
                 customer_data: allCustomerData,
@@ -1598,25 +1598,31 @@
             <style>
                 @media print { 
                     @page { 
-                        size: auto;
+                        size: 80mm auto;
                         margin: 0; 
                     } 
                     body { 
                         margin: 0; 
                         padding: 0; 
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
                     }
                 }
                 * {
                     box-sizing: border-box;
+                    -webkit-font-smoothing: none;
+                    -moz-osx-font-smoothing: grayscale;
                 }
                 body { 
-                    font-family: 'Courier New', monospace;
-                    font-size: 10px;
-                    width: 100%;
-                    max-width: 100%;
+                    font-family: 'Courier New', 'Consolas', monospace;
+                    font-size: 12px;
+                    width: 300px;
+                    max-width: 300px;
                     margin: 0;
-                    padding: 8px;
-                    line-height: 1.3;
+                    padding: 10px;
+                    line-height: 1.4;
+                    color: #000;
+                    background: #fff;
                 }
                 .header {
                     text-align: center;
@@ -1626,17 +1632,19 @@
                     word-wrap: break-word;
                 }
                 .header h3 {
-                    margin: 2px 0;
-                    font-size: clamp(11px, 3.5vw, 14px);
+                    margin: 4px 0;
+                    font-size: 14px;
                     font-weight: bold;
+                    letter-spacing: 0;
                 }
                 .header p {
-                    margin: 1px 0;
-                    font-size: clamp(8px, 2.5vw, 10px);
+                    margin: 2px 0;
+                    font-size: 11px;
+                    letter-spacing: 0;
                 }
                 .info-section {
-                    margin: 6px 0;
-                    font-size: clamp(8px, 2.5vw, 10px);
+                    margin: 8px 0;
+                    font-size: 11px;
                 }
                 .info-row {
                     display: flex;
@@ -1654,21 +1662,22 @@
                 table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin: 6px 0;
-                    font-size: clamp(8px, 2.5vw, 10px);
+                    margin: 8px 0;
+                    font-size: 11px;
                 }
                 th {
                     border-top: 1px solid #000;
                     border-bottom: 1px solid #000;
-                    padding: 3px 2px;
+                    padding: 4px 2px;
                     text-align: left;
                     font-weight: bold;
-                    font-size: clamp(8px, 2.5vw, 10px);
+                    font-size: 11px;
                 }
                 td {
-                    padding: 2px;
+                    padding: 3px 2px;
                     vertical-align: top;
                     word-wrap: break-word;
+                    border-bottom: 1px solid #ddd;
                 }
                 .item-desc {
                     width: 40%;
@@ -1697,8 +1706,8 @@
                 .summary-row {
                     display: flex;
                     justify-content: space-between;
-                    margin: 2px 0;
-                    font-size: clamp(8px, 2.5vw, 10px);
+                    margin: 3px 0;
+                    font-size: 11px;
                     gap: 4px;
                 }
                 .summary-row span:first-child {
@@ -1710,52 +1719,20 @@
                 }
                 .total-row {
                     font-weight: bold;
-                    font-size: clamp(10px, 3vw, 12px);
+                    font-size: 12px;
                     border-top: 1px solid #000;
                     padding-top: 4px;
                     margin-top: 4px;
                 }
                 .footer {
                     text-align: center;
-                    margin-top: 8px;
+                    margin-top: 10px;
                     border-top: 1px dashed #000;
-                    padding-top: 6px;
-                    font-size: clamp(8px, 2.5vw, 10px);
+                    padding-top: 8px;
+                    font-size: 11px;
                 }
                 .footer p {
-                    margin: 2px 0;
-                }
-                
-                /* Adjustments for very small printers (58mm) */
-                @media (max-width: 220px) {
-                    body {
-                        padding: 4px;
-                        font-size: 8px;
-                    }
-                    .header h3 {
-                        font-size: 10px;
-                    }
-                    th, td {
-                        padding: 1px;
-                    }
-                }
-                
-                /* Adjustments for medium printers (80mm) */
-                @media (min-width: 221px) and (max-width: 320px) {
-                    body {
-                        padding: 8px;
-                        font-size: 10px;
-                    }
-                }
-                
-                /* Adjustments for larger printers (> 80mm) */
-                @media (min-width: 321px) {
-                    body {
-                        max-width: 320px;
-                        margin: 0 auto;
-                        padding: 10px;
-                        font-size: 11px;
-                    }
+                    margin: 3px 0;
                 }
             </style>
         </head>

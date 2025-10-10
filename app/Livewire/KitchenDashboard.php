@@ -289,18 +289,30 @@ class KitchenDashboard extends Component
 
     public function render()
     {
-        $today = now()->toDateString(); 
+        $now = now();
+        $today = $now->toDateString();
+        $currentTime = $now->toTimeString();
 
         $pendingOrders = orders::with(['table', 'menu', 'reservation', 'walkin'])
             ->whereNotNull('status')
-            ->where(function ($query) use ($today) {
-                $query->whereHas('reservation', function ($q) use ($today) {
+            ->where(function ($query) use ($today, $currentTime) {
+                $query->whereHas('reservation', function ($q) use ($today, $currentTime) {
                     $q->where('status', 'Active')
-                        ->whereDate('started_at', $today); 
+                        ->whereDate('started_at', $today)
+                        ->whereTime('started_at', '<=', $currentTime)
+                        ->where(function ($timeQuery) use ($currentTime) {
+                            $timeQuery->whereTime('ended_at', '>=', $currentTime)
+                                ->orWhereNull('ended_at');
+                        });
                 })
-                    ->orWhereHas('walkin', function ($q) use ($today) {
+                    ->orWhereHas('walkin', function ($q) use ($today, $currentTime) {
                         $q->where('status', 'active')
-                            ->whereDate('started_at', $today); 
+                            ->whereDate('started_at', $today)
+                            ->whereTime('started_at', '<=', $currentTime)
+                            ->where(function ($timeQuery) use ($currentTime) {
+                                $timeQuery->whereTime('ended_at', '>=', $currentTime)
+                                    ->orWhereNull('ended_at');
+                            });
                     });
             })
             ->orderBy('created_at', 'asc')
@@ -312,9 +324,14 @@ class KitchenDashboard extends Component
                 return 'walkin_' . $order->walk_in_id;
             });
 
-        $tables = table::whereHas('reservation', function ($query) use ($today) {
+        $tables = table::whereHas('reservation', function ($query) use ($today, $currentTime) {
             $query->where('status', 'Active')
-                ->whereDate('started_at', $today) 
+                ->whereDate('started_at', $today)
+                ->whereTime('started_at', '<=', $currentTime)
+                ->where(function ($timeQuery) use ($currentTime) {
+                    $timeQuery->whereTime('ended_at', '>=', $currentTime)
+                        ->orWhereNull('ended_at');
+                })
                 ->whereHas('orders', function ($q) {
                     $q->whereNotNull('id');
                 })
@@ -322,9 +339,14 @@ class KitchenDashboard extends Component
                     $q->where('status', 'Pending');
                 });
         })
-            ->orWhereHas('walkin', function ($query) use ($today) {
+            ->orWhereHas('walkin', function ($query) use ($today, $currentTime) {
                 $query->where('status', 'active')
                     ->whereDate('started_at', $today)
+                    ->whereTime('started_at', '<=', $currentTime)
+                    ->where(function ($timeQuery) use ($currentTime) {
+                        $timeQuery->whereTime('ended_at', '>=', $currentTime)
+                            ->orWhereNull('ended_at');
+                    })
                     ->whereHas('orders', function ($q) {
                         $q->whereNotNull('id');
                     })
@@ -332,12 +354,22 @@ class KitchenDashboard extends Component
                         $q->where('status', 'Pending');
                     });
             })
-            ->with(['reservation' => function ($query) use ($today) {
+            ->with(['reservation' => function ($query) use ($today, $currentTime) {
                 $query->where('status', 'Active')
-                    ->whereDate('started_at', $today);
-            }, 'walkin' => function ($query) use ($today) {
+                    ->whereDate('started_at', $today)
+                    ->whereTime('started_at', '<=', $currentTime)
+                    ->where(function ($timeQuery) use ($currentTime) {
+                        $timeQuery->whereTime('ended_at', '>=', $currentTime)
+                            ->orWhereNull('ended_at');
+                    });
+            }, 'walkin' => function ($query) use ($today, $currentTime) {
                 $query->where('status', 'active')
-                    ->whereDate('started_at', $today);
+                    ->whereDate('started_at', $today)
+                    ->whereTime('started_at', '<=', $currentTime)
+                    ->where(function ($timeQuery) use ($currentTime) {
+                        $timeQuery->whereTime('ended_at', '>=', $currentTime)
+                            ->orWhereNull('ended_at');
+                    });
             }])
             ->get();
 
