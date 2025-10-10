@@ -7,7 +7,6 @@
   <title>Receptionist Page</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
 
   @include('receptionist.components.css')
@@ -89,6 +88,16 @@
     [x-cloak] {
       display: none;
     }
+
+    .spinner {
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
   </style>
 </head>
 
@@ -165,10 +174,21 @@
             <p><strong>Pax:</strong> <span id="paxCount">N/A</span></p>
             <p><strong>Status:</strong> <span id="paymentStatus">N/A</span></p>
             <div id="actionButtons" class="mt-4 text-center flex justify-center gap-2">
-              <form id="acceptForm" method="POST" class="inline">@csrf
-                <button type="submit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Accept</button>
+              <form id="acceptForm" method="POST" class="inline">
+                @csrf
+                <button type="submit" id="acceptBtn"
+                  class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2 transition-all duration-200">
+                  <span
+                    class="spinner hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  <span class="btn-text">Accept</span>
+                </button>
               </form>
-              <button id="cancelReservationBtn" class="px-4 py-2 bg-red-500 text-white">Reject</button>
+              <button id="cancelReservationBtn"
+                class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 flex items-center justify-center gap-2 transition-all duration-200">
+                <span
+                  class="spinner hidden w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                <span class="btn-text">Reject</span>
+              </button>
             </div>
           </div>
         </div>
@@ -202,8 +222,7 @@
         <div class="modal-section">
           <label><strong>Customer</strong></label>
           <input type="text" id="customerName" placeholder="Customer's name" required
-            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full"
-            oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '')" />
+            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full" />
         </div>
 
         <div class="modal-section" id="contactinput">
@@ -217,8 +236,7 @@
           <div class="modal-column">
             <label><strong>Pax</strong></label>
             <input id="numberOfPax" type="number" required
-              class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full"
-              oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+              class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" />
           </div>
           <div class="modal-column" id="reservationInfoGroup">
             <label class="mb-1"><strong>Reserved Now</strong></label>
@@ -471,18 +489,7 @@
       if (this.elements.closeModal) {
         this.elements.closeModal.onclick = () => {
           this.elements.tableModal.style.display = 'none';
-          this.resetForm(); // Clear inputs when closing
         };
-      }
-
-      // Close modal when clicking outside
-      if (this.elements.tableModal) {
-        this.elements.tableModal.addEventListener('click', (e) => {
-          if (e.target === this.elements.tableModal) {
-            this.elements.tableModal.style.display = 'none';
-            this.resetForm(); // Clear inputs when closing
-          }
-        });
       }
 
       const closePaymentBtn = document.getElementById('closePaymentBtn');
@@ -529,6 +536,7 @@
           });
         });
       }
+
     }
 
     closeOrdersPanel() {
@@ -580,7 +588,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-        {{ $table->id }}: {{ $table->capacity }},
+      {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
@@ -840,6 +848,7 @@
     }
   }
 
+
   openNotificationModal(id) {
     this.reservationId = id;
     this.elements.paymentModal.classList.remove('hidden');
@@ -897,62 +906,154 @@
     }
   }
 
+
   handleAcceptReservation(e) {
     e.preventDefault();
-    if (!this.reservationId) return;
+    const btn = this.elements.acceptForm.querySelector('button[type="submit"]');
+    const spinner = btn.querySelector('.spinner');
+    const btnText = btn.querySelector('.btn-text');
 
-    fetch(this.elements.acceptForm.action, {
+    if (!btn || !this.reservationId) {
+      alert('Error: Missing button or reservation ID');
+      return;
+    }
+
+    spinner.classList.remove('hidden');
+    btnText.textContent = 'Processing...';
+    btn.disabled = true;
+    this.elements.cancelReservationBtn.disabled = true;
+
+    const formAction = `/receptionist/accept-reservation/${this.reservationId}`;
+
+    fetch(formAction, {
       method: 'POST',
       headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
-      }
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.success) {
           this.elements.paymentModal.classList.add('hidden');
-          this.updateNotificationBadges(data.unread_count);
-          this.updateNotificationStatus(data.reservationId, data.status);
-          this.reservationId = null;
+          this.showReservationSuccessModal('Reservation accepted successfully!');
+          this.fetchNotifications();
         } else {
-          alert(data.message || 'Failed to accept reservation');
+          this.showReservationErrorModal(data.message || 'Failed to accept reservation.');
         }
       })
-      .catch(err => {
-        console.error(err);
-        alert('Server error');
+      .catch(error => {
+        console.error('Accept error:', error);
+        this.showReservationErrorModal('Error: ' + error.message);
+      })
+      .finally(() => {
+        btn.disabled = false;
+        this.elements.cancelReservationBtn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = 'Accept';
       });
   }
 
   handleCancelReservation() {
-    if (!this.reservationId) return;
+    const cancelBtn = this.elements.cancelReservationBtn;
+    const spinner = cancelBtn.querySelector('.spinner');
+    const btnText = cancelBtn.querySelector('.btn-text');
+
+    if (!cancelBtn || !this.reservationId) {
+      alert('Error: Missing button or reservation ID');
+      return;
+    }
+
+    spinner.classList.remove('hidden');
+    btnText.textContent = 'Processing...';
+    cancelBtn.disabled = true;
+    this.elements.acceptForm.querySelector('button[type="submit"]').disabled = true;
 
     fetch(`/receptionist/cancel-reservation/${this.reservationId}`, {
       method: 'POST',
       headers: {
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-        'Accept': 'application/json'
-      }
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        return res.json();
+      })
       .then(data => {
         if (data.success) {
           this.elements.paymentModal.classList.add('hidden');
-          const li = this.elements.notifList.querySelector(`[data-reservation-id="${this.reservationId}"]`);
-          if (li) {
-            li.classList.add("text-red-600", "font-semibold");
-            li.innerHTML += '<p class="text-xs">Cancelled</p>';
-          }
-          this.reservationId = null;
+          this.showReservationSuccessModal('Reservation rejected successfully!');
+          this.fetchNotifications();
         } else {
-          alert(data.message || "Failed to cancel reservation");
+          this.showReservationErrorModal(data.message || 'Failed to reject reservation.');
         }
       })
-      .catch(err => {
-        console.error(err);
-        alert("Server error while cancelling reservation.");
+      .catch(error => {
+        console.error('Reject error:', error);
+        this.showReservationErrorModal('Error: ' + error.message);
+      })
+      .finally(() => {
+        cancelBtn.disabled = false;
+        this.elements.acceptForm.querySelector('button[type="submit"]').disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = 'Reject';
       });
+  }
+
+  showReservationSuccessModal(message) {
+    const modal = this.elements.successModal;
+    const title = document.getElementById('successTitle');
+
+    if (title) {
+      title.textContent = message;
+    }
+
+    if (modal) {
+      modal.classList.remove('hidden');
+    }
+  }
+
+  showReservationErrorModal(message) {
+    const errorModal = document.getElementById('errorModal') || this.createErrorModal();
+    const errorMessage = document.getElementById('errorMessage');
+
+    if (errorMessage) {
+      errorMessage.textContent = message;
+    }
+
+    if (errorModal) {
+      errorModal.classList.remove('hidden');
+    }
+  }
+
+
+  createErrorModal() {
+    const modal = document.createElement('div');
+    modal.id = 'errorModal';
+    modal.className = 'fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden z-50';
+    modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-6 w-80 text-center">
+                <h3 class="text-lg font-semibold mb-2 text-red-600">Error</h3>
+                <p id="errorMessage" class="text-gray-700 mb-4"></p>
+                <button onclick="this.parentElement.parentElement.classList.add('hidden')" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                    Close
+                </button>
+            </div>
+        `;
+    document.body.appendChild(modal);
+    return modal;
   }
 
   updateNotificationStatus(reservationId, status) {
@@ -1016,13 +1117,10 @@
     this.elements.advancePayment.parentElement.style.display = '';
     this.elements.contactInput.style.display = '';
 
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const today = `${year}-${month}-${day}`;
-
+    const today = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
     this.elements.reservedDate.value = today;
-    this.elements.reservedDate.min = today;
 
     const hours = now.getHours().toString().padStart(2, '0');
     const minutes = now.getMinutes().toString().padStart(2, '0');
@@ -1207,63 +1305,15 @@
   }
 
   resetForm() {
-    // Clear text inputs
-    if (this.elements.customerName) {
-      this.elements.customerName.value = '';
-    }
-    if (this.elements.contactNumber) {
-      this.elements.contactNumber.value = '';
-    }
-    if (this.elements.numberOfPax) {
-      this.elements.numberOfPax.value = '';
-    }
-    if (this.elements.customerNotes) {
-      this.elements.customerNotes.value = '';
-    }
-    if (this.elements.advancePayment) {
-      this.elements.advancePayment.value = '';
-    }
-
-    // Reset date/time inputs to current values
-    const now = new Date();
-    if (this.elements.reservedDate) {
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      this.elements.reservedDate.value = `${year}-${month}-${day}`;
-    }
-
-    if (this.elements.arrivalTimeInput) {
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
-    }
-
-    // Clear error highlights
-    [
+    const fieldsToReset = [
       this.elements.customerName,
       this.elements.contactNumber,
       this.elements.numberOfPax,
-      this.elements.reservedDate,
-      this.elements.arrivalTimeInput
-    ].forEach(el => {
-      if (el) el.classList.remove('border-red-500');
-    });
+      this.elements.customerNotes,
+      this.elements.advancePayment
+    ];
 
-    // Clear time frame display
-    if (this.elements.timeFrameDisplay) {
-      this.elements.timeFrameDisplay.textContent = '';
-    }
-
-    // Clear orders
     this.clearOrders();
-
-    // Close the orders panel if open
-    this.closeOrdersPanel();
-
-    // Reset selected table
-    this.selectedTableId = null;
-    this.selectedTableCapacity = null;
   }
 
       async handleSubmitReservation() {
@@ -1279,130 +1329,44 @@
     const date = dateInput?.value;
     const time = timeInput?.value;
 
-    // Clear previous error highlights
-    [this.elements.customerName, this.elements.contactNumber, paxInput, dateInput, timeInput].forEach(el => {
-      if (el) el.classList.remove('border-red-500');
-    });
-
-    // === VALIDATION 1: Required Fields ===
     const emptyFields = [];
-    if (!name) {
-      emptyFields.push({ field: this.elements.customerName, message: 'Customer name is required' });
-    }
-
-    // Only validate contact for reservations (not walk-ins)
-    if (!this.isPlacingOrder && !contact) {
-      emptyFields.push({ field: this.elements.contactNumber, message: 'Contact number is required' });
-    }
-
-    if (!paxCount) {
-      emptyFields.push({ field: paxInput, message: 'Number of pax is required' });
-    }
-
-    if (!date) {
-      emptyFields.push({ field: dateInput, message: 'Date is required' });
-    }
-
-    if (!time) {
-      emptyFields.push({ field: timeInput, message: 'Time is required' });
-    }
+    if (!name) emptyFields.push(this.elements.customerName);
+    if (!this.isPlacingOrder && !contact) emptyFields.push(this.elements.contactNumber);
+    if (!paxCount) emptyFields.push(paxInput);
+    if (!date) emptyFields.push(dateInput);
+    if (!time) emptyFields.push(timeInput);
 
     if (emptyFields.length > 0) {
-      emptyFields.forEach(item => item.field.classList.add('border-red-500'));
+      emptyFields.forEach(f => f.classList.add('border-red-500'));
       this.showErrorToast('Please fill in all required fields.');
       return;
     }
 
-    // === VALIDATION 2: Customer Name Format ===
-    if (!/^[a-zA-Z\s]+$/.test(name)) {
-      this.elements.customerName.classList.add('border-red-500');
-      this.showErrorToast('Customer name should only contain letters and spaces.');
-      return;
-    }
+    const selectedDate = new Date(`${date}T${time}`);
+    const now = new Date();
 
-    // === VALIDATION 3: Contact Number (only for reservations) ===
-    if (!this.isPlacingOrder) {
-      if (contact.length !== 11) {
-        this.elements.contactNumber.classList.add('border-red-500');
-        this.showErrorToast('Contact number must be exactly 11 digits.');
-        return;
-      }
-
-      if (!contact.startsWith('09')) {
-        this.elements.contactNumber.classList.add('border-red-500');
-        this.showErrorToast('Contact number must start with 09.');
-        return;
-      }
-
-      if (!/^\d+$/.test(contact)) {
-        this.elements.contactNumber.classList.add('border-red-500');
-        this.showErrorToast('Contact number must contain only digits.');
-        return;
-      }
-    }
-
-    // === VALIDATION 4: Pax Count ===
-    const maxCapacity = this.selectedTableCapacity || 10;
-    if (paxCount < 1) {
-      paxInput.classList.add('border-red-500');
-      this.showErrorToast('Number of pax must be at least 1.');
-      return;
-    }
-
-    if (paxCount > maxCapacity) {
-      paxInput.classList.add('border-red-500');
-      this.showErrorToast(`Number of pax cannot exceed ${maxCapacity} for this table.`);
-      return;
-    }
-
-    // === VALIDATION 5: Date/Time (Future Check) ===
-    const selectedDateTime = new Date(`${date}T${time}`);
-    const oneMinuteFromNow = new Date(Date.now() + 60000);
-
-    if (selectedDateTime < oneMinuteFromNow) {
+    if (selectedDate < now.setHours(0, 0, 0, 0)) {
+      this.showErrorToast('You cannot select a past date.');
       dateInput.classList.add('border-red-500');
-      timeInput.classList.add('border-red-500');
-      this.showErrorToast('Selected date/time must be at least 1 minute from now.');
       return;
     }
 
-    // === VALIDATION 6: Business Hours ===
-    const [hours, minutes] = time.split(':').map(Number);
-    const timeInMinutes = hours * 60 + minutes;
-    const startTime = 11 * 60 + 30; // 11:30 AM
-    const endTime = 18 * 60; // 6:00 PM
-
-    if (timeInMinutes < startTime || timeInMinutes > endTime) {
-      timeInput.classList.add('border-red-500');
-      this.showErrorToast('Reservation time must be between 11:30 AM and 6:00 PM.');
-      return;
-    }
-
-    // === VALIDATION 7: Orders Exist ===
     const orders = Object.values(this.selectedOrders || {});
-
-    if (orders.length === 0) {
-      this.showErrorToast('Please add at least one item to your order.');
-      return;
-    }
-
-    // === VALIDATION 8: Main Menu Required ===
     const hasMain = orders.some(item => item.category === 'main');
+
     if (!hasMain) {
       this.showErrorToast('You must order at least one main menu item.');
       return;
     }
 
-    // === VALIDATION 9: Main Menu Quantity = Pax ===
     const mainMenuOrders = orders.filter(item => item.category === 'main');
     const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
 
     if (totalMainMenuQuantity !== paxCount) {
-      this.showErrorToast(`Main menu quantity (${totalMainMenuQuantity}) must match number of pax (${paxCount}).`);
+      this.showErrorToast('Match your main menu order quantity to your number of pax.');
       return;
     }
 
-    // All validations passed - proceed with submission
     this.elements.submitBtn.disabled = true;
     this.elements.submitBtn.textContent = "Submitting...";
 
@@ -1410,29 +1374,28 @@
     this.submitOrder(data);
   }
 
+
+
   showErrorToast(message) {
     const toast = document.createElement('div');
     toast.textContent = message;
     toast.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background-color: #ef4444;
-        color: white;
-        padding: 12px 16px;
-        border-radius: 6px;
-        z-index: 9999;
-        font-size: 14px;
-        max-width: 300px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background-color: #ef4444;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 6px;
+      z-index: 9999;
+      font-size: 14px;
+      max-width: 300px;
     `;
 
     document.body.appendChild(toast);
 
     setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast);
-      }
+      document.body.removeChild(toast);
     }, 3000);
   }
 
@@ -1440,7 +1403,7 @@
     const baseData = {
       customer_name: this.elements.customerName.value.trim(),
       contact_number: this.elements.contactNumber.value.trim(),
-      pax: parseInt(this.elements.numberOfPax.value),
+      pax: this.elements.numberOfPax.value.trim(),
       table_id: this.selectedTableId,
       orders: Object.entries(this.selectedOrders).map(([id, item]) => ({
         menu_id: id,
@@ -1455,7 +1418,7 @@
     } else {
       baseData.reserved_date = this.elements.reservedDate.value;
       baseData.arrival_time = this.elements.arrivalTimeInput.value;
-      baseData.advance_payment = parseFloat(this.elements.advancePayment.value) || 0;
+      baseData.advance_payment = this.elements.advancePayment.value.trim() || 0;
     }
 
     return baseData;
@@ -1542,8 +1505,6 @@
     if (this.elements.tableModal) {
       this.elements.tableModal.style.display = 'none';
     }
-
-    this.resetForm();
   }
 
   showErrorModal(message) {
@@ -1585,6 +1546,8 @@
 
     return errorModal;
   }
+
+
 
   animateFlyToCart(imageEl, targetSelector) {
     const imgRect = imageEl.getBoundingClientRect();
@@ -1659,6 +1622,6 @@
 
   window.dashboard = dashboard;
 </script>
-</div>
+
 
 </html>

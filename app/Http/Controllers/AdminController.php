@@ -264,8 +264,8 @@ class AdminController extends Controller
 
                 return $ingredient;
             })
-            ->sortBy('sort_order') 
-            ->values(); 
+            ->sortBy('sort_order')
+            ->values();
 
         return view('admin.home', compact(
             'totalGrossSales',
@@ -836,8 +836,6 @@ class AdminController extends Controller
 
         return response()->json(['expired' => $expired]);
     }
-
-
 
     public function storeMenu(Request $request)
     {
@@ -1619,33 +1617,35 @@ class AdminController extends Controller
         }
     }
 
-    public function deleteBatch($id)
+    public function deleteBatch(Request $request)
     {
-        DB::beginTransaction();
+        $request->validate([
+            'batch_id' => 'required|exists:ingredient_batches,id',
+        ]);
+
         try {
-            $batch = IngredientBatch::findOrFail($id);
-            $ingredient = $batch->ingredient;
+            DB::beginTransaction();
 
-            $ingredient->update(['stocks' => max(0, $ingredient->stocks - $batch->quantity)]);
+            $batch = ingredientBatch::findOrFail($request->batch_id);
 
-            ingredientMovements::create([
-                'ingredient_id' => $ingredient->id,
-                'user_id' => Auth::id(),
-                'type' => 'expired',
-                'quantity' => -$batch->quantity,
-                'stock_before' => $ingredient->stocks + $batch->quantity,
-                'stock_after' => $ingredient->stocks,
-            ]);
+            $batch->delete(); 
 
-            $batch->delete();
             DB::commit();
 
-            return response()->json(['success' => true]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch deleted and stock updated successfully',
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['success' => false], 500);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete batch: ' . $e->getMessage(),
+            ], 500);
         }
     }
+
 
     public function others(Request $request)
     {

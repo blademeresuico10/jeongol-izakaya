@@ -16,6 +16,7 @@ use App\Models\reservationPayment;
 use App\Models\walkin;
 use App\Models\table;
 
+
 class ReceptionistController extends Controller
 {
 

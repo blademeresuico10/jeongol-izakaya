@@ -70,14 +70,12 @@ class CustomerController extends Controller
         $availabilityData = [];
 
         foreach ($tables as $table) {
-            // Check if currently occupied (Active status, ongoing right now)
             $isCurrentlyOccupied = reservation::where('table_id', $table->id)
                 ->where('status', 'Active')
                 ->where('started_at', '<=', $now)
                 ->where('ended_at', '>=', $now)
                 ->exists();
 
-            // Check if reserved for the searched time
             $isActiveReservation = reservation::where('table_id', $table->id)
                 ->where('status', 'Active')
                 ->where('started_at', '<=', $searchDateTime)

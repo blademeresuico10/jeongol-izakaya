@@ -8,8 +8,7 @@
   <title>Jeongol Izakaya</title>
 
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+ 
 
   @livewireStyles
   @vite('resources/css/app.css')
@@ -728,7 +727,7 @@
 
       if (date && time && !allowClick) {
         [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
-        this.showMessageBox('You can reserve a table 2 hours from now!', 'warning');
+        this.showMessageBox('Please reserve a table at least 2 hours before your arrival.', 'warning');
       } else {
         [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
       }
@@ -741,11 +740,9 @@
         const tableDiv = link.querySelector('.table');
         let existingLabel = tableDiv.querySelector('.booked-label');
 
-        // Remove all status classes first
         tableDiv.classList.remove('booked', 'pending', 'available', 'bg-green-100', 'bg-gray-300', 'bg-blue-200');
 
         if (tableData.is_pending) {
-          // PENDING status - Blue background, clickable
           tableDiv.classList.add('pending', 'bg-blue-200');
           link.style.pointerEvents = 'auto';
 
@@ -819,7 +816,7 @@
 
       const tableCapacities = {
         @foreach($tables as $table)
-        {{ $table->id }}: {{ $table->capacity }},
+      {{ $table->id }}: {{ $table->capacity }},
     @endforeach
   };
 

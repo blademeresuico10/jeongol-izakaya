@@ -2,6 +2,106 @@
 @include('admin.layouts.sidebar')
 @vite(['resources/js/app.js'])
 
+<style>
+    .ingredient-item {
+        position: relative;
+    }
+
+    .floating-stock-alert {
+        position: absolute;
+        top: 50%;
+        right: -280px;
+        transform: translateY(-50%);
+        width: 260px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        animation: floatIn 0.3s ease-out;
+    }
+
+    .floating-stock-alert::before {
+        content: '';
+        position: absolute;
+        left: -8px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-top: 8px solid transparent;
+        border-bottom: 8px solid transparent;
+        border-right: 8px solid white;
+    }
+
+    .floating-stock-alert[data-status="critical"] {
+        border-left: 4px solid #dc3545;
+    }
+
+    .floating-stock-alert[data-status="low"] {
+        border-left: 4px solid #ffc107;
+    }
+
+    @keyframes floatIn {
+        from {
+            opacity: 0;
+            right: -300px;
+        }
+
+        to {
+            opacity: 1;
+            right: -280px;
+        }
+    }
+
+    @keyframes floatOut {
+        from {
+            opacity: 1;
+            right: -280px;
+        }
+
+        to {
+            opacity: 0;
+            right: -300px;
+        }
+    }
+
+    .close-alert:hover {
+        color: #6b7280 !important;
+    }
+
+    .ingredient-item:hover .floating-stock-alert {
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    /* For mobile responsiveness */
+    @media (max-width: 1400px) {
+        .floating-stock-alert {
+            right: auto;
+            left: 50%;
+            top: -80px;
+            transform: translateX(-50%);
+        }
+
+        .floating-stock-alert::before {
+            left: 50%;
+            top: auto;
+            bottom: -8px;
+            transform: translateX(-50%) rotate(90deg);
+        }
+
+        @keyframes floatIn {
+            from {
+                opacity: 0;
+                top: -100px;
+            }
+
+            to {
+                opacity: 1;
+                top: -80px;
+            }
+        }
+    }
+</style>
 <div id="content-wrapper" class="d-flex flex-column">
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
@@ -210,9 +310,9 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <span
-                                            class="badge {{ $ingredient->badge_class }} bg-opacity-10 text-white px-3 py-2">
-                                           {{ $ingredient->badge_text }}
+                                        <span class="badge {{ $ingredient->badge_class }} text-white px-3 py-2">
+                                            <i class="fas {{ $ingredient->badge_icon }} me-1"></i>
+                                            {{ $ingredient->badge_text }}
                                         </span>
                                     </div>
                                 </div>
@@ -561,6 +661,43 @@
         });
     });
 
+    let shownAlerts = new Set();
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Show alerts for critical and low stock items
+        const ingredients = document.querySelectorAll('.ingredient-item');
+
+        ingredients.forEach((item, index) => {
+            const status = item.getAttribute('data-ingredient-status');
+            const alertElement = item.querySelector('.floating-stock-alert');
+
+            if ((status === 'critical' || status === 'low') && alertElement) {
+                // Stagger the appearance of alerts
+                setTimeout(() => {
+                    alertElement.style.display = 'block';
+                    alertElement.setAttribute('data-status', status);
+
+                    // Auto-hide after 8 seconds
+                    setTimeout(() => {
+                        closeAlertWithAnimation(alertElement);
+                    }, 8000);
+                }, index * 200); // 200ms delay between each alert
+            }
+        });
+    });
+
+    function closeAlert(button) {
+        const alert = button.closest('.floating-stock-alert');
+        closeAlertWithAnimation(alert);
+    }
+
+    function closeAlertWithAnimation(alert) {
+        alert.style.animation = 'floatOut 0.3s ease-in';
+        setTimeout(() => {
+            alert.style.display = 'none';
+            alert.style.animation = '';
+        }, 300);
+    }
 </script>
 
 @include('admin.layouts.script')

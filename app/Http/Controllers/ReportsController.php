@@ -25,8 +25,6 @@ class ReportsController extends Controller
     }
 
 
-
-
     public function salesReportPdf(Request $request)
     {
         $filter = $request->query('filter');
@@ -179,71 +177,66 @@ class ReportsController extends Controller
 
 
     public function stockReport(Request $request)
-{
-    try {
-        $filter = $request->query('filter');
+    {
+        try {
+            $filter = $request->query('filter');
 
-        switch ($filter) {
-            case 'daily':
-            case 'today':
-                $dateFrom = now()->startOfDay();
-                $dateTo = now()->endOfDay();
-                break;
+            switch ($filter) {
+                case 'daily':
+                case 'today':
+                    $dateFrom = now()->startOfDay();
+                    $dateTo = now()->endOfDay();
+                    break;
 
-            case 'weekly':
-                $dateFrom = now()->startOfWeek();
-                $dateTo = now()->endOfWeek();
-                break;
+                case 'weekly':
+                    $dateFrom = now()->startOfWeek();
+                    $dateTo = now()->endOfWeek();
+                    break;
 
-            case 'monthly':
-                $dateFrom = now()->startOfMonth();
-                $dateTo = now()->endOfMonth();
-                break;
+                case 'monthly':
+                    $dateFrom = now()->startOfMonth();
+                    $dateTo = now()->endOfMonth();
+                    break;
 
-            case 'yearly':
-                $dateFrom = now()->startOfYear();
-                $dateTo = now()->endOfYear();
-                break;
+                case 'yearly':
+                    $dateFrom = now()->startOfYear();
+                    $dateTo = now()->endOfYear();
+                    break;
 
-            default:
-                $dateFrom = now()->startOfMonth();
-                $dateTo = now()->endOfMonth();
-                break;
-        }
+                default:
+                    $dateFrom = now()->startOfMonth();
+                    $dateTo = now()->endOfMonth();
+                    break;
+            }
 
-        // Get current stocks (all ingredients) - removed eager loading
-        $currentStocks = ingredients::all();
+            $currentStocks = ingredients::all();
 
-        // Stock IN (arrivals) - ingredient batches that arrived in date range
-        $stockIns = ingredientBatch::with('ingredient')
-            ->whereBetween('arrived_at', [$dateFrom, $dateTo])
-            ->get();
+            $stockIns = ingredientBatch::with('ingredient')
+                ->whereBetween('arrived_at', [$dateFrom, $dateTo])
+                ->get();
 
-        // Consumed stocks (used) - ingredient movements that were used
-        $consumedStocks = ingredientMovements::with(['ingredient', 'order'])
-            ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->where('type', 'used')
-            ->get();
+            $consumedStocks = ingredientMovements::with(['ingredient', 'order'])
+                ->whereBetween('created_at', [$dateFrom, $dateTo])
+                ->where('type', 'used')
+                ->get();
 
-        // Expired stocks
-        $expiredStocks = expiredIngredients::with(['ingredient', 'ingredientBatch'])
-            ->whereBetween('expired_at', [$dateFrom, $dateTo])
-            ->get();
+            $expiredStocks = expiredIngredients::with(['ingredient', 'ingredientBatch'])
+                ->whereBetween('expired_at', [$dateFrom, $dateTo])
+                ->get();
 
-        $pdf = PDF::loadView('admin.reports.pdf-stock', [
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'generatedAt' => now(),
-            'currentStocks' => $currentStocks,
-            'consumedStocks' => $consumedStocks,
-            'stockIns' => $stockIns,
-            'expiredStocks' => $expiredStocks,
-        ])->setPaper('A4', 'portrait');
+            $pdf = PDF::loadView('admin.reports.pdf-stock', [
+                'dateFrom' => $dateFrom,
+                'dateTo' => $dateTo,
+                'generatedAt' => now(),
+                'currentStocks' => $currentStocks,
+                'consumedStocks' => $consumedStocks,
+                'stockIns' => $stockIns,
+                'expiredStocks' => $expiredStocks,
+            ])->setPaper('A4', 'portrait');
 
-        return $pdf->download('Stocks_Report_' . now()->format('Ymd_His') . '.pdf');
-        
-    } catch (\Exception $e) {
-        return response()->make("
+            return $pdf->download('Stocks_Report_' . now()->format('Ymd_His') . '.pdf');
+        } catch (\Exception $e) {
+            return response()->make("
             <script>
                 console.error('=== STOCK REPORT ERROR ===');
                 console.error('Message: " . addslashes($e->getMessage()) . "');
@@ -256,6 +249,6 @@ class ReportsController extends Controller
             <p><strong>File:</strong> {$e->getFile()}</p>
             <p><strong>Line:</strong> {$e->getLine()}</p>
         ", 500);
+        }
     }
-}
 }
