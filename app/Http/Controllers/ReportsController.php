@@ -33,46 +33,51 @@ class ReportsController extends Controller
             case 'weekly':
                 $dateFrom = now()->startOfWeek();
                 $dateTo = now()->endOfWeek();
-                $filterDate = 'As of This Week';
                 break;
             case 'monthly':
                 $dateFrom = now()->startOfMonth();
                 $dateTo = now()->endOfMonth();
-                $filterDate = 'As of This Month';
                 break;
             case 'yearly':
                 $dateFrom = now()->startOfYear();
                 $dateTo = now()->endOfYear();
-                $filterDate = 'As of This Year';
                 break;
-            default:
+            default: 
                 $dateFrom = now()->startOfDay();
                 $dateTo = now()->endOfDay();
-                $filterDate = 'As of Today';
                 break;
         }
 
-        $transactions = transaction::with(['transactionDetails.orders', 'reservation', 'walkin'])
+        $transactions = transaction::with([
+            'transactionDetails.orders.menu', 
+            'reservation',
+            'walkin'
+        ])
             ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->where('status', 'Completed') 
             ->get();
 
         $grossSales = $transactions->sum('orders_total');
         $netSales = $transactions->sum('grand_total');
         $totalDiscounts = $transactions->sum('discount_total');
-        $totalCustomers = $transactions->sum(fn($t) => $t->reservation->pax ?? $t->walkin->pax ?? 0);
+        $totalCustomers = $transactions->sum(function ($t) {
+            return $t->reservation?->pax ?? $t->walkin?->pax ?? 0;
+        });
 
         $allDetails = [];
-        foreach ($transactions as $t) {
-            foreach ($t->transactionDetails as $d) {
-                $price = $d->orders->price ?? 0;
-                $quantity = $d->quantity ?? 0;
-                $discount = $d->discount_amount ?? 0;
-                $computedTotal = max(0, ($price * $quantity) - abs($discount));
 
+        foreach ($transactions as $transaction) {
+            foreach ($transaction->transactionDetails as $detail) {
+                $order = $detail->orders;
+                $price = $order ? ($order->price ?? 0) : 0;
+                $quantity = $detail->quantity ?? 0;
+                $discount = abs($detail->discount_amount ?? 0);
+
+                $computedTotal = max(0, ($price * $quantity) - $discount);
 
                 $allDetails[] = [
-                    'item_name' => $d->item_name,
-                    'quantity' => $d->quantity,
+                    'item_name' => $detail->item_name,
+                    'quantity' => $quantity,
                     'total' => $computedTotal,
                 ];
             }
@@ -80,26 +85,32 @@ class ReportsController extends Controller
 
         $groupedSales = collect($allDetails)
             ->groupBy('item_name')
-            ->map(fn($items, $name) => [
-                'item_name' => $name,
-                'quantity' => $items->sum('quantity'),
-                'total' => $items->sum('total'),
-            ])
+            ->map(function ($items, $name) {
+                return [
+                    'item_name' => $name,
+                    'quantity' => $items->sum('quantity'),
+                    'total' => $items->sum('total'),
+                ];
+            })
+            ->sortByDesc('total') 
             ->values();
 
-        $pdf = Pdf::loadView('admin.reports.pdf-sales', [
-            'groupedSales' => $groupedSales,
-            'grossSales' => $grossSales,
-            'netSales' => $netSales,
-            'totalDiscounts' => $totalDiscounts,
-            'totalCustomers' => $totalCustomers,
-            'filterDate' => $filterDate,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-            'generatedAt' => now(),
-        ])->setPaper('a4', 'portrait');
+        try {
+            $pdf = Pdf::loadView('admin.reports.pdf-sales', [
+                'groupedSales' => $groupedSales,
+                'grossSales' => $grossSales,
+                'netSales' => $netSales,
+                'totalDiscounts' => $totalDiscounts,
+                'totalCustomers' => $totalCustomers,
+                'dateFrom' => $dateFrom,
+                'dateTo' => $dateTo,
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'portrait');
 
-        return $pdf->download('Sales_Report_' . now()->format('Ymd_His') . '.pdf');
+            return $pdf->download('Sales_Report_' . now()->format('Ymd_His') . '.pdf');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to generate PDF report: ' . $e->getMessage());
+        }
     }
 
 

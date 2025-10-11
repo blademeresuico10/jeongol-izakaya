@@ -7,6 +7,7 @@
   <title>Receptionist Page</title>
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
 
   @include('receptionist.components.css')
@@ -215,21 +216,28 @@
     </div>
 
     <div id="tableModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div class="modal-content">
+      <<div class="modal-content">
         <span id="closeModal" class="close-modal">&times;</span>
         <h2 class="text-lg font-bold text-center mb-2">Customer Info and Menu</h2>
 
         <div class="modal-section">
           <label><strong>Customer</strong></label>
-          <input type="text" id="customerName" placeholder="Customer's name" required
-            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full" />
+          <input type="text" id="customerName" placeholder="Customer's name" required minlength="3"
+            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full"
+            onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)" />
+          <div>
+            <small id="customerNameError" class="text-red-600 text-sm hidden"></small>
+          </div>
         </div>
 
         <div class="modal-section" id="contactinput">
           <label><strong>Contact Number</strong></label>
           <input type="text" id="contactNumber" required maxlength="11" placeholder="09xxxxxxxxx"
             class="border border-gray-400 focus:border-black-500 p-2 rounded w-full"
-            oninput="this.value = this.value.replace(/[^0-9]/g, '')" />
+            onkeypress="return /[0-9]/i.test(event.key)" />
+          <div>
+            <small id="contactNumberError" class="text-red-600 text-sm hidden"></small>
+          </div>
         </div>
 
         <div class="modal-section modal-flex">
@@ -284,100 +292,100 @@
         <div class="modal-actions">
           <button class="pay-btn" id="submitBtn" type="button">Submit</button>
         </div>
+    </div>
+
+    <div id="default-modal"
+      class="fixed inset-y-0 right-0 z-50 transform translate-x-full transition-transform duration-300 ease-in-out"
+      style="width: 480px;">
+
+      <div id="modalBackdrop"
+        class="fixed inset-0 bg-black bg-opacity-50 -z-10 opacity-0 transition-opacity duration-300 pointer-events-none">
       </div>
 
-      <div id="default-modal"
-        class="fixed inset-y-0 right-0 z-50 transform translate-x-full transition-transform duration-300 ease-in-out"
-        style="width: 480px;">
+      <div class="h-full bg-white shadow-2xl flex flex-col">
 
-        <div id="modalBackdrop"
-          class="fixed inset-0 bg-black bg-opacity-50 -z-10 opacity-0 transition-opacity duration-300 pointer-events-none">
+        <div class="flex-shrink-0 bg-gradient-to-r from-red-700 to-red-800 px-6 py-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="bg-white/20 p-2 rounded-lg">
+                <i class="fas fa-shopping-cart text-white text-xl"></i>
+              </div>
+              <div>
+                <h3 class="text-xl font-bold text-white">Orders Breakdown</h3>
+                <p id="totalItemsCount" class="text-white/80 text-sm mt-0.5">0 items</p>
+              </div>
+            </div>
+            <button id="closeOrdersPanel" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto bg-gray-50">
+
+          <div id="emptyState" class="flex flex-col items-center justify-center h-full px-6 py-12">
+            <div class="bg-gray-100 rounded-full p-8 mb-6">
+              <svg class="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+              </svg>
+            </div>
+            <p class="text-xl font-semibold text-gray-600 mb-2">No orders yet</p>
+            <p class="text-sm text-gray-400 text-center">Start adding items from the menu</p>
+          </div>
+
+          <div id="selectedOrdersContainer" class="p-4 space-y-3">
+          </div>
         </div>
 
-        <div class="h-full bg-white shadow-2xl flex flex-col">
-
-          <div class="flex-shrink-0 bg-gradient-to-r from-red-700 to-red-800 px-6 py-5">
+        <div id="orderTotal" class="flex-shrink-0 bg-white border-t-2 border-gray-200 p-4 hidden">
+          <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 space-y-3">
+            <div class="flex items-center justify-between text-gray-700">
+              <span class="font-medium">Total Items</span>
+              <span id="totalQuantity" class="text-lg font-bold text-orange-600">0</span>
+            </div>
+            <div class="h-px bg-gray-300"></div>
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="bg-white/20 p-2 rounded-lg">
-                  <i class="fas fa-shopping-cart text-white text-xl"></i>
-                </div>
-                <div>
-                  <h3 class="text-xl font-bold text-white">Orders Breakdown</h3>
-                  <p id="totalItemsCount" class="text-white/80 text-sm mt-0.5">0 items</p>
-                </div>
-              </div>
-              <button id="closeOrdersPanel" class="text-white hover:bg-white/20 rounded-lg p-2 transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <span class="text-lg font-bold text-gray-800">Total Amount</span>
+              <span id="grandTotal" class="text-2xl font-bold text-red-600">₱0.00</span>
             </div>
           </div>
-          <div class="flex-1 overflow-y-auto bg-gray-50">
-
-            <div id="emptyState" class="flex flex-col items-center justify-center h-full px-6 py-12">
-              <div class="bg-gray-100 rounded-full p-8 mb-6">
-                <svg class="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
-                </svg>
-              </div>
-              <p class="text-xl font-semibold text-gray-600 mb-2">No orders yet</p>
-              <p class="text-sm text-gray-400 text-center">Start adding items from the menu</p>
-            </div>
-
-            <div id="selectedOrdersContainer" class="p-4 space-y-3">
-            </div>
-          </div>
-
-          <div id="orderTotal" class="flex-shrink-0 bg-white border-t-2 border-gray-200 p-4 hidden">
-            <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 space-y-3">
-              <div class="flex items-center justify-between text-gray-700">
-                <span class="font-medium">Total Items</span>
-                <span id="totalQuantity" class="text-lg font-bold text-orange-600">0</span>
-              </div>
-              <div class="h-px bg-gray-300"></div>
-              <div class="flex items-center justify-between">
-                <span class="text-lg font-bold text-gray-800">Total Amount</span>
-                <span id="grandTotal" class="text-2xl font-bold text-red-600">₱0.00</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex-shrink-0 p-4 bg-white border-t border-gray-200">
-            <div class="grid grid-cols-2 gap-3">
-              <button id="clearOrdersBtn" type="button"
-                class="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-gray-400">
-                <i class="fas fa-trash text-sm"></i>
-                <span>Clear All</span>
-              </button>
-              <button data-modal-hide="default-modal" type="button"
-                class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
-                <i class="fas fa-check text-sm"></i>
-                <span>Confirm</span>
-              </button>
-            </div>
-          </div>
-
         </div>
-      </div>
 
-      <div id="successModal"
-        class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
-        <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
-          <div class="mb-4">
-            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-              <i class="fas fa-check text-2xl text-green-600"></i>
-            </div>
-            <h2 id="successTitle" class="text-lg font-bold text-gray-800">Success!</h2>
+        <div class="flex-shrink-0 p-4 bg-white border-t border-gray-200">
+          <div class="grid grid-cols-2 gap-3">
+            <button id="clearOrdersBtn" type="button"
+              class="bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border-2 border-gray-300 hover:border-gray-400">
+              <i class="fas fa-trash text-sm"></i>
+              <span>Clear All</span>
+            </button>
+            <button data-modal-hide="default-modal" type="button"
+              class="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold py-3.5 px-4 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
+              <i class="fas fa-check text-sm"></i>
+              <span>Confirm</span>
+            </button>
           </div>
-          <button id="successOkBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded">
-            OK
-          </button>
         </div>
+
       </div>
     </div>
+
+    <div id="successModal"
+      class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
+      <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
+        <div class="mb-4">
+          <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-check text-2xl text-green-600"></i>
+          </div>
+          <h2 id="successTitle" class="text-lg font-bold text-gray-800">Success!</h2>
+        </div>
+        <button id="successOkBtn" class="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-6 rounded">
+          OK
+        </button>
+      </div>
+    </div>
+  </div>
 
 </body>
 
@@ -400,6 +408,7 @@
         this.initializeElements();
         this.initializeEventListeners();
         this.initializeNotifications();
+        this.initializeModalValidation();
       });
     }
 
@@ -588,7 +597,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-      {{ $table->id }}: {{ $table->capacity }},
+        {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
@@ -1067,6 +1076,71 @@
             "bg-gray-300 text-gray-700";
         statusSpan.className = `px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`;
       }
+    }
+  }
+
+  initializeModalValidation() {
+    const customerNameInput = document.getElementById('customerName');
+    const customerNameError = document.getElementById('customerNameError');
+
+    if (customerNameInput && customerNameError) {
+      customerNameInput.addEventListener('input', () => {
+        customerNameInput.value = customerNameInput.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
+
+        const value = customerNameInput.value.trim();
+
+        if (!value) {
+          customerNameError.textContent = '';
+          customerNameError.classList.add('hidden');
+          customerNameInput.classList.remove('input-error');
+          return;
+        }
+
+        if (value.length < 3) {
+          customerNameError.textContent = 'Minimum 3 characters required';
+          customerNameError.classList.remove('hidden');
+          customerNameInput.classList.add('input-error');
+        } else {
+          customerNameError.textContent = '';
+          customerNameError.classList.add('hidden');
+          customerNameInput.classList.remove('input-error');
+        }
+      });
+    }
+
+    const contactNumberInput = document.getElementById('contactNumber');
+    const contactNumberError = document.getElementById('contactNumberError');
+
+    if (contactNumberInput && contactNumberError) {
+      contactNumberInput.addEventListener('input', () => {
+        contactNumberInput.value = contactNumberInput.value.replace(/[^0-9]/g, '');
+
+        const value = contactNumberInput.value.trim();
+
+        if (!value) {
+          contactNumberError.textContent = '';
+          contactNumberError.classList.add('hidden');
+          contactNumberInput.classList.remove('input-error');
+          return;
+        }
+
+        if (!value.startsWith('09')) {
+          contactNumberError.textContent = 'Contact number must start with 09';
+          contactNumberError.classList.remove('hidden');
+          contactNumberInput.classList.add('input-error');
+          return;
+        }
+
+        if (value.length < 11) {
+          contactNumberError.textContent = 'Contact number must be 11 digits';
+          contactNumberError.classList.remove('hidden');
+          contactNumberInput.classList.add('input-error');
+        } else {
+          contactNumberError.textContent = '';
+          contactNumberError.classList.add('hidden');
+          contactNumberInput.classList.remove('input-error');
+        }
+      });
     }
   }
 

@@ -316,12 +316,18 @@ class ReceptionistController extends Controller
 
     public function modifyOrders()
     {
-        $targetDate = Carbon::today('Asia/Manila')->toDateString();
+        $now = Carbon::now('Asia/Manila');
+        $targetDate = $now->toDateString();
+        $currentTime = $now->format('H:i:s');
+
         $menuItems = DB::table('menu')->select('menu_item', 'regular_price as price')->get();
 
+        // Get valid walk-ins within their time frame
         $validWalkIns = DB::table('walk_ins')
             ->leftJoin('transactions', 'transactions.walk_in_id', '=', 'walk_ins.id')
             ->whereDate('walk_ins.started_at', $targetDate)
+            ->whereTime('walk_ins.started_at', '<=', $currentTime)
+            ->whereTime('walk_ins.ended_at', '>=', $currentTime)
             ->where('walk_ins.status', 'Active')
             ->where(function ($query) {
                 $query->whereNull('transactions.id')
@@ -329,9 +335,12 @@ class ReceptionistController extends Controller
             })
             ->pluck('walk_ins.id');
 
+        // Get valid reservations within their time frame
         $validReservations = DB::table('reservations')
             ->leftJoin('transactions', 'transactions.reservation_id', '=', 'reservations.id')
             ->whereDate('reservations.started_at', $targetDate)
+            ->whereTime('reservations.started_at', '<=', $currentTime)
+            ->whereTime('reservations.ended_at', '>=', $currentTime)
             ->where('reservations.status', 'Active')
             ->where(function ($query) {
                 $query->whereNull('transactions.id')
@@ -357,6 +366,7 @@ class ReceptionistController extends Controller
                 'tables.table_number',
                 'reservations.pax',
                 'reservations.started_at',
+                'reservations.ended_at',
                 'reservations.status',
                 'customers.name as customer_name',
                 'orders.id as order_id',
@@ -386,6 +396,7 @@ class ReceptionistController extends Controller
                 'tables.table_number',
                 'walk_ins.pax',
                 'walk_ins.started_at',
+                'walk_ins.ended_at',
                 'walk_ins.status',
                 'customers.name as customer_name',
                 'orders.id as order_id',
@@ -418,12 +429,13 @@ class ReceptionistController extends Controller
                     'customer_name' => $orders->first()->customer_name,
                     'table_number' => $orders->first()->table_number,
                     'pax' => $orders->first()->pax,
+                    'started_at' => $orders->first()->started_at,
+                    'ended_at' => $orders->first()->ended_at,
                     'orders' => $ordersWithQty ?: 'No orders',
                     'order_data' => json_encode($orderData),
                     'note' => $orders->pluck('order_notes')->filter()->unique()->implode(', '),
                 ];
             });
-
 
         return view('receptionist.modify_orders', compact('groupedOrders', 'menuItems'));
     }

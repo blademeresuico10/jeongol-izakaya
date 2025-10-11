@@ -135,8 +135,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (!nameRegex.test(value)) {
                     error.textContent = 'Name can only contain letters';
                     showError = true;
-                } else if (value.length < 2) {
-                    error.textContent = 'Name must be at least 2 characters';
+                } else if (value.length < 5) {
+                    error.textContent = 'Enter your exact ewallet registered name.';
                     showError = true;
                 }
             } else if (!input.checkValidity()) {

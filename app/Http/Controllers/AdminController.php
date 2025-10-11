@@ -827,7 +827,6 @@ class AdminController extends Controller
         }
     }
 
-
     public function getExpiredHistory()
     {
         $expired = DB::table('expired_ingredients')
@@ -840,7 +839,6 @@ class AdminController extends Controller
     public function storeMenu(Request $request)
     {
         try {
-            // Validate input
             $request->validate(
                 [
                     'menu_item' => 'required|string|max:255|unique:menu,menu_item,NULL,id,deleted_at,NULL',
@@ -866,7 +864,6 @@ class AdminController extends Controller
                 ]
             );
 
-            // Handle image upload
             $imageName = null;
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
@@ -922,7 +919,6 @@ class AdminController extends Controller
                 'regular_price' => 'required|numeric|min:0',
                 'student_price' => 'nullable|numeric|min:0',
                 'govt_employee_price' => 'nullable|numeric|min:0',
-                'has_customer_discount' => 'nullable|boolean',
                 'status' => 'required|in:Active,Blocked',
                 'category' => 'required|string|max:255',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -935,10 +931,6 @@ class AdminController extends Controller
                 'regular_price.required' => 'Regular price is required.',
                 'regular_price.numeric' => 'Regular price must be a valid number.',
                 'regular_price.min' => 'Regular price cannot be negative.',
-                'student_price.numeric' => 'Student price must be a valid number.',
-                'student_price.min' => 'Student price cannot be negative.',
-                'govt_employee_price.numeric' => 'Government employee price must be a valid number.',
-                'govt_employee_price.min' => 'Government employee price cannot be negative.',
                 'category.required' => 'Category is required.',
                 'category.max' => 'Category cannot exceed 255 characters.',
                 'image.image' => 'The uploaded file must be an image.',
@@ -966,8 +958,6 @@ class AdminController extends Controller
             $updateData = [
                 'menu_item' => $request->menu_item,
                 'regular_price' => $request->regular_price,
-                'student_price' => $request->student_price,
-                'govt_employee_price' => $request->govt_employee_price,
                 'has_customer_discount' => (bool) $request->has_customer_discount,
                 'category' => $request->category,
                 'status' => $request->status,

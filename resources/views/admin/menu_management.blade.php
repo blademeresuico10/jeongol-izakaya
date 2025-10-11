@@ -122,20 +122,25 @@
                                 <span aria-hidden="true">&times;</span>
                             </button>
                         </div>
-                        <form action="{{ route('storeMenu') }}" method="POST" enctype="multipart/form-data">
+                        <form action="{{ route('storeMenu') }}" method="POST" id="addMenuForm"
+                            enctype="multipart/form-data">
                             @csrf
                             <div class="modal-body">
                                 <div class="form-group">
-                                    <label for="menu_item">Menu Item</label>
+                                    <label for="menu_item">Menu Item <span class="text-danger">*</span></label>
                                     <input type="text" name="menu_item" id="menu_item" class="form-control" required
-                                        value="{{ old('menu_item') }}">
+                                        minlength="3" value="{{ old('menu_item') }}">
+                                    <div>
+                                        <small id="menuItemError" class="text-danger text-sm"
+                                            style="display: none;"></small>
+                                    </div>
                                     @error('menu_item')
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="category">Category</label>
+                                    <label for="category">Category <span class="text-danger">*</span></label>
                                     <select name="category" id="category" class="form-control" required>
                                         <option value="">Select Category</option>
                                         <option value="main" {{ old('category') == 'main' ? 'selected' : '' }}>Main
@@ -143,6 +148,10 @@
                                         <option value="add_ons" {{ old('category') == 'add_ons' ? 'selected' : '' }}>
                                             Add-ons</option>
                                     </select>
+                                    <div>
+                                        <small id="categoryError" class="text-danger text-sm"
+                                            style="display: none;"></small>
+                                    </div>
                                     @error('category')
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
@@ -152,30 +161,37 @@
                                     <label for="image">Menu Item Image <span class="text-danger">*</span></label>
                                     <input type="file" name="image" id="image" class="form-control-file" required
                                         accept="image/jpeg,image/png,image/jpg,image/gif">
-
+                                    <div>
+                                        <small id="imageError" class="text-danger text-sm"
+                                            style="display: none;"></small>
+                                    </div>
                                     @error('image')
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="regular_price">Regular Price</label>
+                                    <label for="regular_price">Regular Price <span class="text-danger">*</span></label>
                                     <input type="number" name="regular_price" id="regular_price" class="form-control"
-                                        step="0.01" min="0" required value="{{ old('regular_price') }}">
+                                        step="0.01" min="0.01" required value="{{ old('regular_price') }}">
+                                    <div>
+                                        <small id="regularPriceError" class="text-danger text-sm"
+                                            style="display: none;"></small>
+                                    </div>
                                     @error('regular_price')
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Customer Discount Available</label>
-                                    <select name="has_customer_discount" class="form-control" required>
+                                    <label>Customer Discount Available <span class="text-danger">*</span></label>
+                                    <select name="has_customer_discount" id="has_customer_discount" class="form-control"
+                                        required>
                                         <option value="1" {{ old('has_customer_discount', 1) == 1 ? 'selected' : '' }}>Yes
                                         </option>
                                         <option value="0" {{ old('has_customer_discount', 1) == 0 ? 'selected' : '' }}>No
                                         </option>
                                     </select>
-
                                 </div>
 
                             </div>
@@ -343,10 +359,11 @@
 
             @foreach ($menu as $item)
                 @if(!$item->deleted_at)
-                    <div class="modal fade" id="editMenuModal{{ $item->id }}" data-backdrop="static" data-keyboard="false""
-                                aria-labelledby=" editMenuModalLabel{{ $item->id }}" aria-hidden="true">
+                    <div class="modal fade" id="editMenuModal{{ $item->id }}" data-backdrop="static" data-keyboard="false"
+                        aria-labelledby="editMenuModalLabel{{ $item->id }}" aria-hidden="true">
                         <div class="modal-dialog" role="document">
-                            <form action="{{ route('admin.updatemenu', $item->id) }}" method="POST">
+                            <form action="{{ route('admin.updatemenu', $item->id) }}" method="POST"
+                                id="editMenuForm{{ $item->id }}">
                                 @csrf
                                 @method('PUT')
                                 <div class="modal-content">
@@ -360,39 +377,44 @@
                                     </div>
                                     <div class="modal-body">
                                         <div class="form-group">
-                                            <label>Menu Item</label>
-                                            <input type="text" name="menu_item" value="{{ $item->menu_item }}"
-                                                class="form-control" required>
+                                            <label>Menu Item <span class="text-danger">*</span></label>
+                                            <input type="text" name="menu_item" id="edit_menu_item{{ $item->id }}"
+                                                value="{{ $item->menu_item }}" class="form-control" required minlength="3">
+                                            <div>
+                                                <small id="edit_menuItemError{{ $item->id }}" class="text-danger text-sm"
+                                                    style="display: none;"></small>
+                                            </div>
                                         </div>
 
                                         <div class="form-group">
-                                            <label>Category</label>
-                                            <select name="category" class="form-control" required>
+                                            <label>Category <span class="text-danger">*</span></label>
+                                            <select name="category" id="edit_category{{ $item->id }}" class="form-control"
+                                                required>
+                                                <option value="">Select Category</option>
                                                 <option value="main" {{ $item->category == 'main' ? 'selected' : '' }}>Main Dishes
                                                 </option>
                                                 <option value="add_ons" {{ $item->category == 'add_ons' ? 'selected' : '' }}>
                                                     Add-ons</option>
                                             </select>
+                                            <div>
+                                                <small id="edit_categoryError{{ $item->id }}" class="text-danger text-sm"
+                                                    style="display: none;"></small>
+                                            </div>
                                         </div>
 
                                         <div class="form-group">
-                                            <label>Regular Price</label>
-                                            <input type="number" name="regular_price" value="{{ $item->regular_price }}"
-                                                class="form-control" step="0.01" min="0" required>
+                                            <label>Regular Price <span class="text-danger">*</span></label>
+                                            <input type="number" name="regular_price" id="edit_regular_price{{ $item->id }}"
+                                                value="{{ $item->regular_price }}" class="form-control" step="0.01" min="0.01"
+                                                required>
+                                            <div>
+                                                <small id="edit_regularPriceError{{ $item->id }}" class="text-danger text-sm"
+                                                    style="display: none;"></small>
+                                            </div>
                                         </div>
-                                        <div class="form-group">
-                                            <label>Customer Discount Available</label>
-                                            <select name="has_customer_discount" class="form-control" required>
-                                                <option value="1" {{ $item->has_customer_discount ? 'selected' : '' }}>Yes
-                                                </option>
-                                                <option value="0" {{ !$item->has_customer_discount ? 'selected' : '' }}>No
-                                                </option>
-                                            </select>
-                                            <small class="form-text text-muted">Whether this item is eligible for
-                                                student/government discounts</small>
-                                        </div>
-                                        <label>Status</label>
-                                        <select name="status" class="form-control" required>
+
+                                        <label>Status <span class="text-danger">*</span></label>
+                                        <select name="status" id="edit_status{{ $item->id }}" class="form-control" required>
                                             <option value="Active" {{ $item->status == 'Active' ? 'selected' : '' }}>Active
                                             </option>
                                             <option value="Blocked" {{ $item->status == 'Blocked' ? 'selected' : '' }}>Block
@@ -418,6 +440,247 @@
 @include('admin.layouts.script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+
+    function initializeMenuFormValidation() {
+        // Menu Item Validation
+        const menuItemInput = document.getElementById('menu_item');
+        const menuItemError = document.getElementById('menuItemError');
+
+        if (menuItemInput && menuItemError) {
+            $(menuItemInput).off('input.menuItem');
+            $(menuItemInput).on('input.menuItem', function () {
+                // Allow letters, numbers, spaces, and common punctuation for menu items
+                this.value = this.value.replace(/[^a-zA-Z0-9\s\-'\"().,&]/g, '');
+
+                // Capitalize first character
+                if (this.value.length > 0) {
+                    this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
+                }
+
+                const value = this.value.trim();
+
+                if (!value) {
+                    menuItemError.textContent = '';
+                    menuItemError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    return;
+                }
+
+                if (value.length < 3) {
+                    menuItemError.textContent = 'Minimum 3 characters required';
+                    menuItemError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    menuItemError.textContent = '';
+                    menuItemError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        // Category Validation
+        const categoryInput = document.getElementById('category');
+        const categoryError = document.getElementById('categoryError');
+
+        if (categoryInput && categoryError) {
+            $(categoryInput).off('change.category');
+            $(categoryInput).on('change.category', function () {
+                const value = this.value;
+
+                if (!value) {
+                    categoryError.textContent = 'Please select a category';
+                    categoryError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    categoryError.textContent = '';
+                    categoryError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        // Image Validation
+        const imageInput = document.getElementById('image');
+        const imageError = document.getElementById('imageError');
+
+        if (imageInput && imageError) {
+            $(imageInput).off('change.image');
+            $(imageInput).on('change.image', function () {
+                const file = this.files[0];
+
+                if (!file) {
+                    imageError.textContent = '';
+                    imageError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    return;
+                }
+
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
+                const maxSize = 2 * 1024 * 1024; // 2MB
+
+                if (!allowedTypes.includes(file.type)) {
+                    imageError.textContent = 'Only JPG, JPEG, PNG, and GIF images are allowed';
+                    imageError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                    this.value = '';
+                    return;
+                }
+
+                if (file.size > maxSize) {
+                    imageError.textContent = 'Image size must not exceed 2MB';
+                    imageError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                    this.value = '';
+                    return;
+                }
+
+                imageError.textContent = '';
+                imageError.style.display = 'none';
+                this.classList.remove('is-invalid');
+            });
+        }
+
+        // Regular Price Validation
+        const regularPriceInput = document.getElementById('regular_price');
+        const regularPriceError = document.getElementById('regularPriceError');
+
+        if (regularPriceInput && regularPriceError) {
+            $(regularPriceInput).off('input.regularPrice');
+            $(regularPriceInput).on('input.regularPrice', function () {
+                const value = parseFloat(this.value);
+
+                if (!this.value) {
+                    regularPriceError.textContent = '';
+                    regularPriceError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    return;
+                }
+
+                if (isNaN(value) || value <= 0) {
+                    regularPriceError.textContent = 'Price must be greater than 0';
+                    regularPriceError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    regularPriceError.textContent = '';
+                    regularPriceError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+    }
+
+    // Add Menu Modal Events
+    $('#addMenuModal').on('shown.bs.modal', function () {
+        initializeMenuFormValidation();
+        $('#menu_item').focus();
+    });
+
+    $('#addMenuModal').on('hidden.bs.modal', function () {
+        $('#addMenuForm')[0].reset();
+        $('#addMenuForm input, #addMenuForm select').removeClass('is-invalid');
+        $('small[id$="Error"]').hide().text('');
+    });
+
+    function initializeEditMenuFormValidation(itemId) {
+        // Menu Item Validation
+        const menuItemInput = document.getElementById('edit_menu_item' + itemId);
+        const menuItemError = document.getElementById('edit_menuItemError' + itemId);
+
+        if (menuItemInput && menuItemError) {
+            $(menuItemInput).off('input.menuItem');
+            $(menuItemInput).on('input.menuItem', function () {
+                // Allow letters, numbers, spaces, and common punctuation for menu items
+                this.value = this.value.replace(/[^a-zA-Z0-9\s\-'\"().,&]/g, '');
+
+                // Capitalize first character
+                if (this.value.length > 0) {
+                    this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
+                }
+
+                const value = this.value.trim();
+
+                if (!value) {
+                    menuItemError.textContent = '';
+                    menuItemError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    return;
+                }
+
+                if (value.length < 3) {
+                    menuItemError.textContent = 'Minimum 3 characters required';
+                    menuItemError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    menuItemError.textContent = '';
+                    menuItemError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        // Category Validation
+        const categoryInput = document.getElementById('edit_category' + itemId);
+        const categoryError = document.getElementById('edit_categoryError' + itemId);
+
+        if (categoryInput && categoryError) {
+            $(categoryInput).off('change.category');
+            $(categoryInput).on('change.category', function () {
+                const value = this.value;
+
+                if (!value) {
+                    categoryError.textContent = 'Please select a category';
+                    categoryError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    categoryError.textContent = '';
+                    categoryError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        // Regular Price Validation
+        const regularPriceInput = document.getElementById('edit_regular_price' + itemId);
+        const regularPriceError = document.getElementById('edit_regularPriceError' + itemId);
+
+        if (regularPriceInput && regularPriceError) {
+            $(regularPriceInput).off('input.regularPrice');
+            $(regularPriceInput).on('input.regularPrice', function () {
+                const value = parseFloat(this.value);
+
+                if (!this.value) {
+                    regularPriceError.textContent = '';
+                    regularPriceError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    return;
+                }
+
+                if (isNaN(value) || value <= 0) {
+                    regularPriceError.textContent = 'Price must be greater than 0';
+                    regularPriceError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    regularPriceError.textContent = '';
+                    regularPriceError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+    }
+
+    // Add event listeners for all edit menu modals
+    $('[id^="editMenuModal"]').on('shown.bs.modal', function () {
+        const modalId = $(this).attr('id');
+        const itemId = modalId.replace('editMenuModal', '');
+        initializeEditMenuFormValidation(itemId);
+    });
+
+    $('[id^="editMenuModal"]').on('hidden.bs.modal', function () {
+        const modalId = $(this).attr('id');
+        const itemId = modalId.replace('editMenuModal', '');
+        $(`#editMenuForm${itemId} input, #editMenuForm${itemId} select`).removeClass('is-invalid');
+        $(`small[id^="edit_"][id$="Error${itemId}"]`).hide().text('');
+    });
 
     window.showDeleteModal = function (id, itemName) {
         try {

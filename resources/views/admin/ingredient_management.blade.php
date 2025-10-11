@@ -234,26 +234,39 @@
                 <form id="addIngredientForm">
                     <div class="modal-body">
                         <div class="form-group">
-                            <label>Ingredient Name</label>
-                            <input type="text" name="name" class="form-control" required>
+                            <label>Ingredient Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="ingredient_name" class="form-control" required
+                                minlength="2">
+                            <div>
+                                <small id="ingredientNameError" class="text-danger text-sm"
+                                    style="display: none;"></small>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label>Category</label>
-                            <select name="category" class="form-control" required>
+                            <label>Category <span class="text-danger">*</span></label>
+                            <select name="category" id="ingredient_category" class="form-control" required>
                                 <option value="">Select Category</option>
                                 <option value="meat">Meat</option>
                                 <option value="vegetables">Vegetables</option>
                                 <option value="soupbase">Soup Base</option>
                                 <option value="beverage">Beverage</option>
                             </select>
+                            <div>
+                                <small id="ingredientCategoryError" class="text-danger text-sm"
+                                    style="display: none;"></small>
+                            </div>
                         </div>
                         <div class="form-group">
-                            <label>Unit</label>
-                            <select name="unit" class="form-control" required>
+                            <label>Unit <span class="text-danger">*</span></label>
+                            <select name="unit" id="ingredient_unit" class="form-control" required>
                                 <option value="">Select Unit</option>
                                 <option value="kg">Kilograms</option>
                                 <option value="pieces">Pieces</option>
                             </select>
+                            <div>
+                                <small id="ingredientUnitError" class="text-danger text-sm"
+                                    style="display: none;"></small>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -304,6 +317,92 @@
 @include('admin.layouts.script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+
+    function initializeIngredientFormValidation() {
+        const ingredientNameInput = document.getElementById('ingredient_name');
+        const ingredientNameError = document.getElementById('ingredientNameError');
+
+        if (ingredientNameInput && ingredientNameError) {
+            $(ingredientNameInput).off('input.ingredientName');
+            $(ingredientNameInput).on('input.ingredientName', function () {
+                this.value = this.value.replace(/[^a-zA-Z0-9\s\-'\"().,&]/g, '');
+
+                if (this.value.length > 0) {
+                    this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
+                }
+
+                const value = this.value.trim();
+
+                if (!value) {
+                    ingredientNameError.textContent = '';
+                    ingredientNameError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                    return;
+                }
+
+                if (value.length < 2) {
+                    ingredientNameError.textContent = 'Minimum 2 characters required';
+                    ingredientNameError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    ingredientNameError.textContent = '';
+                    ingredientNameError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        const categoryInput = document.getElementById('ingredient_category');
+        const categoryError = document.getElementById('ingredientCategoryError');
+
+        if (categoryInput && categoryError) {
+            $(categoryInput).off('change.category');
+            $(categoryInput).on('change.category', function () {
+                const value = this.value;
+
+                if (!value) {
+                    categoryError.textContent = 'Please select a category';
+                    categoryError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    categoryError.textContent = '';
+                    categoryError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        const unitInput = document.getElementById('ingredient_unit');
+        const unitError = document.getElementById('ingredientUnitError');
+
+        if (unitInput && unitError) {
+            $(unitInput).off('change.unit');
+            $(unitInput).on('change.unit', function () {
+                const value = this.value;
+
+                if (!value) {
+                    unitError.textContent = 'Please select a unit';
+                    unitError.style.display = 'block';
+                    this.classList.add('is-invalid');
+                } else {
+                    unitError.textContent = '';
+                    unitError.style.display = 'none';
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+    }
+
+    $('#addIngredientModal').on('shown.bs.modal', function () {
+        initializeIngredientFormValidation();
+        $('#ingredient_name').focus();
+    });
+
+    $('#addIngredientModal').on('hidden.bs.modal', function () {
+        $('#addIngredientForm')[0].reset();
+        $('#addIngredientForm input, #addIngredientForm select').removeClass('is-invalid');
+        $('small[id*="ingredient"]').hide().text('');
+    });
     $('#addStockModal, #updateStockModal, #addIngredientModal, #editBatchModal').modal({
         backdrop: 'static',
         keyboard: false,

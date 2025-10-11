@@ -26,7 +26,7 @@ class transactionDetail extends Model
 
     public function orders()
     {
-        return $this->belongsTo(orders::class, 'order_detail_id');
+        return $this->belongsTo(orders::class, 'order_detail_id', 'id');
     }
 
     public function customer()
@@ -36,9 +36,13 @@ class transactionDetail extends Model
 
     public function getTotalAttribute()
     {
+        if (!$this->orders) {
+            return 0;
+        }
+
         $price = $this->orders->price ?? 0;
         $quantity = $this->quantity ?? 0;
-        $discount = abs($this->discount_amount ?? 0); // ensure discount is positive
+        $discount = abs($this->discount_amount ?? 0);
 
         return ($price * $quantity) - $discount;
     }

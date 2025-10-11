@@ -8,7 +8,7 @@
   <title>Jeongol Izakaya</title>
 
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
- 
+
 
   @livewireStyles
   @vite('resources/css/app.css')
@@ -444,8 +444,9 @@
             <div>
               <label for="customerName">Customer</label>
               <input type="text" id="customerName" name="customer_name" placeholder="Enter your name" required
-                class="w-full border rounded p-2" onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)"
+                minlength="3" class="w-full border rounded p-2" onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)"
                 oninput="this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '')" />
+              <small id="customerNameError" class="text-red-600 text-sm hidden"></small>
             </div>
             <div>
               <label for="email">Email</label>
@@ -594,6 +595,7 @@
         this.initializeTabs();
         this.initializeModals();
         this.initializeDateTimeInputs();
+        this.initializeCustomerNameValidation()
         this.initializeEmailValidation();
         this.initializeEventListeners();
         this.initializeAvailabilitySearch();
@@ -617,6 +619,7 @@
 
         emailInput: document.getElementById('email'),
         nameInput: document.getElementById('customerName'),
+
         paxInput: document.getElementById('pax'),
         notesInput: document.getElementById('notesTextarea'),
         dateInput: document.getElementById('reserved_date'),
@@ -816,7 +819,7 @@
 
       const tableCapacities = {
         @foreach($tables as $table)
-      {{ $table->id }}: {{ $table->capacity }},
+        {{ $table->id }}: {{ $table->capacity }},
     @endforeach
   };
 
@@ -1246,6 +1249,38 @@
     this.updateAdvancePayment();
   }
 
+  initializeCustomerNameValidation() {
+    const customerNameInput = document.getElementById('customerName');
+    const customerNameError = document.getElementById('customerNameError');
+
+    if (!customerNameInput || !customerNameError) return;
+
+    customerNameInput.addEventListener('input', () => {
+      // Remove non-allowed characters
+      customerNameInput.value = customerNameInput.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
+
+      const value = customerNameInput.value.trim();
+
+      if (!value) {
+        customerNameError.textContent = '';
+        customerNameError.classList.add('hidden');
+        customerNameInput.classList.remove('input-error');
+        return;
+      }
+
+      if (value.length < 3) {
+        customerNameError.textContent = 'Minimum 3 characters required';
+        customerNameError.classList.remove('hidden');
+        customerNameInput.classList.add('input-error');
+      } else {
+        customerNameError.textContent = '';
+        customerNameError.classList.add('hidden');
+        customerNameInput.classList.remove('input-error');
+      }
+    });
+  }
+
+
   initializeEmailValidation() {
     const { emailInput } = this.elements;
     const emailError = document.getElementById('emailError');
@@ -1286,11 +1321,6 @@
   }
 
 
-  validateEmail(email) {
-    const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return regex.test(email);
-  }
-
 
   validateInputs() {
     let hasError = false;
@@ -1311,6 +1341,7 @@
         field.classList.remove('input-error');
       }
     });
+
 
     const activeTab = document.querySelector(".tab-content:not(.hidden)");
     if (activeTab) {

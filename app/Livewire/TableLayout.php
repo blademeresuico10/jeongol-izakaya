@@ -21,7 +21,6 @@ class TableLayout extends Component
         $twoHoursLater = $currentTime->copy()->addHours(2);
 
         $this->tables = table::with(['reservation', 'walkin'])->get()->map(function ($table) use ($currentTime, $twoHoursLater) {
-            // Active (currently occupied)
             $activeReservation = $table->reservation
                 ->where('status', 'Active')
                 ->where('started_at', '<=', $currentTime)
@@ -34,7 +33,6 @@ class TableLayout extends Component
                 ->where('ended_at', '>=', $currentTime)
                 ->first();
 
-            // Reservation starting soon (within 2 hours)
             $upcomingReservation = $table->reservation
                 ->where('status', 'Active')
                 ->whereBetween('started_at', [$currentTime, $twoHoursLater])

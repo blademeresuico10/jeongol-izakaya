@@ -193,7 +193,6 @@
         <div class="no-data">No stocks consumed in this period.</div>
     @endif
 
-    <!-- Expired Stocks Section -->
     <div class="section-title">Expired Stocks</div>
     @if($expiredStocks && $expiredStocks->count() > 0)
         <table>

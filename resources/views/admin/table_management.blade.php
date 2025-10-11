@@ -94,7 +94,7 @@
                                     </div>
                                     <div class="modal-body">
                                         <label>Table Number</label>
-                                        <input type="text" name="table_number" value="{{ $item->table_number }}"
+                                        <input type="number" name="table_number" value="{{ $item->table_number }}"
                                             class="form-control" required>
 
                                         <label class="mt-2">Capacity</label>
@@ -276,7 +276,7 @@
                                                 </div>
                                                 <div class="modal-body">
                                                     <label>Table Number</label>
-                                                    <input type="text" name="table_number" value="${escapeHtml(table.table_number)}" class="form-control" required>
+                                                    <input type="number" name="table_number" value="${escapeHtml(table.table_number)}" class="form-control" required>
 
                                                     <label class="mt-2">Capacity</label>
                                                     <input type="number" name="capacity" value="${table.capacity}" class="form-control" required>
