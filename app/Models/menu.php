@@ -40,5 +40,4 @@ class Menu extends Model
         return $this->hasOne(MenuDiscount::class, 'menu_id', 'id');
     }
 
-    
 }

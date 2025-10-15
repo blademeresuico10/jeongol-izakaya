@@ -272,10 +272,46 @@
 
                         <div class="border rounded-lg p-4 bg-gray-50">
                             <h4 class="text-lg font-semibold mb-3">Payment Summary</h4>
-                            <div class="space-y-2">
-                                <div class="flex justify-between text-lg font-bold border-t pt-2">
-                                    <span>Total Amount:</span>
-                                    <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
+                            <div class="space-y-2" id="paymentSummaryContent">
+                            </div>
+
+                            <!-- Cash Payment Section (Moved here) -->
+                            <div class="mt-6 pt-4 border-t border-gray-300">
+                                <h5 class="text-md font-semibold mb-3">Cash Payment</h5>
+
+                                <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
+                                    <div class="flex justify-between text-sm text-blue-800">
+                                        <span>Subtotal:</span>
+                                        <span id="summary_subtotal">₱0.00</span>
+                                    </div>
+                                    <div class="flex justify-between text-sm text-green-600" id="advance_payment_row"
+                                        style="display: none;">
+                                        <span>Advance Payment:</span>
+                                        <span id="summary_advance">₱0.00</span>
+                                    </div>
+                                    <div class="flex justify-between font-bold text-blue-600 text-lg border-t pt-2">
+                                        <span>Amount Due:</span>
+                                        <span id="summary_amount_due">₱0.00</span>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="cashReceived" class="block text-sm font-medium text-gray-700 mb-2">
+                                        Cash Received <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <span
+                                            class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
+                                        <input type="number" id="cashReceived" step="0.01" min="0"
+                                            class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-lg font-mono"
+                                            placeholder="0.00" autocomplete="off">
+                                    </div>
+                                    <div id="cashError" class="text-red-500 text-xs mt-1 hidden">
+                                        Insufficient amount
+                                    </div>
+                                    <div class="text-sm text-gray-600 mt-2">
+                                        Change: <span id="change_amount" class="font-bold text-green-600">₱0.00</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -286,8 +322,9 @@
                             class="px-6 py-2.5 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-sm">
                             Print Bill
                         </button>
-                        <button onclick="submitPayment()" type="button"
-                            class="px-8 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm">
+                        <button onclick="window.app.submitPayment(event)" type="button" id="processPaymentBtn"
+                            class="px-8 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm disabled:bg-gray-400"
+                            disabled>
                             Process Payment
                         </button>
                     </div>
@@ -302,6 +339,8 @@
     </div>
     @livewireScripts
 </body>
+
+
 <script>
     window.menuPriceData = @json($menuData);
     window.menuPricesMap = {};
@@ -322,6 +361,7 @@
         });
     }
 
+
     class CashierApp {
         constructor() {
             this.elements = {};
@@ -340,13 +380,11 @@
                     this.initializeElements();
                     this.initializeEventListeners();
                     this.setupTableClickEvents();
-                    this.initializeCountdowns();
                 });
             } else {
                 this.initializeElements();
                 this.initializeEventListeners();
                 this.setupTableClickEvents();
-                this.initializeCountdowns();
             }
         }
 
@@ -457,56 +495,6 @@
             });
         }
 
-        initializeCountdowns() {
-            const countdownElements = document.querySelectorAll('.countdown');
-
-            countdownElements.forEach(el => {
-                let seconds = parseInt(el.dataset.seconds) || 0;
-
-                function formatTime(s) {
-                    s = Math.max(0, s);
-                    const h = String(Math.floor(s / 3600)).padStart(2, '0');
-                    const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-                    const sec = String(s % 60).padStart(2, '0');
-                    return `${h}:${m}:${sec}`;
-                }
-
-                function update() {
-                    if (seconds <= 0) {
-                        el.textContent = "00:00:00";
-                        return;
-                    }
-                    el.textContent = formatTime(seconds);
-                    seconds--;
-                    setTimeout(update, 1000);
-                }
-
-                update();
-            });
-
-            const countupElements = document.querySelectorAll('.countup');
-            countupElements.forEach(el => {
-                let seconds = parseInt(el.dataset.seconds) || 0;
-
-                function formatTime(s) {
-                    s = Math.max(0, s);
-                    const h = String(Math.floor(s / 3600)).padStart(2, '0');
-                    const m = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-                    const sec = String(s % 60).padStart(2, '0');
-                    return `${h}:${m}:${sec}`;
-                }
-
-                function update() {
-                    el.textContent = formatTime(seconds);
-                    seconds++;
-                    setTimeout(update, 1000);
-                }
-
-                update();
-            });
-        }
-
-
         openTablePaymentModal(reservationId, tableNumber) {
             this.currentModalType = 'table';
             this.currentReservationId = reservationId;
@@ -594,7 +582,6 @@
             }
 
             const paymentItemsList = document.getElementById('paymentItemsList');
-            const paymentTotal = document.getElementById('payment_total');
 
             if (reservationData.orders && reservationData.orders.length > 0) {
                 this.currentReservationData = reservationData;
@@ -603,11 +590,11 @@
                 if (paymentItemsList) {
                     paymentItemsList.innerHTML = '<div class="text-center text-gray-500 py-4">No orders placed yet</div>';
                 }
-                if (paymentTotal) {
-                    paymentTotal.textContent = '₱0.00';
-                }
                 this.updatePaymentSummaryBreakdown();
             }
+
+            // Setup cash input
+            this.setupCashReceivedInput();
         }
 
         initializeImagePopup() {
@@ -667,7 +654,7 @@
             if (!paymentItemsList) return;
 
             let subtotal = 0;
-            let itemCounter = 0;
+            let itemCounter = 0; // ✅ This is defined
             paymentItemsList.innerHTML = '';
 
             currentReservationData.orders.forEach(order => {
@@ -681,29 +668,30 @@
                     subtotal += price;
 
                     const orderLine = document.createElement("div");
-                    const showDiscountSelect = this.isMainCategoryItemWithDiscount(itemName, menuItemData);
+                    const isMainMenuItem = this.isMainCategoryItemWithDiscount(itemName, menuItemData);
 
-                    if (showDiscountSelect) {
+                    if (isMainMenuItem) {
                         orderLine.className = "flex justify-between items-center py-2 border-b border-gray-100";
                         orderLine.innerHTML = `
-                        <div class="flex-1">
-                            <div class="font-medium">${itemName}</div>
-                        </div>
-                        <span class="w-20 text-right">₱${price.toFixed(2)}</span>
-                        <div class="w-40 text-right">
-                            <select class="discount-type-select border border-gray-300 rounded px-1 py-1 text-sm w-50" 
-                                    data-item-price="${price}" 
-                                    data-item-name="${itemName}" 
-                                    id="discount-select-${itemCounter}">
-                                ${this.getDiscountOptions(menuItemData)}
-                            </select>
-                        </div>
-                        <span class="w-24 text-right font-medium item-total">₱${price.toFixed(2)}</span>
-                    `;
+                    <div class="flex-1">
+                        <div class="font-medium">${itemName}</div>
+                    </div>
+                    <span class="w-20 text-right">₱${price.toFixed(2)}</span>
+                    <div class="w-40 text-right">
+                        <select class="discount-type-select border border-gray-300 rounded px-1 py-1 text-sm w-50" 
+                                data-item-price="${price}" 
+                                data-item-name="${itemName}"
+                                data-item-index="${itemCounter}" 
+                                id="discount-select-${itemCounter}">
+                            ${this.getDiscountOptions(menuItemData)}
+                        </select>
+                    </div>
+                    <span class="w-24 text-right font-medium item-total" data-item-index="${itemCounter}">₱${price.toFixed(2)}</span>
+                `;
                         paymentItemsList.appendChild(orderLine);
                     } else {
                         orderLine.className = "hidden";
-                        orderLine.innerHTML = `<span class="item-total">₱${price.toFixed(2)}</span>`;
+                        orderLine.innerHTML = `<span class="item-total" data-item-index="${itemCounter}">₱${price.toFixed(2)}</span>`;
                         paymentItemsList.appendChild(orderLine);
                     }
 
@@ -722,9 +710,163 @@
             this.setupDiscountBreakdownSection();
         }
 
+        updatePaymentSummaryBreakdown() {
+            const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
+
+            if (!paymentSummaryDiv) return;
+
+            if (!this.currentReservationData?.orders || this.currentReservationData.orders.length === 0) {
+                paymentSummaryDiv.innerHTML = `
+            <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
+                <span class="flex-1">Item</span>
+                <span class="w-24 text-right">Total Price</span>
+            </div>
+            <div class="flex justify-between text-lg font-bold border-t pt-2">
+                <span>Total Amount:</span>
+                <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
+            </div>
+        `;
+                return;
+            }
+
+            let totalAmount = 0;
+            let breakdownHtml = '';
+
+            const mainMenuItems = ['Samgyupsal', 'HotPot', 'Fusion'];
+            const itemGroups = {};
+            const mainMenuEntries = [];
+            let itemCounter = 0;
+
+            // Create a map of discount selects by their item index
+            const discountSelectMap = {};
+            document.querySelectorAll('.discount-type-select').forEach(select => {
+                const itemIndex = parseInt(select.getAttribute('data-item-index'));
+                if (!isNaN(itemIndex)) {
+                    discountSelectMap[itemIndex] = select;
+                }
+            });
+
+            // Create a map of item totals by their item index
+            const itemTotalMap = {};
+            document.querySelectorAll('.item-total').forEach(total => {
+                const itemIndex = parseInt(total.getAttribute('data-item-index'));
+                if (!isNaN(itemIndex)) {
+                    itemTotalMap[itemIndex] = parseFloat(total.textContent.replace('₱', ''));
+                }
+            });
+
+            this.currentReservationData.orders.forEach((order, orderIndex) => {
+                const itemName = order.order_name;
+                const price = parseFloat(order.regular_price || 0);
+                const qty = parseInt(order.quantity) || 1;
+
+                for (let i = 0; i < qty; i++) {
+                    // Get the final price from the item total map
+                    let finalPrice = itemTotalMap[itemCounter] || price;
+
+                    // Get discount info if available
+                    let discountInfo = '';
+                    let discountType = 'none';
+
+                    const select = discountSelectMap[itemCounter];
+                    if (select) {
+                        discountType = select.value;
+                        if (discountType !== 'none') {
+                            const labels = {
+                                student: ' (Student Discount)',
+                                govt_employee: ' (Govt Employee Discount)',
+                                pwd_senior: ' (PWD/Senior Discount)'
+                            };
+                            discountInfo = labels[discountType] || '';
+                        }
+                    }
+
+                    totalAmount += finalPrice;
+
+                    if (mainMenuItems.includes(itemName)) {
+                        mainMenuEntries.push({
+                            name: itemName + discountInfo,
+                            price: finalPrice,
+                            hasDiscount: discountInfo !== '',
+                            discountType,
+                            index: itemCounter
+                        });
+                    } else {
+                        const groupKey = itemName + discountInfo;
+                        if (!itemGroups[groupKey]) {
+                            itemGroups[groupKey] = {
+                                count: 0,
+                                totalPrice: 0,
+                                unitPrice: finalPrice,
+                                hasDiscount: discountInfo !== '',
+                                discountType: discountType,
+                                index: itemCounter
+                            };
+                        }
+                        itemGroups[groupKey].count++;
+                        itemGroups[groupKey].totalPrice += finalPrice;
+                    }
+
+                    itemCounter++;
+                }
+            });
+
+            let displayItemCounter = 0;
+
+            mainMenuEntries.forEach(entry => {
+                const hasDiscount = entry.hasDiscount;
+                const baseItemName = entry.name.split(' (')[0];
+                const discountType = entry.discountType || 'none';
+
+                breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
+            <span class="flex-1 pr-2">${entry.name}</span>
+            <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
+            <div class="w-12 flex justify-center ml-2">
+                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${entry.index}, '${discountType}')" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                Info
+                                </button>` : ''}
+            </div>
+        </div>`;
+                displayItemCounter++;
+            });
+
+            Object.keys(itemGroups).forEach(groupKey => {
+                const group = itemGroups[groupKey];
+                const displayName = group.count > 1 ? `${groupKey} x${group.count}` : groupKey;
+                const hasDiscount = group.hasDiscount;
+                const baseItemName = groupKey.split(' (')[0];
+                const discountType = group.discountType || 'none';
+
+                breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
+            <span class="flex-1 pr-2">${displayName}</span>
+            <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
+            <div class="w-12 flex justify-center ml-2">
+                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${group.index}, '${discountType}')" 
+                                class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                                Info
+                                </button>` : ''}
+            </div>
+        </div>`;
+                displayItemCounter++;
+            });
+
+            paymentSummaryDiv.innerHTML = `
+        <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
+            <span class="flex-1">Item</span>
+            <span class="w-20 text-right">Total Price</span>
+            <span class="w-12 text-center ml-2"></span>
+        </div>
+        ${breakdownHtml}
+        <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
+            <span>Total Amount:</span>
+            <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
+        </div>
+    `;
+        }
+
         isMainCategoryItemWithDiscount(itemName, menuItemData) {
-            const mainItems = ['Samgyupsal', 'HotPot', 'Fusion'];
-            return mainItems.includes(itemName) && menuItemData.has_discount;
+            return menuItemData && menuItemData.has_discount === true;
         }
 
         getDiscountOptions(menuData) {
@@ -737,7 +879,7 @@
                 options += '<option value="govt_employee">GED</option>';
 
             if (menuData.senior_percent > 0 || menuData.pwd_percent > 0)
-                options += '<option value="pwd_senior">PWD/SR</option>';
+                options += '<option value="pwd_senior">PWD/SC</option>';
 
             return options;
         }
@@ -806,81 +948,76 @@
 
             if (!this.currentReservationData?.orders || this.currentReservationData.orders.length === 0) {
                 paymentSummaryDiv.innerHTML = `
-                <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
-                    <span class="flex-1">Item</span>
-                    <span class="w-24 text-right">Total Price</span>
-                </div>
-                <div class="flex justify-between text-lg font-bold border-t pt-2">
-                    <span>Total Amount:</span>
-                    <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
-                </div>
-            `;
+        <div class="flex justify-between text-sm font-semibold border-b pb-2 mb-2">
+            <span class="flex-1">Item</span>
+            <span class="w-24 text-right">Total Price</span>
+        </div>
+        <div class="flex justify-between text-lg font-bold border-t pt-2">
+            <span>Total Amount:</span>
+            <span id="payment_total" class="font-mono text-blue-600">₱0.00</span>
+        </div>
+        `;
                 return;
             }
 
             let totalAmount = 0;
             let breakdownHtml = '';
-
-            const mainMenuItems = ['Samgyupsal', 'HotPot', 'Fusion'];
             const itemGroups = {};
             const mainMenuEntries = [];
-            let itemCounter = 0;
+            let itemCounter = 0; // ✅ MAKE SURE THIS IS HERE
+
+            // Rest of the function...
+            const discountSelectMap = {};
+            document.querySelectorAll('.discount-type-select').forEach(select => {
+                const itemIndex = parseInt(select.getAttribute('data-item-index'));
+                if (!isNaN(itemIndex)) {
+                    discountSelectMap[itemIndex] = select;
+                }
+            });
+
+            const itemTotalMap = {};
+            document.querySelectorAll('.item-total').forEach(total => {
+                const itemIndex = parseInt(total.getAttribute('data-item-index'));
+                if (!isNaN(itemIndex)) {
+                    itemTotalMap[itemIndex] = parseFloat(total.textContent.replace('₱', ''));
+                }
+            });
 
             this.currentReservationData.orders.forEach((order, orderIndex) => {
                 const itemName = order.order_name;
-
-                const price = parseFloat(
-                    order.order_price ||
-                    order.unit_price ||
-                    order.regular_price ||
-                    0
-                ) / (order.unit_price ? 1 : (parseInt(order.quantity) || 1));
-
+                const price = parseFloat(order.regular_price || 0);
                 const qty = parseInt(order.quantity) || 1;
 
+                const menuItemData = window.menuPricesMap?.[itemName] || {};
+                const isDiscountableItem = menuItemData.has_discount === true;
+
                 for (let i = 0; i < qty; i++) {
-                    let currentIndex = 0;
-                    for (let prevOrderIndex = 0; prevOrderIndex < orderIndex; prevOrderIndex++) {
-                        const prevOrder = this.currentReservationData.orders[prevOrderIndex];
-                        currentIndex += parseInt(prevOrder.quantity) || 1;
-                    }
-                    currentIndex += i;
-
-                    const itemTotalElements = document.querySelectorAll('.item-total');
-                    const discountSelects = document.querySelectorAll('.discount-type-select');
-
-                    let finalPrice = price;
+                    let finalPrice = itemTotalMap[itemCounter] || price; // ✅ USE itemCounter
                     let discountInfo = '';
-
-                    if (currentIndex < itemTotalElements.length) {
-                        finalPrice = parseFloat(itemTotalElements[currentIndex].textContent.replace('₱', ''));
-                    }
-
                     let discountType = 'none';
-                    if (currentIndex < discountSelects.length) {
-                        const select = discountSelects[currentIndex];
-                        if (select) {
-                            discountType = select.value;
-                            if (discountType !== 'none') {
-                                const labels = {
-                                    student: ' (Student Discount)',
-                                    govt_employee: ' (Govt Employee Discount)',
-                                    pwd_senior: ' (PWD/Senior Discount)'
-                                };
-                                discountInfo = labels[discountType] || '';
-                            }
+
+                    const select = discountSelectMap[itemCounter]; // ✅ USE itemCounter
+                    if (select) {
+                        discountType = select.value;
+                        if (discountType !== 'none') {
+                            const labels = {
+                                student: ' (Student Discount)',
+                                govt_employee: ' (Govt Employee Discount)',
+                                pwd_senior: ' (PWD/Senior Discount)'
+                            };
+                            discountInfo = labels[discountType] || '';
                         }
                     }
 
                     totalAmount += finalPrice;
 
-                    if (mainMenuItems.includes(itemName)) {
+                    if (isDiscountableItem) {
                         mainMenuEntries.push({
                             name: itemName + discountInfo,
                             price: finalPrice,
                             hasDiscount: discountInfo !== '',
                             discountType,
-                            index: itemCounter
+                            index: itemCounter // ✅ USE itemCounter
                         });
                     } else {
                         const groupKey = itemName + discountInfo;
@@ -890,17 +1027,19 @@
                                 totalPrice: 0,
                                 unitPrice: finalPrice,
                                 hasDiscount: discountInfo !== '',
-                                index: itemCounter
+                                discountType: discountType,
+                                index: itemCounter // ✅ USE itemCounter
                             };
                         }
                         itemGroups[groupKey].count++;
                         itemGroups[groupKey].totalPrice += finalPrice;
                     }
 
-                    itemCounter++;
+                    itemCounter++; // ✅ INCREMENT itemCounter
                 }
             });
 
+            // Build breakdown display
             let displayItemCounter = 0;
 
             mainMenuEntries.forEach(entry => {
@@ -908,16 +1047,17 @@
                 const baseItemName = entry.name.split(' (')[0];
                 const discountType = entry.discountType || 'none';
 
-                breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
-                <span class="flex-1 pr-2">${entry.name}</span>
-                <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
-                <div class="w-12 flex justify-center ml-2">
-                    ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
-                                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                    Info
-                                    </button>` : ''}
-                </div>
-            </div>`;
+                breakdownHtml += `
+        <div class="flex justify-between items-center text-sm py-2">
+            <span class="flex-1 pr-2">${entry.name}</span>
+            <span class="w-20 text-right font-mono">₱${entry.price.toFixed(2)}</span>
+            <div class="w-12 flex justify-center ml-2">
+                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${entry.index}, '${discountType}')" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                    Info
+                </button>` : ''}
+            </div>
+        </div>`;
                 displayItemCounter++;
             });
 
@@ -928,32 +1068,61 @@
                 const baseItemName = groupKey.split(' (')[0];
                 const discountType = group.discountType || 'none';
 
-                breakdownHtml += `<div class="flex justify-between items-center text-sm py-2">
-                <span class="flex-1 pr-2">${displayName}</span>
-                <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
-                <div class="w-12 flex justify-center ml-2">
-                    ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${displayItemCounter}, '${discountType}')" 
-                                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
-                                    Info
-                                    </button>` : ''}
-                </div>
-            </div>`;
+                breakdownHtml += `
+        <div class="flex justify-between items-center text-sm py-2">
+            <span class="flex-1 pr-2">${displayName}</span>
+            <span class="w-20 text-right font-mono">₱${group.totalPrice.toFixed(2)}</span>
+            <div class="w-12 flex justify-center ml-2">
+                ${hasDiscount ? `<button onclick="window.app.openCustomerInfoModal('${baseItemName}', ${group.index}, '${discountType}')" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">
+                    Info
+                </button>` : ''}
+            </div>
+        </div>`;
                 displayItemCounter++;
             });
 
             paymentSummaryDiv.innerHTML = `
-            <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
-                <span class="flex-1">Item</span>
-                <span class="w-20 text-right">Total Price</span>
-                <span class="w-12 text-center ml-2"></span>
-            </div>
-            ${breakdownHtml}
-            <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
-                <span>Total Amount:</span>
-                <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
-            </div>
-        `;
+        <div class="flex justify-between text-sm font-semibold border-b pb-3 mb-4">
+            <span class="flex-1">Item</span>
+            <span class="w-20 text-right">Total Price</span>
+            <span class="w-12 text-center ml-2"></span>
+        </div>
+        ${breakdownHtml}
+        <div class="flex justify-between text-lg font-bold border-t pt-4 mt-4">
+            <span>Total Amount:</span>
+            <span id="payment_total" class="font-mono text-blue-600">₱${totalAmount.toFixed(2)}</span>
+        </div>
+    `;
+
+            // --- CASH PAYMENT SECTION ---
+            const subtotalEl = document.getElementById('summary_subtotal');
+            const advanceEl = document.getElementById('summary_advance');
+            const amountDueEl = document.getElementById('summary_amount_due');
+            const advanceRow = document.getElementById('advance_payment_row');
+
+            if (this.currentReservationData) {
+                const subtotal = parseFloat(document.getElementById('payment_total').textContent.replace('₱', '').replace(',', ''));
+                const advancePayment = this.currentReservationData.order_type === 'walkin' ? 0 : parseFloat(this.currentReservationData.advance_payment || 0);
+                const amountDue = Math.max(0, subtotal - advancePayment);
+
+                if (subtotalEl) subtotalEl.textContent = '₱' + subtotal.toFixed(2);
+                if (advanceEl) advanceEl.textContent = '₱' + advancePayment.toFixed(2);
+                if (amountDueEl) amountDueEl.textContent = '₱' + amountDue.toFixed(2);
+
+                if (advanceRow) {
+                    advanceRow.style.display = advancePayment > 0 ? 'flex' : 'none';
+                }
+
+                // Update min value for cash input
+                const cashInput = document.getElementById('cashReceived');
+                if (cashInput) {
+                    cashInput.setAttribute('min', amountDue.toFixed(2));
+                }
+            }
         }
+
+
 
         setupDiscountBreakdownSection() {
             this.updatePaymentSummaryBreakdown();
@@ -1161,11 +1330,17 @@
 
             const totalText = document.getElementById("payment_total").textContent;
             const subtotal = parseFloat(totalText.replace('₱', '').replace(',', ''));
-
             const advancePayment = currentReservationData.order_type === 'walkin' ? 0 : parseFloat(currentReservationData.advance_payment || 0);
-
             const finalTotal = Math.max(0, subtotal - advancePayment);
 
+            const cashReceived = parseFloat(document.getElementById('cashReceived').value) || 0;
+
+            if (cashReceived < finalTotal) {
+                this.showToast("Insufficient cash amount", "error");
+                return;
+            }
+
+            // Validate discounts
             const discountSelects = document.querySelectorAll('.discount-type-select');
             let discountedItems = [];
             let hasActiveDiscounts = false;
@@ -1173,32 +1348,13 @@
             discountSelects.forEach((select, index) => {
                 if (select.value !== 'none') {
                     hasActiveDiscounts = true;
-
-                    let itemName = '';
-                    itemName = select.dataset.itemName || select.getAttribute('data-item-name') || '';
-
-                    if (!itemName) {
-                        const parentDiv = select.closest('.flex');
-                        if (parentDiv) {
-                            const itemNameDiv = parentDiv.querySelector('.font-medium');
-                            if (itemNameDiv) {
-                                itemName = itemNameDiv.textContent?.trim() || '';
-                            }
-                        }
-                    }
-
-                    if (!itemName && currentReservationData.orders[index]) {
-                        itemName = currentReservationData.orders[index].order_name || '';
-                    }
-
+                    let itemName = select.dataset.itemName || '';
                     if (itemName) {
                         discountedItems.push({
                             index: index,
                             itemName: itemName,
                             discountType: select.value
                         });
-                    } else {
-                        console.error(`Could not determine item name for select index ${index}`);
                     }
                 }
             });
@@ -1210,40 +1366,25 @@
                     const key = `${item.itemName}_${item.index}`;
                     const customerData = this.tempCustomerData[key];
 
-                    let hasValidName = false;
-
-                    if (customerData &&
-                        customerData.name &&
-                        customerData.name !== '' &&
-                        customerData.name !== null &&
-                        customerData.name !== undefined &&
-                        customerData.name.trim() !== '' &&
-                        customerData.name.trim().length > 0) {
-                        hasValidName = true;
-                    }
-
-                    if (!hasValidName) {
+                    if (!customerData || !customerData.name || customerData.name.trim() === '') {
                         itemsWithoutValidNames.push(item.itemName);
                     }
                 });
 
                 if (itemsWithoutValidNames.length > 0) {
-                    const itemsList = itemsWithoutValidNames.join(', ');
                     this.showToast(`Customer name is required for discounted items.`, "error");
                     return;
                 }
             }
 
+            // Collect customer data
             const allCustomerData = [];
             if (hasActiveDiscounts) {
                 discountedItems.forEach(item => {
                     const key = `${item.itemName}_${item.index}`;
                     const customerInfo = this.tempCustomerData[key];
 
-                    if (customerInfo &&
-                        customerInfo.name &&
-                        customerInfo.name.trim() !== '' &&
-                        customerInfo.name.trim().length > 0) {
+                    if (customerInfo && customerInfo.name && customerInfo.name.trim() !== '') {
                         allCustomerData.push({
                             name: customerInfo.name.trim(),
                             id_type: customerInfo.id_type,
@@ -1253,179 +1394,41 @@
                         });
                     }
                 });
-
-                if (allCustomerData.length !== discountedItems.length) {
-                    this.showToast(`PAYMENT BLOCKED: Need customer names for all ${discountedItems.length} discounted items. Only ${allCustomerData.length} valid names provided.`, "error");
-                    return;
-                }
             }
 
-            this.showCashHandlingModal(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData);
-        }
+            const change = cashReceived - finalTotal;
 
-        showCashHandlingModal(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData) {
-            const isWalkIn = currentReservationData.order_type === 'walkin';
-            const displayAdvancePayment = isWalkIn ? 0 : parseFloat(advancePayment || 0);
-            const displayFinalTotal = isWalkIn ? subtotal : finalTotal;
-
-            const modalHtml = `
-        <div id="cashHandlingModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-            <div class="bg-white rounded-lg p-6 w-80 max-w-sm mx-4 shadow-2xl">
-                <div class="text-center mb-6">
-                    <h2 class="text-xl font-bold text-gray-800 mb-4">Cash Payment</h2>
-                    
-                    <!-- Payment Breakdown -->
-                    <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
-                        <div class="flex justify-between text-sm text-blue-800">
-                            <span>Subtotal:</span>
-                            <span>₱${subtotal.toFixed(2)}</span>
-                        </div>
-                        ${!isWalkIn && displayAdvancePayment > 0 ? `
-                        <div class="flex justify-between text-sm text-green-600 items-center">
-                            <label for="advancePayment" class="mr-2">Advance Payment:</label>
-                            <input 
-                                type="number" 
-                                id="advancePayment" 
-                                name="advancePayment" 
-                                value="${displayAdvancePayment.toFixed(2)}"
-                                class="w-24 text-green-600 border border-green-600 rounded px-1 py-0.5 text-right"
-                                step="0.01"
-                                min="0"
-                                max="${subtotal}"
-                                oninput="
-                                    const newAdvance = Math.min(parseFloat(this.value) || 0, ${subtotal});
-                                    this.value = newAdvance.toFixed(2);
-                                    const newAmountDue = Math.max(0, ${subtotal} - newAdvance);
-                                    document.getElementById('amountDue').textContent = '₱' + newAmountDue.toFixed(2);
-                                    document.getElementById('cashReceived').setAttribute('min', newAmountDue.toFixed(2));
-                                    
-                                    fetch('/cashier/update-advance/${currentReservationData.reservation_id}', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').getAttribute('content')
-                                        },
-                                        body: JSON.stringify({ advance_payment: newAdvance })
-                                    }).catch(err => console.error('Failed to update advance payment:', err));
-                                "
-                            >
-                        </div>
-                        <hr class="border-blue-200">
-                        ` : ''}
-                        <div class="flex justify-between">
-                            <span class="text-sm text-blue-800">Amount Due:</span>
-                            <span id="amountDue" class="text-2xl font-bold text-blue-600">₱${displayFinalTotal.toFixed(2)}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <form id="cashPaymentForm" class="space-y-4">
-                    <div>
-                        <label for="cashReceived" class="block text-sm font-medium text-gray-700 mb-2">
-                            Cash Received
-                        </label>
-                        <div class="relative">
-                            <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₱</span>
-                            <input 
-                                type="number" 
-                                id="cashReceived" 
-                                name="cashReceived" 
-                                step="0.01" 
-                                min="${displayFinalTotal}"
-                                class="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-lg font-mono"
-                                placeholder="0.00"
-                                required
-                                autocomplete="off">
-                        </div>
-                        <div id="cashError" class="text-red-500 text-xs mt-1 hidden">
-                            Insufficient amount
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between space-x-3 mt-6">
-                        <button 
-                            type="button" 
-                            id="cancelCashPayment" 
-                            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
-                            Cancel
-                        </button>
-                        <button 
-                            type="submit" 
-                            id="completeCashPayment"
-                            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-400"
-                            disabled>
-                            Submit
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-
-            const existingModal = document.getElementById('cashHandlingModal');
-            if (existingModal) {
-                existingModal.remove();
-            }
-
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            this.setupCashHandlingEvents(displayFinalTotal, subtotal, displayAdvancePayment, currentReservationData, allCustomerData);
+            this.processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData);
         }
 
 
-        setupCashHandlingEvents(finalTotal, subtotal, advancePayment, currentReservationData, allCustomerData) {
-            const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
-            const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
 
-            const modal = document.getElementById('cashHandlingModal');
+
+        setupCashReceivedInput() {
             const cashInput = document.getElementById('cashReceived');
-            const completeButton = document.getElementById('completeCashPayment');
-            const cancelButton = document.getElementById('cancelCashPayment');
+            const changeDisplay = document.getElementById('change_amount');
             const cashError = document.getElementById('cashError');
+            const processBtn = document.getElementById('processPaymentBtn');
 
-            setTimeout(() => cashInput.focus(), 100);
+            if (!cashInput) return;
 
             cashInput.addEventListener('input', () => {
                 const cashReceived = parseFloat(cashInput.value) || 0;
-                cashError.classList.add('hidden');
+                const amountDue = parseFloat(document.getElementById('summary_amount_due').textContent.replace('₱', '').replace(',', '')) || 0;
 
-                if (cashReceived >= actualFinalTotal) {
-                    completeButton.disabled = false;
+                if (cashReceived >= amountDue && amountDue > 0) {
+                    const change = cashReceived - amountDue;
+                    changeDisplay.textContent = '₱' + change.toFixed(2);
+                    cashError.classList.add('hidden');
+                    processBtn.disabled = false;
                 } else {
-                    completeButton.disabled = true;
-                    if (cashReceived > 0) {
+                    changeDisplay.textContent = '₱0.00';
+                    processBtn.disabled = true;
+                    if (cashReceived > 0 && cashReceived < amountDue) {
                         cashError.classList.remove('hidden');
+                    } else {
+                        cashError.classList.add('hidden');
                     }
-                }
-            });
-
-            const form = document.getElementById('cashPaymentForm');
-            form.addEventListener('submit', (e) => {
-                e.preventDefault();
-
-                const cashReceived = parseFloat(cashInput.value) || 0;
-
-                if (cashReceived >= actualFinalTotal) {
-                    const change = cashReceived - actualFinalTotal;
-                    modal.remove();
-                    this.processFinalPayment(actualFinalTotal, subtotal, actualAdvancePayment, cashReceived, change, currentReservationData, allCustomerData);
-                } else {
-                    cashError.classList.remove('hidden');
-                }
-            });
-
-            cancelButton.addEventListener('click', () => {
-                modal.remove();
-            });
-
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.remove();
-                }
-            });
-
-            cashInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' && !completeButton.disabled) {
-                    form.dispatchEvent(new Event('submit'));
                 }
             });
         }
@@ -1452,85 +1455,94 @@
         }
 
         processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData) {
-            this.showProcessingModal();
+    this.showProcessingModal();
 
-            const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
-            const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
+    const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
+    const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
 
-            this.printFinalReceipt(actualFinalTotal, subtotal, actualAdvancePayment, cashReceived, change, currentReservationData);
 
-            const discountInputs = document.querySelectorAll('.discount-input');
-            const discountedPersons = {};
+    const discountInputs = document.querySelectorAll('.discount-input');
+    const discountedPersons = {};
 
-            discountInputs.forEach((input, index) => {
-                const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
-                const discountValue = parseInt(input.value) || 0;
+    discountInputs.forEach((input, index) => {
+        const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
+        const discountValue = parseInt(input.value) || 0;
 
-                if (discountValue > 0 && orderDetailId) {
-                    discountedPersons[orderDetailId] = discountValue;
-                }
-            });
-
-            const ordersData = currentReservationData.orders.map(order => {
-                return {
-                    order_id: order.order_id,
-                    order_name: order.order_name,
-                    quantity: parseInt(order.quantity) || 1,
-                    price: parseFloat(order.order_price || order.unit_price || order.regular_price || 0)
-                };
-            });
-
-            const paymentData = {
-                reservation_id: currentReservationData.reservation_id,
-                order_type: currentReservationData.order_type,
-                subtotal: subtotal,
-                advance_payment: actualAdvancePayment,
-                total: actualFinalTotal,
-                orders: ordersData,
-                discounted_persons: discountedPersons,
-                customer_data: allCustomerData,
-                cash_received: cashReceived,
-                change_given: change
-            };
-
-            fetch('/process-payment', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                },
-                body: JSON.stringify(paymentData)
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(data => {
-                            throw new Error(data.message || `HTTP ${response.status}: Error occurred`);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    this.removeProcessingModal();
-
-                    if (data.success) {
-                        this.updateTableStatusAfterPayment(currentReservationData.reservation_id);
-                        this.showToast("Payment completed successfully!", "success");
-
-                        this.tempCustomerData = {};
-                        this.currentReservationData = null;
-
-                        setTimeout(() => { location.reload(); }, 1500);
-                    } else {
-                        this.showToast(data.message || "Payment processing failed", "error");
-                    }
-                })
-                .catch(error => {
-                    this.removeProcessingModal();
-                    this.showToast(error.message || "Payment processing failed. Please try again.", "error");
-                });
+        if (discountValue > 0 && orderDetailId) {
+            discountedPersons[orderDetailId] = discountValue;
         }
+    });
 
-        printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData) {
+    const ordersData = currentReservationData.orders.map(order => {
+        return {
+            order_id: order.order_id,
+            order_name: order.order_name,
+            quantity: parseInt(order.quantity) || 1,
+            price: parseFloat(order.order_price || order.unit_price || order.regular_price || 0)
+        };
+    });
+
+    const paymentData = {
+        reservation_id: currentReservationData.reservation_id,
+        order_type: currentReservationData.order_type,
+        subtotal: subtotal,
+        advance_payment: actualAdvancePayment,
+        total: actualFinalTotal,
+        orders: ordersData,
+        discounted_persons: discountedPersons,
+        customer_data: allCustomerData,
+        cash_received: cashReceived,
+        change_given: change
+    };
+
+    fetch('/process-payment', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify(paymentData)
+    })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || `HTTP ${response.status}: Error occurred`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            this.removeProcessingModal();
+
+            if (data.success) {
+                this.printFinalReceipt(
+                    actualFinalTotal, 
+                    subtotal, 
+                    actualAdvancePayment, 
+                    cashReceived, 
+                    change, 
+                    currentReservationData, 
+                    data.transaction_no 
+                );
+
+                this.updateTableStatusAfterPayment(currentReservationData.reservation_id);
+                this.showToast("Payment completed successfully!", "success");
+
+                this.tempCustomerData = {};
+                this.currentReservationData = null;
+
+                setTimeout(() => { location.reload(); }, 1500);
+            } else {
+                this.showToast(data.message || "Payment processing failed", "error");
+            }
+        })
+        .catch(error => {
+            this.removeProcessingModal();
+            this.showToast(error.message || "Payment processing failed. Please try again.", "error");
+        });
+}
+
+        printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, transactionNo ) {
             const today = new Date();
             const dateStr = today.toLocaleDateString('en-PH', { year: 'numeric', month: '2-digit', day: '2-digit' });
             const timeStr = today.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -1564,11 +1576,12 @@
                         finalPrice = parseFloat(itemTotalElements[itemIndex].textContent.replace('₱', ''));
                     }
 
-                    const groupKey = itemName;
+                    const groupKey = `${itemName}_${finalPrice.toFixed(2)}`;
                     if (!itemGroups[groupKey]) {
                         itemGroups[groupKey] = {
+                            itemName: itemName,
                             quantity: 0,
-                            regularPrice: regularPrice,
+                            unitPrice: finalPrice,
                             totalAmount: 0
                         };
                     }
@@ -1578,16 +1591,16 @@
                 }
             });
 
-            Object.keys(itemGroups).forEach(itemName => {
-                const item = itemGroups[itemName];
+            Object.keys(itemGroups).forEach(groupKey => {
+                const item = itemGroups[groupKey];
+                const itemDescription = item.quantity > 1 ? `${item.itemName} x${item.quantity}` : item.itemName;
                 orderItemsHTML += `
-        <tr>
-            <td style="padding: 4px 8px; border-bottom: 1px solid #ddd;">${itemName}</td>
-            <td style="padding: 4px 8px; text-align: center; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-            <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.regularPrice.toFixed(2)}</td>
-            <td style="padding: 4px 8px; text-align: right; border-bottom: 1px solid #ddd;">₱${item.totalAmount.toFixed(2)}</td>
-        </tr>
-        `;
+    <tr>
+        <td class="item-desc">${itemDescription}</td>
+        <td class="item-price">₱${item.unitPrice.toFixed(2)}</td>
+        <td class="item-amount">₱${item.totalAmount.toFixed(2)}</td>
+    </tr>
+    `;
             });
 
             const printHTML = `
@@ -1743,12 +1756,15 @@
                 <p>VAT Reg. TIN 295-774-127-00003</p>
                 <p style="margin-top: 6px; font-weight: bold;">Receipt</p>
             </div>
+            <div class="info-row">
+                <span>Transaction No:</span>
+                <span style="font-weight: bold;">${transactionNo || 'N/A'}</span>
+            </div>
 
             <table>
                 <thead>
                     <tr>
-                        <th class="item-desc">Item</th>
-                        <th class="item-qty">Qty</th>
+                        <th class="item-desc">Item Description</th>
                         <th class="item-price">Price</th>
                         <th class="item-amount">Amount</th>
                     </tr>
@@ -2055,7 +2071,6 @@
 
 </script>
 
-</body>
 <!-- -->
 <!-- --><!-- -->
 <!-- -->

@@ -206,6 +206,35 @@
                 </div>
             </div>
 
+            <div class="modal fade" id="postMenuCreationModal" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog modal-dialog-centered" role="document">
+                    <div class="modal-content border-success">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-check-circle"></i> Menu Added Successfully!
+                            </h5>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <div class="mb-3">
+                                <i class="fas fa-utensils fa-3x text-success"></i>
+                            </div>
+                            <h6 class="font-weight-bold mb-3">
+                                "<span id="newMenuName"></span>" has been added to the menu.
+                            </h6>
+
+                        </div>
+                        <div class="modal-footer justify-content-center">
+                            <button type="button" class="btn btn-success" id="configureIngredientsBtn">
+                                <i class="fas fa-cog"></i> Configure Ingredients
+                            </button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">
+                                <i class="fas fa-times"></i> Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal fade" id="menuIngredientsModal" data-backdrop="static" data-keyboard="false"
                 aria-labelledby="menuIngredientsLabel" aria-hidden="true">
                 <div class="modal-dialog modal-lg" role="document">
@@ -772,6 +801,14 @@
         $('#menuIngredientsModal').on('show.bs.modal', function () {
             const content = document.getElementById('ingredientsContent');
 
+            // Show loading
+            content.innerHTML = `
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+            <p class="mt-2">Loading menu ingredients...</p>
+        </div>
+    `;
+
             fetch("{{ route('admin.menu_ingredients') }}")
                 .then(res => res.json())
                 .then(data => {
@@ -782,73 +819,101 @@
 
                     let html = '';
                     data.menus.forEach(menu => {
-                        html += `
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
-                            </div>
-                            <div class="card-body p-0">
-                                <table class="table table-sm table-hover mb-0">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th>Ingredient</th>
-                                            <th width="150">Quantity(grams)</th>
-                                            <th width="80">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                    `;
-
                         const ingList = data.ingredients[menu.id] || [];
+                        const hasIngredients = ingList.length > 0;
+
+                        // 🆕 Highlight newly created menus with suggestions
+                        const isNewWithSuggestions = hasIngredients && menu.created_recently;
+                        const cardClass = isNewWithSuggestions ? 'border-success' : '';
+                        const headerClass = isNewWithSuggestions ? 'bg-success text-white' : 'bg-light';
+
+                        html += `
+                    <div class="card mb-3 ${cardClass}">
+                        <div class="card-header ${headerClass}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 font-weight-bold">
+                                    ${menu.menu_item}
+                                </h6>
+                                <small class="text-${isNewWithSuggestions ? 'white' : 'muted'}">
+                                    Category: ${menu.category}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Ingredient</th>
+                                        <th>Category</th>
+                                        <th width="150">Quantity (grams/pcs)</th>
+                                        <th width="80">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
 
                         if (ingList.length === 0) {
                             html += `
-                            <tr>
-                                <td colspan="3" class="text-center text-muted py-2">
-                                    No ingredients added yet
-                                </td>
-                            </tr>
-                        `;
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                <i class="fas fa-info-circle"></i> Empty
+                            </td>
+                        </tr>
+                    `;
                         } else {
                             ingList.forEach(ing => {
                                 html += `
-                                <tr>
-                                    <td class="align-middle">${ing.ingredient_name}</td>
-                                    <td>
+                            <tr>
+                                <td class="align-middle">
+                                    <strong>${ing.ingredient_name}</strong>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge badge-info">${ing.category}</span>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
                                         <input type="number" 
-                                               class="form-control form-control-sm ingredient-qty"
+                                               class="form-control ingredient-qty"
                                                data-id="${ing.id}" 
                                                value="${ing.quantity}"
                                                min="0.01"
-                                               step="any">
-                                    </td>
-                                    <td class="align-middle">
-                                        <button type="button" 
-                                                class="btn btn-sm btn-danger removeIngredientBtn" 
-                                                data-id="${ing.id}"
-                                                title="Remove">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `;
+                                               step="any"
+                                               placeholder="Quantity">
+                                        
+                                    </div>
+                                </td>
+                                <td class="align-middle text-center">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger removeIngredientBtn" 
+                                            data-id="${ing.id}"
+                                            title="Remove">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
                             });
                         }
 
                         html += `
-                                    </tbody>
-                                </table>
-                                <div class="card-footer bg-light">
+                                </tbody>
+                            </table>
+                            <div class="card-footer bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
                                     <button type="button" 
                                             class="btn btn-sm btn-success addIngredientBtn" 
                                             data-menu-id="${menu.id}"
                                             data-menu-name="${menu.menu_item}">
                                         <i class="fas fa-plus"></i> Add Ingredient
                                     </button>
+                                    ${hasIngredients ? `
+                                   
+                                    ` : ''}
                                 </div>
                             </div>
                         </div>
-                    `;
+                    </div>
+                `;
                     });
 
                     content.innerHTML = html;
@@ -856,11 +921,11 @@
                 .catch(err => {
                     console.error('Error fetching ingredients:', err);
                     content.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle"></i> 
-                        Failed to load menu ingredients. Please try again.
-                    </div>
-                `;
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> 
+                    Failed to load menu ingredients. Please try again.
+                </div>
+            `;
                 });
         });
 
@@ -1064,8 +1129,6 @@
                             position: 'top',
                             timer: 3000,
                             showConfirmButton: false,
-                            background: '#d1ecf1',
-                            color: '#0c5460'
                         });
                         return;
                     }
@@ -1076,19 +1139,48 @@
                         return acc;
                     }, {});
 
-                    let options = '<option value="">Select an ingredient</option>';
-                    Object.keys(grouped).forEach(category => {
-                        options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
-                        grouped[category].forEach(ing => {
-                            options += `<option value="${ing.id}" data-unit="${ing.unit}">
-                            ${ing.name} (Stock: ${ing.stocks} ${ing.unit})
-                        </option>`;
-                        });
-                        options += '</optgroup>';
-                    });
+                    fetch(`{{ url('menu') }}/${currentMenuId}/existing-ingredients`)
+                        .then(res => res.json())
+                        .then(existingData => {
+                            const existingIds = existingData.ingredient_ids || [];
 
-                    $('#ingredientSelect').html(options);
-                    $('#addIngredientModal').modal('show');
+                            let options = '<option value="">Select an ingredient</option>';
+
+                            const categoryOrder = ['meat', 'vegetables', 'soupbase', 'beverage'];
+                            categoryOrder.forEach(category => {
+                                if (!grouped[category]) return;
+
+                                const available = grouped[category].filter(ing => !existingIds.includes(ing.id));
+                                if (available.length === 0) return;
+
+                                options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
+                                available.forEach(ing => {
+                                    const stockClass = ing.stocks < 100 ? 'text-danger' : '';
+                                    options += `<option value="${ing.id}" data-unit="${ing.unit}">
+                                ${ing.name} - Stock: ${ing.stocks} ${ing.unit}
+                            </option>`;
+                                });
+                                options += '</optgroup>';
+                            });
+
+                            $('#ingredientSelect').html(options);
+                            $('#addIngredientModal').modal('show');
+                        })
+                        .catch(() => {
+                            // Fallback if can't fetch existing
+                            let options = '<option value="">Select an ingredient</option>';
+                            Object.keys(grouped).forEach(category => {
+                                options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
+                                grouped[category].forEach(ing => {
+                                    options += `<option value="${ing.id}" data-unit="${ing.unit}">
+                                ${ing.name} (Stock: ${ing.stocks} ${ing.unit})
+                            </option>`;
+                                });
+                                options += '</optgroup>';
+                            });
+                            $('#ingredientSelect').html(options);
+                            $('#addIngredientModal').modal('show');
+                        });
                 })
                 .catch(err => {
                     console.error('Error loading ingredients:', err);
@@ -1100,12 +1192,24 @@
                         position: 'top',
                         timer: 3000,
                         showConfirmButton: false,
-                        background: '#f8d7da',
-                        color: '#721c24'
                     });
                 });
         });
 
+        $(document).on('change', '#ingredientSelect', function () {
+            const selected = $(this).find('option:selected');
+            const unit = selected.data('unit');
+
+            let defaultQty = 1;
+            if (unit === 'grams') {
+                defaultQty = 100;
+            } else if (unit === 'pieces') {
+                defaultQty = 1;
+            }
+
+            $('#ingredientQty').val(defaultQty);
+            $('#unitLabel').text(unit ? ` (${unit})` : '');
+        });
         $(document).on('change', '#ingredientSelect', function () {
             const selected = $(this).find('option:selected');
             const unit = selected.data('unit');
@@ -1313,16 +1417,21 @@
 `;
     document.head.appendChild(style);
     @if(session('success'))
-        Swal.fire({
-            icon: 'success',
-            title: '{{ session('success') }}',
-            toast: true,
-            position: 'top',
-            timer: 3000,
-            showConfirmButton: false,
-            background: '#d4edda',
-            color: '#155724'
-        });
+        @if(session('new_menu_name'))
+            $('#newMenuName').text("{{ session('new_menu_name') }}");
+            $('#postMenuCreationModal').modal('show');
+        @else
+            Swal.fire({
+                icon: 'success',
+                title: '{{ session('success') }}',
+                toast: true,
+                position: 'top',
+                timer: 3000,
+                showConfirmButton: false,
+                background: '#d4edda',
+                color: '#155724'
+            });
+        @endif
     @endif
 
     @if(session('error'))
@@ -1337,4 +1446,31 @@
             color: '#721c24'
         });
     @endif
+
+    @if(session('new_menu_name'))
+        $('#newMenuName').text("{{ session('new_menu_name') }}");
+        $('#postMenuCreationModal').modal({
+            backdrop: 'static',  
+            keyboard: false       
+        });
+    @endif
+
+    $('#configureIngredientsBtn').on('click', function () {
+        $('#postMenuCreationModal').modal('hide');
+
+        setTimeout(function () {
+            $('#menuIngredientsModal').modal('show');
+        }, 300);
+    });
+
+    let autoCloseTimer;
+    $('#postMenuCreationModal').on('shown.bs.modal', function () {
+        autoCloseTimer = setTimeout(function () {
+            $('#postMenuCreationModal').modal('hide');
+        }, 10000);
+    });
+
+    $('#postMenuCreationModal').on('hidden.bs.modal', function () {
+        clearTimeout(autoCloseTimer);
+    });
 </script>

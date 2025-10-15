@@ -15,6 +15,7 @@ class ingredientMovements extends Model
         'quantity',
         'stock_before',
         'stock_after',
+        'notes',
     ];
 
     public function ingredient()

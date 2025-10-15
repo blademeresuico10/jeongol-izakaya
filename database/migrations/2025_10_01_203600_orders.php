@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedInteger('quantity');
             $table->decimal('price', 8, 2);
             $table->text('notes')->nullable();
-            $table->enum('status', ['Pending', 'Served', 'Cancelled'])->default('Pending');
+            $table->enum('status', ['Pending','Ready', 'Served', 'Cancelled'])->default('Pending');
             $table->timestamps();
         });
     }

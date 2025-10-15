@@ -3,19 +3,19 @@
     show: false, 
     type: 'success', 
     message: '' 
-}" @notify.window="
-        show = true; 
-        type = $event.detail.type; 
-        message = $event.detail.message;
-        setTimeout(() => show = false, 3000);
-     " x-show="show" x-transition:enter="transition ease-out duration-300"
+  }" @notify.window="
+    show = true; 
+    type = $event.detail.type; 
+    message = $event.detail.message;
+    setTimeout(() => show = false, 3000);
+  " x-show="show" x-transition:enter="transition ease-out duration-300"
     x-transition:enter-start="opacity-0 transform translate-x-full"
     x-transition:enter-end="opacity-100 transform translate-x-0" x-transition:leave="transition ease-in duration-300"
     x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" :class="{
-        'bg-green-500': type === 'success',
-        'bg-red-500': type === 'error',
-        'bg-yellow-500': type === 'warning'
-     }" class="fixed top-4 right-4 p-4 rounded shadow-lg text-white z-50" style="display: none;">
+      'bg-green-500': type === 'success',
+      'bg-red-500': type === 'error',
+      'bg-yellow-500': type === 'warning'
+    }" class="fixed top-4 right-4 p-4 rounded shadow-lg text-white z-50" style="display: none;">
     <span x-text="message"></span>
   </div>
 
@@ -40,7 +40,7 @@
         </div>
         <form method="POST" action="{{ route('logout') }}">
           @csrf
-          <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
+          <button type="submit" class="w-full text-left px-4 py-2">Logout</button>
         </form>
       </div>
     </div>
@@ -48,269 +48,252 @@
 
   <div class="border-b border-gray-300 mb-6"></div>
 
-  <div class="flex gap-6 max-w-9xl mx-auto items-start">
+  <div class="max-w-full mx-auto px-4">
+    <div wire:poll.10s class="w-full">
 
+      <!-- Grid Layout for Orders -->
+      <div class="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-4">
 
-    <div wire:poll.10s class="bg-white border rounded-xl shadow-lg w-1/2 flex flex-col">
-
-
-      <div class="border-b bg-gray-100 rounded-t-xl flex">
-        <button wire:click="$set('activeTab', 'pending')"
-          class="flex-1 p-4 text-lg font-semibold transition-colors {{ $activeTab === 'pending' ? 'bg-white border-b-2 border-orange-600 text-orange-600' : 'text-gray-600 hover:bg-gray-50' }}">
-          Pending Orders
-        </button>
-        <button wire:click="$set('activeTab', 'served')"
-          class="flex-1 p-4 text-lg font-semibold transition-colors {{ $activeTab === 'served' ? 'bg-white border-b-2 border-green-600 text-green-600' : 'text-gray-600 hover:bg-gray-50' }}">
-          Served Orders
-        </button>
-      </div>
-
-      @if($activeTab === 'pending')
-      <div class="overflow-y-auto max-h-[75vh] p-4 space-y-4">
-      @php
-      $pendingOrdersFiltered = $pendingOrders->filter(function ($group) {
-      return $group->first()->status === 'Pending';
-      });
-    @endphp
-
-      @forelse($pendingOrdersFiltered as $groupKey => $orderGroup)
-      <div x-data="{ open: false }" class="border rounded-lg p-4 bg-white cursor-pointer" @click="open = !open">
-      <div class="flex justify-between items-center">
-      <div class="flex-1">
-        <h3 class="font-semibold text-gray-800 text-lg">
+        <!-- Normal Pending Orders -->
+        @forelse($this->pendingOrders as $groupKey => $orderGroup)
         @php
-      $tableNumber = $orderGroup->first()->reservation->table->table_number
-      ?? $orderGroup->first()->walkin->table->table_number
-      ?? $orderGroup->first()->table->table_number
-      ?? null;
-      @endphp
+        $tableNumber = $orderGroup->first()->reservation->table->table_number
+        ?? $orderGroup->first()->walkin->table->table_number
+        ?? 'N/A';
+        $status = $orderGroup->first()->status ?? 'Pending';
+        $statusColor = $status === 'Pending' ? 'bg-red-400' : ($status === 'Ready' ? 'bg-yellow-400' : 'bg-green-400');
+        @endphp
 
-        @if($tableNumber)
-      Table {{ $tableNumber }}
-      @else
-      No Table
-      @endif
-        </h3>
-      </div>
-      <span class="text-sm text-white bg-orange-600 rounded px-3 py-1">Pending</span>
-      </div>
-
-      <div x-show="open" x-transition class="mt-3 pt-3 border-t">
-      <ul class="space-y-3">
-        @foreach($orderGroup as $order)
-      <li class="flex justify-between items-start">
-      <div class="flex-1">
-      <div class="flex items-center gap-2">
-      <span class="font-medium">{{ $order->menu->menu_item ?? 'Menu item not found' }}</span>
-      <span class="font-semibold text-gray-700">x{{ $order->quantity }}</span>
-      </div>
-      </div>
-      </li>
-      @endforeach
-      </ul>
-
-      @php
-      $firstOrder = $orderGroup->first();
-      $groupNote = $firstOrder->notes ?? null;
-      @endphp
-
-      <div class="mt-3 pt-3 border-t">
-        <div class="text-sm text-black bg-yellow-100 border-l-4 border-yellow-500 px-3 py-2 rounded">
-        <span class="font-semibold">Note:</span>
-        {{ !empty($groupNote) && trim($groupNote) !== '' ? $groupNote : 'No notes' }}
-        </div>
-      </div>
-
-      <div class="mt-4" @click.stop>
-        <button wire:click="markAsServed({{ $orderGroup->first()->id }})"
-        class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded transition-colors">
-        Mark as Served
-        </button>
-      </div>
-      </div>
-      </div>
-    @empty
-      <p class="text-center text-gray-500 py-8">No pending orders</p>
-    @endforelse
-      </div>
-    @endif
-
-      <!-- Served Orders Tab -->
-      @if($activeTab === 'served')
-      <div class="overflow-y-auto max-h-[75vh] p-4 space-y-4">
-      @php
-      $servedOrdersFiltered = $pendingOrders->filter(function ($group) {
-      return $group->first()->status === 'Served';
-      });
-    @endphp
-
-      @forelse($servedOrdersFiltered as $groupKey => $orderGroup)
-      <div x-data="{ open: false }" class="border rounded-lg p-4 bg-white cursor-pointer" @click="open = !open">
-      <div class="flex justify-between items-center">
-      <div class="flex-1">
-        <h3 class="font-semibold text-gray-800 text-lg">
-        @php
-      $tableNumber = $orderGroup->first()->reservation->table->table_number
-      ?? $orderGroup->first()->walkin->table->table_number
-      ?? $orderGroup->first()->table->table_number
-      ?? null;
-
-      $hasNotes = $orderGroup->filter(function ($order) {
-      return !empty($order->notes) && trim($order->notes) !== '';
-      })->isNotEmpty();
-      @endphp
-
-        @if($tableNumber)
-      Table {{ $tableNumber }}
-      @else
-      No Table
-      @endif
-        </h3>
-        <p class="text-sm mt-1 flex items-center gap-1 {{ $hasNotes ? 'text-yellow-700' : 'text-gray-500' }}">
-        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-        <path
-        d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z">
-        </path>
-        </svg>
-        {{ $hasNotes ? 'Has notes' : 'No notes' }}
-        </p>
-      </div>
-      <span class="text-sm text-white bg-green-600 rounded px-3 py-1">Served</span>
-      </div>
-
-      <div x-show="open" x-transition class="mt-3 pt-3 border-t">
-      <ul class="space-y-2">
-        @foreach($orderGroup as $order)
-      <li class="flex justify-between items-start">
-      <div class="flex-1">
-        <span class="font-medium">{{ $order->menu->menu_item ?? 'Menu item not found' }}</span>
-        @if($order->notes)
-      <p class="text-xs text-gray-600 bg-yellow-50 px-2 py-1 rounded mt-1 inline-block">
-      Note: {{ $order->notes }}
-      </p>
-      @endif
-      </div>
-      <span class="font-semibold ml-2">x{{ $order->quantity }}</span>
-      </li>
-      @endforeach
-      </ul>
-      </div>
-      </div>
-    @empty
-      <p class="text-center text-gray-500 py-8">No served orders</p>
-    @endforelse
-      </div>
-    @endif
-
-    </div>
-
-    <!-- Right Side: Refills and Additional Orders -->
-    <div class="w-1/2 space-y-6">
-
-      <!-- Unlimited Refills -->
-      <div class="bg-white border rounded-xl shadow-lg flex flex-col">
-        <div class="border-b bg-blue-50 rounded-t-xl">
-          <p class="p-4 text-lg font-semibold text-gray-700">Unlimited Refills</p>
-        </div>
-
-        <div class="p-4">
-          <form wire:submit.prevent="addUnlimitedRefill" class="space-y-4">
-            <div>
-              <label for="table_unlimited" class="block text-sm font-medium text-gray-700">Table Number</label>
-              <select wire:model="selectedTableUnlimited" id="table_unlimited" required
-                class="mt-1 w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-blue-500 focus:outline-none">
-                <option value="">Select a table</option>
-                @foreach($tables as $table)
-          <option value="{{ $table->id }}">
-            Table {{ $table->table_number }}
-          </option>
-        @endforeach
-              </select>
-              @error('selectedTableUnlimited') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">Select Ingredients (Enter quantity in
-                grams)</label>
-              <div class="border rounded-lg p-3 max-h-64 overflow-y-auto space-y-2">
-                @foreach($unlimitedIngredients as $ingredient)
-          <div class="flex items-center p-2 hover:bg-gray-50 rounded">
-            <span class="flex-1">
-            <span class="font-medium">{{ $ingredient->name }}</span>
-            </span>
-
-            <input type="number" wire:model="selectedIngredients.{{ $ingredient->id }}.quantity" min="1"
-            placeholder="Grams" class="w-24 px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-blue-500">
+        <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col h-[420px]">
+          <!-- Header -->
+          <div class="p-4 {{ $statusColor }} text-white">
+          <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
           </div>
-        @endforeach
-              </div>
-              @error('selectedIngredients') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-            </div>
 
-            <div>
-              <button type="submit"
-                class="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition">
-                Add Selected Refills
-              </button>
-            </div>
-          </form>
+          <!-- Order Items -->
+          <div class="p-4 space-y-2 flex-grow">
+          @foreach($orderGroup as $order)
+        <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
+          <span class="font-medium text-sm text-gray-800">{{ $order->quantity }} x
+          {{ $order->menu->menu_item ?? 'Unknown' }}</span>
+          <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd"
+          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+          clip-rule="evenodd" />
+          </svg>
         </div>
+        @endforeach
+
+          @if($orderGroup->first()->notes)
+        <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 rounded px-3 py-2">
+          <p class="text-xs font-semibold text-gray-800">Note: {{ $orderGroup->first()->notes }}</p>
+        </div>
+        @endif
+          </div>
+
+          <!-- Action Button -->
+          <div class="p-4 pt-0">
+          @if($status === 'Pending')
+        <button wire:click="markAsReady({{ $orderGroup->first()->id }})"
+          class="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
+          Mark as Ready
+        </button>
+        @elseif($status === 'Ready')
+        <button class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold cursor-default">
+          Ready
+        </button>
+        @else
+        <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold cursor-default">
+          Served
+        </button>
+        @endif
+          </div>
+        </div>
+    @empty
+    @endforelse
+
+        <!-- Pending Refills -->
+        @forelse($this->pendingRefills as $refill)
+        @php
+        $tableNumber = $refill->order->reservation->table->table_number
+        ?? $refill->order->walkin->table->table_number
+        ?? 'N/A';
+        $status = $refill->status ?? 'Pending';
+        $statusColor = $status === 'Pending' ? 'bg-blue-400' : 'bg-blue-600';
+        @endphp
+
+        <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col h-fit">
+          <!-- Header -->
+          <div class="p-4 {{ $statusColor }} text-white">
+          <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
+          </div>
+
+          <!-- Refill Items -->
+          <div class="p-4 space-y-2 flex-grow">
+          <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
+            <span class="font-medium text-sm text-gray-800">{{ $refill->quantity }} x
+            {{ $refill->ingredient->name ?? 'Unknown' }} (Refill)</span>
+            <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd" />
+            </svg>
+          </div>
+          </div>
+
+          <!-- Action Button -->
+          <div class="p-4 pt-0">
+          @if($status === 'Pending')
+        <button wire:click="markAsReady({{ $refill->id }}, 'refill')"
+          class="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
+          Mark as Ready
+        </button>
+        @else
+        <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold cursor-default">
+          Ready
+        </button>
+        @endif
+          </div>
+        </div>
+    @empty
+    @endforelse
+
+        <!-- Served Orders -->
+        @forelse($this->servedOrders as $groupKey => $orderGroup)
+        @php
+        $tableNumber = $orderGroup->first()->reservation->table->table_number
+        ?? $orderGroup->first()->walkin->table->table_number
+        ?? $orderGroup->first()->table->table_number
+        ?? 'N/A';
+        $status = $orderGroup->first()->status ?? 'Ready';
+        $statusColor = $status === 'Ready' ? 'bg-green-500' : 'bg-blue-600';
+        @endphp
+
+        <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col h-fit">
+          <!-- Header -->
+          <div class="p-4 {{ $statusColor }} text-white">
+          <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
+          </div>
+
+          <!-- Order Items -->
+          <div class="p-4 space-y-2 flex-grow">
+          @foreach($orderGroup as $order)
+        <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
+          <span class="font-medium text-sm text-gray-800">{{ $order->quantity }} x
+          {{ $order->menu->menu_item ?? 'Unknown' }}</span>
+          <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd"
+          d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+          clip-rule="evenodd" />
+          </svg>
+        </div>
+        @endforeach
+
+          @php
+          $hasNotes = $orderGroup->contains(function ($order) {
+          return !empty($order->notes);
+          });
+        @endphp
+
+          @if($hasNotes)
+          <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 rounded px-3 py-2">
+          @foreach($orderGroup as $order)
+          @if($order->notes)
+          <p class="text-xs font-semibold text-gray-800">Note: {{ $order->notes }}</p>
+        @endif
+        @endforeach
+          </div>
+        @endif
+          </div>
+
+          <!-- Status Button -->
+          <div class="p-4 pt-0">
+          @if($status === 'Ready')
+        <button class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold cursor-default">
+          Ready
+        </button>
+        @else
+        <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold cursor-default">
+          Served
+        </button>
+        @endif
+          </div>
+        </div>
+    @empty
+    @endforelse
+
+        <!-- Served Refills -->
+        @forelse($this->servedRefills as $refill)
+        @php
+        $tableNumber = $refill->order->reservation->table->table_number
+        ?? $refill->order->walkin->table->table_number
+        ?? 'N/A';
+        $status = $refill->status ?? 'Ready';
+        $statusColor = $status === 'Ready' ? 'bg-blue-600' : 'bg-indigo-600';
+        @endphp
+
+        <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col h-fit">
+          <!-- Header -->
+          <div class="p-4 {{ $statusColor }} text-white">
+          <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
+          </div>
+
+          <!-- Refill Items -->
+          <div class="p-4 space-y-2 flex-grow">
+          <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
+            <span class="font-medium text-sm text-gray-800">{{ $refill->quantity }} x
+            {{ $refill->ingredient->name ?? 'Unknown' }} (Refill)</span>
+            <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd"
+              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+              clip-rule="evenodd" />
+            </svg>
+          </div>
+          </div>
+
+          <!-- Status Button -->
+          <div class="p-4 pt-0">
+          <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold cursor-default">
+            {{ $status }}
+          </button>
+          </div>
+        </div>
+    @empty
+    @endforelse
+
+        @if($this->pendingOrders->isEmpty() && $this->pendingRefills->isEmpty() && $this->servedOrders->isEmpty() && $this->servedRefills->isEmpty())
+      <div class="col-span-full text-center py-12">
+        <p class="text-gray-500 text-lg">No orders at the moment</p>
       </div>
+    @endif
 
-      <!-- Additional Orders -->
-      <div class="bg-white border rounded-xl shadow-lg flex flex-col">
-        <div class="border-b bg-green-50 rounded-t-xl">
-          <p class="p-4 text-lg font-semibold text-gray-700">Additional Orders</p>
-        </div>
-
-        <div class="p-4">
-          <form wire:submit.prevent="addAdditionalOrder" class="space-y-4">
-            <div>
-              <label for="table_order" class="block text-sm font-medium text-gray-700">Table Number</label>
-              <select wire:model="selectedTableOrder" id="table_order" required
-                class="mt-1 w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-green-500 focus:outline-none">
-                <option value="">Select a table</option>
-                @foreach($tables as $table)
-          <option value="{{ $table->id }}">
-            Table {{ $table->table_number }}
-          </option>
-        @endforeach
-              </select>
-              @error('selectedTableOrder') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-            </div>
-
-            <div>
-              <label for="menu_id" class="block text-sm font-medium text-gray-700">Menu Item</label>
-              <select wire:model="selectedMenuId" id="menu_id" required
-                class="mt-1 w-full px-3 py-2 border rounded-lg text-base focus:ring-2 focus:ring-green-500 focus:outline-none">
-                <option value="">Select menu item</option>
-                @foreach($aLaCarteMenus as $menu)
-          <option value="{{ $menu->id }}">
-            {{ $menu->menu_item }}
-          </option>
-        @endforeach
-              </select>
-              @error('selectedMenuId') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-            </div>
-
-            <div>
-              <label for="quantity_order" class="block text-sm font-medium text-gray-700">Quantity</label>
-              <input type="number" wire:model="orderQuantity" id="quantity_order" required min="1"
-                class="mt-1 w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:outline-none">
-              @error('orderQuantity') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-            </div>
-
-            <div>
-              <button type="submit"
-                class="w-full bg-green-600 text-white py-2 rounded-lg font-semibold hover:bg-green-700 transition">
-                Add to Order
-              </button>
-            </div>
-          </form>
-        </div>
       </div>
 
     </div>
-
   </div>
+
+  <!-- Success Modal -->
+  @if (session()->has('success'))
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-data="{ show: true }"
+    x-show="show" x-transition>
+    <div class="bg-white p-6 rounded-xl text-center shadow-lg">
+      <h2 class="text-lg font-semibold text-green-600 mb-2">Success</h2>
+      <p class="text-gray-700 mb-4">{{ session('success') }}</p>
+      <button @click="show = false" class="bg-green-600 text-white px-4 py-2 rounded">OK</button>
+    </div>
+    </div>
+  @endif
+
+  <!-- Error Modal -->
+  @if (session()->has('error'))
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-data="{ show: true }"
+    x-show="show" x-transition>
+    <div class="bg-white p-6 rounded-xl text-center shadow-lg">
+      <h2 class="text-lg font-semibold text-red-600 mb-2">Error</h2>
+      <p class="text-gray-700 mb-4">{{ session('error') }}</p>
+      <button @click="show = false" class="bg-red-600 text-white px-4 py-2 rounded">OK</button>
+    </div>
+    </div>
+  @endif
+
 </div>

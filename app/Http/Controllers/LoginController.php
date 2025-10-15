@@ -398,6 +398,8 @@ class LoginController extends Controller
                 return redirect()->route('kitchen.home');
             case 'Cashier':
                 return redirect()->route('cashier.home');
+                case 'Wait Staff':
+                    return redirect()->route('waitstaff.home');
             default:
                 return redirect()->route('login')->withErrors(['error' => 'Invalid user role.']);
         }

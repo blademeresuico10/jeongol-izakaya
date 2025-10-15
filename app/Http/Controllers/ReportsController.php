@@ -96,7 +96,7 @@ class ReportsController extends Controller
             ->values();
 
         try {
-            $pdf = Pdf::loadView('admin.reports.pdf-sales', [
+            $pdf = PDF::loadView('admin.reports.pdf-sales', [
                 'groupedSales' => $groupedSales,
                 'grossSales' => $grossSales,
                 'netSales' => $netSales,

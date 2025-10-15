@@ -19,7 +19,6 @@ use App\Models\table;
 
 class ReceptionistController extends Controller
 {
-
     public function home()
     {
         $currentTime = Carbon::now();

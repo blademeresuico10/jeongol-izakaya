@@ -91,7 +91,7 @@
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">
-                <i class="far fa-clock mr-2"></i>Operating Hours & Discount Management
+                Miscellaneous
             </h1>
         </nav>
 

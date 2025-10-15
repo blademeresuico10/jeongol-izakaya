@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <title>Kitchen Dashboard</title>
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
-  
+
   @vite(['resources/css/app.css', 'resources/js/app.js'])
 
   <style>
@@ -24,6 +24,7 @@
   </style>
 
   @livewireStyles
+  
 </head>
 
 <body class="p-5">
@@ -34,4 +35,5 @@
 
 
 </body>
+
 </html>

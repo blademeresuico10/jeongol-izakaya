@@ -597,7 +597,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-        {{ $table->id }}: {{ $table->capacity }},
+      {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
@@ -1192,14 +1192,59 @@
     this.elements.advancePayment.parentElement.style.display = '';
     this.elements.contactInput.style.display = '';
 
+    // Set minimum date to today
     const today = now.getFullYear() + '-' +
       String(now.getMonth() + 1).padStart(2, '0') + '-' +
       String(now.getDate()).padStart(2, '0');
     this.elements.reservedDate.value = today;
+    this.elements.reservedDate.min = today;
 
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
+    // Set default time to 2 hours from now
+    const twoHoursLater = new Date(now.getTime() + (2 * 60 * 60 * 1000));
+    const hours = twoHoursLater.getHours().toString().padStart(2, '0');
+    const minutes = twoHoursLater.getMinutes().toString().padStart(2, '0');
     this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
+
+    // Add validation event listeners
+    const validateReservationTime = () => {
+      const selectedDate = this.elements.reservedDate.value;
+      const selectedTime = this.elements.arrivalTimeInput.value;
+
+      if (!selectedDate || !selectedTime) return;
+
+      const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
+      const currentTime = new Date();
+      const minAllowedTime = new Date(currentTime.getTime() + (2 * 60 * 60 * 1000));
+
+      if (selectedDateTime < minAllowedTime) {
+        this.showToast('Reservation must be at least 2 hours from now', 'error');
+
+        // Reset to minimum allowed time
+        const resetHours = minAllowedTime.getHours().toString().padStart(2, '0');
+        const resetMinutes = minAllowedTime.getMinutes().toString().padStart(2, '0');
+        this.elements.arrivalTimeInput.value = `${resetHours}:${resetMinutes}`;
+
+        // If the min time goes to next day, update date
+        if (minAllowedTime.getDate() !== currentTime.getDate()) {
+          const newDate = minAllowedTime.getFullYear() + '-' +
+            String(minAllowedTime.getMonth() + 1).padStart(2, '0') + '-' +
+            String(minAllowedTime.getDate()).padStart(2, '0');
+          this.elements.reservedDate.value = newDate;
+        }
+      }
+    };
+
+    // Remove old listeners if they exist
+    this.elements.reservedDate.removeEventListener('change', this.validateReservationTime);
+    this.elements.arrivalTimeInput.removeEventListener('change', this.validateReservationTime);
+
+    // Store the function reference for removal later
+    this.validateReservationTime = validateReservationTime;
+
+    // Add new listeners
+    this.elements.reservedDate.addEventListener('change', validateReservationTime);
+    this.elements.arrivalTimeInput.addEventListener('change', validateReservationTime);
+    this.elements.arrivalTimeInput.addEventListener('blur', validateReservationTime);
   }
 
   selectMenuItem(element) {
@@ -1417,13 +1462,15 @@
       return;
     }
 
-    const selectedDate = new Date(`${date}T${time}`);
-    const now = new Date();
-
     if (!this.isPlacingOrder) {
-      if (selectedDate < now.setHours(0, 0, 0, 0)) {
-        this.showErrorToast('You cannot select a past date.');
+      const selectedDateTime = new Date(`${date}T${time}`);
+      const currentTime = new Date();
+      const minAllowedTime = new Date(currentTime.getTime() + (2 * 60 * 60 * 1000));
+
+      if (selectedDateTime < minAllowedTime) {
+        this.showErrorToast('Reservation must be at least 2 hours from now.');
         dateInput.classList.add('border-red-500');
+        timeInput.classList.add('border-red-500');
         return;
       }
     }

@@ -11,6 +11,8 @@ use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
+use App\Http\Controllers\WaitingStaffController;
+
 
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
@@ -95,7 +97,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/menu/{menu}/add-ingredient', [AdminController::class, 'attachIngredient'])->name('menu.attachIngredient');
         Route::get('/ingredients/list', [AdminController::class, 'getAllIngredients'])->name('ingredients.list');
         Route::delete('/menu_ingredients/{id}', [AdminController::class, 'removeMenuIngredient'])->name('menu_ingredients.remove');
-
+        Route::get('/menu/{menuId}/existing-ingredients', [AdminController::class, 'getExistingIngredients'])->name('menu.existing-ingredients');
+        Route::get('/menu/{menuId}/suggested-ingredients', [AdminController::class, 'getSuggestedIngredientsApi'])->name('menu.suggested-ingredients');
+       
         // Table Management
         Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
         Route::post('/addtable', [AdminController::class, 'addtable'])->name('admin.addtable');
@@ -206,15 +210,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/check-customer/{idNumber}', [CashierController::class, 'checkCustomer']);
     });
 
-    Route::get('/api/menu-prices', function () {
-        $menuItems = \App\Models\Menu::select([
-            'menu_item',
-            'regular_price',
-            'student_price',
-            'govt_employee_price',
-            'has_customer_discount'
-        ])->get();
-        return response()->json($menuItems);
+    Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {
+        Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
     });
 
     Route::get('/do-logout', function (Request $request) {

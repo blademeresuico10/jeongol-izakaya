@@ -16,36 +16,47 @@ class orders extends Model
         'status',
     ];
 
+    protected $casts = [
+        'quantity' => 'integer',
+        'price' => 'decimal:2',
+    ];
+
     public function reservation()
     {
-        return $this->belongsTo(reservation::class, 'reservation_id');
+        return $this->belongsTo(Reservation::class, 'reservation_id');
     }
 
     public function walkin()
     {
-        return $this->belongsTo(walkin::class, 'walk_in_id');
-    }
-
-    public function table()
-    {
-        return $this->belongsTo(table::class, 'table_id');
+        return $this->belongsTo(WalkIn::class, 'walk_in_id');
     }
 
     public function menu()
     {
-        return $this->belongsTo(menu::class, 'menu_id');
+        return $this->belongsTo(Menu::class, 'menu_id');
+    }
+
+    public function refills()
+    {
+        return $this->hasMany(OrderRefill::class, 'order_id');
     }
 
     public function getLinkedTableAttribute()
     {
-        if ($this->reservation) {
-            return $this->reservation->table;
-        }
-
-        if ($this->walkin) {
-            return $this->walkin->table;
-        }
-
-        return null;
+        return $this->reservation->table ?? $this->walkin->table ?? null;
     }
+
+    public function scopePending($query) { return $query->where('status', 'Pending'); }
+    public function scopeReady($query)   { return $query->where('status', 'Ready'); }
+    public function scopeServed($query)  { return $query->where('status', 'Served'); }
+    public function scopeCancelled($query) { return $query->where('status', 'Cancelled'); }
+
+    public function isPending() { return $this->status === 'Pending'; }
+    public function isReady()   { return $this->status === 'Ready'; }
+    public function isServed()  { return $this->status === 'Served'; }
+    public function isCancelled() { return $this->status === 'Cancelled'; }
+
+    public function markAsReady() { $this->update(['status' => 'Ready']); }
+    public function markAsServed() { $this->update(['status' => 'Served']); }
+    public function markAsCancelled() { $this->update(['status' => 'Cancelled']); }
 }

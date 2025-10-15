@@ -5,22 +5,15 @@ namespace App\Livewire;
 use Livewire\Component;
 use App\Models\orders;
 use App\Models\ingredients;
-use App\Models\ingredientMovements;
-use App\Models\MenuIngredient;
-use App\Models\UnlimitedMeatLog;
 use App\Models\table;
-use App\Models\menu;
+use App\Models\OrderRefill;
+use App\Models\RefillConfiguration;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class KitchenDashboard extends Component
 {
     public $activeTab = 'pending';
-    public $selectedTableUnlimited;
-    public $selectedTableOrder;
-    public $selectedMenuId;
-    public $orderQuantity = 1;
-    public $selectedIngredients = [];
 
     protected $listeners = [
         'echo:kitchen,order.created' => 'refreshDashboard',
@@ -29,9 +22,8 @@ class KitchenDashboard extends Component
 
     public function refreshDashboard()
     {
-        $this->emit('$refresh');
+        $this->dispatch('$refresh');
     }
-
 
     public function handleOrderCreated($event)
     {
@@ -45,346 +37,254 @@ class KitchenDashboard extends Component
 
     public function mount() {}
 
-    public function markAsServed($orderId)
+    public function getPendingOrdersProperty()
     {
-        $order = orders::findOrFail($orderId);
-
-        if ($order->reservation_id) {
-            $orders = orders::where('reservation_id', $order->reservation_id)
-                ->where('status', 'pending')
-                ->with('menu')
-                ->get();
-        } elseif ($order->walk_in_id) {
-            $orders = orders::where('walk_in_id', $order->walk_in_id)
-                ->where('status', 'pending')
-                ->with('menu')
-                ->get();
-        } else {
-            session()->flash('error', 'Order not found!');
-            return;
-        }
-
-        if ($orders->isEmpty()) {
-            session()->flash('error', 'No pending orders found!');
-            return;
-        }
-
-        DB::beginTransaction();
-
-        try {
-            $mainOrders = $orders->filter(fn($o) => $o->menu && $o->menu->category === 'main');
-            $addonOrders = $orders->filter(fn($o) => $o->menu && $o->menu->category === 'add_ons');
-
-            $processedIngredients = [];
-
-            $processIngredients = function ($singleOrder, $isAddon = false) use (&$processedIngredients) {
-                $menuIngredients = MenuIngredient::where('menu_id', $singleOrder->menu_id)->get();
-
-                foreach ($menuIngredients as $menuIngredient) {
-                    $ingredient = ingredients::find($menuIngredient->ingredient_id);
-                    if (!$ingredient) continue;
-
-                    if (!$isAddon && in_array($ingredient->id, $processedIngredients)) continue;
-
-                    $quantityNeeded = $isAddon
-                        ? $menuIngredient->quantity * $singleOrder->quantity
-                        : $menuIngredient->quantity;
-
-                    $ingredient->deductStock(
-                        $quantityNeeded,
-                        $singleOrder->id,
-                        Auth::id(),
-                        ($isAddon ? "Add-on" : "Main") . ": " . ($isAddon ? "{$singleOrder->quantity} x " : "") . "{$singleOrder->menu->menu_item}"
-                    );
-
-                    if (!$isAddon) {
-                        $processedIngredients[] = $ingredient->id;
-                    }
-                }
-
-                $singleOrder->status = 'served';
-                $singleOrder->save();
-            };
-
-            foreach ($mainOrders as $singleOrder) {
-                $processIngredients($singleOrder);
-            }
-
-            foreach ($addonOrders as $singleOrder) {
-                $processIngredients($singleOrder, true);
-            }
-
-            DB::commit();
-
-            session()->flash('success', 'Order marked as served successfully!');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            session()->flash('error', 'Failed to process order: ' . $e->getMessage());
-        }
+        return orders::with(['menu', 'reservation.table', 'walkin.table'])
+            ->where('status', 'Pending')
+            ->whereNotNull('menu_id')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->groupBy(function ($order) {
+                return ($order->reservation_id ?? 'w') . '-' . ($order->walk_in_id ?? 'r');
+            });
     }
 
-    public function addUnlimitedRefill()
+    public function getPendingRefillsProperty()
     {
-        if (!$this->selectedTableUnlimited) {
-            session()->flash('error', 'Please select a table.');
-            return;
-        }
-
-        $hasQuantity = false;
-        $ingredientsToProcess = [];
-
-        foreach ($this->selectedIngredients as $ingredientId => $data) {
-            if (isset($data['quantity']) && !empty($data['quantity']) && $data['quantity'] > 0) {
-                $hasQuantity = true;
-                $ingredientsToProcess[$ingredientId] = $data['quantity'];
-            }
-        }
-
-        if (!$hasQuantity) {
-            session()->flash('error', 'Please enter quantity for at least one ingredient.');
-            return;
-        }
-
-        $table = table::with(['reservation', 'walkin'])->findOrFail($this->selectedTableUnlimited);
-
-        $reservationId = $table->reservation->first()?->id;
-        $walkInId = $table->walkin->first()?->id;
-
-        DB::beginTransaction();
-
-        try {
-            $refillCount = 0;
-
-            foreach ($ingredientsToProcess as $ingredientId => $quantity) {
-                $ingredient = ingredients::findOrFail($ingredientId);
-
-                if ($ingredient->stocks < $quantity) {
-                    $available = $ingredient->unit === 'kg'
-                        ? number_format($ingredient->stocks / 1000, 2) . ' kg'
-                        : $ingredient->stocks . ' pieces';
-
-                    DB::rollBack();
-                    session()->flash('error', "Insufficient {$ingredient->name}! Only {$available} available.");
-                    return;
-                }
-
-                $stockBefore = $ingredient->stocks;
-                $ingredient->decrement('stocks', $quantity);
-                $ingredient->refresh();
-                $stockAfter = $ingredient->stocks;
-
-                ingredientMovements::create([
-                    'ingredient_id' => $ingredient->id,
-                    'user_id' => Auth::id(),
-                    'type' => 'used',
-                    'quantity' => $quantity,
-                    'stock_before' => $stockBefore,
-                    'stock_after' => $stockAfter,
-                ]);
-
-                UnlimitedMeatLog::create([
-                    'table_id' => $this->selectedTableUnlimited,
-                    'ingredient_id' => $ingredientId,
-                    'quantity' => $quantity,
-                    'unit' => $ingredient->unit === 'kg' ? 'g' : 'pieces',
-                    'reservation_id' => $reservationId,
-                    'walk_in_id' => $walkInId,
-                ]);
-
-                $refillCount++;
-            }
-
-            DB::commit();
-
-            $this->dispatch('notify', type: 'success', message: 'Stock updated.');
-            $this->reset(['selectedTableUnlimited', 'selectedIngredients']);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            $this->dispatch('notify', type: 'error', message: 'Failed to add refills: ' . $e->getMessage());
-        }
+        return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
+            ->where('status', 'Pending')
+            ->orderBy('created_at', 'asc')
+            ->get()
+            ->map(function ($refill) {
+                $config = RefillConfiguration::where('ingredient_id', $refill->ingredient_id)->first();
+                $refill->grams_per_plate = $config ? $config->quantity_per_plate : 0;
+                $refill->total_grams = $refill->grams_per_plate * $refill->quantity;
+                return $refill;
+            });
     }
 
-    public function addAdditionalOrder()
+    public function getReadyOrdersProperty()
     {
-        $this->validate([
-            'selectedTableOrder' => 'required|exists:tables,id',
-            'selectedMenuId' => 'required|exists:menu,id',
-            'orderQuantity' => 'required|integer|min:1',
-        ], [
-            'selectedTableOrder.required' => 'Please select a table.',
-            'selectedMenuId.required' => 'Please select a menu item.',
-            'orderQuantity.required' => 'Please enter quantity.',
-            'orderQuantity.min' => 'Quantity must be at least 1.',
-        ]);
+        return orders::with(['menu', 'reservation.table', 'walkin.table'])
+            ->where('status', 'Ready')
+            ->whereNotNull('menu_id')
+            ->orderBy('updated_at', 'asc')
+            ->get()
+            ->groupBy(function ($order) {
+                return ($order->reservation_id ?? 'w') . '-' . ($order->walk_in_id ?? 'r');
+            });
+    }
 
-        if (in_array($this->selectedMenuId, [1, 2, 3])) {
-            session()->flash('error', 'Cannot add unlimited packages as additional orders!');
-            return;
-        }
+    public function getReadyRefillsProperty()
+    {
+        return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
+            ->where('status', 'Ready')
+            ->orderBy('updated_at', 'asc')
+            ->get()
+            ->map(function ($refill) {
+                $config = RefillConfiguration::where('ingredient_id', $refill->ingredient_id)->first();
+                $refill->grams_per_plate = $config ? $config->quantity_per_plate : 0;
+                $refill->total_grams = $refill->grams_per_plate * $refill->quantity;
+                return $refill;
+            });
+    }
 
-        $menu = menu::findOrFail($this->selectedMenuId);
-        $table = table::with(['reservation', 'walkin'])->findOrFail($this->selectedTableOrder);
-        $reservationId = $table->reservation->first()?->id;
-        $walkInId = $table->walkin->first()?->id;
+    public function getServedOrdersProperty()
+    {
+        return orders::with(['menu', 'reservation.table', 'walkin.table'])
+            ->whereIn('status', ['Served', 'Ready']) 
+            ->whereNotNull('menu_id')
+            ->orderBy('updated_at', 'desc')
+            ->get()
+            ->groupBy(function ($order) {
+                return ($order->reservation_id ?? 'w') . '-' . ($order->walk_in_id ?? 'r');
+            });
+    }
 
-        $menuIngredients = MenuIngredient::where('menu_id', $menu->id)->get();
+    public function getServedRefillsProperty()
+    {
+        return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
+            ->whereIn('status', ['Served', 'Ready'])
+            ->orderBy('updated_at', 'desc')
+            ->get()
+            ->map(function ($refill) {
+                $config = RefillConfiguration::where('ingredient_id', $refill->ingredient_id)->first();
+                $refill->grams_per_plate = $config ? $config->quantity_per_plate : 0;
+                $refill->total_grams = $refill->grams_per_plate * $refill->quantity;
+                return $refill;
+            });
+    }
 
-        foreach ($menuIngredients as $menuIngredient) {
-            $ingredient = ingredients::find($menuIngredient->ingredient_id);
-            $quantityNeeded = $menuIngredient->quantity * $this->orderQuantity;
+    public function markAsReady($orderOrRefillId, $type = 'order')
+    {
+        if ($type === 'refill') {
+            $refill = OrderRefill::with('ingredient', 'order')->find($orderOrRefillId);
 
-            if ($ingredient->stocks < $quantityNeeded) {
-                $available = $ingredient->unit === 'kg'
-                    ? number_format($ingredient->stocks / 1000, 2) . ' kg'
-                    : $ingredient->stocks . ' pieces';
-                session()->flash('error', "Insufficient {$ingredient->name}! Only {$available} available.");
+            if (!$refill || $refill->status !== 'Pending') {
+                session()->flash('error', 'No pending refill found!');
                 return;
             }
-        }
 
-        DB::beginTransaction();
-
-        try {
-            $pricePerItem = $menu->regular_price ?? $menu->price ?? 0;
-            $totalPrice = $pricePerItem * $this->orderQuantity;
-
-            $order = orders::create([
-                'reservation_id' => $reservationId,
-                'walk_in_id' => $walkInId,
-                'menu_id' => $this->selectedMenuId,
-                'quantity' => $this->orderQuantity,
-                'price' => $totalPrice,
-                'status' => 'Served',
-            ]);
-
-            foreach ($menuIngredients as $menuIngredient) {
-                $ingredient = ingredients::find($menuIngredient->ingredient_id);
-                $quantityNeeded = $menuIngredient->quantity * $this->orderQuantity;
-
-                $stockBefore = $ingredient->stocks;
-                $ingredient->decrement('stocks', $quantityNeeded);
-                $ingredient->refresh();
-                $stockAfter = $ingredient->stocks;
-
-                ingredientMovements::create([
-                    'ingredient_id' => $ingredient->id,
-                    'user_id' => Auth::id(),
-                    'order_id' => $order->id,
-                    'type' => 'used',
-                    'quantity' => $quantityNeeded,
-                    'stock_before' => $stockBefore,
-                    'stock_after' => $stockAfter,
-                ]);
+            $ingredient = $refill->ingredient;
+            if (!$ingredient) {
+                session()->flash('error', 'Ingredient not found!');
+                return;
             }
 
-            DB::commit();
-            $this->dispatch('notify', type: 'success', message: 'Additional order added successfully!');
-            $this->reset(['selectedTableOrder', 'selectedMenuId', 'orderQuantity']);
-            $this->orderQuantity = 1;
-        } catch (\Exception $e) {
-            DB::rollBack();
-            $this->dispatch('notify', type: 'error', message: 'Failed to add order: ' . $e->getMessage());
+            DB::beginTransaction();
+            try {
+                $config = RefillConfiguration::where('ingredient_id', $ingredient->id)->first();
+                
+                if (!$config) {
+                    throw new \Exception("Refill configuration not found for {$ingredient->name}");
+                }
+
+                $gramsPerPlate = $config->quantity_per_plate;
+                $totalGrams = $gramsPerPlate * $refill->quantity;
+                $totalKg = $totalGrams / 1000;
+
+                if ($ingredient->stocks < $totalKg) {
+                    throw new \Exception(
+                        "Insufficient stock for '{$ingredient->name}'. Required: {$totalKg} kg, Available: {$ingredient->stocks} kg"
+                    );
+                }
+
+                $stockBefore = $ingredient->stocks;
+                $stockAfter = $stockBefore - $totalKg;
+
+                DB::table('ingredients')
+                    ->where('id', $ingredient->id)
+                    ->update([
+                        'stocks' => $stockAfter,
+                        'updated_at' => now()
+                    ]);
+
+                DB::table('ingredient_movements')->insert([
+                    'ingredient_id' => $ingredient->id,
+                    'ingredient_batch_id' => null,
+                    'user_id' => Auth::id(),
+                    'order_id' => $refill->order_id,
+                    'type' => 'used',
+                    'quantity' => $totalKg,
+                    'stock_before' => $stockBefore,
+                    'stock_after' => $stockAfter,
+                    'notes' => sprintf(
+                        "Refill #%d: %dx %s - Deducted %.3f kg (%.0f g per plate)",
+                        $refill->id,
+                        $refill->quantity,
+                        $ingredient->name,
+                        $totalKg,
+                        $gramsPerPlate
+                    ),
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+
+                $refill->status = 'Ready';
+                $refill->save();
+
+                DB::commit();
+                session()->flash('success', "Refill is ready for pickup!");
+            } catch (\Exception $e) {
+                DB::rollBack();
+                session()->flash('error', 'Failed to process refill: ' . $e->getMessage());
+            }
+        } else { // Normal order
+            $order = orders::findOrFail($orderOrRefillId);
+
+            if ($order->reservation_id) {
+                $orders = orders::where('reservation_id', $order->reservation_id)
+                    ->where('status', 'Pending')
+                    ->with(['menu'])
+                    ->get();
+            } elseif ($order->walk_in_id) {
+                $orders = orders::where('walk_in_id', $order->walk_in_id)
+                    ->where('status', 'Pending')
+                    ->with(['menu'])
+                    ->get();
+            } else {
+                session()->flash('error', 'Order not found!');
+                return;
+            }
+
+            if ($orders->isEmpty()) {
+                session()->flash('error', 'No pending orders found!');
+                return;
+            }
+
+            DB::beginTransaction();
+
+            try {
+                foreach ($orders as $singleOrder) {
+                    if (!$singleOrder->menu) continue;
+
+                    $menuItem = $singleOrder->menu;
+                    $menuIngredients = DB::table('menu_ingredients')
+                        ->where('menu_id', $menuItem->id)
+                        ->get();
+
+                    foreach ($menuIngredients as $menuIngredient) {
+                        $ingredient = DB::table('ingredients')->find($menuIngredient->ingredient_id);
+                        if (!$ingredient) continue;
+
+                        $quantityNeeded = ($menuIngredient->quantity / 1000) * $singleOrder->quantity;
+
+                        if ($ingredient->stocks < $quantityNeeded) {
+                            throw new \Exception(
+                                "Insufficient stock for '{$ingredient->name}'. Required: {$quantityNeeded} kg, Available: {$ingredient->stocks} kg"
+                            );
+                        }
+
+                        $stockBefore = $ingredient->stocks;
+                        $stockAfter = $stockBefore - $quantityNeeded;
+
+                        DB::table('ingredients')
+                            ->where('id', $ingredient->id)
+                            ->update([
+                                'stocks' => $stockAfter,
+                                'updated_at' => now()
+                            ]);
+
+                        DB::table('ingredient_movements')->insert([
+                            'ingredient_id' => $ingredient->id,
+                            'ingredient_batch_id' => null,
+                            'user_id' => Auth::id(),
+                            'order_id' => $singleOrder->id,
+                            'type' => 'used',
+                            'quantity' => $quantityNeeded,
+                            'stock_before' => $stockBefore,
+                            'stock_after' => $stockAfter,
+                            'notes' => sprintf(
+                                "Order #%d: %dx %s (%s) - Deducted %.3f kg of %s (%.0f g per serving)",
+                                $singleOrder->id,
+                                $singleOrder->quantity,
+                                $menuItem->menu_item,
+                                $menuItem->category,
+                                $quantityNeeded,
+                                $ingredient->name,
+                                $menuIngredient->quantity
+                            ),
+                            'created_at' => now(),
+                            'updated_at' => now()
+                        ]);
+                    }
+
+                    $singleOrder->status = 'Ready';
+                    $singleOrder->save();
+                }
+
+                DB::commit();
+                $totalOrders = $orders->count();
+                session()->flash('success', "{$totalOrders} order(s) ready for pickup!");
+            } catch (\Exception $e) {
+                DB::rollBack();
+                session()->flash('error', 'Failed to process orders: ' . $e->getMessage());
+            }
         }
     }
 
     public function render()
     {
-        $now = now();
-        $today = $now->toDateString();
-        $currentTime = $now->toTimeString();
-
-        $pendingOrders = orders::with(['table', 'menu', 'reservation', 'walkin'])
-            ->whereNotNull('status')
-            ->where(function ($query) use ($today, $currentTime) {
-                $query->whereHas('reservation', function ($q) use ($today, $currentTime) {
-                    $q->where('status', 'Active')
-                        ->whereDate('started_at', $today)
-                        ->whereTime('started_at', '<=', $currentTime)
-                        ->where(function ($timeQuery) use ($currentTime) {
-                            $timeQuery->whereTime('ended_at', '>=', $currentTime)
-                                ->orWhereNull('ended_at');
-                        });
-                })
-                    ->orWhereHas('walkin', function ($q) use ($today, $currentTime) {
-                        $q->where('status', 'active')
-                            ->whereDate('started_at', $today)
-                            ->whereTime('started_at', '<=', $currentTime)
-                            ->where(function ($timeQuery) use ($currentTime) {
-                                $timeQuery->whereTime('ended_at', '>=', $currentTime)
-                                    ->orWhereNull('ended_at');
-                            });
-                    });
-            })
-            ->orderBy('created_at', 'asc')
-            ->get()
-            ->groupBy(function ($order) {
-                if ($order->reservation_id) {
-                    return 'reservation_' . $order->reservation_id;
-                }
-                return 'walkin_' . $order->walk_in_id;
-            });
-
-        $tables = table::whereHas('reservation', function ($query) use ($today, $currentTime) {
-            $query->where('status', 'Active')
-                ->whereDate('started_at', $today)
-                ->whereTime('started_at', '<=', $currentTime)
-                ->where(function ($timeQuery) use ($currentTime) {
-                    $timeQuery->whereTime('ended_at', '>=', $currentTime)
-                        ->orWhereNull('ended_at');
-                })
-                ->whereHas('orders', function ($q) {
-                    $q->whereNotNull('id');
-                })
-                ->whereDoesntHave('orders', function ($q) {
-                    $q->where('status', 'Pending');
-                });
-        })
-            ->orWhereHas('walkin', function ($query) use ($today, $currentTime) {
-                $query->where('status', 'active')
-                    ->whereDate('started_at', $today)
-                    ->whereTime('started_at', '<=', $currentTime)
-                    ->where(function ($timeQuery) use ($currentTime) {
-                        $timeQuery->whereTime('ended_at', '>=', $currentTime)
-                            ->orWhereNull('ended_at');
-                    })
-                    ->whereHas('orders', function ($q) {
-                        $q->whereNotNull('id');
-                    })
-                    ->whereDoesntHave('orders', function ($q) {
-                        $q->where('status', 'Pending');
-                    });
-            })
-            ->with(['reservation' => function ($query) use ($today, $currentTime) {
-                $query->where('status', 'Active')
-                    ->whereDate('started_at', $today)
-                    ->whereTime('started_at', '<=', $currentTime)
-                    ->where(function ($timeQuery) use ($currentTime) {
-                        $timeQuery->whereTime('ended_at', '>=', $currentTime)
-                            ->orWhereNull('ended_at');
-                    });
-            }, 'walkin' => function ($query) use ($today, $currentTime) {
-                $query->where('status', 'active')
-                    ->whereDate('started_at', $today)
-                    ->whereTime('started_at', '<=', $currentTime)
-                    ->where(function ($timeQuery) use ($currentTime) {
-                        $timeQuery->whereTime('ended_at', '>=', $currentTime)
-                            ->orWhereNull('ended_at');
-                    });
-            }])
-            ->get();
-
-        $unlimitedMenuIds = [1, 2, 3];
-        $unlimitedIngredients = ingredients::whereHas('menuIngredients', function ($query) use ($unlimitedMenuIds) {
-            $query->whereIn('menu_id', $unlimitedMenuIds);
-        })->get();
-
-        $aLaCarteMenus = menu::whereNotIn('id', $unlimitedMenuIds)->get();
-
-        return view('livewire.kitchen-dashboard', [
-            'pendingOrders' => $pendingOrders,
-            'tables' => $tables,
-            'unlimitedIngredients' => $unlimitedIngredients,
-            'aLaCarteMenus' => $aLaCarteMenus,
-        ]);
+        return view('livewire.kitchen-dashboard');
     }
 }

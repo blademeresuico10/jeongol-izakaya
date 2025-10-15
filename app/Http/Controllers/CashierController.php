@@ -22,7 +22,7 @@ class CashierController extends Controller
         $tables = DB::table('tables')->get();
         $menuItems = DB::table('menu')->get();
 
-        $reservations = Reservation::with('table')
+        $reservations = reservation::with('table')
             ->where('status', 'Active')
             ->where('started_at', '<=', $now)
             ->where('ended_at', '>', $now)
@@ -33,6 +33,7 @@ class CashierController extends Controller
             ->where('status', 'Active')
             ->where('started_at', '<=', $now)
             ->where('ended_at', '>', $now)
+            ->whereDoesntHave('transactions')
             ->get();
 
         $reservationIds = $reservations->pluck('id')->toArray();
@@ -40,8 +41,12 @@ class CashierController extends Controller
 
         $orders = orders::with('menu')
             ->where(function ($query) use ($reservationIds, $walkinIds) {
-                $query->whereIn('reservation_id', $reservationIds)
-                    ->orWhereIn('walk_in_id', $walkinIds);
+                if (!empty($reservationIds)) {
+                    $query->whereIn('reservation_id', $reservationIds);
+                }
+                if (!empty($walkinIds)) {
+                    $query->orWhereIn('walk_in_id', $walkinIds);
+                }
             })
             ->get()
             ->groupBy(function ($order) {
@@ -49,6 +54,7 @@ class CashierController extends Controller
             });
 
         $occupiedTables = [];
+
         foreach ($tables as $table) {
             $res = $reservations->firstWhere('table_id', $table->id);
             $session = $walkin->firstWhere('table_id', $table->id);
@@ -59,10 +65,13 @@ class CashierController extends Controller
                 $table->is_walk_in = false;
 
                 $endTime = Carbon::parse($res->ended_at);
-                $secondsRemaining = $now->diffInSeconds($endTime);
-                $table->remaining_seconds = min(7200, max(0, $secondsRemaining));
 
-                $table->current_orders = $orders[$res->id] ?? [];
+                $secondsRemaining = $now->diffInSeconds($endTime, false);
+                $table->remaining_seconds = max(0, $secondsRemaining);
+
+                $orderKey = $res->id;
+                $table->current_orders = $orders[$orderKey] ?? [];
+
                 $occupiedTables[] = $res->table->table_number ?? $table->table_number;
             } elseif ($session) {
                 $table->current_reservation_id = null;
@@ -70,17 +79,19 @@ class CashierController extends Controller
                 $table->is_walk_in = true;
 
                 $endTime = Carbon::parse($session->ended_at);
-                $secondsRemaining = $now->diffInSeconds($endTime);
-                $table->elapsed_seconds = min(7200, $secondsRemaining);
 
-                $table->current_orders = $orders[$session->id] ?? [];
+                $secondsRemaining = $now->diffInSeconds($endTime, false);
+                $table->remaining_seconds = max(0, $secondsRemaining);
+
+                $orderKey = 'walkin_' . $session->id;
+                $table->current_orders = $orders[$orderKey] ?? [];
+
                 $occupiedTables[] = $session->table->table_number ?? $table->table_number;
             } else {
                 $table->current_reservation_id = null;
                 $table->current_session_id = null;
                 $table->is_walk_in = false;
                 $table->remaining_seconds = null;
-                $table->elapsed_seconds = null;
                 $table->current_orders = [];
             }
         }
@@ -103,10 +114,9 @@ class CashierController extends Controller
                 'govt_percent'    => $govtDisc->discount_percentage ?? null,
                 'senior_percent'  => $seniorDisc->discount_percentage ?? null,
                 'pwd_percent'     => $pwdDisc->discount_percentage ?? null,
-                'has_discount'    => $item->has_customer_discount,
+                'has_discount'    => (bool) $item->has_customer_discount,
             ];
         }
-
 
         $groupedMenu = [];
         foreach ($menuItems as $item) {
@@ -126,14 +136,25 @@ class CashierController extends Controller
 
     public function getOrders($id)
     {
+        $now = Carbon::now();
+        $today = Carbon::today();
+
         $reservation = DB::table('reservations')
             ->leftJoin('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('reservation_payment_details', 'reservations.id', '=', 'reservation_payment_details.reservation_id')
             ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
             ->where('reservations.id', $id)
+            ->where('reservations.status', 'Active')
+            ->whereDate('reservations.started_at', $today) 
+            ->whereNotExists(function ($query) use ($id) {
+                $query->select(DB::raw(1))
+                    ->from('transactions')
+                    ->whereColumn('transactions.reservation_id', 'reservations.id');
+            })
             ->select(
                 'reservations.id as reservation_id',
                 'reservations.started_at as reservation_time',
+                'reservations.ended_at',
                 'reservation_payment_details.advance_payment',
                 'customers.name as customer_name',
                 'customers.contact_number',
@@ -150,9 +171,17 @@ class CashierController extends Controller
                 ->join('customers', 'walk_ins.customer_id', '=', 'customers.id')
                 ->join('tables', 'walk_ins.table_id', '=', 'tables.id')
                 ->where('walk_ins.id', $id)
+                ->where('walk_ins.status', 'Active')
+                ->whereDate('walk_ins.started_at', $today)
+                ->whereNotExists(function ($query) use ($id) {
+                    $query->select(DB::raw(1))
+                        ->from('transactions')
+                        ->whereColumn('transactions.walk_in_id', 'walk_ins.id');
+                })
                 ->select(
                     'walk_ins.id as reservation_id',
                     'walk_ins.started_at as reservation_time',
+                    'walk_ins.ended_at',
                     DB::raw('0 as advance_payment'),
                     'customers.name as customer_name',
                     'customers.contact_number',
@@ -165,7 +194,9 @@ class CashierController extends Controller
                 ->first();
 
             if (!$reservation) {
-                return response()->json(['message' => 'Order not found'], 404);
+                return response()->json([
+                    'message' => 'No active session found or already processed'
+                ], 404);
             }
         }
 
@@ -192,6 +223,10 @@ class CashierController extends Controller
                 return $order;
             });
 
+        // Calculate if time expired
+        $endTime = Carbon::parse($reservation->ended_at);
+        $isExpired = $now->greaterThan($endTime);
+
         return response()->json([
             'reservation_id'   => $reservation->reservation_id,
             'customer_name'    => $reservation->customer_name,
@@ -203,10 +238,11 @@ class CashierController extends Controller
             'advance_payment'  => floatval($reservation->advance_payment ?? 0),
             'table_number'     => $reservation->table_number,
             'order_type'       => $reservation->order_type,
+            'ended_at'         => $reservation->ended_at,
+            'is_expired'       => $isExpired,
             'orders'           => $orders
         ]);
     }
-
     private function calculateDiscountedPrice($menuItem, $regularPrice, $customerType)
     {
         if ($customerType === 'regular' || $customerType === 'none') {
@@ -407,7 +443,7 @@ class CashierController extends Controller
                 'orders_total'    => $ordersTotal,
                 'discount_total'  => $totalDiscountAmount,
                 'grand_total'     => $grandTotal,
-                'advance_payment' => $advancePayment, // Will be 0 for walk-ins
+                'advance_payment' => $advancePayment,
                 'to_pay'          => $toPay,
                 'cash_received'   => $cashReceived,
                 'change'          => $change,

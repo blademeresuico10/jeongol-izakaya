@@ -580,26 +580,41 @@ class AdminController extends Controller
 
     public function menuIngredients()
     {
-        $menus = DB::table('menu')
-            ->where('category', 'main')
-            ->whereNull('deleted_at')
-            ->get();
+        try {
+            $menus = DB::table('menu')
+                ->whereNull('deleted_at')
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        $ingredients = DB::table('menu_ingredients')
-            ->join('ingredients', 'menu_ingredients.ingredient_id', '=', 'ingredients.id')
-            ->select(
-                'menu_ingredients.id',
-                'menu_ingredients.menu_id',
-                'menu_ingredients.quantity',
-                'ingredients.name as ingredient_name'
-            )
-            ->get()
-            ->groupBy('menu_id');
+            $ingredients = [];
+            foreach ($menus as $menu) {
+                $ingredients[$menu->id] = DB::table('menu_ingredients as mi')
+                    ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
+                    ->where('mi.menu_id', $menu->id)
+                    ->select(
+                        'mi.id',
+                        'mi.quantity',
+                        'i.name as ingredient_name',
+                        'i.category',
+                        'i.unit',
+                        'i.stocks as stock'
+                    )
+                    ->get();
+            }
 
-        return response()->json([
-            'menus' => $menus,
-            'ingredients' => $ingredients,
-        ]);
+            return response()->json([
+                'success' => true,
+                'menus' => $menus,
+                'ingredients' => $ingredients
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Menu ingredients fetch error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch menu ingredients',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getIngredients($id)
@@ -881,7 +896,8 @@ class AdminController extends Controller
             ]);
 
             return redirect()->route('admin.menu_management')
-                ->with('success', 'Menu item "' . $menu->menu_item . '" added successfully!');
+                ->with('success', 'Menu item added successfully!')
+                ->with('new_menu_name', $menu->menu_item);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()
                 ->withInput()
@@ -891,6 +907,100 @@ class AdminController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'An error occurred while adding the menu item: ' . $e->getMessage());
+        }
+    }
+
+    private function getDefaultQuantity($unit, $menuCategory)
+    {
+        if ($unit === 'grams') {
+            return $menuCategory === 'main' ? 100 : 500; 
+        } elseif ($unit === 'pieces') {
+            return 1; 
+        }
+
+        return 100; 
+    }
+
+    private function getSuggestedIngredients($menuCategory)
+    {
+        // Define which ingredient categories to suggest for each menu category
+        $categoryMapping = [
+            'main' => ['meat', 'vegetables', 'soupbase'],  // Main dishes
+            'add_ons' => ['meat', 'beverage'],             // Add-ons
+        ];
+
+        $ingredientCategories = $categoryMapping[$menuCategory] ?? [];
+
+        if (empty($ingredientCategories)) {
+            return [];
+        }
+
+        // Get all active ingredients from these categories
+        $ingredients = DB::table('ingredients')
+            ->whereIn('category', $ingredientCategories)
+            ->orderBy('category')
+            ->orderBy('name')
+            ->get();
+
+        $suggested = [];
+        foreach ($ingredients as $ingredient) {
+            $suggested[] = [
+                'id' => $ingredient->id,
+                'name' => $ingredient->name,
+                'category' => $ingredient->category,
+                'default_quantity' => $this->getDefaultQuantity($ingredient->unit, $menuCategory),
+            ];
+        }
+
+        return $suggested;
+    }
+
+    public function getExistingIngredients($menuId)
+    {
+        try {
+            $ingredientIds = DB::table('menu_ingredients')
+                ->where('menu_id', $menuId)
+                ->pluck('ingredient_id')
+                ->toArray();
+
+            return response()->json([
+                'success' => true,
+                'ingredient_ids' => $ingredientIds
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch existing ingredients',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getSuggestedIngredientsApi($menuId)
+    {
+        try {
+            $menu = DB::table('menu')->find($menuId);
+
+            if (!$menu) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Menu not found'
+                ], 404);
+            }
+
+            $suggestions = $this->getSuggestedIngredients($menu->category);
+
+            return response()->json([
+                'success' => true,
+                'suggestions' => $suggestions,
+                'menu_category' => $menu->category
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch suggestions',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -917,8 +1027,6 @@ class AdminController extends Controller
                     'unique:menu,menu_item,' . $id . ',id,deleted_at,NULL'
                 ],
                 'regular_price' => 'required|numeric|min:0',
-                'student_price' => 'nullable|numeric|min:0',
-                'govt_employee_price' => 'nullable|numeric|min:0',
                 'status' => 'required|in:Active,Blocked',
                 'category' => 'required|string|max:255',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -958,7 +1066,6 @@ class AdminController extends Controller
             $updateData = [
                 'menu_item' => $request->menu_item,
                 'regular_price' => $request->regular_price,
-                'has_customer_discount' => (bool) $request->has_customer_discount,
                 'category' => $request->category,
                 'status' => $request->status,
                 'updated_at' => now(),

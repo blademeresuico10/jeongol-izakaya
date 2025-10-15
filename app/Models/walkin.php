@@ -42,4 +42,13 @@ class walkin extends Model
     {
         return $this->hasMany(transaction::class, 'walk_in_id', 'id');
     }
+
+    public function scopeCurrentlyActive($query)
+    {
+        $now = now();
+        return $query->where('status', 'Active')
+            ->where('started_at', '<=', $now)
+            ->where('ended_at', '>', $now)
+            ->whereDoesntHave('transactions');
+    }
 }

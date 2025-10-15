@@ -48,7 +48,7 @@ class transaction extends Model
 
     public function reservation()
     {
-        return $this->belongsTo(Reservation::class);
+        return $this->belongsTo(reservation::class);
     }
 
     public function orders()

@@ -12,12 +12,12 @@ class users extends Seeder
     {
         $users = [
             [
-                'firstname' => 'Keith',
-                'lastname' => 'Canon',
+                'firstname' => 'Admin',
+                'lastname' => 'Admin',
                 'role' => 'Admin',
                 'contact_number' => '09171234567',
                 'address' => 'Koronadal City',
-                'username' => 'keith',
+                'username' => 'admin',
                 'email' => 'emsoyalarcon@gmail.com',
                 'password' => Hash::make('q12345'),
                 'status' => 'Active',
@@ -52,6 +52,17 @@ class users extends Seeder
                 'address' => 'New Ilo-Ilo',
                 'username' => 'blademere',
                 'email' => 'blademeresuico@gmail.com',
+                'password' => Hash::make('q12345'),
+                'status' => 'Active',
+            ],
+            [
+                'firstname' => 'Nunuy',
+                'lastname' => 'Teodoro',
+                'role' => 'Wait Staff',
+                'contact_number' => '09174445435',
+                'address' => 'Koronadal City',
+                'username' => 'nunuy',
+                'email' => 'nunuyteodoro@gmail.com',
                 'password' => Hash::make('q12345'),
                 'status' => 'Active',
             ],

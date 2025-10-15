@@ -20,7 +20,15 @@ class TableLayout extends Component
         $currentTime = Carbon::now();
         $twoHoursLater = $currentTime->copy()->addHours(2);
 
-        $this->tables = table::with(['reservation', 'walkin'])->get()->map(function ($table) use ($currentTime, $twoHoursLater) {
+        $this->tables = table::with([
+            'reservation' => function($query) {
+                $query->whereDoesntHave('transactions'); // Exclude paid reservations
+            },
+            'walkin' => function($query) {
+                $query->whereDoesntHave('transactions'); // Exclude paid walk-ins
+            }
+        ])->get()->map(function ($table) use ($currentTime, $twoHoursLater) {
+            // Active: session has started and not ended
             $activeReservation = $table->reservation
                 ->where('status', 'Active')
                 ->where('started_at', '<=', $currentTime)
@@ -35,11 +43,11 @@ class TableLayout extends Component
 
             $upcomingReservation = $table->reservation
                 ->where('status', 'Active')
-                ->whereBetween('started_at', [$currentTime, $twoHoursLater])
+                ->where('started_at', '>', $currentTime) 
+                ->where('started_at', '<=', $twoHoursLater) 
                 ->first();
 
-            $table->is_occupied = $activeReservation || $activeWalkin;
-            $table->just_reserved = !$table->is_occupied && $upcomingReservation ? true : false;
+            $table->is_occupied = (bool)($activeReservation || $activeWalkin);
 
             return $table;
         });
