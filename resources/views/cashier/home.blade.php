@@ -1597,8 +1597,8 @@
                 orderItemsHTML += `
     <tr>
         <td class="item-desc">${itemDescription}</td>
-        <td class="item-price">₱${item.unitPrice.toFixed(2)}</td>
-        <td class="item-amount">₱${item.totalAmount.toFixed(2)}</td>
+        <td class="item-price">${item.unitPrice.toFixed(2)}</td>
+        <td class="item-amount">${item.totalAmount.toFixed(2)}</td>
     </tr>
     `;
             });
@@ -1777,37 +1777,37 @@
             <div class="summary">
                 <div class="summary-row">
                     <span>VATable Sales:</span>
-                    <span>₱${vatableSales}</span>
+                    <span>${vatableSales}</span>
                 </div>
                 <div class="summary-row">
                     <span>VAT (12%):</span>
-                    <span>₱${vat}</span>
+                    <span>${vat}</span>
                 </div>
                 <div class="summary-row">
                     <span>Total Sales (VAT Inclusive):</span>
-                    <span>₱${subtotal.toFixed(2)}</span>
+                    <span>${subtotal.toFixed(2)}</span>
                 </div>
                 ${actualAdvancePayment > 0 ? `
                 <div class="summary-row">
                     <span>Advance Payment:</span>
-                    <span>₱${actualAdvancePayment.toFixed(2)}</span>
+                    <span>${actualAdvancePayment.toFixed(2)}</span>
                 </div>
                 ` : ''}
                 <div class="summary-row">
                     <span>Discount:</span>
-                    <span>₱${discountAmount.toFixed(2)}</span>
+                    <span>${discountAmount.toFixed(2)}</span>
                 </div>
                 <div class="summary-row total-row">
                     <span>TOTAL AMOUNT DUE:</span>
-                    <span>₱${finalTotal.toFixed(2)}</span>
+                    <span>${finalTotal.toFixed(2)}</span>
                 </div>
                 <div class="summary-row" style="margin-top: 6px;">
                     <span>Cash Received:</span>
-                    <span>₱${cashReceived.toFixed(2)}</span>
+                    <span>${cashReceived.toFixed(2)}</span>
                 </div>
                 <div class="summary-row">
                     <span>Change:</span>
-                    <span>₱${change.toFixed(2)}</span>
+                    <span>${change.toFixed(2)}</span>
                 </div>
             </div>
 

@@ -23,30 +23,30 @@
         animation: heartbeat 1.5s ease-in-out infinite;
     }
 </style>
-<div wire:poll.keep-alive.5s="loadTables">
+<div wire:poll.10s="loadTables">
 
     <div class="max-w-7xl mx-auto px-4 py-6" x-data="waitStaffData()">
 
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
             <h2 class="text-2xl font-bold mb-6 text-gray-800">Select Table</h2>
             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                @foreach($tables as $table)
-                    <button @click="selectTable({{ $table['id'] }})" :class="{
-                                                'bg-orange-600 text-white shadow-xl scale-105': activeTable === {{ $table['id'] }},
-                                                'bg-orange-100 text-orange-800': {{ $table['hasOrders'] ? 'true' : 'false' }} && {{ $table['hasActiveSession'] ? 'true' : 'false' }},
-                                                'bg-gray-100 text-gray-600 cursor-not-allowed': !{{ $table['hasActiveSession'] ? 'true' : 'false' }}
-                                            }" :disabled="!{{ $table['hasActiveSession'] ? 'true' : 'false' }}"
+                <template x-for="table in tables" :key="table.id">
+                    <button @click="selectTable(table.id)" :class="{
+                                        'bg-orange-600 text-white shadow-xl scale-105': activeTable === table.id,
+                                        'bg-orange-100 text-orange-800': table.hasOrders && table.hasActiveSession,
+                                        'bg-gray-100 text-gray-600 cursor-not-allowed': !table.hasActiveSession
+                                    }" :disabled="!table.hasActiveSession"
                         class="relative p-6 rounded-xl font-bold text-lg transition-all">
-                        Table {{ $table['number'] }}
+                        <span x-text="'Table ' + table.number"></span>
 
-                        <template x-if="{{ $table['hasReadyItems'] ? 'true' : 'false' }}">
+                        <template x-if="table.hasReadyItems">
                             <span
                                 class="absolute -top-1 -right-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200 animate-heartbeat whitespace-nowrap">
                                 Ready to Serve!
                             </span>
                         </template>
                     </button>
-                @endforeach
+                </template>
             </div>
         </div>
 
@@ -67,9 +67,8 @@
                 <h2 class="text-2xl font-bold text-gray-800">
                     Table <span x-text="activeTable ? getTableNumber(activeTable) : ''"></span> Orders
                 </h2>
-
                 <!-- Serve All Ready Button -->
-                <template x-if="tables.some(t => t.hasReadyItems)">
+                <template x-if="hasReadyItemsInCurrentTable()">
                     <button @click="serveAllReady()"
                         class="px-6 py-3 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -78,7 +77,6 @@
                         Serve All Ready
                     </button>
                 </template>
-
             </div>
 
             <template x-if="currentOrders.length === 0 && currentRefills.length === 0">
@@ -184,7 +182,6 @@
                             </div>
 
                             <div class="flex items-center gap-2 ml-4">
-                                <!-- Remove Button for Pending Refills -->
                                 <template x-if="refill.status === 'Pending'">
                                     <button @click="removeItem(refill.id, 'refill')"
                                         class="p-3 text-red-600 bg-red-100 hover:bg-red-200 active:bg-red-300 rounded-xl transition-colors touch-manipulation"
@@ -236,8 +233,9 @@
                                 </h4>
                                 <div class="space-y-2">
                                     @foreach($items as $item)
-                                        <button @click="addToCart({{ $item['id'] }}, @js($item['menu_item'])
-                                                                                , {{ $item['regular_price'] }})"
+                                        <button
+                                            @click="addToCart({{ $item['id'] }}, @js($item['menu_item'])
+                                                                                                                                                , {{ $item['regular_price'] }})"
                                             class="w-full p-3 sm:p-4 text-left bg-white hover:bg-gray-50 active:bg-gray-100 border border-gray-200 hover:border-gray-300 rounded-lg transition-all touch-manipulation group">
                                             <div class="flex items-center justify-between">
                                                 <div class="flex-1 min-w-0">
@@ -341,17 +339,23 @@
         <div x-show="showRefillModal" x-cloak @click.self="closeRefillModal()"
             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             style="display: none;">
+
             <div @click.away="closeRefillModal()"
                 class="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
+
+                <!-- Header -->
                 <div class="sticky top-0 bg-white border-b-2 p-6 flex items-center justify-between z-10 rounded-t-2xl">
                     <h2 class="text-2xl font-bold text-gray-800">Select Refill Items</h2>
                     <button @click="closeRefillModal()"
-                        class="text-gray-500 hover:text-gray-700 active:text-gray-900 text-4xl leading-none w-12 h-12 flex items-center justify-center touch-manipulation rounded-full hover:bg-gray-100 active:bg-gray-200">
+                        class="text-gray-500 hover:text-gray-700 text-4xl w-12 h-12 flex items-center justify-center rounded-full hover:bg-gray-100">
                         ×
                     </button>
                 </div>
+
+                <!-- Content -->
                 <div class="p-6">
-                    <template x-if="availableRefills.length === 0">
+                    <!-- No Unlimited Package -->
+                    <template x-if="!hasUnlimitedPackage">
                         <div class="text-center py-12">
                             <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
@@ -362,30 +366,45 @@
                         </div>
                     </template>
 
-                    <template x-if="availableRefills.length > 0">
+                    <!-- With Unlimited Package -->
+                    <template x-if="hasUnlimitedPackage">
                         <div>
-                            <!-- Group by category -->
                             <template x-for="category in getRefillCategories()" :key="category">
                                 <div class="mb-6">
                                     <h3 class="text-lg font-bold text-gray-700 mb-3 pb-2 border-b" x-text="category">
                                     </h3>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                                    <div class="space-y-3">
                                         <template x-for="item in getRefillsByCategory(category)" :key="item.id">
-                                            <div class="p-4 border-2 rounded-xl bg-white border-gray-200">
-                                                <div class="flex items-start justify-between mb-3">
-                                                    <div class="flex-1">
-                                                        <div class="font-bold text-base mb-1" x-text="item.name"></div>
-                                                    </div>
+                                            <div
+                                                class="flex items-center justify-between border rounded-xl p-3 bg-white hover:bg-gray-50 transition">
+
+                                                <!-- Left side: Checkbox + name -->
+                                                <div class="flex items-center gap-3 flex-1">
                                                     <input type="checkbox"
                                                         @change="toggleRefillItem(item.id, $event.target.checked)"
-                                                        class="w-6 h-6 text-blue-600 rounded focus:ring-2 focus:ring-blue-500 touch-manipulation" />
+                                                        class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500" />
+                                                    <span class="font-semibold text-gray-800" x-text="item.name"></span>
                                                 </div>
+
+                                                <!-- Right side: Quantity controls -->
                                                 <template x-if="selectedRefills[item.id]">
-                                                    <div class="flex items-center gap-2 mt-2">
-                                                        <label class="text-sm font-semibold">Plates:</label>
-                                                        <input type="number" min="1" value="1"
-                                                            @input="updateRefillPlates(item.id, $event.target.value)"
-                                                            class="w-20 px-2 py-1 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center touch-manipulation" />
+                                                    <div class="flex items-center gap-2">
+                                                        <button type="button"
+                                                            @click="updateRefillPlates(item.id, Math.max(selectedRefills[item.id].plates - 1, 1))"
+                                                            class="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 font-bold">−</button>
+
+                                                        <input type="text"
+                                                            x-model.number="selectedRefills[item.id].plates"
+                                                            @input="if (!/^\d*$/.test($event.target.value)) $event.target.value = selectedRefills[item.id].plates"
+                                                            @keypress="if (!/[0-9]/.test($event.key)) $event.preventDefault()"
+                                                            @paste.prevent
+                                                            class="w-12 text-center border rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                                            style="appearance: textfield; -moz-appearance: textfield; -webkit-appearance: none;" />
+
+                                                        <button type="button"
+                                                            @click="updateRefillPlates(item.id, selectedRefills[item.id].plates + 1)"
+                                                            class="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 font-bold">+</button>
                                                     </div>
                                                 </template>
                                             </div>
@@ -394,10 +413,13 @@
                                 </div>
                             </template>
 
+                            <!-- Submit -->
                             <div class="sticky bottom-0 bg-white pt-4 border-t-2 mt-6">
                                 <button @click="submitRefills()" :disabled="Object.keys(selectedRefills).length === 0"
-                                    :class="Object.keys(selectedRefills).length > 0 ? 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'"
-                                    class="w-full p-4 rounded-xl font-bold text-lg transition-colors touch-manipulation">
+                                    :class="Object.keys(selectedRefills).length > 0 ? 
+                                'bg-blue-600 hover:bg-blue-700 text-white' : 
+                                'bg-gray-300 text-gray-500 cursor-not-allowed'"
+                                    class="w-full p-4 rounded-xl font-bold text-lg transition">
                                     Add Refill(s)
                                 </button>
                             </div>
@@ -406,6 +428,7 @@
                 </div>
             </div>
         </div>
+
 
         <!-- Serve Confirmation Modal -->
         <div x-show="showServeModal" x-cloak @click.self="showServeModal = false"
@@ -431,12 +454,6 @@
                             <div class="flex items-center justify-between p-3 border-b last:border-b-0 bg-gray-50">
                                 <div class="flex-1">
                                     <span class="font-medium text-sm text-gray-900" x-text="item.name"></span>
-                                    <template x-if="item.type === 'refill'">
-                                        <span
-                                            class="ml-2 text-xs font-bold px-2 py-0.5 rounded-full bg-purple-600 text-white">
-                                            REFILL
-                                        </span>
-                                    </template>
                                 </div>
                                 <span class="text-sm text-gray-600" x-text="item.quantity"></span>
                             </div>
@@ -469,7 +486,6 @@
             showServeModal: false,
             serveModalMessage: '',
             itemsToServe: [],
-            editingQuantity: null,
             currentOrders: @json($orders),
             currentRefills: @json($refills),
             tableNote: @json($tableNote),
@@ -477,101 +493,75 @@
             availableRefills: @json($availableRefills),
             hasUnlimitedPackage: @json($hasUnlimitedPackage),
             selectedRefills: {},
-
             orderCart: [],
             orderNotes: '',
 
             init() {
-                const component = window.Livewire.find('{{ $_instance->getId() }}');
+                setInterval(async () => {
+                    if (this.activeTable) {
+                        await @this.call('loadOrders', this.activeTable);
+                    }
+                    await @this.call('loadTables');
+                    this.tables = @this.get('tables');
+                }, 3000);
 
-                Livewire.on('ordersUpdated', () => {
-                    Object.assign(this, {
-                        currentOrders: component.get('orders'),
-                        currentRefills: component.get('refills'),
-                        tableNote: component.get('tableNote'),
-                        availableRefills: component.get('availableRefills'),
-                        hasUnlimitedPackage: component.get('hasUnlimitedPackage'),
-                    });
+                Livewire.on('ordersUpdated', (data) => {
+                    this.currentOrders = data.orders || @this.get('orders');
+                    this.currentRefills = data.refills || @this.get('refills');
+                    this.tableNote = data.tableNote || @this.get('tableNote');
+                    this.availableRefills = data.availableRefills || @this.get('availableRefills');
+                    this.hasUnlimitedPackage = data.hasUnlimitedPackage || @this.get('hasUnlimitedPackage');
                 });
 
                 Livewire.on('tablesUpdated', (data) => {
                     this.tables = data.tables || data;
                 });
-
-                Livewire.hook('message.processed', () => {
-                    this.tables = component.get('tables');
-                });
             },
-
 
             getTableNumber(tableId) {
                 const table = this.tables.find(t => t.id === tableId);
                 return table ? table.number : tableId;
             },
 
+            hasReadyItemsInCurrentTable() {
+                const hasReadyOrders = this.currentOrders.some(order => order.status === 'Ready');
+                const hasReadyRefills = this.currentRefills.some(refill => refill.status === 'Ready');
+                return hasReadyOrders || hasReadyRefills;
+            },
+
             async selectTable(tableId) {
                 this.activeTable = tableId;
-                this.editingQuantity = null;
                 this.selectedRefills = {};
-                await window.Livewire.find('{{ $_instance->getId() }}').call('loadOrders', tableId);
-                const component = window.Livewire.find('{{ $_instance->getId() }}');
-                this.currentOrders = component.get('orders');
-                this.currentRefills = component.get('refills');
-                this.tableNote = component.get('tableNote');
-                this.availableRefills = component.get('availableRefills');
-                this.hasUnlimitedPackage = component.get('hasUnlimitedPackage');
-            },
-
-            editQuantity(orderId) {
-                this.editingQuantity = orderId;
-                this.$nextTick(() => {
-                    const inputs = document.querySelectorAll('input[data-qty-id="' + orderId + '"]');
-                    if (inputs.length > 0) {
-                        inputs[0].focus();
-                        inputs[0].select();
-                    }
-                });
-            },
-
-            async updateQuantity(orderId, newQuantity) {
-                if (this.editingQuantity !== orderId) return;
-
-                const qty = parseInt(newQuantity);
-                if (isNaN(qty) || qty < 1) {
-                    alert('Please enter a valid quantity (minimum 1)');
-                    return;
-                }
-
-                await window.Livewire.find('{{ $_instance->getId() }}').call('updateOrderQuantity', orderId, qty);
-                this.currentOrders = window.Livewire.find('{{ $_instance->getId() }}').get('orders');
-                this.editingQuantity = null;
+                await @this.call('loadOrders', tableId);
+                this.currentOrders = @this.get('orders');
+                this.currentRefills = @this.get('refills');
+                this.tableNote = @this.get('tableNote');
+                this.availableRefills = @this.get('availableRefills');
+                this.hasUnlimitedPackage = @this.get('hasUnlimitedPackage');
             },
 
             async removeItem(id, type) {
                 const confirmMsg = type === 'order' ? 'Remove this item from the order?' : 'Remove this refill?';
                 if (confirm(confirmMsg)) {
                     if (type === 'order') {
-                        await window.Livewire.find('{{ $_instance->getId() }}').call('removeOrder', id);
+                        await @this.call('removeOrder', id);
                     } else {
-                        await window.Livewire.find('{{ $_instance->getId() }}').call('removeRefill', id);
+                        await @this.call('removeRefill', id);
                     }
-                    const component = window.Livewire.find('{{ $_instance->getId() }}');
-                    this.currentOrders = component.get('orders');
-                    this.currentRefills = component.get('refills');
-                    this.tables = component.get('tables');
+                    this.currentOrders = @this.get('orders');
+                    this.currentRefills = @this.get('refills');
+                    this.tables = @this.get('tables');
                 }
             },
-            
+
             serveAllReady() {
                 if (!this.activeTable) {
                     alert('Please select a table first');
                     return;
                 }
 
-                // Collect all ready items
                 this.itemsToServe = [];
 
-                // Add ready orders
                 const readyOrders = this.currentOrders.filter(o => o.status === 'Ready');
                 readyOrders.forEach(order => {
                     this.itemsToServe.push({
@@ -582,7 +572,6 @@
                     });
                 });
 
-                // Add ready refills
                 const readyRefills = this.currentRefills.filter(r => r.status === 'Ready');
                 readyRefills.forEach(refill => {
                     this.itemsToServe.push({
@@ -598,17 +587,14 @@
                     return;
                 }
 
-                const itemCount = this.itemsToServe.length;
                 this.showServeModal = true;
             },
 
             async confirmServe() {
-                await window.Livewire.find('{{ $_instance->getId() }}').call('serveAllReady', this.activeTable);
-                const component = window.Livewire.find('{{ $_instance->getId() }}');
-                this.currentOrders = component.get('orders');
-                this.currentRefills = component.get('refills');
-                this.tables = component.get('tables');
-
+                await @this.call('serveAllReady', this.activeTable);
+                this.currentOrders = @this.get('orders');
+                this.currentRefills = @this.get('refills');
+                this.tables = @this.get('tables');
                 this.showServeModal = false;
                 this.itemsToServe = [];
             },
@@ -624,20 +610,11 @@
                     return;
                 }
 
-                try {
-                    await window.Livewire.find('{{ $_instance->getId() }}')
-                        .call('addRefill', this.activeTable, Object.values(this.selectedRefills));
-
-                    const component = window.Livewire.find('{{ $_instance->getId() }}');
-                    this.currentRefills = component.get('refills');
-                    this.tables = component.get('tables');
-
-                    this.selectedRefills = {};
-                    this.showRefillModal = false;
-                } catch (error) {
-                    console.error(error);
-                    alert('Something went wrong while adding refills.');
-                }
+                await @this.call('addRefill', this.activeTable, Object.values(this.selectedRefills));
+                this.currentRefills = @this.get('refills');
+                this.tables = @this.get('tables');
+                this.selectedRefills = {};
+                this.showRefillModal = false;
             },
 
             getRefillCategories() {
@@ -674,16 +651,10 @@
 
             addToCart(menuId, name, price) {
                 const existingIndex = this.orderCart.findIndex(item => item.menuId === menuId);
-
                 if (existingIndex !== -1) {
                     this.orderCart[existingIndex].quantity++;
                 } else {
-                    this.orderCart.push({
-                        menuId: menuId,
-                        name: name,
-                        price: parseFloat(price),
-                        quantity: 1
-                    });
+                    this.orderCart.push({ menuId, name, price: parseFloat(price), quantity: 1 });
                 }
             },
 
@@ -701,32 +672,18 @@
                 }
             },
 
-            updateCartQuantity(index) {
-                if (this.orderCart[index].quantity < 1) {
-                    this.orderCart[index].quantity = 1;
-                }
-            },
-
             async submitOrder() {
-                if (this.orderCart.length === 0) {
-                    return;
-                }
-
-                if (!this.activeTable) {
-                    alert('Please select a table first');
+                if (this.orderCart.length === 0 || !this.activeTable) {
                     return;
                 }
 
                 for (const item of this.orderCart) {
-                    await window.Livewire.find('{{ $_instance->getId() }}')
-                        .call('addOrder', this.activeTable, item.menuId, item.quantity, this.orderNotes);
+                    await @this.call('addOrder', this.activeTable, item.menuId, item.quantity, this.orderNotes);
                 }
 
-                const component = window.Livewire.find('{{ $_instance->getId() }}');
-                this.currentOrders = component.get('orders');
-                this.currentRefills = component.get('refills');
-                this.tables = component.get('tables');
-
+                this.currentOrders = @this.get('orders');
+                this.currentRefills = @this.get('refills');
+                this.tables = @this.get('tables');
                 this.orderCart = [];
                 this.orderNotes = '';
                 this.showMenu = false;

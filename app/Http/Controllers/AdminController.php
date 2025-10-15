@@ -226,7 +226,7 @@ class AdminController extends Controller
                         $ingredient->badge_class = 'bg-danger';
                         $ingredient->badge_text = 'Critical';
                         $ingredient->badge_icon = 'fa-exclamation-triangle';
-                        $ingredient->sort_order = 1; // Highest priority
+                        $ingredient->sort_order = 1;
                     } elseif ($ingredient->stocks <= ($alertLevel->low_stock ?? 0)) {
                         $ingredient->status = 'low';
                         $ingredient->badge_class = 'bg-warning';
@@ -913,12 +913,12 @@ class AdminController extends Controller
     private function getDefaultQuantity($unit, $menuCategory)
     {
         if ($unit === 'grams') {
-            return $menuCategory === 'main' ? 100 : 500; 
+            return $menuCategory === 'main' ? 100 : 500;
         } elseif ($unit === 'pieces') {
-            return 1; 
+            return 1;
         }
 
-        return 100; 
+        return 100;
     }
 
     private function getSuggestedIngredients($menuCategory)
@@ -1304,28 +1304,63 @@ class AdminController extends Controller
 
     public function ingredient_management(Request $request)
     {
-        // For initial page load, just return empty data
-        // The JavaScript will load the actual data via AJAX
-        $ingredients = collect([]); // Empty collection for initial load
+
+        $ingredients = collect([]);
 
         return view('admin.ingredient_management', compact('ingredients'));
     }
 
-    // Add this new method for AJAX stock requests
     public function getStocks(Request $request)
     {
         try {
-            $ingredients = ingredients::orderBy('name', 'asc')
-                ->paginate(10)
-                ->through(function ($ingredient) {
+            $ingredients = ingredients::select('id', 'name', 'category', 'unit', 'stocks')
+                ->with(['stockAlertLevel'])
+                ->orderBy('name', 'asc')
+                ->get()
+                ->map(function ($ingredient) {
+                    $alertLevel = $ingredient->stockAlertLevel;
+
+                    // Default thresholds
+                    $lowStock = $alertLevel->low_stock ?? 50;
+                    $criticalStock = $alertLevel->critical_stock ?? 10;
+
+                    // Apply color logic
+                    if ($ingredient->stocks <= $criticalStock) {
+                        $ingredient->badge_class = 'bg-danger';
+                        $ingredient->badge_text = 'Critical';
+                    } elseif ($ingredient->stocks <= $lowStock) {
+                        $ingredient->badge_class = 'bg-warning';
+                        $ingredient->badge_text = 'Low Stock';
+                    } else {
+                        $ingredient->badge_class = 'bg-success';
+                        $ingredient->badge_text = 'Good';
+                    }
+
+                    // Normalize unit
                     if (strtolower($ingredient->unit) === 'pieces') {
                         $ingredient->unit = 'pcs';
                     }
+
+                    // Include thresholds in response
+                    $ingredient->low_stock = $lowStock;
+                    $ingredient->critical_stock = $criticalStock;
+
                     return $ingredient;
                 });
 
+            // Manual pagination
+            $page = $request->get('page', 1);
+            $perPage = 10;
+            $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+                $ingredients->forPage($page, $perPage),
+                $ingredients->count(),
+                $perPage,
+                $page,
+                ['path' => url()->current()]
+            );
+
             return response()->json([
-                'ingredients' => $ingredients
+                'ingredients' => $paginated
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1335,7 +1370,7 @@ class AdminController extends Controller
         }
     }
 
-    // Update your existing getStockBatches to add pagination
+
     public function getStockBatches(Request $request)
     {
         try {

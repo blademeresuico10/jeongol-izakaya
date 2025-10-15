@@ -73,7 +73,6 @@
         box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
     }
 
-    /* For mobile responsiveness */
     @media (max-width: 1400px) {
         .floating-stock-alert {
             right: auto;

@@ -214,10 +214,4 @@ Route::middleware('auth')->group(function () {
         Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
     });
 
-    Route::get('/do-logout', function (Request $request) {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/login');
-    })->name('logout.dev');
 });

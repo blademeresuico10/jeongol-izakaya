@@ -38,6 +38,7 @@ class WaitStaffDashboard extends Component
 
         $this->tables = Table::with(['reservation' => function ($query) use ($now) {
             $query->where('status', 'Active')
+                ->whereDate('started_at', $now->toDateString())
                 ->where('started_at', '<=', $now)
                 ->where(function ($q) use ($now) {
                     $q->where('ended_at', '>=', $now)
@@ -45,6 +46,7 @@ class WaitStaffDashboard extends Component
                 });
         }, 'walkin' => function ($query) use ($now) {
             $query->where('status', 'Active')
+                ->whereDate('started_at', $now->toDateString())
                 ->where('started_at', '<=', $now)
                 ->where('ended_at', '>=', $now);
         }])
@@ -184,7 +186,13 @@ class WaitStaffDashboard extends Component
             $this->tableNote = '';
             $this->hasUnlimitedPackage = false;
             $this->availableRefills = [];
-            $this->dispatch('ordersUpdated');
+            $this->dispatch('ordersUpdated', [
+                'orders' => $this->orders,
+                'refills' => $this->refills,
+                'tableNote' => $this->tableNote,
+                'availableRefills' => $this->availableRefills,
+                'hasUnlimitedPackage' => $this->hasUnlimitedPackage,
+            ]);
             return;
         }
 
@@ -237,55 +245,14 @@ class WaitStaffDashboard extends Component
             ->toArray();
 
         $this->loadAvailableRefills($tableId);
-        $this->dispatch('ordersUpdated');
-    }
 
-    public function addOrder($tableId, $menuId, $quantity = 1, $note = null)
-    {
-        $table = table::find($tableId);
-        $menu = Menu::find($menuId);
-
-        if (!$menu) {
-            $this->dispatch('error', 'Menu item not found');
-            return;
-        }
-
-        $reservation = $table->reservation()
-            ->where('status', 'Active')
-            ->whereDate('started_at', '<=', today())
-            ->where(function ($q) {
-                $q->whereDate('ended_at', '>=', today())
-                    ->orWhereNull('ended_at');
-            })
-            ->first();
-
-        $walkin = $table->walkin()
-            ->where('status', 'Active')
-            ->whereDate('started_at', today())
-            ->first();
-
-        if (!$reservation && !$walkin) {
-            $this->dispatch('error', 'No active session for this table');
-            return;
-        }
-
-        $pricePerItem = $menu->regular_price ?? $menu->price ?? 0;
-        $totalPrice = $pricePerItem * $quantity;
-
-        orders::create([
-            'reservation_id' => $reservation?->id,
-            'walk_in_id' => $walkin?->id,
-            'menu_id' => $menuId,
-            'quantity' => $quantity,
-            'notes' => $note,
-            'price' => $totalPrice,
-            'status' => 'Pending'
+        $this->dispatch('ordersUpdated', [
+            'orders' => $this->orders,
+            'refills' => $this->refills,
+            'tableNote' => $this->tableNote,
+            'availableRefills' => $this->availableRefills,
+            'hasUnlimitedPackage' => $this->hasUnlimitedPackage,
         ]);
-
-        $this->loadOrders($tableId);
-        $this->loadTables();
-        $this->dispatch('tablesUpdated', tables: $this->tables);
-        $this->dispatch('success', 'Order added successfully!');
     }
 
     public function addRefill($tableId, $selectedItems)
@@ -312,8 +279,11 @@ class WaitStaffDashboard extends Component
         }
 
         $unlimitedOrder = orders::where(function ($query) use ($reservation, $walkin) {
-            $query->where('reservation_id', $reservation?->id)
-                ->orWhere('walk_in_id', $walkin?->id);
+            if ($reservation) {
+                $query->where('reservation_id', $reservation->id);
+            } elseif ($walkin) {
+                $query->where('walk_in_id', $walkin->id);
+            }
         })
             ->whereIn('menu_id', [1, 2, 3])
             ->whereIn('status', ['Pending', 'Ready', 'Served'])
@@ -631,6 +601,53 @@ class WaitStaffDashboard extends Component
         }
 
         return $hasReadyItems;
+    }
+
+    public function addOrder($tableId, $menuId, $quantity = 1, $note = null)
+    {
+        $table = table::find($tableId);
+        $menu = Menu::find($menuId);
+
+        if (!$menu) {
+            session()->flash('error', 'Menu item not found');
+            return;
+        }
+
+        $reservation = $table->reservation()
+            ->where('status', 'Active')
+            ->whereDate('started_at', '<=', today())
+            ->where(function ($q) {
+                $q->whereDate('ended_at', '>=', today())
+                    ->orWhereNull('ended_at');
+            })
+            ->first();
+
+        $walkin = $table->walkin()
+            ->where('status', 'Active')
+            ->whereDate('started_at', today())
+            ->first();
+
+        if (!$reservation && !$walkin) {
+            session()->flash('error', 'No active session for this table');
+            return;
+        }
+
+        $pricePerItem = $menu->regular_price ?? $menu->price ?? 0;
+        $totalPrice = $pricePerItem * $quantity;
+
+        orders::create([
+            'reservation_id' => $reservation?->id,
+            'walk_in_id' => $walkin?->id,
+            'menu_id' => $menuId,
+            'quantity' => $quantity,
+            'notes' => $note,
+            'price' => $totalPrice,
+            'status' => 'Pending'
+        ]);
+
+        $this->loadOrders($tableId);
+        $this->loadTables();
+        $this->dispatch('tablesUpdated', ['tables' => $this->tables]);
     }
 
     public function render()

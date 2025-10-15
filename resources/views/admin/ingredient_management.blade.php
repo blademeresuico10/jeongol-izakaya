@@ -26,14 +26,17 @@
                                 <a class="nav-link" id="expired-tab" data-toggle="tab" href="#expired"
                                     role="tab">Expired Ingredients</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="#stock-order-tab" data-toggle="tab" href="#stock-order"
+                                    role="tab">Stock Order</a>
+                            </li>
                         </ul>
                     </div>
 
                     <div class="d-flex flex-wrap gap-2">
                         <button class="btn btn-primary btn-sm mr-2" data-toggle="modal" data-target="#addStockModal">Add
                             New Stock</button>
-                        <button class="btn btn-success btn-sm mr-2" data-toggle="modal"
-                            data-target="#updateStockModal">Update Stock</button>
+
                         <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#addIngredientModal">Add
                             Ingredient</button>
                     </div>
@@ -186,37 +189,6 @@
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Add Stock</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    {{-- Update Stock Modal --}}
-    <div class="modal fade" id="updateStockModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Update Stock</h5>
-                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
-                </div>
-                <form id="updateStockForm">
-                    <div class="modal-body">
-                        <p class="text-muted small mb-3">Correct mistakes in stock quantities to match exact amounts</p>
-                        <div class="form-group">
-                            <label>Ingredient</label>
-                            <select name="ingredient_id" class="form-control" required>
-                                <option value="">Select Ingredient</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>New Quantity</label>
-                            <input type="number" name="new_quantity" class="form-control" step="0.01" min="0" required>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-success">Update Stock</button>
                     </div>
                 </form>
             </div>
@@ -440,19 +412,34 @@
                 const $tbody = $('#stocksTableBody').empty();
                 if (data.ingredients.data.length) {
                     data.ingredients.data.forEach(i => {
+                        let status = 'Good';
+                        let badgeClass = 'bg-success'; // green
+                        const lowStock = i.stock_alert_level?.low_stock ?? null;
+                        const criticalStock = i.stock_alert_level?.critical_stock ?? null;
+
+                        if (criticalStock !== null && i.stocks <= criticalStock) {
+                            status = 'Critical';
+                            badgeClass = 'bg-danger';
+                        } else if (lowStock !== null && i.stocks <= lowStock) {
+                            status = 'Low Stock';
+                            badgeClass = 'bg-warning';
+                        }
+
                         $tbody.append(`
-                        <tr>
-                            <td class="font-weight-bold">${i.name}</td>
-                            <td class="text-capitalize">${i.category}</td>
-                            <td>
-                                <span class="badge badge-${i.stocks > 0 ? 'success' : 'danger'}">
-                                    ${i.stocks}
-                                </span>
-                                <span>${i.unit}</span>
-                            </td>
-                        </tr>
-                    `);
+        <tr>
+            <td class="font-weight-bold">${i.name}</td>
+            <td class="text-capitalize">${i.category}</td>
+            <td>
+                <span class="font-semibold">${parseFloat(i.stocks).toFixed(2)}</span>
+                <span>${i.unit}</span>
+                <span class="ml-2 px-2 py-1 text-white text-xs font-semibold rounded ${badgeClass}">
+                    ${status}
+                </span>
+            </td>
+        </tr>
+    `);
                     });
+
                 } else {
                     $tbody.append('<tr><td colspan="3" class="text-center text-muted">No ingredients available</td></tr>');
                 }

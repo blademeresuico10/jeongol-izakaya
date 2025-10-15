@@ -15,9 +15,12 @@ class OrderStatusUpdated implements ShouldBroadcastNow
 
     public function __construct(public orders $order) {}
 
-    public function broadcastOn(): Channel
+    public function broadcastOn(): array
     {
-        return new Channel('kitchen');
+        return [
+            new Channel('kitchen'),
+            new Channel('waitstaff'), 
+        ];
     }
 
     public function broadcastAs(): string
@@ -27,8 +30,16 @@ class OrderStatusUpdated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
+        $tableId = null;
+        if ($this->order->reservation) {
+            $tableId = $this->order->reservation->table_id;
+        } elseif ($this->order->walkin) {
+            $tableId = $this->order->walkin->table_id;
+        }
+
         return [
             'order_id' => $this->order->id,
+            'table_id' => $tableId,
             'table_number' => $this->order->linked_table->table_number ?? null,
             'status' => $this->order->status,
         ];

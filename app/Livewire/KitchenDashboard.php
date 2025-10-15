@@ -11,6 +11,7 @@ use App\Models\RefillConfiguration;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
+
 class KitchenDashboard extends Component
 {
     public $activeTab = 'pending';
@@ -40,7 +41,7 @@ class KitchenDashboard extends Component
     public function getPendingOrdersProperty()
     {
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
-            ->where('status', 'Pending')
+            ->whereIn('status', ['Pending', 'Ready'])
             ->whereNotNull('menu_id')
             ->orderBy('created_at', 'asc')
             ->get()
@@ -52,7 +53,7 @@ class KitchenDashboard extends Component
     public function getPendingRefillsProperty()
     {
         return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
-            ->where('status', 'Pending')
+            ->whereIn('status', ['Pending', 'Ready'])
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function ($refill) {
@@ -92,7 +93,7 @@ class KitchenDashboard extends Component
     public function getServedOrdersProperty()
     {
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
-            ->whereIn('status', ['Served', 'Ready']) 
+            ->whereIn('status', ['Served', 'Ready'])
             ->whereNotNull('menu_id')
             ->orderBy('updated_at', 'desc')
             ->get()
@@ -134,7 +135,7 @@ class KitchenDashboard extends Component
             DB::beginTransaction();
             try {
                 $config = RefillConfiguration::where('ingredient_id', $ingredient->id)->first();
-                
+
                 if (!$config) {
                     throw new \Exception("Refill configuration not found for {$ingredient->name}");
                 }
@@ -152,12 +153,8 @@ class KitchenDashboard extends Component
                 $stockBefore = $ingredient->stocks;
                 $stockAfter = $stockBefore - $totalKg;
 
-                DB::table('ingredients')
-                    ->where('id', $ingredient->id)
-                    ->update([
-                        'stocks' => $stockAfter,
-                        'updated_at' => now()
-                    ]);
+                DB::table('ingredients')->where('id', $ingredient->id)
+                    ->update(['stocks' => $stockAfter, 'updated_at' => now()]);
 
                 DB::table('ingredient_movements')->insert([
                     'ingredient_id' => $ingredient->id,
@@ -180,10 +177,11 @@ class KitchenDashboard extends Component
                     'updated_at' => now()
                 ]);
 
-                $refill->status = 'Ready';
-                $refill->save();
+                $refill->update(['status' => 'Ready']);
 
                 DB::commit();
+
+                $this->dispatch('refillStatusUpdated');
                 session()->flash('success', "Refill is ready for pickup!");
             } catch (\Exception $e) {
                 DB::rollBack();
@@ -213,7 +211,6 @@ class KitchenDashboard extends Component
             }
 
             DB::beginTransaction();
-
             try {
                 foreach ($orders as $singleOrder) {
                     if (!$singleOrder->menu) continue;
@@ -238,12 +235,8 @@ class KitchenDashboard extends Component
                         $stockBefore = $ingredient->stocks;
                         $stockAfter = $stockBefore - $quantityNeeded;
 
-                        DB::table('ingredients')
-                            ->where('id', $ingredient->id)
-                            ->update([
-                                'stocks' => $stockAfter,
-                                'updated_at' => now()
-                            ]);
+                        DB::table('ingredients')->where('id', $ingredient->id)
+                            ->update(['stocks' => $stockAfter, 'updated_at' => now()]);
 
                         DB::table('ingredient_movements')->insert([
                             'ingredient_id' => $ingredient->id,
@@ -269,19 +262,20 @@ class KitchenDashboard extends Component
                         ]);
                     }
 
-                    $singleOrder->status = 'Ready';
-                    $singleOrder->save();
+                    $singleOrder->update(['status' => 'Ready']);
                 }
 
                 DB::commit();
-                $totalOrders = $orders->count();
-                session()->flash('success', "{$totalOrders} order(s) ready for pickup!");
+
+                $this->dispatch('orderStatusUpdated');
+                session()->flash('success', $orders->count() . " order(s) ready for pickup!");
             } catch (\Exception $e) {
                 DB::rollBack();
                 session()->flash('error', 'Failed to process orders: ' . $e->getMessage());
             }
         }
     }
+
 
     public function render()
     {

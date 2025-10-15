@@ -33,7 +33,7 @@
                                 Add Menu
                             </button>
                             <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#menuIngredientsModal">
-                                Menu Ingredients
+                                Menu Servings
                             </button>
                         </div>
                     @endif
@@ -241,7 +241,7 @@
                     <div class="modal-content">
                         <div class="modal-header bg-info text-white">
                             <h5 class="modal-title" id="menuIngredientsLabel">
-                                <i class="fas fa-utensils"></i> Menu Ingredients
+                                <i class="fas fa-utensils"></i> Menu Servings
                             </h5>
                             <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
                                 <span aria-hidden="true">&times;</span>
