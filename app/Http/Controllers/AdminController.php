@@ -25,6 +25,7 @@ use App\Models\walkin;
 use App\Models\OperatingHour;
 use App\Models\MenuDiscount;
 use App\Models\StockAlertLevel;
+use App\Models\StockOrder;
 
 class AdminController extends Controller
 {
@@ -1795,20 +1796,26 @@ class AdminController extends Controller
         $menus = menu::whereNull('deleted_at')->get();
         $discounts = MenuDiscount::with('menu')->paginate(6);
         $stock_level = StockAlertLevel::with('ingredient')->paginate(6);
+        $stock_order = StockOrder::with('ingredient')->paginate(6);
+        $ingredients = ingredients::orderBy('name')->get();
 
         if ($request->ajax()) {
             $section = $request->get('section');
 
             if ($section === 'discounts') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level'))->render();
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'))->render();
             }
 
             if ($section === 'stock') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level'))->render();
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'))->render();
+            }
+
+            if ($section === 'stock_order') {
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'))->render();
             }
         }
 
-        return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level'));
+        return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'));
     }
 
 
@@ -1902,13 +1909,6 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Discount updated successfully!');
     }
 
-    public function deleteDiscount($id)
-    {
-        MenuDiscount::findOrFail($id)->delete();
-        return redirect()->back()->with('success', 'Discount removed successfully!');
-    }
-
-
     public function updateStockLevel(Request $request, $id)
     {
         $validated = $request->validate([
@@ -1925,6 +1925,37 @@ class AdminController extends Controller
 
         return back()->with('success', 'Stock level updated successfully!');
     }
+
+    public function updateStockOrder(Request $request, $id)
+    {
+        $request->validate([
+            'requested_quantity' => 'required|numeric|min:0'
+        ]);
+
+        $stockOrder = StockOrder::findOrFail($id);
+        $stockOrder->update([
+            'requested_quantity' => $request->requested_quantity
+        ]);
+
+        return redirect()->back()->with('success', 'Stock order updated successfully');
+    }
+    public function storeStockOrder(Request $request)
+    {
+        $request->validate([
+            'ingredient_id' => 'required|exists:ingredients,id',
+            'requested_quantity' => 'required|numeric|min:0'
+        ]);
+
+        StockOrder::create([
+            'ingredient_id' => $request->ingredient_id,
+            'requested_quantity' => $request->requested_quantity,
+            'status' => 'pending'
+        ]);
+
+        return redirect()->back()->with('success', 'Stock order added successfully');
+    }
+
+
 
     public function ewallet_management()
     {

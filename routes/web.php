@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\WaitingStaffController;
-
+use Phiki\Phast\Root;
 
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/menu_ingredients/{id}', [AdminController::class, 'removeMenuIngredient'])->name('menu_ingredients.remove');
         Route::get('/menu/{menuId}/existing-ingredients', [AdminController::class, 'getExistingIngredients'])->name('menu.existing-ingredients');
         Route::get('/menu/{menuId}/suggested-ingredients', [AdminController::class, 'getSuggestedIngredientsApi'])->name('menu.suggested-ingredients');
-       
+
         // Table Management
         Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
         Route::post('/addtable', [AdminController::class, 'addtable'])->name('admin.addtable');
@@ -149,10 +149,13 @@ Route::middleware('auth')->group(function () {
         // Discounts Management
         Route::post('/discounts', [AdminController::class, 'storeDiscount'])->name('admin.discounts.store');
         Route::put('/discounts/{id}', [AdminController::class, 'updateDiscount'])->name('admin.discounts.update');
-        Route::delete('/discounts/{id}', [AdminController::class, 'deleteDiscount'])->name('admin.discounts.delete');
 
         // Feedback
         Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
+
+        //Stock Order
+        Route::put('/stock-orders/{id}', [AdminController::class, 'updateStockOrder'])->name('admin.stock_orders.update');
+        Route::post('/stock-orders', [AdminController::class, 'storeStockOrder'])->name('admin.stock_orders.store');
 
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
@@ -213,5 +216,4 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {
         Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
     });
-
 });

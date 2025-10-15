@@ -19,7 +19,8 @@ class DatabaseSeeder extends Seeder
             MenuDiscountSeeder::class,
             OperatingHoursSeeder::class,
             StockLevelAlertSeeder::class,
-            RefillConfigurationSeeder::class
+            RefillConfigurationSeeder::class,
+            StockOrderSeeder::class
         ]);
     }
 }

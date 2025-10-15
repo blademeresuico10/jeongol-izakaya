@@ -27,7 +27,7 @@
                                     role="tab">Expired Ingredients</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" id="#stock-order-tab" data-toggle="tab" href="#stock-order"
+                                <a class="nav-link" id="stock-order-tab" data-toggle="tab" href="#stock-order"
                                     role="tab">Stock Order</a>
                             </li>
                         </ul>
@@ -77,7 +77,6 @@
 
                             <div class="tab-content">
                                 <div class="tab-pane fade show active" id="thisweek" role="tabpanel">
-                                    <div id="thisWeekLoading" class="text-center py-4 text-muted">Loading...</div>
                                     <div id="thisWeekEmpty" class="text-center py-4 text-muted d-none">No stock batches
                                         added this week</div>
                                     <div id="thisWeekContent" class="d-none">
@@ -130,7 +129,6 @@
 
                         {{-- Expired Tab --}}
                         <div class="tab-pane fade" id="expired" role="tabpanel">
-                            <div id="expiredLoading" class="text-center py-4 text-muted">Loading...</div>
                             <div id="expiredEmpty" class="text-center py-4 text-muted d-none">No expired ingredients in
                                 history</div>
                             <div id="expiredContent" class="d-none">
@@ -151,6 +149,48 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Stock Order Tab -->
+                        <div class="tab-pane fade" id="stock-order" role="tabpanel" aria-labelledby="stock-order-tab">
+                            <div class="card shadow-sm mb-3 mt-3">
+                                <div
+                                    class="card-header bg-secondary text-white py-2 d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 font-weight-bold">Stock Orders Request</h6>
+                                </div>
+
+                                <div class="card-body p-2">
+                                    <!-- Loading Spinner -->
+                                    <div id="stockOrderLoading" class="text-center my-3 d-none">
+                                        <div class="spinner-border text-secondary" role="status"></div>
+                                    </div>
+
+                                    <!-- Empty State -->
+                                    <div id="stockOrderEmpty" class="text-center text-muted d-none">
+                                        No stock orders yet.
+                                    </div>
+
+                                    <!-- Stock Order Table -->
+                                    <div id="stockOrderContent" class="d-none">
+                                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                            <table class="table table-sm table-bordered mb-0">
+                                                <thead class="thead-light sticky-top">
+                                                    <tr>
+                                                        <th>Ingredient</th>
+                                                        <th>Requested Quantity</th>
+                                                        <th>Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="stockOrderTableBody"></tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Pagination -->
+                                        <div id="stockOrderPagination" class="mt-3 d-flex justify-content-center"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
 
                     </div>
                 </div>
@@ -535,6 +575,42 @@
             });
         }
 
+        //Stock Order
+        function loadStockOrders(page = 1) {
+            currentPage = page;
+
+            // Show loader only initially
+            if (page === 1 && $('#stockOrderTableBody').is(':empty')) {
+                $('#stockOrderLoading').removeClass('d-none');
+                $('#stockOrderEmpty, #stockOrderContent').addClass('d-none');
+            }
+
+            $.get(`/ingredient_management/stock-orders?page=${page}`, function (data) {
+                $('#stockOrderLoading').addClass('d-none');
+
+                if (data.stock_orders.data && data.stock_orders.data.length) {
+                    $('#stockOrderContent').removeClass('d-none');
+                    $('#stockOrderEmpty').addClass('d-none');
+                    const $tb = $('#stockOrderTableBody').empty();
+
+                    data.stock_orders.data.forEach(order => {
+                        $tb.append(`
+                    <tr>
+                        <td class="font-weight-bold">${order.ingredient.name}</td>
+                        <td>${parseFloat(order.requested_quantity).toFixed(2)} ${order.ingredient.unit}</td>
+                        <td class="text-capitalize text-center">${order.status}</td>
+                    </tr>
+                `);
+                    });
+
+                    renderPagination('#stockOrderPagination', data.stock_orders);
+                } else {
+                    $('#stockOrderEmpty').removeClass('d-none');
+                    $('#stockOrderContent').addClass('d-none');
+                }
+            });
+        }
+
         // Render pagination controls - Always visible and static
         function renderPagination(selector, data, section) {
             const $pagination = $(selector);
@@ -622,7 +698,6 @@
         // Initial load
         loadStocks(1);
 
-        // Tab events - load on first visit only
         let tabsLoaded = {
             stocks: true,
             batch: false,
@@ -662,6 +737,7 @@
                 tabsLoaded.expired = true;
             }
         });
+
 
         // Modal events
         $('#addStockModal').on('show.bs.modal', () => loadIngredients('#addStockForm select[name="ingredient_id"]'));
@@ -716,7 +792,6 @@
                             color: '#155724'
                         });
 
-                        // Just reload the current page of the current tab - NO RESET TO PAGE 1
                         if (refreshSection === 'stocks') {
                             loadStocks(currentPages.stocks);
                         }
