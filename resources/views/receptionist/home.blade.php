@@ -1462,6 +1462,7 @@
       return;
     }
 
+    /*
     if (!this.isPlacingOrder) {
       const selectedDateTime = new Date(`${date}T${time}`);
       const currentTime = new Date();
@@ -1474,6 +1475,8 @@
         return;
       }
     }
+*/
+    
 
 
     const orders = Object.values(this.selectedOrders || {});

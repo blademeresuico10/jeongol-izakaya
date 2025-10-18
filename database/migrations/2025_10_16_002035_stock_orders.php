@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('stock_orders', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
-            $table->decimal('requested_quantity', 8, 2); 
+            $table->decimal('reorder_point', 8, 2); 
+            $table->decimal('reorder_quantity', 8, 2);
             $table->enum('status', ['pending', 'ordered', 'received', 'cancelled'])->default('pending');
             $table->timestamps();
         });

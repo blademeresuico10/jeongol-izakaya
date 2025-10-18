@@ -6,7 +6,7 @@ use Livewire\Component;
 use App\Models\orders;
 use App\Models\OrderRefill;
 use App\Models\table;
-use App\Models\Menu;
+use App\Models\menu;
 use App\Models\MenuIngredient;
 use App\Models\ingredients;
 use App\Models\reservation;
@@ -36,7 +36,7 @@ class WaitStaffDashboard extends Component
     {
         $now = now();
 
-        $this->tables = Table::with(['reservation' => function ($query) use ($now) {
+        $this->tables = table::with(['reservation' => function ($query) use ($now) {
             $query->where('status', 'Active')
                 ->whereDate('started_at', $now->toDateString())
                 ->where('started_at', '<=', $now)
@@ -46,7 +46,7 @@ class WaitStaffDashboard extends Component
                 });
         }, 'walkin' => function ($query) use ($now) {
             $query->where('status', 'Active')
-                ->whereDate('started_at', $now->toDateString())
+            ->whereDate('started_at', $now->toDateString())
                 ->where('started_at', '<=', $now)
                 ->where('ended_at', '>=', $now);
         }])

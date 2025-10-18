@@ -152,46 +152,21 @@
 
                         <!-- Stock Order Tab -->
                         <div class="tab-pane fade" id="stock-order" role="tabpanel" aria-labelledby="stock-order-tab">
-                            <div class="card shadow-sm mb-3 mt-3">
-                                <div
-                                    class="card-header bg-secondary text-white py-2 d-flex justify-content-between align-items-center">
-                                    <h6 class="mb-0 font-weight-bold">Stock Orders Request</h6>
+
+                            <!-- Low Stock Orders Alert Section -->
+                            <div class="card shadow-sm mb-3 mt-3 border-warning">
+                                <div class="card-header bg-warning text-dark py-2">
+                                    <h6 class="mb-0 font-weight-bold">
+                                        Low Stock Ingredient
+                                    </h6>
                                 </div>
-
                                 <div class="card-body p-2">
-                                    <!-- Loading Spinner -->
-                                    <div id="stockOrderLoading" class="text-center my-3 d-none">
-                                        <div class="spinner-border text-secondary" role="status"></div>
-                                    </div>
-
-                                    <!-- Empty State -->
-                                    <div id="stockOrderEmpty" class="text-center text-muted d-none">
-                                        No stock orders yet.
-                                    </div>
-
-                                    <!-- Stock Order Table -->
-                                    <div id="stockOrderContent" class="d-none">
-                                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                                            <table class="table table-sm table-bordered mb-0">
-                                                <thead class="thead-light sticky-top">
-                                                    <tr>
-                                                        <th>Ingredient</th>
-                                                        <th>Requested Quantity</th>
-                                                        <th>Status</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="stockOrderTableBody"></tbody>
-                                            </table>
-                                        </div>
-
-                                        <!-- Pagination -->
-                                        <div id="stockOrderPagination" class="mt-3 d-flex justify-content-center"></div>
+                                    <div id="lowStockOrdersList">
                                     </div>
                                 </div>
                             </div>
+
                         </div>
-
-
                     </div>
                 </div>
             </div>
@@ -201,34 +176,40 @@
     <div class="modal fade" id="addStockModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Add New Stock</h5>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">Confirm Add Stock</h5>
                     <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
                 </div>
                 <form id="addStockForm">
                     <div class="modal-body">
+                        <p class="mb-3">Are you sure you want to add stock for <strong
+                                id="addStockIngredientName"></strong>?</p>
+
+                        <input type="hidden" name="ingredient_id" id="addStock_ingredient_id">
+
                         <div class="form-group">
-                            <label>Ingredient</label>
-                            <select name="ingredient_id" class="form-control" required>
-                                <option value="">Select Ingredient</option>
-                            </select>
+                            <label class="font-weight-bold">Enter quantity received (<span
+                                    id="addStockUnit"></span>)</label>
+                            <input type="number" name="quantity" id="addStockQuantity" class="form-control" step="0.01"
+                                min="0.01" required>
                         </div>
-                        <div class="form-group">
-                            <label>Quantity</label>
-                            <input type="number" name="quantity" class="form-control" step="0.01" min="0.01" required>
-                        </div>
+
                         <div class="form-group">
                             <label>Arrived Date</label>
-                            <input type="date" name="arrived_at" class="form-control" required>
+                            <input type="date" name="arrived_at" id="addStock_arrivedDate" class="form-control"
+                                required>
                         </div>
-                        <div class="form-group">
+
+                        <div class="form-group mb-0">
                             <label>Expiration Date</label>
                             <input type="date" name="expiration_date" class="form-control" required>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Add Stock</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Confirm
+                        </button>
                     </div>
                 </form>
             </div>
@@ -425,19 +406,18 @@
         const today = new Date().toISOString().split('T')[0];
         $('input[name="expiration_date"]').attr('min', today);
 
-        // Track current pages for each section
         let currentPages = {
             stocks: 1,
             thisweek: 1,
             lastweek: 1,
             expired: 1
+            ,
+            stockorder: 1
         };
 
-        // Load stocks with pagination
         function loadStocks(page = 1) {
             currentPages.stocks = page;
 
-            // Only show loading on initial load
             if (page === 1 && $('#stocksTableBody').is(':empty')) {
                 $('#stocksLoading').removeClass('d-none');
                 $('#stocksContent').addClass('d-none');
@@ -452,34 +432,23 @@
                 const $tbody = $('#stocksTableBody').empty();
                 if (data.ingredients.data.length) {
                     data.ingredients.data.forEach(i => {
-                        let status = 'Good';
-                        let badgeClass = 'bg-success'; // green
-                        const lowStock = i.stock_alert_level?.low_stock ?? null;
-                        const criticalStock = i.stock_alert_level?.critical_stock ?? null;
-
-                        if (criticalStock !== null && i.stocks <= criticalStock) {
-                            status = 'Critical';
-                            badgeClass = 'bg-danger';
-                        } else if (lowStock !== null && i.stocks <= lowStock) {
-                            status = 'Low Stock';
-                            badgeClass = 'bg-warning';
-                        }
+                        const status = i.badge_text || 'Good';
+                        const badgeClass = i.badge_class || 'bg-success';
 
                         $tbody.append(`
-        <tr>
-            <td class="font-weight-bold">${i.name}</td>
-            <td class="text-capitalize">${i.category}</td>
-            <td>
-                <span class="font-semibold">${parseFloat(i.stocks).toFixed(2)}</span>
-                <span>${i.unit}</span>
-                <span class="ml-2 px-2 py-1 text-white text-xs font-semibold rounded ${badgeClass}">
-                    ${status}
-                </span>
-            </td>
-        </tr>
-    `);
+                            <tr>
+                                <td class="font-weight-bold">${i.name}</td>
+                                <td class="text-capitalize">${i.category}</td>
+                                <td>
+                                    <span class="font-semibold">${parseFloat(i.stocks).toFixed(2)}</span>
+                                    <span>${i.unit}</span>
+                                    <span class="ml-2 px-2 py-1 text-white text-xs font-semibold rounded ${badgeClass}">
+                                        ${status}
+                                    </span>
+                                </td>
+                            </tr>
+                        `);
                     });
-
                 } else {
                     $tbody.append('<tr><td colspan="3" class="text-center text-muted">No ingredients available</td></tr>');
                 }
@@ -488,12 +457,10 @@
             });
         }
 
-        // Load batches with pagination
         function loadBatches(period, page = 1) {
             const pre = period === 'thisweek' ? 'thisWeek' : 'lastWeek';
             currentPages[period] = page;
 
-            // Only show loading on initial load
             if (page === 1 && $(`#${pre}TableBody`).is(':empty')) {
                 $(`#${pre}Loading`).removeClass('d-none');
                 $(`#${pre}Empty, #${pre}Content`).addClass('d-none');
@@ -511,22 +478,22 @@
 
                     data.batches.data.forEach(b => {
                         $tb.append(`
-                        <tr>
-                            <td>${b.ingredient_name}</td>
-                            <td>${parseFloat(b.quantity).toFixed(2)} ${b.unit}</td>
-                            <td>${new Date(b.arrived_at).toLocaleDateString()}</td>
-                            <td>${new Date(b.expiration_date).toLocaleDateString()}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-warning btn-edit-batch" data-id="${b.id}" 
-                                    data-qty="${b.quantity}" data-arrived="${b.arrived_at}" data-exp="${b.expiration_date}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger btn-del-batch" data-id="${b.id}" data-name="${b.ingredient_name}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `);
+                            <tr>
+                                <td>${b.ingredient_name}</td>
+                                <td>${parseFloat(b.quantity).toFixed(2)} ${b.unit}</td>
+                                <td>${new Date(b.arrived_at).toLocaleDateString()}</td>
+                                <td>${new Date(b.expiration_date).toLocaleDateString()}</td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-warning btn-edit-batch" data-id="${b.id}" 
+                                        data-qty="${b.quantity}" data-arrived="${b.arrived_at}" data-exp="${b.expiration_date}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-danger btn-del-batch" data-id="${b.id}" data-name="${b.ingredient_name}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
                     });
 
                     renderPagination(`#${period}Pagination`, data.batches, period);
@@ -537,11 +504,9 @@
             });
         }
 
-        // Load expired with pagination
         function loadExpired(page = 1) {
             currentPages.expired = page;
 
-            // Only show loading on initial load
             if (page === 1 && $('#expiredTableBody').is(':empty')) {
                 $('#expiredLoading').removeClass('d-none');
                 $('#expiredEmpty, #expiredContent').addClass('d-none');
@@ -559,12 +524,12 @@
 
                     data.expired_items.data.forEach(i => {
                         $tb.append(`
-                        <tr>
-                            <td>${i.ingredient_name}</td>
-                            <td>${parseFloat(i.quantity).toFixed(2)} ${i.unit}</td>
-                            <td>${new Date(i.expiration_date).toLocaleDateString()}</td>
-                        </tr>
-                    `);
+                            <tr>
+                                <td>${i.ingredient_name}</td>
+                                <td>${parseFloat(i.quantity).toFixed(2)} ${i.unit}</td>
+                                <td>${new Date(i.expiration_date).toLocaleDateString()}</td>
+                            </tr>
+                        `);
                     });
 
                     renderPagination('#expiredPagination', data.expired_items, 'expired');
@@ -575,11 +540,9 @@
             });
         }
 
-        //Stock Order
         function loadStockOrders(page = 1) {
-            currentPage = page;
+            currentPages.stockorder = page;
 
-            // Show loader only initially
             if (page === 1 && $('#stockOrderTableBody').is(':empty')) {
                 $('#stockOrderLoading').removeClass('d-none');
                 $('#stockOrderEmpty, #stockOrderContent').addClass('d-none');
@@ -589,21 +552,41 @@
                 $('#stockOrderLoading').addClass('d-none');
 
                 if (data.stock_orders.data && data.stock_orders.data.length) {
-                    $('#stockOrderContent').removeClass('d-none');
-                    $('#stockOrderEmpty').addClass('d-none');
-                    const $tb = $('#stockOrderTableBody').empty();
+                    // Filter to only show triggered stock orders
+                    const triggeredOrders = data.stock_orders.data.filter(order =>
+                        order.ingredient.stocks <= order.reorder_point
+                    );
 
-                    data.stock_orders.data.forEach(order => {
-                        $tb.append(`
-                    <tr>
-                        <td class="font-weight-bold">${order.ingredient.name}</td>
-                        <td>${parseFloat(order.requested_quantity).toFixed(2)} ${order.ingredient.unit}</td>
-                        <td class="text-capitalize text-center">${order.status}</td>
-                    </tr>
-                `);
-                    });
+                    if (triggeredOrders.length > 0) {
+                        $('#stockOrderContent').removeClass('d-none');
+                        $('#stockOrderEmpty').addClass('d-none');
+                        const $tb = $('#stockOrderTableBody').empty();
 
-                    renderPagination('#stockOrderPagination', data.stock_orders);
+                        triggeredOrders.forEach(order => {
+                            const unit = order.ingredient.unit === 'pieces' ? 'pcs' : order.ingredient.unit;
+
+                            $tb.append(`
+                                <tr class="table-warning">
+                                    <td>
+                                        <strong>${order.ingredient.name}</strong>
+                                        <br>
+                                        <small class="text-muted">Current: ${parseFloat(order.ingredient.stocks).toFixed(2)} ${unit}</small>
+                                    </td>
+                                    <td>${parseFloat(order.reorder_point).toFixed(2)} ${unit}</td>
+                                    <td class="text-center">
+                                        <span class="badge badge-${getStatusBadge(order.status)}">${order.status}</span>
+                                        <br><small class="text-danger font-weight-bold">⚠️ Stock Low</small>
+                                    </td>
+                                </tr>
+                            `);
+                        });
+
+                        renderPagination('#stockOrderPagination', data.stock_orders, 'stockorder');
+                    } else {
+                        $('#stockOrderEmpty').removeClass('d-none');
+                        $('#stockOrderContent').addClass('d-none');
+                        $('#stockOrderTableBody').empty();
+                    }
                 } else {
                     $('#stockOrderEmpty').removeClass('d-none');
                     $('#stockOrderContent').addClass('d-none');
@@ -611,11 +594,114 @@
             });
         }
 
-        // Render pagination controls - Always visible and static
+        function loadLowStockOrders() {
+            $.get('/ingredient_management/stock-orders/low-stock', function (data) {
+                const $container = $('#lowStockOrdersList').empty();
+
+                if (data.low_stock_orders && data.low_stock_orders.length > 0) {
+                    data.low_stock_orders.forEach(order => {
+                        const unit = order.ingredient.unit === 'pieces' ? 'pcs' : order.ingredient.unit;
+
+                        const quantityNeeded = (order.reorder_point - order.ingredient.stocks).toFixed(2);
+
+                        $container.append(`
+                    <div class="card mb-2 border-warning">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 font-weight-bold">${order.ingredient.name}</h6>
+                                    <div class="small text-muted">
+                                        <div><strong>Current Stock:</strong> ${parseFloat(order.ingredient.stocks).toFixed(2)} ${unit}</div>
+                                        
+                                        <!-- FIX 2: Changed from request_alert_value to reorder_point -->
+                                        <div><strong>Order Threshold:</strong> ${parseFloat(order.reorder_point).toFixed(2)} ${unit}</div>
+                                        
+                                        <!-- FIX 3: Changed from undefined reorder_quantity to order.reorder_quantity -->
+                                        <div><strong>Need to Order:</strong> ${parseFloat(order.reorder_quantity).toFixed(2)} ${unit}</div>
+                                        
+                                    </div>
+                                </div>
+                                <div class="ml-2">
+                                    <button class="btn btn-sm btn-success add-stock-btn mb-1" 
+                                            data-order-id="${order.id}"
+                                            data-ingredient="${order.ingredient.name}"
+                                            data-ingredient-id="${order.ingredient.id}"
+                                            data-current-stock="${order.ingredient.stocks}"
+                                            data-reorder-quantity="${order.reorder_quantity}"
+                                            data-unit="${unit}">
+                                        <i class="fas fa-plus-circle"></i> Add Stock
+                                    </button>
+                                    <button class="btn btn-sm btn-primary print-order-btn" 
+                                            data-order-id="${order.id}"
+                                            data-ingredient="${order.ingredient.name}"
+                                            data-quantity="${quantityNeeded}"
+                                            data-unit="${unit}">
+                                        <i class="fas fa-print"></i> Print
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                    });
+                } else {
+                    $container.html('<div class="text-center text-muted py-3"><small>No low stock orders at the moment</small></div>');
+                }
+            });
+        }
+
+        function getStatusBadge(status) {
+            const badges = {
+                'pending': 'warning',
+                'ordered': 'info',
+                'received': 'success',
+                'cancelled': 'danger'
+            };
+            return badges[status] || 'secondary';
+        }
+
+        // Print order button handler
+        $(document).on('click', '.print-order-btn', function () {
+            const orderId = $(this).data('order-id');
+            const ingredient = $(this).data('ingredient');
+            const quantity = $(this).data('quantity');
+            const unit = $(this).data('unit');
+
+            console.log('Print order request:', { orderId, ingredient, quantity, unit });
+
+            Swal.fire({
+                icon: 'info',
+                title: 'Print Request',
+                html: `
+                    <strong>Ingredient:</strong> ${ingredient}<br>
+                    <strong>Quantity:</strong> ${quantity} ${unit}
+                `,
+                confirmButtonText: 'OK'
+            });
+
+        });
+
+        $(document).on('click', '.add-stock-btn', function () {
+            const ingredient = $(this).data('ingredient');
+            const ingredientId = $(this).data('ingredient-id');
+            const reorderQuantity = $(this).data('reorder-quantity');
+            const unit = $(this).data('unit');
+
+            $('#addStockIngredientName').text(ingredient);
+            $('#addStock_ingredient_id').val(ingredientId);
+            $('#addStockUnit').text(unit);
+
+            $('#addStockQuantity').val(parseFloat(reorderQuantity).toFixed(2));
+
+            const today = new Date().toISOString().split('T')[0];
+            $('#addStock_arrivedDate').val(today);
+
+            $('#addStockModal').modal('show');
+        });
+
+    
         function renderPagination(selector, data, section) {
             const $pagination = $(selector);
-
-            // Don't clear if pagination already exists - just update it
             $pagination.empty();
 
             if (data.last_page <= 1) return;
@@ -623,24 +709,21 @@
             const nav = $('<nav><ul class="pagination pagination-sm justify-content-center mb-0"></ul></nav>');
             const ul = nav.find('ul');
 
-            // Previous button (chevron left)
             ul.append(`
-            <li class="page-item ${data.current_page <= 1 ? 'disabled' : ''}">
-                <a class="page-link ${data.current_page <= 1 ? 'disabled' : ''}" 
-                   href="#" 
-                   data-page="${data.current_page - 1}" 
-                   data-section="${section}"
-                   ${data.current_page <= 1 ? 'tabindex="-1"' : ''}>
-                    ‹
-                </a>
-            </li>
-        `);
+                <li class="page-item ${data.current_page <= 1 ? 'disabled' : ''}">
+                    <a class="page-link ${data.current_page <= 1 ? 'disabled' : ''}" 
+                       href="#" 
+                       data-page="${data.current_page - 1}" 
+                       data-section="${section}"
+                       ${data.current_page <= 1 ? 'tabindex="-1"' : ''}>
+                        ‹
+                    </a>
+                </li>
+            `);
 
-            // Page numbers - show current page and 2 neighbors on each side
             let startPage = Math.max(1, data.current_page - 1);
             let endPage = Math.min(data.last_page, data.current_page + 1);
 
-            // Always show at least 3 pages if available
             if (endPage - startPage < 2) {
                 if (startPage === 1) {
                     endPage = Math.min(3, data.last_page);
@@ -651,29 +734,27 @@
 
             for (let i = startPage; i <= endPage; i++) {
                 ul.append(`
-                <li class="page-item ${i === data.current_page ? 'active' : ''}">
-                    <a class="page-link" href="#" data-page="${i}" data-section="${section}">${i}</a>
-                </li>
-            `);
+                    <li class="page-item ${i === data.current_page ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}" data-section="${section}">${i}</a>
+                    </li>
+                `);
             }
 
-            // Next button (chevron right)
             ul.append(`
-            <li class="page-item ${data.current_page >= data.last_page ? 'disabled' : ''}">
-                <a class="page-link ${data.current_page >= data.last_page ? 'disabled' : ''}" 
-                   href="#" 
-                   data-page="${data.current_page + 1}" 
-                   data-section="${section}"
-                   ${data.current_page >= data.last_page ? 'tabindex="-1"' : ''}>
-                    ›
-                </a>
-            </li>
-        `);
+                <li class="page-item ${data.current_page >= data.last_page ? 'disabled' : ''}">
+                    <a class="page-link ${data.current_page >= data.last_page ? 'disabled' : ''}" 
+                       href="#" 
+                       data-page="${data.current_page + 1}" 
+                       data-section="${section}"
+                       ${data.current_page >= data.last_page ? 'tabindex="-1"' : ''}>
+                        ›
+                    </a>
+                </li>
+            `);
 
             $pagination.html(nav);
         }
 
-        // Handle pagination clicks
         $(document).on('click', '.page-link:not(.disabled)', function (e) {
             e.preventDefault();
             const page = $(this).data('page');
@@ -692,16 +773,19 @@
                 case 'expired':
                     loadExpired(page);
                     break;
+                case 'stockorder':
+                    loadStockOrders(page);
+                    break;
             }
         });
 
-        // Initial load
         loadStocks(1);
 
         let tabsLoaded = {
             stocks: true,
             batch: false,
-            expired: false
+            expired: false,
+            stockorder: false
         };
 
         $('a[href="#stocks"]').on('shown.bs.tab', function () {
@@ -738,12 +822,17 @@
             }
         });
 
+        $('a[href="#stock-order"]').on('shown.bs.tab', function () {
+            if (!tabsLoaded.stockorder) {
+                loadStockOrders(currentPages.stockorder);
+                loadLowStockOrders();
+                tabsLoaded.stockorder = true;
+            }
+        });
 
-        // Modal events
         $('#addStockModal').on('show.bs.modal', () => loadIngredients('#addStockForm select[name="ingredient_id"]'));
         $('#updateStockModal').on('show.bs.modal', () => loadIngredients('#updateStockForm select[name="ingredient_id"]', true));
 
-        // Form submissions - NO PAGE REFRESH
         $('#addStockForm').on('submit', function (e) {
             e.preventDefault();
             submitForm(this, '/ingredient_management/add-stock', 'Stock added successfully', 'stocks');
@@ -767,9 +856,33 @@
         function loadIngredients(selector, showStock = false) {
             $.get('/ingredient_management/addStockForm', data => {
                 const $sel = $(selector).find('option:not(:first)').remove().end();
-                data.ingredients.forEach(i => $sel.append(`<option value="${i.id}">${i.name}${showStock ? ` (${i.stocks} ${i.unit})` : ''}</option>`));
+                const ingredientsData = {};
+
+                data.ingredients.forEach(i => {
+                    const unit = i.unit.toLowerCase() === 'pieces' ? 'pcs' : i.unit;
+                    ingredientsData[i.id] = { unit: unit, name: i.name };
+                    $sel.append(`<option value="${i.id}" data-unit="${unit}">${i.name}${showStock ? ` (${i.stocks} ${unit})` : ''}</option>`);
+                });
+
+                $sel.data('ingredientsData', ingredientsData);
             });
         }
+
+        $(document).on('change', '#addStock_ingredient', function () {
+            const selectedOption = $(this).find('option:selected');
+            const unit = selectedOption.data('unit');
+
+            if (unit) {
+                $('#addStock_unitLabel').text(`(${unit})`);
+            } else {
+                $('#addStock_unitLabel').text('');
+            }
+        });
+
+        $('#addStockModal').on('hidden.bs.modal', function () {
+            $('#addStock_unitLabel').text('');
+            $('#addStockForm')[0].reset();
+        });
 
         function submitForm(form, url, msg, refreshSection) {
             $.ajax({
@@ -839,7 +952,6 @@
                             color: '#155724'
                         });
 
-                        // Reload current page - NO RESET
                         const period = $('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek';
                         loadBatches(period, currentPages[period]);
                     }

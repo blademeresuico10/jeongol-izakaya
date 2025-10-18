@@ -12,7 +12,8 @@ class StockOrder extends Model
 
     protected $fillable = [
         'ingredient_id',
-        'requested_quantity',
+        'reorder_point',
+        'reorder_quantity',
         'status',
     ];
 

@@ -126,6 +126,13 @@ Route::middleware('auth')->group(function () {
             Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
             Route::put('/batches/{id}', [AdminController::class, 'updateBatch'])->name('batches.update');
             Route::delete('/batches/delete', [AdminController::class, 'deleteBatch'])->name('batches.delete'); // Fixed path
+            
+            // Stock Order Routes
+            Route::get('/stock-orders', [AdminController::class, 'getStockOrders'])->name('ingredient.stockOrders');
+            Route::get('/stock-orders/low-stock', [AdminController::class, 'getLowStockOrders'])->name('ingredient.lowStockOrders');
+            Route::post('/stock-orders', [AdminController::class, 'createStockOrder'])->name('ingredient.createStockOrder');
+            Route::put('/stock-orders/{id}', [AdminController::class, 'updateStockOrder'])->name('ingredient.updateStockOrder');
+            Route::delete('/stock-orders/{id}', [AdminController::class, 'deleteStockOrder'])->name('ingredient.deleteStockOrder');
         });
 
         // E-Wallet Management

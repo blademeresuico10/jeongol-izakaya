@@ -23,7 +23,6 @@ class CashierTableLayout extends Component
         $now = Carbon::now();
         $today = Carbon::today();
 
-        // Fetch active reservations (started and not ended)
         $activeReservations = reservation::with('table')
             ->where('status', 'Active')
             ->whereDate('started_at', $today)
@@ -32,7 +31,6 @@ class CashierTableLayout extends Component
             ->whereDoesntHave('transactions')
             ->get();
 
-        // Fetch active walk-ins (started and not ended)
         $activeWalkins = walkin::with('table')
             ->where('status', 'Active')
             ->whereDate('started_at', $today)
@@ -41,7 +39,6 @@ class CashierTableLayout extends Component
             ->whereDoesntHave('transactions')
             ->get();
 
-        // Load all tables and map their status
         $this->tables = table::all()->map(function ($table) use ($activeReservations, $activeWalkins, $now) {
             $res = $activeReservations->firstWhere('table_id', $table->id);
             $session = $activeWalkins->firstWhere('table_id', $table->id);
@@ -78,7 +75,6 @@ class CashierTableLayout extends Component
             return $table;
         });
 
-        // Build occupied tables array for easy checking
         $this->occupiedTables = $this->tables
             ->filter(fn($t) => $t->is_occupied)
             ->pluck('table_number')

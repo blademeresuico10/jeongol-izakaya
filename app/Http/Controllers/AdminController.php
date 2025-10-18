@@ -1314,54 +1314,33 @@ class AdminController extends Controller
     public function getStocks(Request $request)
     {
         try {
-            $ingredients = ingredients::select('id', 'name', 'category', 'unit', 'stocks')
-                ->with(['stockAlertLevel'])
+            $ingredients = ingredients::with(['stockAlertLevel'])
                 ->orderBy('name', 'asc')
-                ->get()
-                ->map(function ($ingredient) {
-                    $alertLevel = $ingredient->stockAlertLevel;
+                ->paginate(10);
 
-                    // Default thresholds
-                    $lowStock = $alertLevel->low_stock ?? 50;
-                    $criticalStock = $alertLevel->critical_stock ?? 10;
+            $ingredients->getCollection()->transform(function ($ingredient) {
+                $alertLevel = $ingredient->stockAlertLevel;
+                $lowStock = $alertLevel->low_stock ?? 50;
+                $criticalStock = $alertLevel->critical_stock ?? 10;
 
-                    // Apply color logic
-                    if ($ingredient->stocks <= $criticalStock) {
-                        $ingredient->badge_class = 'bg-danger';
-                        $ingredient->badge_text = 'Critical';
-                    } elseif ($ingredient->stocks <= $lowStock) {
-                        $ingredient->badge_class = 'bg-warning';
-                        $ingredient->badge_text = 'Low Stock';
-                    } else {
-                        $ingredient->badge_class = 'bg-success';
-                        $ingredient->badge_text = 'Good';
-                    }
+                if ($ingredient->stocks <= $criticalStock) {
+                    $ingredient->badge_class = 'bg-danger';
+                    $ingredient->badge_text = 'Critical';
+                } elseif ($ingredient->stocks <= $lowStock) {
+                    $ingredient->badge_class = 'bg-warning';
+                    $ingredient->badge_text = 'Low Stock';
+                } else {
+                    $ingredient->badge_class = 'bg-success';
+                    $ingredient->badge_text = 'Good';
+                }
 
-                    // Normalize unit
-                    if (strtolower($ingredient->unit) === 'pieces') {
-                        $ingredient->unit = 'pcs';
-                    }
+                $ingredient->unit = strtolower($ingredient->unit) === 'pieces' ? 'pcs' : $ingredient->unit;
 
-                    // Include thresholds in response
-                    $ingredient->low_stock = $lowStock;
-                    $ingredient->critical_stock = $criticalStock;
-
-                    return $ingredient;
-                });
-
-            // Manual pagination
-            $page = $request->get('page', 1);
-            $perPage = 10;
-            $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
-                $ingredients->forPage($page, $perPage),
-                $ingredients->count(),
-                $perPage,
-                $page,
-                ['path' => url()->current()]
-            );
+                return $ingredient;
+            });
 
             return response()->json([
-                'ingredients' => $paginated
+                'ingredients' => $ingredients
             ]);
         } catch (\Exception $e) {
             return response()->json([
@@ -1370,7 +1349,6 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
 
     public function getStockBatches(Request $request)
     {
@@ -1525,10 +1503,14 @@ class AdminController extends Controller
 
     public function addStockForm()
     {
-        $ingredients = DB::table('ingredients')->get();
-        return response()->json(['ingredients' => $ingredients]);
-    }
+        $ingredients = ingredients::select('id', 'name', 'unit', 'stocks')
+            ->orderBy('name', 'asc')
+            ->get();
 
+        return response()->json([
+            'ingredients' => $ingredients
+        ]);
+    }
     public function addStock(Request $request)
     {
         $request->validate([
@@ -1789,6 +1771,54 @@ class AdminController extends Controller
         }
     }
 
+    public function getStockOrders(Request $request)
+    {
+        try {
+            $stockOrders = StockOrder::with('ingredient')
+                ->orderBy('created_at', 'desc')
+                ->paginate(10);
+
+            return response()->json([
+                'stock_orders' => $stockOrders
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load stock orders: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get low stock orders (where current stock <= requested quantity)
+     */
+    public function getLowStockOrders(Request $request)
+    {
+        try {
+            $lowStockOrders = StockOrder::with('ingredient')
+                ->select('stock_orders.*')
+                ->join('ingredients', 'stock_orders.ingredient_id', '=', 'ingredients.id')
+                ->where('ingredients.stocks', '<=', DB::raw('stock_orders.reorder_point'))
+                ->whereNotIn('stock_orders.status', ['cancelled', 'received'])
+                ->whereIn('stock_orders.id', function ($query) {
+                    $query->select(DB::raw('MAX(id)'))
+                        ->from('stock_orders as so')
+                        ->whereColumn('so.ingredient_id', 'stock_orders.ingredient_id')
+                        ->whereNotIn('so.status', ['cancelled', 'received']);
+                })
+                ->orderBy('stock_orders.created_at', 'desc')
+                ->get();
+
+            return response()->json([
+                'low_stock_orders' => $lowStockOrders
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load low stock orders: ' . $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function others(Request $request)
     {
@@ -1929,12 +1959,14 @@ class AdminController extends Controller
     public function updateStockOrder(Request $request, $id)
     {
         $request->validate([
-            'requested_quantity' => 'required|numeric|min:0'
+            'reorder_point' => 'required|numeric|min:0',
+            'reorder_quantity' => 'required|numeric|min:0'
         ]);
 
         $stockOrder = StockOrder::findOrFail($id);
         $stockOrder->update([
-            'requested_quantity' => $request->requested_quantity
+            'reorder_point' => $request->reorder_point,
+            'reorder_quantity' => $request->reorder_quantity
         ]);
 
         return redirect()->back()->with('success', 'Stock order updated successfully');
@@ -1943,19 +1975,19 @@ class AdminController extends Controller
     {
         $request->validate([
             'ingredient_id' => 'required|exists:ingredients,id',
-            'requested_quantity' => 'required|numeric|min:0'
+            'reorder_point' => 'required|numeric|min:0'
+
         ]);
 
         StockOrder::create([
             'ingredient_id' => $request->ingredient_id,
-            'requested_quantity' => $request->requested_quantity,
+            'reorder_point' => $request->reorder_point,
+            'reorder_quantity' => $request->reorder_quantity,
             'status' => 'pending'
         ]);
 
         return redirect()->back()->with('success', 'Stock order added successfully');
     }
-
-
 
     public function ewallet_management()
     {

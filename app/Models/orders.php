@@ -23,17 +23,17 @@ class orders extends Model
 
     public function reservation()
     {
-        return $this->belongsTo(Reservation::class, 'reservation_id');
+        return $this->belongsTo(reservation::class, 'reservation_id');
     }
 
     public function walkin()
     {
-        return $this->belongsTo(WalkIn::class, 'walk_in_id');
+        return $this->belongsTo(walkin::class, 'walk_in_id');
     }
 
     public function menu()
     {
-        return $this->belongsTo(Menu::class, 'menu_id');
+        return $this->belongsTo(menu::class, 'menu_id');
     }
 
     public function refills()

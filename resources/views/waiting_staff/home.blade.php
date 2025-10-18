@@ -6,7 +6,7 @@
     <title>Wait Staff Dashboard</title>
     <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
 
-    {{-- Vite & Livewire Styles --}}
+    
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 
@@ -27,14 +27,12 @@
     <header class="p-3 border-b border-gray-300">
         <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
 
-            {{-- Logo + Title --}}
             <div class="flex items-center gap-3 ml-5 justify-center sm:justify-start">
                 <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo"
                     class="h-12 w-16 sm:h-14 sm:w-20 object-contain">
                 <h1 class="text-2xl sm:text-3xl font-semibold text-gray-800">Wait Staff</h1>
             </div>
 
-            {{-- Profile Dropdown --}}
             <div class="relative flex justify-center mr-5" x-data="{ open: false }">
                 <button @click="open = !open" class="flex items-center gap-2 focus:outline-none">
                     <div

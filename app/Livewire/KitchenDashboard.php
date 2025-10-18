@@ -16,10 +16,7 @@ class KitchenDashboard extends Component
 {
     public $activeTab = 'pending';
 
-    protected $listeners = [
-        'echo:kitchen,order.created' => 'refreshDashboard',
-        'echo:kitchen,order.status.updated' => 'refreshDashboard',
-    ];
+
 
     public function refreshDashboard()
     {
@@ -40,9 +37,24 @@ class KitchenDashboard extends Component
 
     public function getPendingOrdersProperty()
     {
+        $now = now();
+
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
             ->whereIn('status', ['Pending', 'Ready'])
             ->whereNotNull('menu_id')
+            ->where(function ($query) use ($now) {
+                $query->whereHas('reservation', function ($q) use ($now) {
+                    $q->where('started_at', '<=', $now)
+                        ->where(function ($subQ) use ($now) {
+                            $subQ->where('ended_at', '>=', $now)
+                                ->orWhereNull('ended_at');
+                        });
+                })
+                    ->orWhereHas('walkin', function ($q) use ($now) {
+                        $q->where('started_at', '<=', $now)
+                            ->where('ended_at', '>=', $now);
+                    });
+            })
             ->orderBy('created_at', 'asc')
             ->get()
             ->groupBy(function ($order) {
@@ -52,8 +64,25 @@ class KitchenDashboard extends Component
 
     public function getPendingRefillsProperty()
     {
+        $now = now();
+
         return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
             ->whereIn('status', ['Pending', 'Ready'])
+            ->whereHas('order', function ($query) use ($now) {
+                $query->where(function ($q) use ($now) {
+                    $q->whereHas('reservation', function ($reservationQuery) use ($now) {
+                        $reservationQuery->where('started_at', '<=', $now)
+                            ->where(function ($subQ) use ($now) {
+                                $subQ->where('ended_at', '>=', $now)
+                                    ->orWhereNull('ended_at');
+                            });
+                    })
+                        ->orWhereHas('walkin', function ($walkinQuery) use ($now) {
+                            $walkinQuery->where('started_at', '<=', $now)
+                                ->where('ended_at', '>=', $now);
+                        });
+                });
+            })
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function ($refill) {
@@ -66,9 +95,24 @@ class KitchenDashboard extends Component
 
     public function getReadyOrdersProperty()
     {
+        $now = now();
+
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
             ->where('status', 'Ready')
             ->whereNotNull('menu_id')
+            ->where(function ($query) use ($now) {
+                $query->whereHas('reservation', function ($q) use ($now) {
+                    $q->where('started_at', '<=', $now)
+                        ->where(function ($subQ) use ($now) {
+                            $subQ->where('ended_at', '>=', $now)
+                                ->orWhereNull('ended_at');
+                        });
+                })
+                    ->orWhereHas('walkin', function ($q) use ($now) {
+                        $q->where('started_at', '<=', $now)
+                            ->where('ended_at', '>=', $now);
+                    });
+            })
             ->orderBy('updated_at', 'asc')
             ->get()
             ->groupBy(function ($order) {
@@ -78,8 +122,25 @@ class KitchenDashboard extends Component
 
     public function getReadyRefillsProperty()
     {
+        $now = now();
+
         return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
             ->where('status', 'Ready')
+            ->whereHas('order', function ($query) use ($now) {
+                $query->where(function ($q) use ($now) {
+                    $q->whereHas('reservation', function ($reservationQuery) use ($now) {
+                        $reservationQuery->where('started_at', '<=', $now)
+                            ->where(function ($subQ) use ($now) {
+                                $subQ->where('ended_at', '>=', $now)
+                                    ->orWhereNull('ended_at');
+                            });
+                    })
+                        ->orWhereHas('walkin', function ($walkinQuery) use ($now) {
+                            $walkinQuery->where('started_at', '<=', $now)
+                                ->where('ended_at', '>=', $now);
+                        });
+                });
+            })
             ->orderBy('updated_at', 'asc')
             ->get()
             ->map(function ($refill) {
@@ -92,9 +153,24 @@ class KitchenDashboard extends Component
 
     public function getServedOrdersProperty()
     {
+        $now = now();
+
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
             ->whereIn('status', ['Served', 'Ready'])
             ->whereNotNull('menu_id')
+            ->where(function ($query) use ($now) {
+                $query->whereHas('reservation', function ($q) use ($now) {
+                    $q->where('started_at', '<=', $now)
+                        ->where(function ($subQ) use ($now) {
+                            $subQ->where('ended_at', '>=', $now)
+                                ->orWhereNull('ended_at');
+                        });
+                })
+                    ->orWhereHas('walkin', function ($q) use ($now) {
+                        $q->where('started_at', '<=', $now)
+                            ->where('ended_at', '>=', $now);
+                    });
+            })
             ->orderBy('updated_at', 'desc')
             ->get()
             ->groupBy(function ($order) {
@@ -104,8 +180,25 @@ class KitchenDashboard extends Component
 
     public function getServedRefillsProperty()
     {
+        $now = now();
+
         return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
             ->whereIn('status', ['Served', 'Ready'])
+            ->whereHas('order', function ($query) use ($now) {
+                $query->where(function ($q) use ($now) {
+                    $q->whereHas('reservation', function ($reservationQuery) use ($now) {
+                        $reservationQuery->where('started_at', '<=', $now)
+                            ->where(function ($subQ) use ($now) {
+                                $subQ->where('ended_at', '>=', $now)
+                                    ->orWhereNull('ended_at');
+                            });
+                    })
+                        ->orWhereHas('walkin', function ($walkinQuery) use ($now) {
+                            $walkinQuery->where('started_at', '<=', $now)
+                                ->where('ended_at', '>=', $now);
+                        });
+                });
+            })
             ->orderBy('updated_at', 'desc')
             ->get()
             ->map(function ($refill) {
@@ -115,7 +208,6 @@ class KitchenDashboard extends Component
                 return $refill;
             });
     }
-
     public function markAsReady($orderOrRefillId, $type = 'order')
     {
         if ($type === 'refill') {

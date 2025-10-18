@@ -3,6 +3,48 @@
 @vite(['resources/js/app.js'])
 
 <style>
+    html,
+    body {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    #wrapper {
+        height: 100vh;
+    }
+
+    #content-wrapper {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 999;
+    }
+
+    .container-fluid {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-bottom: 2rem;
+    }
+
+    .container-fluid::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .container-fluid::-webkit-scrollbar-track {
+        background: #f1f1f1;
+    }
+
+    .container-fluid::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 4px;
+    }
+
     .ingredient-item {
         position: relative;
     }

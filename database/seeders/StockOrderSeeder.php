@@ -13,11 +13,11 @@ class StockOrderSeeder extends Seeder
         $now = Carbon::now();
 
         $stockOrders = [
-            ['ingredient_id' => 1, 'requested_quantity' => 30.00, 'status' => 'pending'],
-            ['ingredient_id' => 5, 'requested_quantity' => 15.00, 'status' => 'pending'],
-            ['ingredient_id' => 10, 'requested_quantity' => 25.00, 'status' => 'pending'],
-            ['ingredient_id' => 13, 'requested_quantity' => 40.00, 'status' => 'pending'],
-            ['ingredient_id' => 17, 'requested_quantity' => 20.00, 'status' => 'pending'],
+            ['ingredient_id' => 1, 'reorder_point' => 30.00, 'reorder_quantity' =>20, 'status' => 'pending'],
+            ['ingredient_id' => 5, 'reorder_point' => 15.00, 'reorder_quantity' =>20, 'status' => 'pending'],
+            ['ingredient_id' => 10, 'reorder_point' => 25.00, 'reorder_quantity' =>20, 'status' => 'pending'],
+            ['ingredient_id' => 13, 'reorder_point' => 40.00, 'reorder_quantity' =>20,'status' => 'pending'],
+            ['ingredient_id' => 17, 'reorder_point' => 20.00, 'reorder_quantity' =>20,'status' => 'pending'],
         ];
 
         $stockOrders = array_map(function ($item) use ($now) {

@@ -35,6 +35,11 @@ class ingredients extends Model
             ->withTimestamps();
     }
 
+    public function stockOrders()
+    {
+        return $this->hasMany(StockOrder::class, 'ingredient_id');
+    }
+
     public function convertGramsToKg($grams)
     {
         return $grams / 1000;
