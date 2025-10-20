@@ -145,7 +145,7 @@ class CashierController extends Controller
             ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
             ->where('reservations.id', $id)
             ->where('reservations.status', 'Active')
-            ->whereDate('reservations.started_at', $today) 
+            ->whereDate('reservations.started_at', $today)
             ->whereNotExists(function ($query) use ($id) {
                 $query->select(DB::raw(1))
                     ->from('transactions')
@@ -157,6 +157,7 @@ class CashierController extends Controller
                 'reservations.ended_at',
                 'reservation_payment_details.advance_payment',
                 'customers.name as customer_name',
+                'customers.id_number',
                 'customers.contact_number',
                 'customers.id_type',
                 'reservations.pax',
@@ -184,6 +185,7 @@ class CashierController extends Controller
                     'walk_ins.ended_at',
                     DB::raw('0 as advance_payment'),
                     'customers.name as customer_name',
+                    'customers.id_number',
                     'customers.contact_number',
                     'customers.id_type',
                     'walk_ins.pax',
@@ -223,13 +225,13 @@ class CashierController extends Controller
                 return $order;
             });
 
-        // Calculate if time expired
         $endTime = Carbon::parse($reservation->ended_at);
         $isExpired = $now->greaterThan($endTime);
 
         return response()->json([
             'reservation_id'   => $reservation->reservation_id,
             'customer_name'    => $reservation->customer_name,
+            'id_number'        => $reservation->id_number,
             'contact_number'   => $reservation->contact_number,
             'id_type'          => $reservation->id_type,
             'customer_id'      => $reservation->customer_id,
@@ -243,6 +245,7 @@ class CashierController extends Controller
             'orders'           => $orders
         ]);
     }
+
     private function calculateDiscountedPrice($menuItem, $regularPrice, $customerType)
     {
         if ($customerType === 'regular' || $customerType === 'none') {
@@ -309,7 +312,8 @@ class CashierController extends Controller
                 'orders.*.quantity'            => 'required|integer|min:1',
                 'orders.*.price'               => 'required|numeric|min:0',
                 'customer_data'                => 'nullable|array',
-                'customer_data.*.name'         => 'required_with:customer_data|string|max:255',
+                'customer_data.*.name'         => 'nullable|string|max:255', // Changed to nullable
+                'customer_data.*.id_number'    => 'required_with:customer_data|string|max:255', // Required
                 'customer_data.*.id_type'      => 'nullable|string|max:255',
                 'customer_data.*.customer_type' => 'nullable|string|in:student,govt_employee,pwd_senior,regular',
                 'customer_data.*.item_index'   => 'required_with:customer_data|integer',
@@ -335,7 +339,7 @@ class CashierController extends Controller
                     throw new Exception('Walk-in not found');
                 }
             } else {
-                $record = Reservation::with('customer')->find($recordId);
+                $record = reservation::with('customer')->find($recordId);
                 if (!$record) {
                     throw new Exception('Reservation not found');
                 }
@@ -346,11 +350,12 @@ class CashierController extends Controller
 
             if (!empty($request->customer_data)) {
                 foreach ($request->customer_data as $customerInfo) {
-                    $customerKey = trim($customerInfo['name']) . '|' . ($customerInfo['id_type'] ?? '');
+                    $customerKey = trim($customerInfo['id_number']) . '|' . ($customerInfo['id_type'] ?? '');
 
                     if (!isset($uniqueCustomers[$customerKey])) {
-                        $customer = Customers::create([
-                            'name'    => trim($customerInfo['name']),
+                        $customer = customers::create([
+                            'name' => trim($customerInfo['name']),
+                            'id_number' => trim($customerInfo['id_number']),
                             'id_type' => $customerInfo['id_type'] ?? null,
                         ]);
                         $uniqueCustomers[$customerKey] = $customer;
@@ -365,8 +370,9 @@ class CashierController extends Controller
 
             $mainCustomer = $record->customer;
             if (!$mainCustomer) {
-                $mainCustomer = Customers::create([
+                $mainCustomer = customers::create([
                     'name' => $isWalkIn ? 'Walk-in Customer' : 'Reservation Customer',
+                    'id_number' => $isWalkIn ? 'WALKIN-' . now()->format('YmdHis') : 'RES-' . now()->format('YmdHis'),
                 ]);
                 $record->update(['customer_id' => $mainCustomer->id]);
             }
@@ -419,10 +425,8 @@ class CashierController extends Controller
                 }
             }
 
-            // FIX: Only fetch advance payment for reservations, NOT walk-ins
             $advancePayment = 0;
             if (!$isWalkIn) {
-                // Only process advance payment for reservations
                 $advancePayment = floatval($request->advance_payment ?? 0);
                 if ($advancePayment == 0) {
                     $paymentDetail = DB::table('reservation_payment_details')
@@ -431,7 +435,6 @@ class CashierController extends Controller
                     $advancePayment = floatval($paymentDetail->advance_payment ?? 0);
                 }
             }
-            // For walk-ins, advance payment stays 0
 
             $grandTotal     = $ordersTotal - $totalDiscountAmount;
             $toPay          = max(0, $grandTotal - $advancePayment);
@@ -515,10 +518,7 @@ class CashierController extends Controller
             ]);
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error('Payment Processing Failed', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Payment failed: ' . $e->getMessage()
@@ -526,16 +526,76 @@ class CashierController extends Controller
         }
     }
 
-    public function checkCustomer($idNumber)
+    public function checkCustomer(Request $request)
     {
         try {
-            $exists = \App\Models\customers::where('id_type', $idNumber)->exists();
-            return response()->json(['exists' => $exists]);
+            $idNumber = $request->input('id_number');
+            $idType = $request->input('id_type');
+
+            if (!$idNumber || !$idType) {
+                return response()->json([
+                    'exists' => false,
+                    'can_use_discount' => false,
+                    'error' => 'Missing parameters'
+                ], 400);
+            }
+
+            // Check if customer exists with this ID number and ID type
+            $customer = customers::where('id_number', $idNumber)
+                ->where('id_type', $idType)
+                ->first();
+
+            if (!$customer) {
+                // Check if this ID number was already used today with ANY ID type
+                $hasUsedDiscountWithDifferentIdType = DB::table('transactions')
+                    ->join('transaction_details', 'transactions.id', '=', 'transaction_details.transaction_id')
+                    ->join('customers', 'transaction_details.customer_id', '=', 'customers.id')
+                    ->where('customers.id_number', $idNumber)
+                    ->where('transaction_details.discount_amount', '>', 0)
+                    ->whereDate('transactions.created_at', Carbon::today())
+                    ->exists();
+
+                if ($hasUsedDiscountWithDifferentIdType) {
+                    return response()->json([
+                        'exists' => false,
+                        'can_use_discount' => false,
+                        'message' => 'This ID number already received a discount today'
+                    ]);
+                }
+
+                return response()->json([
+                    'exists' => false,
+                    'can_use_discount' => true,
+                    'message' => 'New customer'
+                ]);
+            }
+
+            $hasDiscountToday = DB::table('transactions')
+                ->join('transaction_details', 'transactions.id', '=', 'transaction_details.transaction_id')
+                ->join('customers', 'transaction_details.customer_id', '=', 'customers.id')
+                ->where('customers.id_number', $idNumber)
+                ->where('transaction_details.discount_amount', '>', 0)
+                ->whereDate('transactions.created_at', Carbon::today())
+                ->exists();
+
+            return response()->json([
+                'exists' => true,
+                'customer_id' => $customer->id,
+                'customer_name' => $customer->name,
+                'can_use_discount' => !$hasDiscountToday,
+                'message' => $hasDiscountToday
+                    ? 'This ID number already received a discount today'
+                    : 'Customer can use discount'
+            ]);
         } catch (Exception $e) {
-            return response()->json(['exists' => false, 'error' => 'Unable to check customer']);
+            Log::error('Check customer failed: ' . $e->getMessage());
+            return response()->json([
+                'exists' => false,
+                'can_use_discount' => false,
+                'error' => 'Unable to check customer'
+            ], 500);
         }
     }
-
 
     public function getTransactionReceipt($transactionId)
     {
@@ -547,6 +607,7 @@ class CashierController extends Controller
                 ->select(
                     'transactions.*',
                     'customers.name as customer_name',
+                    'customers.id_number',
                     'users.name as cashier_name'
                 )
                 ->first();

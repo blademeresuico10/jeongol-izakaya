@@ -12,6 +12,7 @@ class StockAlertLevel extends Model
         'ingredient_id',
         'low_stock',
         'critical_stock',
+        'reorder_quantity', 
     ];
 
     public function ingredient()

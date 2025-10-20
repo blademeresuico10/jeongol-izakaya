@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
             $table->decimal('low_stock', 8, 2);
             $table->decimal('critical_stock', 8, 2)->nullable();
+            $table->decimal('reorder_quantity', 10, 2); 
             $table->timestamps();
             $table->unique('ingredient_id');
         });

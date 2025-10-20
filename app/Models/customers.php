@@ -9,6 +9,7 @@ class customers extends Model
 {
     protected $fillable = [
         'name',
+        'id_number',
         'contact_number',
         'email',
         'id_type',
@@ -33,6 +34,4 @@ class customers extends Model
     {
         return $this->hasMany(transaction::class);
     }
-    
-    
 }

@@ -125,15 +125,20 @@ Route::middleware('auth')->group(function () {
             Route::get('/expired-only', [AdminController::class, 'getExpiredOnly'])->name('ingredients.expired_only');
             Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
             Route::put('/batches/{id}', [AdminController::class, 'updateBatch'])->name('batches.update');
-            Route::delete('/batches/delete', [AdminController::class, 'deleteBatch'])->name('batches.delete'); // Fixed path
-            
+            Route::delete('/batches/delete', [AdminController::class, 'deleteBatch'])->name('batches.delete');
+
             // Stock Order Routes
-            Route::get('/stock-orders', [AdminController::class, 'getStockOrders'])->name('ingredient.stockOrders');
-            Route::get('/stock-orders/low-stock', [AdminController::class, 'getLowStockOrders'])->name('ingredient.lowStockOrders');
-            Route::post('/stock-orders', [AdminController::class, 'createStockOrder'])->name('ingredient.createStockOrder');
-            Route::put('/stock-orders/{id}', [AdminController::class, 'updateStockOrder'])->name('ingredient.updateStockOrder');
-            Route::delete('/stock-orders/{id}', [AdminController::class, 'deleteStockOrder'])->name('ingredient.deleteStockOrder');
+            Route::get('/available-ingredients', [AdminController::class, 'getAvailableIngredients'])->name('ingredient.available'); // ADD THIS LINE
+            Route::post('/stock-orders/create', [AdminController::class, 'createStockOrder'])->name('ingredient.stock-orders.create');
+            Route::post('/stock-orders/check-all', [AdminController::class, 'checkAllIngredients'])->name('ingredient.stock-orders.check-all');
+            Route::post('/stock-orders/{stockOrder}/complete', [AdminController::class, 'completeStockOrder'])->name('ingredient.stock-orders.complete');
+            Route::post('/stock-orders/{stockOrder}/cancel', [AdminController::class, 'cancelStockOrder'])->name('ingredient.stock-orders.cancel');
+            Route::get('/stock-orders', [AdminController::class, 'getStockOrders'])->name('ingredient.stock-orders');
+            Route::get('/low-stock', [AdminController::class, 'getLowStockIngredients'])->name('ingredient.low-stock');
         });
+
+        Route::get('stock-request/{id}/print', [AdminController::class, 'printStockRequest'])
+            ->name('admin.stock-request.print');
 
         // E-Wallet Management
         Route::get('/ewallet', [AdminController::class, 'ewallet_management'])->name('admin.ewallet_management');
@@ -143,9 +148,15 @@ Route::middleware('auth')->group(function () {
 
         // Others
         Route::get('/miscelanious', [AdminController::class, 'others'])->name('admin.others');
-        // Add this to your routes/web.php inside the admin middleware group
 
+        // Stock Level Management (existing)
         Route::put('/stock-levels/{id}', [AdminController::class, 'updateStockLevel'])->name('admin.stock_levels.update');
+
+        // Stock Alert Routes (add these)
+        Route::post('/stock-alerts', [AdminController::class, 'storeStockAlert'])->name('admin.stock-alerts.store');
+        Route::put('/stock-alerts/{id}', [AdminController::class, 'updateStockAlert'])->name('admin.stock-alerts.update');
+        Route::delete('/stock-alerts/{id}', [AdminController::class, 'deleteStockAlert'])->name('admin.stock-alerts.delete');
+
 
         // Operating Hours Management
         Route::put('/operating-hours/default', [AdminController::class, 'updateDefaultHours'])->name('admin.operating_hours.update_default');
@@ -166,9 +177,12 @@ Route::middleware('auth')->group(function () {
 
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
-        Route::get('/reports/sales', [ReportsController::class, 'salesReportPdf'])->name('admin.sales_report.pdf');
-        Route::get('/reports/transaction', [ReportsController::class, 'transactionReport'])->name('admin.transaction_reports');
-        Route::get('/reports/stock', [ReportsController::class, 'stockReport'])->name('admin.stock_report');
+        Route::post('/reports/sales', [ReportsController::class, 'getSalesReport'])->name('admin.reports.sales');
+        Route::post('/reports/transaction', [ReportsController::class, 'getTransactionReport']);
+        Route::post('/reports/menu', [ReportsController::class, 'getMenuReport']);
+        Route::get('/reports/sales/pdf', [ReportsController::class, 'salesReportPdf'])->name('admin.sales_report.pdf');
+        Route::get('/reports/transaction/pdf', [ReportsController::class, 'transactionReportPdf']);
+        Route::get('/reports/menu/pdf', [ReportsController::class, 'menuReportPdf'])->name('admin.menu_report.pdf');
         Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');
         Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('admin.reports.export-csv');
     });
@@ -217,7 +231,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
         Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
         Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
-        Route::get('/check-customer/{idNumber}', [CashierController::class, 'checkCustomer']);
+        // Make sure this route exists
+        Route::get('/cashier/check-customer', [CashierController::class, 'checkCustomer'])->name('cashier.check.customer');
     });
 
     Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {

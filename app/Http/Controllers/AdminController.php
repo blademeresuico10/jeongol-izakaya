@@ -1303,12 +1303,152 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Table permanently deleted!');
     }
 
-    public function ingredient_management(Request $request)
+    public function ingredient_management()
     {
+        $lowStockIngredients = ingredients::with('stockAlertLevel')
+            ->whereHas('stockAlertLevel', function ($query) {
+                $query->whereRaw('ingredients.stocks <= stock_level_alerts.low_stock');
+            })
+            ->get();
 
-        $ingredients = collect([]);
+        $allIngredients = ingredients::with('stockAlertLevel')
+            ->orderBy('name', 'asc')
+            ->get();
 
-        return view('admin.ingredient_management', compact('ingredients'));
+        return view('admin.ingredient_management', compact('lowStockIngredients', 'allIngredients'));
+    }
+
+    public function createStockOrder(Request $request)
+    {
+        $request->validate([
+            'ingredient_id' => 'required|exists:ingredients,id',
+            'quantity' => 'required|numeric|min:0.01'
+        ]);
+
+        try {
+            $order = StockOrder::createManualOrder(
+                $request->ingredient_id,
+                $request->quantity
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Stock order created successfully',
+                'order' => $order
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create stock order: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // Check all ingredients
+    public function checkAllIngredients(Request $request)
+    {
+        $ingredients = ingredients::with('stockAlertLevel')->get();
+        $ordersCreated = 0;
+
+        foreach ($ingredients as $ingredient) {
+            // Use the correct method name from your ingredients model
+            $order = $ingredient->checkAndCreateStockOrder();
+
+            if ($order) {
+                $ordersCreated++;
+            }
+        }
+
+        $message = $ordersCreated > 0
+            ? "{$ordersCreated} stock order(s) created successfully"
+            : "No ingredients need restocking at this time";
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'orders_created' => $ordersCreated
+        ]);
+    }
+
+    // Add this method for getting available ingredients (without pending orders)
+    public function getAvailableIngredients()
+    {
+        $ingredients = ingredients::with('stockAlertLevel')
+            ->whereDoesntHave('stockOrders', function ($query) {
+                $query->where('status', 'pending');
+            })
+            ->orderBy('name')
+            ->get()
+            ->map(function ($ingredient) {
+                // Determine stock status
+                $stockStatus = 'normal';
+                if ($ingredient->stockAlertLevel) {
+                    if ($ingredient->stocks <= $ingredient->stockAlertLevel->critical_stock) {
+                        $stockStatus = 'critical';
+                    } elseif ($ingredient->stocks <= $ingredient->stockAlertLevel->low_stock) {
+                        $stockStatus = 'low';
+                    }
+                }
+
+                return [
+                    'id' => $ingredient->id,
+                    'name' => $ingredient->name,
+                    'unit' => $ingredient->unit,
+                    'stocks' => $ingredient->stocks,
+                    'stock_status' => $stockStatus,
+                    'reorder_quantity' => $ingredient->stockAlertLevel->reorder_quantity ?? 0,
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'ingredients' => $ingredients
+        ]);
+    }
+
+    // Complete stock order
+    public function completeStockOrder(Request $request, StockOrder $stockOrder)
+    {
+        if ($stockOrder->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'Order is not pending'], 400);
+        }
+
+        $stockOrder->complete();
+
+        return response()->json(['success' => true, 'message' => 'Stock order completed successfully']);
+    }
+
+    // Cancel stock order
+    public function cancelStockOrder(Request $request, StockOrder $stockOrder)
+    {
+        if ($stockOrder->status !== 'pending') {
+            return response()->json(['success' => false, 'message' => 'Order is not pending'], 400);
+        }
+
+        $stockOrder->cancel();
+
+        return response()->json(['success' => true, 'message' => 'Stock order cancelled']);
+    }
+
+    public function getStockOrders()
+    {
+        $stockOrders = StockOrder::with('ingredient')->latest()->paginate(10);
+        return response()->json([
+            'stock_orders' => $stockOrders
+        ]);
+    }
+
+    public function getLowStockIngredients()
+    {
+        $ingredients = Ingredients::with('stockAlertLevel')->get();
+
+        $lowStockIngredients = $ingredients->filter(function ($ingredient) {
+            return $ingredient->stockAlertLevel && $ingredient->stocks <= $ingredient->stockAlertLevel->low_stock;
+        })->values();
+
+        return response()->json([
+            'low_stock_ingredients' => $lowStockIngredients
+        ]);
     }
 
     public function getStocks(Request $request)
@@ -1771,54 +1911,75 @@ class AdminController extends Controller
         }
     }
 
-    public function getStockOrders(Request $request)
+    public function getLowStockAlerts()
     {
         try {
-            $stockOrders = StockOrder::with('ingredient')
-                ->orderBy('created_at', 'desc')
-                ->paginate(10);
-
-            return response()->json([
-                'stock_orders' => $stockOrders
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load stock orders: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Get low stock orders (where current stock <= requested quantity)
-     */
-    public function getLowStockOrders(Request $request)
-    {
-        try {
-            $lowStockOrders = StockOrder::with('ingredient')
-                ->select('stock_orders.*')
-                ->join('ingredients', 'stock_orders.ingredient_id', '=', 'ingredients.id')
-                ->where('ingredients.stocks', '<=', DB::raw('stock_orders.reorder_point'))
-                ->whereNotIn('stock_orders.status', ['cancelled', 'received'])
-                ->whereIn('stock_orders.id', function ($query) {
-                    $query->select(DB::raw('MAX(id)'))
-                        ->from('stock_orders as so')
-                        ->whereColumn('so.ingredient_id', 'stock_orders.ingredient_id')
-                        ->whereNotIn('so.status', ['cancelled', 'received']);
-                })
-                ->orderBy('stock_orders.created_at', 'desc')
+            $lowStock = ingredients::whereColumn('stocks', '<=', 'low_stock')
+                ->orderBy('category')
+                ->orderBy('name')
                 ->get();
 
             return response()->json([
-                'low_stock_orders' => $lowStockOrders
+                'low_stock_ingredients' => $lowStock
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load low stock orders: ' . $e->getMessage()
+                'message' => 'Failed to load low stock alerts: ' . $e->getMessage()
             ], 500);
         }
     }
+    public function printStockRequest($id)
+    {
+        $ingredient = ingredients::with(['stockAlertLevel', 'stockOrders'])->findOrFail($id);
+
+        // Get the pending order for this ingredient
+        $order = $ingredient->stockOrders()
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        if (!$order) {
+            return back()->with('error', 'No pending order found for this ingredient.');
+        }
+
+        // Determine stock status
+        $stockStatus = 'normal';
+        if ($ingredient->stockAlertLevel) {
+            if ($ingredient->stocks <= $ingredient->stockAlertLevel->critical_stock) {
+                $stockStatus = 'critical';
+            } elseif ($ingredient->stocks <= $ingredient->stockAlertLevel->low_stock) {
+                $stockStatus = 'low';
+            }
+        }
+
+        $data = [
+            'date' => now()->format('M d, Y'),
+            'requestedBy' => Auth::user()->name,
+            'ingredient' => [
+                'name' => $ingredient->name,
+                'stocks' => $ingredient->stocks,
+                'unit' => $ingredient->unit,
+                'stock_status' => $stockStatus,
+            ],
+            'alertLevel' => [
+                'low_stock' => $ingredient->stockAlertLevel->low_stock ?? 0,
+                'critical_stock' => $ingredient->stockAlertLevel->critical_stock ?? 0,
+                'reorder_quantity' => $ingredient->stockAlertLevel->reorder_quantity ?? 0,
+            ],
+            'order' => [
+                'id' => $order->id,
+                'quantity' => $order->quantity,
+                'status' => ucfirst($order->status),
+                'notes' => $order->notes ?? null,
+                'created_at' => $order->created_at->format('M d, Y h:i A'),
+            ],
+        ];
+
+        $pdf = Pdf::loadView('admin.pdf.stock_request', $data);
+        return $pdf->stream("purchase_order_{$order->id}_{$ingredient->name}.pdf");
+    }
+
 
     public function others(Request $request)
     {
@@ -1829,23 +1990,28 @@ class AdminController extends Controller
         $stock_order = StockOrder::with('ingredient')->paginate(6);
         $ingredients = ingredients::orderBy('name')->get();
 
+        $ingredientsWithAlerts = StockAlertLevel::pluck('ingredient_id');
+        $ingredients_without_alerts = ingredients::whereNotIn('id', $ingredientsWithAlerts)
+            ->orderBy('name')
+            ->get();
+
         if ($request->ajax()) {
             $section = $request->get('section');
 
             if ($section === 'discounts') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'))->render();
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
             }
 
             if ($section === 'stock') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'))->render();
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
             }
 
             if ($section === 'stock_order') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'))->render();
+                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
             }
         }
 
-        return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients'));
+        return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'));
     }
 
 
@@ -1939,55 +2105,55 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Discount updated successfully!');
     }
 
-    public function updateStockLevel(Request $request, $id)
+    // Store new stock alert
+    public function storeStockAlert(Request $request)
     {
-        $validated = $request->validate([
+        $request->validate([
+            'ingredient_id' => 'required|exists:ingredients,id|unique:stock_level_alerts,ingredient_id',
             'low_stock' => 'required|numeric|min:0',
-            'critical_stock' => 'required|numeric|min:0',
+            'critical_stock' => 'nullable|numeric|min:0',
+            'reorder_quantity' => 'required|numeric|min:0.01',
         ]);
 
-        if ($validated['critical_stock'] >= $validated['low_stock']) {
-            return back()->with('error', 'Critical stock level must be lower than low stock level.');
-        }
-
-        $stockLevel = StockAlertLevel::findOrFail($id);
-        $stockLevel->update($validated);
-
-        return back()->with('success', 'Stock level updated successfully!');
-    }
-
-    public function updateStockOrder(Request $request, $id)
-    {
-        $request->validate([
-            'reorder_point' => 'required|numeric|min:0',
-            'reorder_quantity' => 'required|numeric|min:0'
-        ]);
-
-        $stockOrder = StockOrder::findOrFail($id);
-        $stockOrder->update([
-            'reorder_point' => $request->reorder_point,
-            'reorder_quantity' => $request->reorder_quantity
-        ]);
-
-        return redirect()->back()->with('success', 'Stock order updated successfully');
-    }
-    public function storeStockOrder(Request $request)
-    {
-        $request->validate([
-            'ingredient_id' => 'required|exists:ingredients,id',
-            'reorder_point' => 'required|numeric|min:0'
-
-        ]);
-
-        StockOrder::create([
+        StockAlertLevel::create([
             'ingredient_id' => $request->ingredient_id,
-            'reorder_point' => $request->reorder_point,
+            'low_stock' => $request->low_stock,
+            'critical_stock' => $request->critical_stock,
             'reorder_quantity' => $request->reorder_quantity,
-            'status' => 'pending'
         ]);
 
-        return redirect()->back()->with('success', 'Stock order added successfully');
+        return response()->json(['success' => true, 'message' => 'Stock alert created successfully']);
     }
+
+    // Update stock alert
+    public function updateStockAlert(Request $request, $id)
+    {
+        $request->validate([
+            'low_stock' => 'required|numeric|min:0',
+            'critical_stock' => 'nullable|numeric|min:0',
+            'reorder_quantity' => 'required|numeric|min:0.01',
+        ]);
+
+        $stockAlert = StockAlertLevel::findOrFail($id);
+
+        $stockAlert->update([
+            'low_stock' => $request->low_stock,
+            'critical_stock' => $request->critical_stock,
+            'reorder_quantity' => $request->reorder_quantity,
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Stock alert updated successfully']);
+    }
+
+    // Delete stock alert
+    public function deleteStockAlert($id)
+    {
+        $stockAlert = StockAlertLevel::findOrFail($id);
+        $stockAlert->delete();
+
+        return response()->json(['success' => true, 'message' => 'Stock alert deleted successfully']);
+    }
+
 
     public function ewallet_management()
     {

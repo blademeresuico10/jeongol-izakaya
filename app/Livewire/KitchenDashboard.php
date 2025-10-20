@@ -279,7 +279,7 @@ class KitchenDashboard extends Component
                 DB::rollBack();
                 session()->flash('error', 'Failed to process refill: ' . $e->getMessage());
             }
-        } else { // Normal order
+        } else {
             $order = orders::findOrFail($orderOrRefillId);
 
             if ($order->reservation_id) {
@@ -316,11 +316,19 @@ class KitchenDashboard extends Component
                         $ingredient = DB::table('ingredients')->find($menuIngredient->ingredient_id);
                         if (!$ingredient) continue;
 
-                        $quantityNeeded = ($menuIngredient->quantity / 1000) * $singleOrder->quantity;
+                        // Adjust deduction formula based on unit
+                        if ($ingredient->unit === 'pieces') {
+                            // For items like Coke, Coco Island
+                            $quantityNeeded = $menuIngredient->quantity * $singleOrder->quantity;
+                        } else {
+                            // For items in kg (meat, veggies, soupbase)
+                            $quantityNeeded = ($menuIngredient->quantity / 1000) * $singleOrder->quantity;
+                        }
 
+                        // Check stock
                         if ($ingredient->stocks < $quantityNeeded) {
                             throw new \Exception(
-                                "Insufficient stock for '{$ingredient->name}'. Required: {$quantityNeeded} kg, Available: {$ingredient->stocks} kg"
+                                "Insufficient stock for '{$ingredient->name}'. Required: {$quantityNeeded} {$ingredient->unit}, Available: {$ingredient->stocks} {$ingredient->unit}"
                             );
                         }
 
@@ -340,14 +348,16 @@ class KitchenDashboard extends Component
                             'stock_before' => $stockBefore,
                             'stock_after' => $stockAfter,
                             'notes' => sprintf(
-                                "Order #%d: %dx %s (%s) - Deducted %.3f kg of %s (%.0f g per serving)",
+                                "Order #%d: %dx %s (%s) - Deducted %.3f %s of %s (%.0f %s per serving)",
                                 $singleOrder->id,
                                 $singleOrder->quantity,
                                 $menuItem->menu_item,
                                 $menuItem->category,
                                 $quantityNeeded,
+                                $ingredient->unit,
                                 $ingredient->name,
-                                $menuIngredient->quantity
+                                $menuIngredient->quantity,
+                                $ingredient->unit
                             ),
                             'created_at' => now(),
                             'updated_at' => now()

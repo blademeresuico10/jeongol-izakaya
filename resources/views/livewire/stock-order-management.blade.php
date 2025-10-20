@@ -1,0 +1,346 @@
+<div wire:poll.10s>
+    @if (session()->has('success'))
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            {{ session('success') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
+    @if (session()->has('error'))
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            {{ session('error') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
+    @if (session()->has('info'))
+        <div class="alert alert-info alert-dismissible fade show mt-3" role="alert">
+            {{ session('info') }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+    @endif
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mt-3 mb-3 border-bottom-0" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link {{ $activeTab === 'stock-requests-list' ? 'active' : '' }}"
+                wire:click="$set('activeTab', 'stock-requests-list')" href="#" role="tab">
+                Stock Alerts
+                @if(isset($requestCount) && $requestCount > 0)
+                    <span class="badge badge-danger ml-1">{{ $requestCount }}</span>
+                @endif
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {{ $activeTab === 'pending-orders-list' ? 'active' : '' }}"
+                wire:click="$set('activeTab', 'pending-orders-list')" href="#" role="tab">
+                Pending Orders
+                @if($pendingCount > 0)
+                    <span class="badge badge-warning ml-1">{{ $pendingCount }}</span>
+                @endif
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab Contents -->
+    <div class="tab-content">
+
+        <!-- Stock Alerts Tab - Only show ingredients WITHOUT pending orders -->
+        <div class="tab-pane fade {{ $activeTab === 'stock-requests-list' ? 'show active' : '' }}">
+
+            <div class="card shadow-sm mb-3">
+                <div class="p-3">
+                    <h5 class="mb-3 font-weight-bold text-dark">
+                        Low Stock Alerts
+                    </h5>
+
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="bg-danger text-white font-weight-bold sticky-top">
+                                <tr>
+                                    <th>Ingredient</th>
+                                    <th>Current Stock</th>
+                                    <th>Reorder Qty</th>
+                                    <th>Status</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Critical Stock Ingredients (without pending orders) -->
+                                @php
+                                    $criticalWithoutOrders = $criticalStockIngredients->filter(function ($ingredient) {
+                                        return !$ingredient->pending_order_id;
+                                    });
+                                @endphp
+
+                                @foreach($criticalWithoutOrders as $ingredient)
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-exclamation-circle text-danger"></i>
+                                            <strong>{{ $ingredient->name }}</strong>
+                                        </td>
+                                        <td><span class="text-danger font-weight-bold">{{ $ingredient->stocks }}
+                                                {{ $ingredient->unit }}</span></td>
+                                        <td>
+                                            @if($ingredient->stockAlertLevel)
+                                                {{ $ingredient->stockAlertLevel->reorder_quantity }} {{ $ingredient->unit }}
+                                            @else
+                                                <span class="text-muted">N/A</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-danger">
+                                                <i class="fas fa-exclamation-circle"></i> Critical
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-primary"
+                                                wire:click="createStockOrder({{ $ingredient->id }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="createStockOrder({{ $ingredient->id }})">
+                                                <span wire:loading.remove
+                                                    wire:target="createStockOrder({{ $ingredient->id }})">
+                                                    <i class="fas fa-plus"></i> Create Order
+                                                </span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+
+                                @php
+                                    $lowWithoutOrders = $lowStockIngredients->filter(function ($ingredient) {
+                                        return !$ingredient->pending_order_id;
+                                    });
+                                @endphp
+
+                                @foreach($lowWithoutOrders as $ingredient)
+                                    <tr>
+                                        <td>
+                                            <i class="fas fa-exclamation-triangle text-warning"></i>
+                                            <strong>{{ $ingredient->name }}</strong>
+                                        </td>
+                                        <td><span class="text-warning font-weight-bold">{{ $ingredient->stocks }}
+                                                {{ $ingredient->unit }}</span></td>
+                                        <td>
+                                            @if($ingredient->stockAlertLevel)
+                                                {{ $ingredient->stockAlertLevel->reorder_quantity }} {{ $ingredient->unit }}
+                                            @else
+                                                <span class="text-muted">N/A</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-exclamation-triangle"></i> Low
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-primary"
+                                                wire:click="createStockOrder({{ $ingredient->id }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="createStockOrder({{ $ingredient->id }})">
+                                                <span wire:loading.remove
+                                                    wire:target="createStockOrder({{ $ingredient->id }})">
+                                                    <i class="fas fa-plus"></i> Create Order
+                                                </span>
+                                                <span wire:loading wire:target="createStockOrder({{ $ingredient->id }})">
+                                                    <i class="fas fa-spinner fa-spin"></i>
+                                                </span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+
+                                @if($criticalWithoutOrders->count() == 0 && $lowWithoutOrders->count() == 0)
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4">
+                                            <p class="mb-0">No low stock ingredient!</p>
+                                        </td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Orders Tab -->
+        <div class="tab-pane fade {{ $activeTab === 'pending-orders-list' ? 'show active' : '' }}">
+            <div class="card shadow-sm mb-3">
+                <div class="p-3">
+                    <h5 class="mb-3 font-weight-bold text-dark">
+                        Pending Stock Orders
+                    </h5>
+
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered  mb-0">
+                            <thead class="bg-warning text-dark font-weight-bold sticky-top">
+                                <tr>
+                                    <th>Ingredient</th>
+                                    <th>Current Stock</th>
+                                    <th>Order Quantity</th>
+                                    <th width="100">Status</th>
+                                    <th width="120">Created</th>
+                                    <th class="text-center" width="180">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($stockOrders->where('status', 'pending') as $order)
+                                    <tr>
+                                        <td>
+                                            <strong>{{ $order->ingredient->name }}</strong>
+                                            @if($order->ingredient->getStockStatus() === 'critical')
+                                                <i class="fas fa-exclamation-circle text-danger ml-1"
+                                                    title="Critical stock"></i>
+                                            @elseif($order->ingredient->getStockStatus() === 'low')
+                                                <i class="fas fa-exclamation-triangle text-warning ml-1" title="Low stock"></i>
+                                            @endif
+                                        </td>
+                                        <td>{{ $order->ingredient->stocks }} {{ $order->ingredient->unit }}</td>
+                                        <td><strong>{{ $order->quantity }}
+                                                {{ $order->ingredient->unit }}</strong></td>
+                                        <td>
+                                            <span class="badge badge-warning">
+                                                <i class="fas fa-clock"></i> Pending
+                                            </span>
+                                        </td>
+                                        <td><small>{{ $order->created_at->format('M d, Y') }}</small></td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-success"
+                                                wire:click="openReceiveModal({{ $order->id }})"
+                                                wire:loading.attr="disabled">
+                                                <i class="fas fa-check"></i> Receive
+                                            </button>
+                                            <a href="{{ route('admin.stock-request.print', $order->ingredient_id) }}"
+                                                target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-4">
+                                            <p class="mb-0">No pending stock orders.</p>
+                                        </td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Receive Stock Modal -->
+        @if($showReceiveModal)
+            <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-success text-white">
+                            <h5 class="modal-title">
+                                Confirm Stock Receipt
+                            </h5>
+                            <button type="button" class="close text-white" wire:click="closeReceiveModal">
+                                <span>&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <strong>Ingredient:</strong> {{ $ingredientName }}
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="font-weight-bold">Ordered Quantity:</label>
+                                    <div class="form-control bg-light">
+                                        {{ $orderedQuantity }} {{ $unit }}
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="font-weight-bold text-success">
+                                        Received Quantity: <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="number" id="receivedQuantityInput"
+                                        class="form-control @error('receivedQuantity') is-invalid @enderror"
+                                        wire:model.lazy="receivedQuantity"
+                                        min="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
+                                        step="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
+                                        placeholder="Enter received quantity">
+                                    @error('receivedQuantity')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                    @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
+                                        <small class="form-text text-muted">
+                                            <i class="fas fa-info-circle"></i> Whole numbers only (no decimals)
+                                        </small>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="font-weight-bold">
+                                    Expiration Date: <span class="text-muted">(Optional)</span>
+                                </label>
+                                <input type="date" class="form-control @error('expirationDate') is-invalid @enderror"
+                                    wire:model="expirationDate" min="{{ date('Y-m-d') }}">
+                                @error('expirationDate')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" wire:click="closeReceiveModal">
+                                Close
+                            </button>
+                            <button type="button" class="btn btn-success" wire:click="confirmReceive"
+                                wire:loading.attr="disabled" wire:target="confirmReceive">
+                                <span wire:loading.remove wire:target="confirmReceive">
+                                    <i class="fas fa-check"></i> Confirm Receipt
+                                </span>
+                                <span wire:loading wire:target="confirmReceive">
+                                    <i class="fas fa-spinner fa-spin"></i> Processing...
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
+    </div>
+</div>
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.addEventListener('print-stock-request', event => {
+                const data = event.detail[0];
+
+                document.getElementById('print-date').textContent = data.date;
+                document.getElementById('print-user').textContent = data.requestedBy;
+                document.getElementById('print-ingredient').textContent = data.ingredient.name;
+                document.getElementById('print-stock').textContent = `${data.ingredient.stocks} ${data.ingredient.unit}`;
+                document.getElementById('print-reorder').textContent = `${data.alertLevel.reorder_quantity} ${data.ingredient.unit}`;
+                document.getElementById('print-status').textContent = data.order.status;
+
+                const printContent = document.getElementById('printable-stock-request').innerHTML;
+
+                const printWindow = window.open('', '', 'width=800,height=600');
+                printWindow.document.write('<html><head><title>Stock Request Preview</title>');
+                printWindow.document.write('<style>body{font-family:Arial,sans-serif;color:#333;font-size:14px;padding:20px;} h2{margin-bottom:10px;}</style>');
+                printWindow.document.write('</head><body>');
+                printWindow.document.write(printContent);
+                printWindow.document.write('</body></html>');
+                printWindow.document.close();
+                printWindow.focus();
+                printWindow.print();
+            });
+        });
+    </script>
+@endpush

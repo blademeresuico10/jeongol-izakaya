@@ -8,6 +8,15 @@ class ingredients extends Model
 {
     protected $fillable = ['name', 'category', 'unit', 'stocks'];
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::updated(function ($ingredient) {
+            $ingredient->checkAndCreateStockOrder();
+        });
+    }
+
     public function batches()
     {
         return $this->hasMany(ingredientBatch::class);
@@ -33,6 +42,11 @@ class ingredients extends Model
         return $this->belongsToMany(menu::class, 'menu_ingredients', 'ingredient_id', 'menu_id')
             ->withPivot('quantity')
             ->withTimestamps();
+    }
+
+    public function stockAlertLevel()
+    {
+        return $this->hasOne(StockAlertLevel::class, 'ingredient_id');
     }
 
     public function stockOrders()
@@ -67,8 +81,66 @@ class ingredients extends Model
         return $this;
     }
 
-    public function stockAlertLevel()
+    public function checkAndCreateStockOrder()
     {
-        return $this->hasOne(StockAlertLevel::class, 'ingredient_id');
+        $alertLevel = $this->stockAlertLevel;
+
+        if (!$alertLevel) {
+            return null;
+        }
+
+        if ($this->stocks <= $alertLevel->low_stock) {
+
+            $existingOrder = StockOrder::where('ingredient_id', $this->id)
+                ->where('status', 'pending')
+                ->exists();
+
+            if ($existingOrder) {
+                return null;
+            }
+
+            return StockOrder::create([
+                'ingredient_id' => $this->id,
+                'alert_id'      => $alertLevel->id,
+                'quantity'      => $alertLevel->reorder_quantity,
+                'status'        => 'pending',
+            ]);
+        }
+
+        return null;
+    }
+
+    public function getStockStatus()
+    {
+        $alertLevel = $this->stockAlertLevel;
+
+        if (!$alertLevel) {
+            return 'unknown';
+        }
+
+        if ($this->stocks <= $alertLevel->critical_stock) {
+            return 'critical';
+        }
+
+        if ($this->stocks <= $alertLevel->low_stock) {
+            return 'low';
+        }
+
+        return 'normal';
+    }
+
+
+    public function getStockStatusBadge()
+    {
+        $status = $this->getStockStatus();
+
+        $badges = [
+            'critical' => '<span class="badge bg-danger">Critical</span>',
+            'low' => '<span class="badge bg-warning">Low</span>',
+            'normal' => '<span class="badge bg-success">Normal</span>',
+            'unknown' => '<span class="badge bg-secondary">Unknown</span>',
+        ];
+
+        return $badges[$status] ?? $badges['unknown'];
     }
 }

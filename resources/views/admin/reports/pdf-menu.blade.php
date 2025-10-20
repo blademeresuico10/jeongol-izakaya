@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Transaction Report</title>
+    <title>Menu Performance Report</title>
     <style>
         body {
             font-size: 11px;
@@ -120,28 +120,6 @@
             font-style: italic;
             padding: 15px;
         }
-
-        .status-badge {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: bold;
-        }
-
-        .status-completed {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .status-pending {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .status-cancelled {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
     </style>
 </head>
 
@@ -149,7 +127,7 @@
     <!-- Header -->
     <div class="header">
         <div class="company-name">JEONGOL IZAKAYA</div>
-        <div class="report-title">TRANSACTION REPORT</div>
+        <div class="report-title">MENU PERFORMANCE REPORT</div>
         <div class="date-range">
             <strong>Period:</strong> {{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}
         </div>
@@ -158,79 +136,93 @@
         </div>
     </div>
 
-    <!-- Summary Section -->
-    <div class="section-title">Transaction Summary</div>
+    <!-- Summary Box -->
     <div class="summary-box">
         <div class="summary-row">
-            <span class="summary-label">Total Transactions:</span>
-            <span>{{ number_format($totalTransactions) }}</span>
+            <span class="summary-label">Total Items Sold:</span>
+            <span>{{ number_format($totalItemsSold) }}</span>
         </div>
-        <div class="summary-row"
-            style="border-top: 2px solid #000; margin-top: 5px; padding-top: 8px; font-weight: bold; font-size: 12px;">
-            <span class="summary-label">Total Amount:</span>
-            <span>{{ number_format($totalAmount, 2) }}</span>
+        <div class="summary-row">
+            <span class="summary-label">Total Revenue:</span>
+            <span>{{ number_format($totalRevenue, 2) }}</span>
         </div>
+        @if($bestSelling)
+        <div class="summary-row">
+            <span class="summary-label">Best Selling Item:</span>
+            <span>{{ $bestSelling['menu_item'] }} ({{ $bestSelling['quantity'] }} sold)</span>
+        </div>
+        <div class="summary-row">
+            <span class="summary-label">Best Seller Revenue:</span>
+            <span>{{ number_format($bestSelling['revenue'], 2) }}</span>
+        </div>
+        @else
+        <div class="summary-row">
+            <span class="summary-label">Best Selling Item:</span>
+            <span>No sales data available</span>
+        </div>
+        @endif
     </div>
 
-    <!-- Payment Methods -->
-    <div class="section-title">Payment Methods</div>
+    <!-- Menu Performance Table -->
+    <div class="section-title">Menu Item Performance</div>
+
+    @if($menuItems->count() > 0)
     <table>
         <thead>
             <tr>
-                <th>Payment Method</th>
-                <th class="text-center">Transactions</th>
-                <th class="text-right">Total Amount</th>
+                <th style="width: 8%;" class="text-center">Rank</th>
+                <th style="width: 52%;">Menu Item</th>
+                <th style="width: 20%;" class="text-right">Quantity Sold</th>
+                <th style="width: 20%;" class="text-right">Revenue</th>
             </tr>
         </thead>
         <tbody>
+            @php
+                $hasAnySales = $menuItems->where('quantity', '>', 0)->count() > 0;
+            @endphp
+            
+            @foreach($menuItems as $index => $item)
             <tr>
-                <td>Cash</td>
-                <td class="text-center">{{ number_format($cashTransactions) }}</td>
-                <td class="text-right">{{ number_format($cashAmount, 2) }}</td>
+                <td class="text-center">
+                    @if($item['quantity'] > 0)
+                        {{ $index + 1 }}
+                    @else
+                        -
+                    @endif
+                </td>
+                <td>
+                    {{ $item['menu_item'] }}
+                    @if($item['quantity'] == 0)
+                        <span style="font-size: 9px;"> (No sales)</span>
+                    @endif
+                </td>
+                <td class="text-right">
+                    {{ number_format($item['quantity']) }}
+                </td>
+                <td class="text-right">
+                    {{ number_format($item['revenue'], 2) }}
+                </td>
             </tr>
-            <tr>
-                <td>E-wallet (GCash/Maya)</td>
-                <td class="text-center">{{ number_format($ewalletTransactions) }}</td>
-                <td class="text-right">{{ number_format($ewalletAmount, 2) }}</td>
-            </tr>
+            @endforeach
+        </tbody>
+        @if($hasAnySales)
+        <tfoot>
             <tr class="total-row">
-                <td>Total</td>
-                <td class="text-center">{{ number_format($cashTransactions + $ewalletTransactions) }}</td>
-                <td class="text-right">{{ number_format($cashAmount + $ewalletAmount, 2) }}</td>
+                <td colspan="2" class="text-right"><strong>TOTAL:</strong></td>
+                <td class="text-right"><strong>{{ number_format($totalItemsSold) }}</strong></td>
+                <td class="text-right"><strong>{{ number_format($totalRevenue, 2) }}</strong></td>
             </tr>
-        </tbody>
+        </tfoot>
+        @endif
     </table>
+    @else
+    <div class="no-data">
+        No menu performance data available for this period.
+    </div>
+    @endif
 
-    <!-- Transaction List -->
-    <div class="section-title">Transaction Details</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 8%;">ID</th>
-                <th style="width: 15%;">Order Type</th>
-                <th class="text-right" style="width: 15%;">Amount</th>
-                <th style="width: 15%;">Payment</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($transactionList as $transaction)
-                <tr>
-                    <td>{{ $transaction['id'] }}</td>
-                    <td>{{ $transaction['order_type'] }}</td>
-                    <td class="text-right">{{ number_format($transaction['amount'], 2) }}</td>
-                    <td>{{ $transaction['payment_method'] }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="5" class="no-data">No transactions for this period</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-
-    <!-- Footer -->
     <div class="footer">
-        <p>JEONGOL IZAKAYA • Transaction Report • {{ now()->format('F j, Y') }}</p>
+        <p>JEONGOL IZAKAYA • Menu Performance Report • {{ now()->format('F j, Y') }}</p>
     </div>
 </body>
 

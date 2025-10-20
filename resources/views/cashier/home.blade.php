@@ -361,7 +361,6 @@
         });
     }
 
-
     class CashierApp {
         constructor() {
             this.elements = {};
@@ -1147,7 +1146,7 @@
             // Check if we already have saved data for this item
             const key = `${itemName}_${itemIndex}`;
             const savedData = this.tempCustomerData[key];
-            const savedName = savedData ? savedData.name : '';
+            const savedIdNumber = savedData ? savedData.id_number : ''; // Changed from name to id_number
 
             const modalHtml = `
     <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -1172,14 +1171,24 @@
                 <input type="hidden" name="customer_type" value="${discountType}">
                 
                 <div>
-                    <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
-                        Customer Name <span class="text-red-500">*</span>
+                    <label for="customerIdNumber" class="block text-sm font-medium text-gray-700 mb-1">
+                        ID Number <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" id="customerName" name="name" required value="${savedName}"
+                    <input type="text" id="customerIdNumber" name="id_number" required value="${savedIdNumber}"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        placeholder="Enter customer name"
+                        placeholder="Enter ID number"
+                        oninput="this.value = this.value.replace(/[^a-zA-Z0-9-]/g, '')">
+                    <div id="idNumberError" class="text-red-500 text-xs mt-1 hidden">ID number is required</div>
+                </div>
+
+                <div>
+                    <label for="customerName" class="block text-sm font-medium text-gray-700 mb-1">
+                        Customer Name <span class="text-gray-400">(Optional)</span>
+                    </label>
+                    <input type="text" id="customerName" name="name" value="${savedData ? savedData.name || '' : ''}"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        placeholder="Enter customer name (optional)"
                         oninput="this.value = this.value.replace(/[0-9]/g, '')">
-                    <div id="nameError" class="text-red-500 text-xs mt-1 hidden">Customer name is required</div>
                 </div>
 
                 <div>
@@ -1217,6 +1226,8 @@
             const closeBtn = document.getElementById('closeCustomerInfoModal');
             const cancelBtn = document.getElementById('cancelCustomerInfo');
             const form = document.getElementById('customerInfoForm');
+            const idNumberInput = document.getElementById('customerIdNumber');
+            const idTypeInput = document.getElementById('customerIdType');
 
             const closeModal = () => {
                 if (modal) {
@@ -1235,82 +1246,180 @@
                 });
             }
 
+            // ✅ REAL-TIME VALIDATION
+            if (idNumberInput && idTypeInput) {
+                let validationTimeout;
+
+                idNumberInput.addEventListener('input', (e) => {
+                    const idNumber = e.target.value.trim();
+                    const idType = idTypeInput.value;
+                    const idNumberError = document.getElementById('idNumberError');
+
+                    clearTimeout(validationTimeout);
+
+                    if (!idNumber || idNumber.length < 2) {
+                        idNumberError.classList.add('hidden');
+                        return;
+                    }
+
+                    validationTimeout = setTimeout(() => {
+                        idNumberError.textContent = 'Checking...';
+                        idNumberError.classList.remove('hidden', 'text-red-500');
+                        idNumberError.classList.add('text-blue-500');
+
+                        fetch(`/cashier/check-customer?id_number=${encodeURIComponent(idNumber)}&id_type=${encodeURIComponent(idType)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const submitBtn = form.querySelector('button[type="submit"]');
+
+                                if (data.exists && !data.can_use_discount) {
+                                    idNumberError.textContent = 'This customer already used their discount today with this ID type.';
+                                    idNumberError.classList.remove('text-blue-500');
+                                    idNumberError.classList.add('text-red-500');
+                                    idNumberError.classList.remove('hidden');
+
+                                    if (submitBtn) {
+                                        submitBtn.disabled = true;
+                                        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                                    }
+                                } else {
+                                    idNumberError.classList.add('hidden');
+
+                                    if (submitBtn) {
+                                        submitBtn.disabled = false;
+                                        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                                    }
+
+                                    if (data.exists && data.customer_name) {
+                                        const nameInput = document.getElementById('customerName');
+                                        if (nameInput && !nameInput.value) {
+                                            nameInput.value = data.customer_name;
+                                        }
+                                    }
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Validation error:', error);
+                                idNumberError.classList.add('hidden');
+                            });
+                    }, 500);
+                });
+            }
+
             if (form) {
                 form.addEventListener('submit', (e) => {
                     e.preventDefault();
 
                     const formData = new FormData(form);
+                    const customerIdNumber = formData.get('id_number');
                     const customerName = formData.get('name');
                     const idType = formData.get('id_type');
-
-                    const nameError = document.getElementById('nameError');
+                    const idNumberError = document.getElementById('idNumberError');
                     let hasError = false;
 
-
-                    if (!customerName ||
-                        customerName === '' ||
-                        customerName === null ||
-                        customerName === undefined ||
-                        customerName.trim() === '' ||
-                        customerName.trim().length === 0) {
-
-                        nameError.textContent = 'Customer name is required and cannot be empty';
-                        nameError.classList.remove('hidden');
+                    if (!customerIdNumber || customerIdNumber.trim() === '' || customerIdNumber.trim().length === 0) {
+                        idNumberError.textContent = 'ID number is required';
+                        idNumberError.classList.remove('hidden', 'text-blue-500');
+                        idNumberError.classList.add('text-red-500');
                         hasError = true;
-                    }
-                    else if (customerName.trim().length < 2) {
-                        nameError.textContent = 'Customer name must be at least 2 characters';
-                        nameError.classList.remove('hidden');
+                    } else if (customerIdNumber.trim().length < 2) {
+                        idNumberError.textContent = 'ID number must be at least 2 characters';
+                        idNumberError.classList.remove('hidden', 'text-blue-500');
+                        idNumberError.classList.add('text-red-500');
                         hasError = true;
-                    }
-                    else {
-                        nameError.classList.add('hidden');
+                    } else {
+                        idNumberError.classList.add('hidden');
                     }
 
                     if (hasError) {
-                        this.showToast('Please enter a valid customer name before saving', 'error');
+                        this.showToast('Please enter a valid ID number', 'error');
                         return;
                     }
 
-                    const trimmedName = customerName.trim();
+                    const trimmedIdNumber = customerIdNumber.trim();
+                    const trimmedName = customerName ? customerName.trim() : '';
 
-                    if (!trimmedName || trimmedName === '' || trimmedName.length === 0) {
-                        this.showToast('Customer name cannot be empty', 'error');
-                        return;
+                    const submitBtn = form.querySelector('button[type="submit"]');
+
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.textContent = 'Checking...';
                     }
 
-                    const customerData = {
-                        name: trimmedName,
-                        id_type: idType,
-                        item_name: formData.get('item_name'),
-                        item_index: formData.get('item_index'),
-                        customer_type: formData.get('customer_type')
-                    };
+                    fetch(`/cashier/check-customer?id_number=${encodeURIComponent(trimmedIdNumber)}&id_type=${encodeURIComponent(idType)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.exists && !data.can_use_discount) {
+                                idNumberError.textContent = 'This customer already used their discount today with this ID type.';
+                                idNumberError.classList.remove('text-blue-500');
+                                idNumberError.classList.add('text-red-500');
+                                idNumberError.classList.remove('hidden');
 
+                                this.showToast('Discount already used today', 'error');
 
-                    if (this.saveCustomerInfoTemporarily(customerData)) {
-                        closeModal();
-                    }
+                                if (submitBtn) {
+                                    submitBtn.disabled = true;
+                                    submitBtn.textContent = 'Save';
+                                }
+                                return;
+                            }
+
+                            const customerData = {
+                                id_number: trimmedIdNumber,
+                                name: trimmedName,
+                                id_type: idType,
+                                item_name: formData.get('item_name'),
+                                item_index: formData.get('item_index'),
+                                customer_type: formData.get('customer_type')
+                            };
+
+                            if (this.saveCustomerInfoTemporarily(customerData)) {
+                                this.showToast('Customer information saved', 'success');
+                                closeModal();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            const customerData = {
+                                id_number: trimmedIdNumber,
+                                name: trimmedName,
+                                id_type: idType,
+                                item_name: formData.get('item_name'),
+                                item_index: formData.get('item_index'),
+                                customer_type: formData.get('customer_type')
+                            };
+
+                            if (this.saveCustomerInfoTemporarily(customerData)) {
+                                closeModal();
+                            }
+
+                            if (submitBtn) {
+                                submitBtn.disabled = false;
+                                submitBtn.textContent = 'Save';
+                            }
+                        });
                 });
             }
         }
 
         saveCustomerInfoTemporarily(customerData) {
             if (!customerData ||
-                !customerData.name ||
-                customerData.name === '' ||
-                customerData.name === null ||
-                customerData.name === undefined ||
-                customerData.name.trim() === '' ||
-                customerData.name.trim().length === 0) {
+                !customerData.id_number ||
+                customerData.id_number === '' ||
+                customerData.id_number === null ||
+                customerData.id_number === undefined ||
+                customerData.id_number.trim() === '' ||
+                customerData.id_number.trim().length === 0) {
 
-                this.showToast('Cannot save empty customer name', 'error');
+                this.showToast('Cannot save empty ID number', 'error');
                 return false;
             }
 
+
             const key = `${customerData.item_name}_${customerData.item_index}`;
             this.tempCustomerData[key] = {
-                name: customerData.name.trim(),
+                id_number: customerData.id_number.trim(),
+                name: customerData.name ? customerData.name.trim() : '',
                 id_type: customerData.id_type,
                 item_name: customerData.item_name,
                 item_index: parseInt(customerData.item_index),
@@ -1360,33 +1469,37 @@
             });
 
             if (hasActiveDiscounts) {
-                let itemsWithoutValidNames = [];
+                let itemsWithoutValidInfo = [];
 
                 discountedItems.forEach(item => {
                     const key = `${item.itemName}_${item.index}`;
                     const customerData = this.tempCustomerData[key];
 
-                    if (!customerData || !customerData.name || customerData.name.trim() === '') {
-                        itemsWithoutValidNames.push(item.itemName);
+                    if (!customerData ||
+                        !customerData.id_number ||
+                        customerData.id_number.trim() === '') {
+                        itemsWithoutValidInfo.push(item.itemName);
                     }
                 });
 
-                if (itemsWithoutValidNames.length > 0) {
-                    this.showToast(`Customer name is required for discounted items.`, "error");
+                if (itemsWithoutValidInfo.length > 0) {
+                    this.showToast(`ID number is required for discounted items.`, "error");
                     return;
                 }
             }
 
-            // Collect customer data
             const allCustomerData = [];
             if (hasActiveDiscounts) {
                 discountedItems.forEach(item => {
                     const key = `${item.itemName}_${item.index}`;
                     const customerInfo = this.tempCustomerData[key];
 
-                    if (customerInfo && customerInfo.name && customerInfo.name.trim() !== '') {
+                    if (customerInfo &&
+                        customerInfo.id_number &&
+                        customerInfo.id_number.trim() !== '') {
                         allCustomerData.push({
-                            name: customerInfo.name.trim(),
+                            id_number: customerInfo.id_number.trim(),
+                            name: customerInfo.name ? customerInfo.name.trim() : '',
                             id_type: customerInfo.id_type,
                             item_name: customerInfo.item_name,
                             item_index: parseInt(customerInfo.item_index),
@@ -1400,9 +1513,6 @@
 
             this.processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData);
         }
-
-
-
 
         setupCashReceivedInput() {
             const cashInput = document.getElementById('cashReceived');
@@ -1455,94 +1565,94 @@
         }
 
         processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData) {
-    this.showProcessingModal();
+            this.showProcessingModal();
 
-    const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
-    const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
+            const actualAdvancePayment = currentReservationData.order_type === 'walkin' ? 0 : advancePayment;
+            const actualFinalTotal = currentReservationData.order_type === 'walkin' ? subtotal : finalTotal;
 
 
-    const discountInputs = document.querySelectorAll('.discount-input');
-    const discountedPersons = {};
+            const discountInputs = document.querySelectorAll('.discount-input');
+            const discountedPersons = {};
 
-    discountInputs.forEach((input, index) => {
-        const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
-        const discountValue = parseInt(input.value) || 0;
+            discountInputs.forEach((input, index) => {
+                const orderDetailId = currentReservationData.orders[index]?.order_detail_id;
+                const discountValue = parseInt(input.value) || 0;
 
-        if (discountValue > 0 && orderDetailId) {
-            discountedPersons[orderDetailId] = discountValue;
-        }
-    });
+                if (discountValue > 0 && orderDetailId) {
+                    discountedPersons[orderDetailId] = discountValue;
+                }
+            });
 
-    const ordersData = currentReservationData.orders.map(order => {
-        return {
-            order_id: order.order_id,
-            order_name: order.order_name,
-            quantity: parseInt(order.quantity) || 1,
-            price: parseFloat(order.order_price || order.unit_price || order.regular_price || 0)
-        };
-    });
+            const ordersData = currentReservationData.orders.map(order => {
+                return {
+                    order_id: order.order_id,
+                    order_name: order.order_name,
+                    quantity: parseInt(order.quantity) || 1,
+                    price: parseFloat(order.order_price || order.unit_price || order.regular_price || 0)
+                };
+            });
 
-    const paymentData = {
-        reservation_id: currentReservationData.reservation_id,
-        order_type: currentReservationData.order_type,
-        subtotal: subtotal,
-        advance_payment: actualAdvancePayment,
-        total: actualFinalTotal,
-        orders: ordersData,
-        discounted_persons: discountedPersons,
-        customer_data: allCustomerData,
-        cash_received: cashReceived,
-        change_given: change
-    };
+            const paymentData = {
+                reservation_id: currentReservationData.reservation_id,
+                order_type: currentReservationData.order_type,
+                subtotal: subtotal,
+                advance_payment: actualAdvancePayment,
+                total: actualFinalTotal,
+                orders: ordersData,
+                discounted_persons: discountedPersons,
+                customer_data: allCustomerData,
+                cash_received: cashReceived,
+                change_given: change
+            };
 
-    fetch('/process-payment', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify(paymentData)
-    })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(data => {
-                    throw new Error(data.message || `HTTP ${response.status}: Error occurred`);
+            fetch('/process-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify(paymentData)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || `HTTP ${response.status}: Error occurred`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    this.removeProcessingModal();
+
+                    if (data.success) {
+                        this.printFinalReceipt(
+                            actualFinalTotal,
+                            subtotal,
+                            actualAdvancePayment,
+                            cashReceived,
+                            change,
+                            currentReservationData,
+                            data.transaction_no
+                        );
+
+                        this.updateTableStatusAfterPayment(currentReservationData.reservation_id);
+                        this.showToast("Payment completed successfully!", "success");
+
+                        this.tempCustomerData = {};
+                        this.currentReservationData = null;
+
+                        setTimeout(() => { location.reload(); }, 1500);
+                    } else {
+                        this.showToast(data.message || "Payment processing failed", "error");
+                    }
+                })
+                .catch(error => {
+                    this.removeProcessingModal();
+                    this.showToast(error.message || "Payment processing failed. Please try again.", "error");
                 });
-            }
-            return response.json();
-        })
-        .then(data => {
-            this.removeProcessingModal();
+        }
 
-            if (data.success) {
-                this.printFinalReceipt(
-                    actualFinalTotal, 
-                    subtotal, 
-                    actualAdvancePayment, 
-                    cashReceived, 
-                    change, 
-                    currentReservationData, 
-                    data.transaction_no 
-                );
-
-                this.updateTableStatusAfterPayment(currentReservationData.reservation_id);
-                this.showToast("Payment completed successfully!", "success");
-
-                this.tempCustomerData = {};
-                this.currentReservationData = null;
-
-                setTimeout(() => { location.reload(); }, 1500);
-            } else {
-                this.showToast(data.message || "Payment processing failed", "error");
-            }
-        })
-        .catch(error => {
-            this.removeProcessingModal();
-            this.showToast(error.message || "Payment processing failed. Please try again.", "error");
-        });
-}
-
-        printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, transactionNo ) {
+        printFinalReceipt(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, transactionNo) {
             const today = new Date();
             const dateStr = today.toLocaleDateString('en-PH', { year: 'numeric', month: '2-digit', day: '2-digit' });
             const timeStr = today.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', hour12: true });

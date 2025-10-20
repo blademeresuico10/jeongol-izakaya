@@ -36,7 +36,7 @@ class MenuSeeder extends Seeder
             ],
 
             [
-                'menu_item' => 'Wagyu Alacarte',
+                'menu_item' => 'Wagyu',
                 'regular_price' => 350.00,
                 'image' => 'wagyu_alacarte.jpg',
                 'category' => 'add_ons',

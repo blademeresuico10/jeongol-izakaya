@@ -25,10 +25,6 @@ class ingredientsSeeder extends Seeder
             ['name' => 'Hotpot Balls',  'category' => 'soupbase', 'unit' => 'kg',  'stocks' => 20],
             ['name' => 'Noodles',       'category' => 'soupbase', 'unit' => 'kg',  'stocks' => 20],
             ['name' => 'Coke',      'category' => 'beverage', 'unit' => 'pieces', 'stocks' => 100],
-            ['name' => 'Coke Zero', 'category' => 'beverage', 'unit' => 'pieces', 'stocks' => 100],
-            ['name' => 'Water',     'category' => 'beverage', 'unit' => 'pieces', 'stocks' => 100],
-            ['name' => 'Soju',      'category' => 'beverage', 'unit' => 'pieces', 'stocks' => 100],
-            ['name' => 'Ice Talk',  'category' => 'beverage', 'unit' => 'pieces', 'stocks' => 100],
             ['name' => 'Wagyu',     'category' => 'meat',    'unit' => 'kg',     'stocks' => 50], 
             ['name' => 'Coco Island', 'category' => 'beverage', 'unit' => 'pieces', 'stocks' => 100],  
         ];

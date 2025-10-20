@@ -292,6 +292,9 @@
             <div class="card shadow-sm mb-3">
                 <div class="card-header bg-secondary text-white py-2 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 font-weight-bold">Stock Level Management</h6>
+                    <button class="btn btn-sm btn-light" data-toggle="modal" data-target="#addStockAlertModal">
+                        <i class="fas fa-plus"></i> Add Alert
+                    </button>
                 </div>
                 <div class="card-body p-2">
                     <div id="stock-section">
@@ -300,30 +303,51 @@
                                 <thead class="thead-light sticky-top">
                                     <tr>
                                         <th>Ingredient Name</th>
+                                        <th>Current Stock</th>
                                         <th>Low Level Alert</th>
                                         <th>Critical Level Alert</th>
-                                        <th class="text-center" width="100">Actions</th>
+                                        <th>Reorder Quantity</th>
+                                        <th class="text-center" width="120">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse ($stock_level as $stocklevel)
-                                        <tr>
-                                            <td>{{ $stocklevel->ingredient->name }}</td>
-                                            <td>{{ $stocklevel->low_stock }}</td>
-                                            <td>{{ $stocklevel->critical_stock ?? '—' }}</td>
+                                        <tr
+                                            class="{{ $stocklevel->ingredient->getStockStatus() === 'critical' ? 'table-danger' : ($stocklevel->ingredient->getStockStatus() === 'low' ? 'table-warning' : '') }}">
+                                            <td>
+                                                {{ $stocklevel->ingredient->name }}
+                                                @if($stocklevel->ingredient->getStockStatus() === 'critical')
+                                                    <span class="badge badge-danger badge-sm ml-1">Critical</span>
+                                                @elseif($stocklevel->ingredient->getStockStatus() === 'low')
+                                                    <span class="badge badge-warning badge-sm ml-1">Low</span>
+                                                @endif
+                                            </td>
+                                            <td><strong>{{ $stocklevel->ingredient->stocks }}
+                                                    {{ $stocklevel->ingredient->unit }}</strong></td>
+                                            <td>{{ $stocklevel->low_stock }} {{ $stocklevel->ingredient->unit }}</td>
+                                            <td>{{ $stocklevel->critical_stock ?? '—' }}
+                                                {{ $stocklevel->critical_stock ? $stocklevel->ingredient->unit : '' }}
+                                            </td>
+                                            <td>{{ $stocklevel->reorder_quantity }} {{ $stocklevel->ingredient->unit }}</td>
                                             <td class="text-center">
                                                 <button class="btn btn-xs btn-primary p-1 edit-stock"
                                                     data-id="{{ $stocklevel->id }}"
                                                     data-ingredient="{{ $stocklevel->ingredient->name }}"
                                                     data-low="{{ $stocklevel->low_stock }}"
-                                                    data-critical="{{ $stocklevel->critical_stock }}">
+                                                    data-critical="{{ $stocklevel->critical_stock }}"
+                                                    data-reorder="{{ $stocklevel->reorder_quantity }}">
                                                     <i class="fas fa-edit" style="font-size: 10px;"></i>
+                                                </button>
+                                                <button class="btn btn-xs btn-danger p-1 ml-1 delete-stock"
+                                                    data-id="{{ $stocklevel->id }}"
+                                                    data-ingredient="{{ $stocklevel->ingredient->name }}">
+                                                    <i class="fas fa-trash" style="font-size: 10px;"></i>
                                                 </button>
                                             </td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="4" class="text-center text-muted">No stock alerts found.</td>
+                                            <td colspan="6" class="text-center text-muted">No stock alerts found.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -338,150 +362,92 @@
                 </div>
             </div>
 
-            <!--Order Stock Management-->
-            <div class="card shadow-sm mb-3">
-                <div class="card-header bg-warning text-dark py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 font-weight-bold">Order Stock Management</h6>
-                    <button class="btn btn-sm btn-dark" data-toggle="modal" data-target="#addOrderStockModal">
-                        <i class="fas fa-plus"></i> Add Order
-                    </button>
-                </div>
-                <div class="card-body p-2">
-                    <div id="stock-order-section">
-                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-sm table-bordered mb-0">
-                                <thead class="thead-light sticky-top">
-                                    <tr>
-                                        <th>Ingredient Name</th>
-                                        <th>Request Quantity</th>
-                                        <th>Reorder Quantity</th>
-                                        <th class="text-center" width="100">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($stock_order as $order)
-                                        <tr>
-                                            <td>{{ $order->ingredient->name }}</td>
-                                            <td>
-                                                {{ number_format($order->reorder_point, 2) }}
-                                                {{ $order->ingredient->unit == 'pieces' ? 'pcs' : $order->ingredient->unit }}
-                                            </td>
-                                            <td>
-                                                {{ number_format($order->reorder_quantity, 2) }}
-                                                {{ $order->ingredient->unit == 'pieces' ? 'pcs' : $order->ingredient->unit }}
-                                            </td>
-                                            <td class="text-center">
-                                                <button class="btn btn-xs btn-primary p-1 edit-order-stock"
-                                                    data-id="{{ $order->id }}"
-                                                    data-ingredient="{{ $order->ingredient->name }}"
-                                                    data-quantity="{{ $order->reorder_point }}"
-                                                    data-reorderquantity="{{ $order->reorder_quantity }}"
-                                                    data-unit="{{ $order->ingredient->unit }}">
-                                                    <i class="fas fa-edit" style="font-size: 10px;"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="3" class="text-center text-muted py-3">No stock orders found.</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                        @if($stock_order->hasPages())
-                            <div class="mt-3 d-flex justify-content-center">
-                                {{ $stock_order->onEachSide(1)->links('pagination::bootstrap-4') }}
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <!-- ADD ORDER STOCK MODAL -->
-            <div class="modal fade" id="addOrderStockModal" tabindex="-1">
+            <!-- Add Stock Alert Modal -->
+            <div class="modal fade" id="addStockAlertModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <div class="modal-header bg-warning text-dark py-2">
-                            <h6 class="modal-title mb-0">Add New Stock Order</h6>
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                        <div class="modal-header bg-secondary text-white">
+                            <h5 class="modal-title">Add Stock Alert</h5>
+                            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                         </div>
-                        <form action="{{ route('admin.stock_orders.store') }}" method="POST">
+                        <form id="addStockAlertForm">
                             @csrf
-                            <div class="modal-body p-3">
+                            <div class="modal-body">
                                 <div class="form-group">
-                                    <label class="small font-weight-bold">Ingredient</label>
-                                    <select name="ingredient_id" id="ingredientSelect"
-                                        class="form-control form-control-sm" required>
-                                        <option value="">Select Ingredient</option>
-                                        @foreach($ingredients ?? [] as $ingredient)
+                                    <label>Select Ingredient</label>
+                                    <select class="form-control" id="add-ingredient-id" required>
+                                        <option value="">Choose ingredient...</option>
+                                        @foreach($ingredients_without_alerts ?? [] as $ingredient)
                                             <option value="{{ $ingredient->id }}" data-unit="{{ $ingredient->unit }}">
-                                                {{ $ingredient->name }}
+                                                {{ $ingredient->name }} ({{ $ingredient->stocks }} {{ $ingredient->unit }})
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label class="small font-weight-bold">Alert Value (<span
-                                            id="addOrderUnit">—</span>)</label>
-                                    <input type="number" name="reorder_point" class="form-control form-control-sm"
-                                        min="0" step="0.01" required>
+                                    <label>Low Stock Alert</label>
+                                    <input type="number" class="form-control" id="add-low-stock" step="0.01" required>
                                 </div>
-                                <div class="form-group mb-0">
-                                    <!-- FIX: Changed name from reorder_point to reorder_quantity -->
-                                    <label class="small font-weight-bold">Reorder Quantity (<span
-                                            id="addOrderUnit2">—</span>)</label>
-                                    <input type="number" name="reorder_quantity" class="form-control form-control-sm"
-                                        min="0" step="0.01" required>
-                                </div>
-                            </div>
-                            <div class="modal-footer p-2">
-                                <button type="submit" class="btn btn-warning btn-sm">Add Order</button>
-                                <button type="button" class="btn btn-secondary btn-sm"
-                                    data-dismiss="modal">Cancel</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- EDIT ORDER STOCK MODAL -->
-            <div class="modal fade" id="editOrderStockModal" tabindex="-1">
-                <div class="modal-dialog modal-sm">
-                    <div class="modal-content">
-                        <div class="modal-header bg-warning text-dark py-2">
-                            <h6 class="modal-title mb-0">Edit Order: <span id="orderIngredientName"></span></h6>
-                            <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                        </div>
-                        <form id="editOrderStockForm" method="POST">
-                            @csrf
-                            @method('PUT')
-                            <div class="modal-body p-3">
                                 <div class="form-group">
-                                    <label class="small font-weight-bold">Request Quantity (<span
-                                            id="editOrderUnit">—</span>)</label>
-                                    <!-- FIX: Changed ID from editOrderQuantityInput to editReorderPointInput -->
-                                    <input type="number" name="reorder_point" id="editReorderPointInput"
-                                        class="form-control form-control-sm" min="0" step="0.01" required>
+                                    <label>Critical Stock Alert</label>
+                                    <input type="number" class="form-control" id="add-critical-stock" step="0.01">
                                 </div>
-                                <div class="form-group mb-0">
-                                    <label class="small font-weight-bold">Reorder Quantity (<span
-                                            id="editOrderUnit2">—</span>)</label>
-                                    <!-- FIX: Added unique ID editReorderQuantityInput -->
-                                    <input type="number" name="reorder_quantity" id="editReorderQuantityInput"
-                                        class="form-control form-control-sm" min="0" step="0.01" required>
+                                <div class="form-group">
+                                    <label>Reorder Quantity</label>
+                                    <input type="number" class="form-control" id="add-reorder-quantity" step="0.01"
+                                        required>
                                 </div>
                             </div>
-                            <div class="modal-footer p-2">
-                                <button type="submit" class="btn btn-warning btn-sm">Update</button>
-                                <button type="button" class="btn btn-secondary btn-sm"
-                                    data-dismiss="modal">Cancel</button>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-secondary">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
 
+            <!-- Edit Stock Alert Modal -->
+            <div class="modal fade" id="editStockModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Edit Stock Alert - <span id="modal-ingredient-name"></span></h5>
+                            <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+                        </div>
+                        <form id="editStockForm">
+                            @csrf
+                            <input type="hidden" id="stock-id">
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label>Low Stock
+                                        Alert</label>
+                                    <input type="number" class="form-control" id="low-stock" step="0.01" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Critical Stock
+                                        Alert</label>
+                                    <input type="number" class="form-control" id="critical-stock" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label>Reorder Quantity</label>
+                                    <input type="number" class="form-control" id="reorder-quantity" step="0.01"
+                                        required>
+                                   
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -594,38 +560,6 @@
         </div>
     </div>
 
-    <!-- MODIFY STOCK LEVEL MODAL -->
-    <div class="modal fade" id="modifyStockLevel">
-        <div class="modal-dialog modal-md">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white py-2">
-                    <h6 class="modal-title mb-0">Modify Stock Level: <span id="stockIngredientName"></span></h6>
-                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
-                </div>
-                <form id="modifyStockLevelForm" method="POST">
-                    @csrf
-                    @method('PUT')
-                    <div class="modal-body p-3">
-                        <div class="form-group">
-                            <label class="small font-weight-bold">Low Stock Level (kg)</label>
-                            <input type="number" name="low_stock" id="lowStockInput"
-                                class="form-control form-control-sm" min="0" step="0.01" required>
-                        </div>
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Critical Stock Level (kg)</label>
-                            <input type="number" name="critical_stock" id="criticalStockInput"
-                                class="form-control form-control-sm" min="0" step="0.01" required>
-                            <small class="text-muted">Must be lower than low stock level</small>
-                        </div>
-                    </div>
-                    <div class="modal-footer p-2">
-                        <button type="submit" class="btn btn-primary btn-sm">Update</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 
 
     @include('admin.layouts.script')
@@ -853,6 +787,145 @@
             renderCalendar();
             setupEventDelegation();
             showSuccessMessage();
+        });
+
+        // Add this inside your existing <script> tag
+
+        $(document).ready(function () {
+            // Edit Stock Alert
+            $(document).on('click', '.edit-stock', function () {
+                const id = $(this).data('id');
+                const ingredient = $(this).data('ingredient');
+                const low = $(this).data('low');
+                const critical = $(this).data('critical');
+                const reorder = $(this).data('reorder');
+
+                $('#stock-id').val(id);
+                $('#modal-ingredient-name').text(ingredient);
+                $('#low-stock').val(low);
+                $('#critical-stock').val(critical);
+                $('#reorder-quantity').val(reorder);
+
+                $('#editStockModal').modal('show');
+            });
+
+            // Submit Edit Stock Form
+            $('#editStockForm').on('submit', function (e) {
+                e.preventDefault();
+                const id = $('#stock-id').val();
+
+                $.ajax({
+                    url: `/stock-alerts/${id}`,
+                    method: 'PUT',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        low_stock: $('#low-stock').val(),
+                        critical_stock: $('#critical-stock').val(),
+                        reorder_quantity: $('#reorder-quantity').val()
+                    },
+                    success: function (response) {
+                        $('#editStockModal').modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Stock alert settings updated successfully',
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function (xhr) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: 'Failed to update stock alert'
+                        });
+                    }
+                });
+            });
+
+            // Add Stock Alert
+            $('#addStockAlertForm').on('submit', function (e) {
+                e.preventDefault();
+
+                $.ajax({
+                    url: '/stock-alerts',
+                    method: 'POST',
+                    data: {
+                        _token: $('meta[name="csrf-token"]').attr('content'),
+                        ingredient_id: $('#add-ingredient-id').val(),
+                        low_stock: $('#add-low-stock').val(),
+                        critical_stock: $('#add-critical-stock').val(),
+                        reorder_quantity: $('#add-reorder-quantity').val()
+                    },
+                    success: function (response) {
+                        $('#addStockAlertModal').modal('hide');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success!',
+                            text: 'Stock alert created successfully',
+                            timer: 2000
+                        }).then(() => {
+                            location.reload();
+                        });
+                    },
+                    error: function (xhr) {
+                        let errorMsg = 'Failed to create stock alert';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        }
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error!',
+                            text: errorMsg
+                        });
+                    }
+                });
+            });
+
+            // Delete Stock Alert
+            $(document).on('click', '.delete-stock', function () {
+                const id = $(this).data('id');
+                const ingredient = $(this).data('ingredient');
+
+                Swal.fire({
+                    title: 'Delete Stock Alert?',
+                    html: `Remove stock alert for <strong>${ingredient}</strong>?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, Delete',
+                    cancelButtonText: 'Cancel'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        $.ajax({
+                            url: `/stock-alerts/${id}`,
+                            method: 'DELETE',
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content')
+                            },
+                            success: function (response) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted!',
+                                    text: 'Stock alert removed successfully',
+                                    timer: 2000
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            },
+                            error: function (xhr) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: 'Failed to delete stock alert'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
         });
     </script>
 </div>
