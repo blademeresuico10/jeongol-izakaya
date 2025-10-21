@@ -132,76 +132,66 @@ class ReportsController extends Controller
         $startDate = Carbon::parse($request->start_date)->startOfDay();
         $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-        // Get all transactions
-        $transactions = transaction::with(['reservation.customer', 'walkin'])
+        $transactions = transaction::with(['reservation.customer', 'walkin', 'cashier'])
             ->whereBetween('created_at', [$startDate, $endDate])
-            ->orderBy('created_at', 'desc')
+            ->where('status', 'Completed')
             ->get();
 
-        // Summary metrics
         $totalTransactions = $transactions->count();
-        $completedTransactions = $transactions->where('status', 'Completed')->count();
-        $pendingTransactions = $transactions->where('status', 'Pending')->count();
-        $totalAmount = $transactions->where('status', 'Completed')->sum('grand_total');
+        $totalAmount = $transactions->sum('grand_total');
 
-        // Payment method breakdown
-        $cashTransactions = $transactions->where('status', 'Completed')
-            ->where('payment_method', 'cash')->count();
-        $cashAmount = $transactions->where('status', 'Completed')
-            ->where('payment_method', 'cash')->sum('grand_total');
+        $walkinTransactions = $transactions->filter(fn($t) => is_null($t->reservation_id));
+        $reservationTransactions = $transactions->filter(fn($t) => !is_null($t->reservation_id));
 
-        // E-wallet from reservation payments
-        $ewalletTransactions = DB::table('reservation_payment_details as rpd')
-            ->join('transactions as t', 'rpd.reservation_id', '=', 't.reservation_id')
-            ->where('t.status', 'Completed')
-            ->whereBetween('t.created_at', [$startDate, $endDate])
-            ->whereIn('rpd.payment_method', ['gcash', 'maya'])
-            ->count();
+        $categorizedData = [
+            [
+                'category' => 'Walk-in',
+                'payment_method' => 'Cash',
+                'transaction_count' => $walkinTransactions->count(),
+                'total_amount' => $walkinTransactions->sum('grand_total'),
+            ],
+            [
+                'category' => 'Reservation',
+                'payment_method' => 'Cash',
+                'transaction_count' => $reservationTransactions->count(),
+                'total_amount' => $reservationTransactions->sum('grand_total'),
+            ],
+        ];
 
-        $ewalletAmount = DB::table('reservation_payment_details as rpd')
-            ->join('transactions as t', 'rpd.reservation_id', '=', 't.reservation_id')
-            ->where('t.status', 'Completed')
-            ->whereBetween('t.created_at', [$startDate, $endDate])
-            ->whereIn('rpd.payment_method', ['gcash', 'maya'])
-            ->sum('rpd.advance_payment');
+        $categorizedData = collect($categorizedData)
+            ->filter(fn($item) => $item['transaction_count'] > 0)
+            ->values();
 
-        // Transaction list
-        $transactionList = $transactions->map(function ($transaction) {
-            $customerName = 'Walk-in Customer';
-            $orderType = 'Walk-in';
+        $cashierSummary = $transactions->groupBy(
+            fn($t) =>
+            $t->cashier
+                ? "{$t->cashier->firstname} {$t->cashier->lastname}"
+                : 'Unknown Cashier'
+        )
+            ->map(function ($group, $cashierName) {
+                return [
+                    'cashier_name' => $cashierName,
+                    'transaction_count' => $group->count(),
+                    'total_amount' => $group->sum('grand_total'),
+                ];
+            })
+            ->values();
 
-            if ($transaction->reservation) {
-                $customerName = $transaction->reservation->customer->name ?? 'N/A';
-                $orderType = 'Reservation';
-            } elseif ($transaction->walkin) {
-                $customerName = 'Walk-in #' . $transaction->walkin->id;
-            }
 
-            return [
-                'id' => $transaction->id,
-                'date' => Carbon::parse($transaction->created_at)->format('M d, Y h:i A'),
-                'customer_name' => $customerName,
-                'order_type' => $orderType,
-                'amount' => floatval($transaction->grand_total),
-                'payment_method' => ucfirst($transaction->payment_method ?? 'N/A'),
-                'status' => $transaction->status,
-            ];
-        });
 
         return response()->json([
             'success' => true,
             'data' => [
                 'summary' => [
                     'total_transactions' => $totalTransactions,
-                    'completed_transactions' => $completedTransactions,
-                    'pending_transactions' => $pendingTransactions,
                     'total_amount' => round($totalAmount, 2),
-                    'cash_transactions' => $cashTransactions,
-                    'cash_amount' => round($cashAmount, 2),
-                    'ewallet_transactions' => $ewalletTransactions,
-                    'ewallet_amount' => round($ewalletAmount, 2),
+                    'date_range' => [
+                        'from' => $startDate->format('M d, Y'),
+                        'to' => $endDate->format('M d, Y'),
+                    ],
                 ],
-                'transactions' => $transactionList,
+                'categorized_transactions' => $categorizedData,
+                'cashier_summary' => $cashierSummary,
             ]
         ]);
     }
@@ -232,48 +222,56 @@ class ReportsController extends Controller
 
     private function getStockMovementReport($startDate, $endDate)
     {
-        $movements = ingredientMovements::with(['ingredient', 'user', 'ingredientBatch'])
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        try {
+            $movements = ingredientMovements::with(['ingredient'])
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->orderBy('created_at', 'desc')
+                ->get();
 
-        $stockIn = $movements->where('type', 'stock_in')->count();
-        $stockOut = $movements->whereIn('type', ['stock_out', 'used'])->count();
-        $expired = $movements->where('type', 'expired')->count();
+            $stockInQtyKg = $movements->where('type', 'stock_in')
+                ->where('ingredient.unit', 'kg')->sum('quantity');
 
-        $stockInQty = $movements->where('type', 'stock_in')->sum('quantity');
-        $stockOutQty = $movements->whereIn('type', ['stock_out', 'used'])->sum('quantity');
-        $expiredQty = $movements->where('type', 'expired')->sum('quantity');
+            $stockInQtyPcs = $movements->where('type', 'stock_in')
+                ->where('ingredient.unit', 'pcs')->sum('quantity');
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'report_type' => 'stock-movement',
-                'summary' => [
-                    'stock_in' => $stockIn,
-                    'stock_out' => $stockOut,
-                    'expired' => $expired,
-                    'total_movements' => $movements->count(),
-                    'stock_in_qty' => round($stockInQty, 2),
-                    'stock_out_qty' => round($stockOutQty, 2),
-                    'expired_qty' => round($expiredQty, 2),
-                    'unit' => 'kg/pieces',
-                ],
-                'movements' => $movements->map(function ($move) {
-                    return [
-                        'date' => $move->created_at->format('M d, Y h:i A'),
-                        'ingredient' => $move->ingredient->name ?? 'Unknown',
-                        'category' => $move->ingredient->category ?? 'Unknown',
-                        'type' => $move->type,
-                        'quantity' => round($move->quantity, 2),
-                        'unit' => $move->ingredient->unit ?? 'kg',
-                        'stock_before' => round($move->stock_before, 2),
-                        'stock_after' => round($move->stock_after, 2),
-                        'notes' => $move->notes,
-                    ];
-                })->values(),
-            ]
-        ]);
+            $stockOutQtyKg = $movements->whereIn('type', ['stock_out', 'used', 'expired'])
+                ->where('ingredient.unit', 'kg')->sum('quantity');
+
+            $stockOutQtyPcs = $movements->whereIn('type', ['stock_out', 'used', 'expired'])
+                ->where('ingredient.unit', 'pcs')->sum('quantity');
+
+            $response = [
+                'success' => true,
+                'data' => [
+                    'report_type' => 'stock-movement',
+                    'summary' => [
+                        'stock_in_kg' => round($stockInQtyKg, 2),
+                        'stock_in_pcs' => round($stockInQtyPcs, 2),
+                        'stock_out_kg' => round($stockOutQtyKg, 2),
+                        'stock_out_pcs' => round($stockOutQtyPcs, 2),
+                    ],
+                    'movements' => $movements->map(function ($move) {
+                        return [
+                            'date' => $move->created_at->format('M d, Y h:i A'),
+                            'category' => $move->ingredient->category ?? 'Unknown',
+                            'type' => $move->type,
+                            'quantity' => round($move->quantity, 2),
+                            'unit' => $move->ingredient->unit ?? 'kg',
+                        ];
+                    })->values(),
+                ]
+            ];
+
+
+            return response()->json($response);
+        } catch (\Throwable $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate stock movement report',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     private function getExpiredItemsReport($startDate, $endDate)
@@ -292,7 +290,6 @@ class ReportsController extends Controller
             return $item->quantity * 100;
         });
 
-        // Group by category (using your actual categories)
         $byCategory = $expiredItems->groupBy(function ($item) {
             return $item->ingredientBatch->ingredient->category ?? 'Unknown';
         })->map(function ($items, $category) {
@@ -368,35 +365,39 @@ class ReportsController extends Controller
         $totalConsumed = $movements->count();
         $totalQuantity = $movements->sum('quantity');
         $totalValue = $movements->sum(fn($m) => $m->quantity * 100);
-
         $periodDays = max(1, $startDate->diffInDays($endDate) + 1);
         $avgDaily = $totalQuantity / $periodDays;
 
-        // Group by category (using your actual categories)
-        $byCategory = $movements->groupBy(function ($move) {
-            return $move->ingredient->category ?? 'Unknown';
-        })->map(function ($items, $category) use ($totalQuantity) {
-            $qty = $items->sum('quantity');
-            $percentage = $totalQuantity > 0 ? round(($qty / $totalQuantity) * 100, 1) : 0;
+        // 🔹 Group movements by Date + Category
+        $groupedConsumption = $movements
+            ->groupBy(function ($move) {
+                return Carbon::parse($move->created_at)->format('Y-m-d');
+            })
+            ->flatMap(function ($dayGroup, $date) {
+                return $dayGroup->groupBy(function ($item) {
+                    return $item->ingredient->category ?? 'Unknown';
+                })->map(function ($catGroup, $category) use ($date) {
+                    $qty = $catGroup->sum('quantity');
+                    $unit = optional($catGroup->first()->ingredient)->unit ?? 'kg';
+                    return [
+                        'date' => Carbon::parse($date)->format('M d, Y'),
+                        'category' => $category,
+                        'quantity' => round($qty, 2),
+                        'unit' => $unit,
+                    ];
+                });
+            })
+            ->values();
 
-            return [
-                'name' => $category,
-                'quantity' => round($qty, 2),
-                'value' => round($items->sum(fn($i) => $i->quantity * 100), 2),
-                'percentage' => $percentage,
-                'icon' => $this->getCategoryIcon($category),
-                'color' => $this->getCategoryColor($category),
-            ];
-        })->values();
-
+        // 🔹 Top consumed items
         $topConsumed = $movements->groupBy('ingredient_id')
             ->map(function ($items) {
                 $ingredient = $items->first()->ingredient;
                 return [
-                    'name' => $ingredient->name,
-                    'category' => $ingredient->category,
+                    'name' => $ingredient->name ?? 'Unknown',
+                    'category' => $ingredient->category ?? 'Unknown',
                     'total_consumed' => round($items->sum('quantity'), 2),
-                    'unit' => $ingredient->unit,
+                    'unit' => $ingredient->unit ?? 'kg',
                     'usage_count' => $items->count(),
                     'value' => round($items->sum(fn($i) => $i->quantity * 100), 2),
                 ];
@@ -405,22 +406,18 @@ class ReportsController extends Controller
             ->take(10)
             ->values();
 
+        // 🔹 Trend info
         $dailyUsage = $movements->groupBy(function ($move) {
             return Carbon::parse($move->created_at)->format('Y-m-d');
         })->map(fn($items) => $items->sum('quantity'));
 
         $peakDay = null;
         if ($dailyUsage->isNotEmpty()) {
-            $maxDay = $dailyUsage->keys()->zip($dailyUsage->values())
-                ->sortByDesc(fn($item) => $item[1])
-                ->first();
-
-            if ($maxDay) {
-                $peakDay = [
-                    'date' => Carbon::parse($maxDay[0])->format('M d, Y'),
-                    'value' => round($maxDay[1], 2),
-                ];
-            }
+            $maxDay = $dailyUsage->sortDesc()->keys()->first();
+            $peakDay = [
+                'date' => Carbon::parse($maxDay)->format('M d, Y'),
+                'value' => round($dailyUsage[$maxDay], 2),
+            ];
         }
 
         return response()->json([
@@ -432,30 +429,20 @@ class ReportsController extends Controller
                     'total_quantity' => round($totalQuantity, 2),
                     'total_value' => round($totalValue, 2),
                     'avg_daily' => round($avgDaily, 2),
-                    'by_category' => $byCategory,
                     'trends' => [
-                        'peak_day' => $peakDay ? $peakDay['date'] : 'N/A',
-                        'peak_value' => $peakDay ? $peakDay['value'] : 0,
+                        'peak_day' => $peakDay['date'] ?? 'N/A',
+                        'peak_value' => $peakDay['value'] ?? 0,
                         'avg_per_day' => round($avgDaily, 2),
                         'direction' => 'up',
                         'change_percentage' => 0,
                     ],
                 ],
-                'consumption_data' => $movements->map(function ($move) {
-                    return [
-                        'date' => $move->created_at->format('M d, Y'),
-                        'ingredient' => $move->ingredient->name ?? 'Unknown',
-                        'category' => $move->ingredient->category ?? 'Unknown',
-                        'quantity' => round($move->quantity, 2),
-                        'unit' => $move->ingredient->unit ?? 'kg',
-                        'used_for' => $move->order_id ? "Order #{$move->order_id}" : null,
-                        'value' => round($move->quantity * 100, 2),
-                    ];
-                })->values(),
+                'consumption_data' => $groupedConsumption,
                 'top_consumed' => $topConsumed,
-            ]
+            ],
         ]);
     }
+
 
     private function getCategoryIcon($category)
     {
@@ -515,18 +502,14 @@ class ReportsController extends Controller
             })
             ->get();
 
-        // Merge both order collections
         $servedOrders = $reservationOrders->merge($walkinOrders);
 
-        // Calculate total items sold
         $totalItemsSold = $servedOrders->sum('quantity');
 
-        // Calculate total revenue
         $totalRevenue = $servedOrders->sum(function ($order) {
             return $order->quantity * $order->price;
         });
 
-        // Group by menu items
         $menuPerformance = $servedOrders->groupBy('menu_id')->map(function ($orders) {
             $menu = $orders->first()->menu;
             if (!$menu) {
@@ -546,10 +529,8 @@ class ReportsController extends Controller
             ];
         })->filter()->sortByDesc('quantity')->values();
 
-        // Get best-selling item
         $bestSelling = $menuPerformance->first();
 
-        // Get all menu items with zero sales
         $soldMenuIds = $menuPerformance->pluck('menu_id')->toArray();
         $zeroSalesItems = Menu::whereNotIn('id', $soldMenuIds)
             ->where('status', 'available')
@@ -563,7 +544,6 @@ class ReportsController extends Controller
                 ];
             });
 
-        // Merge sold items with zero sales items
         $allMenuItems = $menuPerformance->concat($zeroSalesItems);
 
         return response()->json([
@@ -694,7 +674,6 @@ class ReportsController extends Controller
             return back()->with('error', 'Failed to generate PDF report: ' . $e->getMessage());
         }
     }
-
     public function transactionReportPdf(Request $request)
     {
         $request->validate([
@@ -705,73 +684,45 @@ class ReportsController extends Controller
         $dateFrom = Carbon::parse($request->start_date)->startOfDay();
         $dateTo = Carbon::parse($request->end_date)->endOfDay();
 
-        // Get all transactions
-        $transactions = transaction::with(['reservation.customer', 'walkin'])
+        $transactions = transaction::with(['reservation.customer', 'walkin', 'cashier'])
             ->whereBetween('created_at', [$dateFrom, $dateTo])
-            ->orderBy('created_at', 'desc')
+            ->where('status', 'Completed')
             ->get();
 
-        // Summary metrics
         $totalTransactions = $transactions->count();
-        $completedTransactions = $transactions->where('status', 'Completed')->count();
-        $pendingTransactions = $transactions->where('status', 'Pending')->count();
-        $totalAmount = $transactions->where('status', 'Completed')->sum('grand_total');
+        $totalAmount = $transactions->sum('grand_total');
 
-        // Payment method breakdown
-        $cashTransactions = $transactions->where('status', 'Completed')
-            ->where('payment_method', 'cash')->count();
-        $cashAmount = $transactions->where('status', 'Completed')
-            ->where('payment_method', 'cash')->sum('grand_total');
+        // Cashier grouping with firstname + lastname
+        $cashierData = $transactions
+            ->groupBy('cashier_id')
+            ->map(function ($group) {
+                $cashier = optional($group->first()->cashier);
+                return [
+                    'cashier_name' => $cashier
+                        ? "{$cashier->firstname} {$cashier->lastname}"
+                        : 'Unknown Cashier',
+                    'transaction_count' => $group->count(),
+                    'total_amount' => $group->sum('grand_total'),
+                ];
+            })
+            ->values()
+            ->toArray();
 
-        // E-wallet from reservation payments
-        $ewalletTransactions = DB::table('reservation_payment_details as rpd')
-            ->join('transactions as t', 'rpd.reservation_id', '=', 't.reservation_id')
-            ->where('t.status', 'Completed')
-            ->whereBetween('t.created_at', [$dateFrom, $dateTo])
-            ->whereIn('rpd.payment_method', ['gcash', 'maya'])
-            ->count();
-
-        $ewalletAmount = DB::table('reservation_payment_details as rpd')
-            ->join('transactions as t', 'rpd.reservation_id', '=', 't.reservation_id')
-            ->where('t.status', 'Completed')
-            ->whereBetween('t.created_at', [$dateFrom, $dateTo])
-            ->whereIn('rpd.payment_method', ['gcash', 'maya'])
-            ->sum('rpd.advance_payment');
-
-        // Transaction list
-        $transactionList = $transactions->map(function ($transaction) {
-            $customerName = 'Walk-in Customer';
-            $orderType = 'Walk-in';
-
-            if ($transaction->reservation) {
-                $customerName = $transaction->reservation->customer->name ?? 'N/A';
-                $orderType = 'Reservation';
-            } elseif ($transaction->walkin) {
-                $customerName = 'Walk-in #' . $transaction->walkin->id;
-            }
-
-            return [
-                'id' => $transaction->id,
-                'date' => Carbon::parse($transaction->created_at)->format('M d, Y h:i A'),
-                'customer_name' => $customerName,
-                'order_type' => $orderType,
-                'amount' => floatval($transaction->grand_total),
-                'payment_method' => ucfirst($transaction->payment_method ?? 'N/A'),
-                'status' => $transaction->status,
-            ];
-        });
+        $data = [
+            'summary' => [
+                'total_transactions' => $totalTransactions,
+                'total_amount' => round($totalAmount, 2),
+                'date_range' => [
+                    'from' => $dateFrom->format('M d, Y'),
+                    'to' => $dateTo->format('M d, Y'),
+                ],
+            ],
+            'cashier_summary' => $cashierData,
+        ];
 
         try {
             $pdf = PDF::loadView('admin.reports.pdf-transaction', [
-                'totalTransactions' => $totalTransactions,
-                'completedTransactions' => $completedTransactions,
-                'pendingTransactions' => $pendingTransactions,
-                'totalAmount' => $totalAmount,
-                'cashTransactions' => $cashTransactions,
-                'cashAmount' => $cashAmount,
-                'ewalletTransactions' => $ewalletTransactions,
-                'ewalletAmount' => $ewalletAmount,
-                'transactionList' => $transactionList,
+                'data' => $data,
                 'dateFrom' => $dateFrom,
                 'dateTo' => $dateTo,
                 'generatedAt' => now(),
@@ -782,6 +733,8 @@ class ReportsController extends Controller
             return back()->with('error', 'Failed to generate PDF report: ' . $e->getMessage());
         }
     }
+
+
 
     private function getStockMovementData($startDate, $endDate)
     {

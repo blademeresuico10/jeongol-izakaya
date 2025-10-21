@@ -1,146 +1,73 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <title>Transaction Report</title>
     <style>
         body {
+            font-family: 'Arial', sans-serif;
             font-size: 11px;
-            line-height: 1.4;
-            color: #000;
-            margin: 0;
-            padding: 15px;
-            font-family: Arial, sans-serif;
+            margin: 30px;
+            color: #333;
         }
-
-        .header {
+        .header, .footer {
             text-align: center;
             margin-bottom: 20px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
         }
-
         .report-title {
-            font-size: 18px;
+            font-size: 16px;
             font-weight: bold;
-            margin-bottom: 3px;
         }
-
         .company-name {
             font-size: 14px;
             font-weight: bold;
             margin-bottom: 8px;
         }
-
-        .date-range {
-            font-size: 11px;
-            margin-bottom: 3px;
-        }
-
-        .generated-info {
-            font-size: 10px;
-            color: #666;
-        }
-
         .section-title {
-            font-size: 12px;
+            font-size: 13px;
             font-weight: bold;
-            margin-top: 15px;
+            margin-top: 25px;
             margin-bottom: 8px;
-            text-transform: uppercase;
+            border-bottom: 1px solid #000;
+            padding-bottom: 3px;
         }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-        }
-
-        th,
-        td {
-            border: 1px solid #000;
-            padding: 6px 8px;
-            text-align: left;
-        }
-
-        th {
-            background-color: #e8e8e8;
-            font-weight: bold;
-            font-size: 10px;
-            text-transform: uppercase;
-        }
-
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .total-row {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-
         .summary-box {
-            border: 2px solid #000;
+            border: 1px solid #000;
             padding: 10px;
             margin-bottom: 15px;
         }
-
         .summary-row {
             display: flex;
             justify-content: space-between;
-            padding: 4px 0;
-            border-bottom: 1px dotted #ccc;
+            margin: 2px 0;
         }
-
-        .summary-row:last-child {
-            border-bottom: none;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
         }
-
-        .summary-label {
+        th, td {
+            padding: 6px 8px;
+            border: 1px solid #999;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
             font-weight: bold;
         }
-
-        .footer {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 9px;
-            color: #666;
-            border-top: 1px solid #000;
-            padding-top: 8px;
+        .text-right {
+            text-align: right;
         }
-
         .no-data {
             text-align: center;
-            color: #666;
             font-style: italic;
-            padding: 15px;
+            color: #666;
+            padding: 10px 0;
         }
-
-        .status-badge {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: bold;
-        }
-
-        .status-completed {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .status-pending {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .status-cancelled {
-            background-color: #f8d7da;
-            color: #721c24;
+        .footer p {
+            font-size: 10px;
+            color: #555;
+            margin-top: 30px;
         }
     </style>
 </head>
@@ -158,71 +85,27 @@
         </div>
     </div>
 
-    <!-- Summary Section -->
-    <div class="section-title">Transaction Summary</div>
-    <div class="summary-box">
-        <div class="summary-row">
-            <span class="summary-label">Total Transactions:</span>
-            <span>{{ number_format($totalTransactions) }}</span>
-        </div>
-        <div class="summary-row"
-            style="border-top: 2px solid #000; margin-top: 5px; padding-top: 8px; font-weight: bold; font-size: 12px;">
-            <span class="summary-label">Total Amount:</span>
-            <span>{{ number_format($totalAmount, 2) }}</span>
-        </div>
-    </div>
 
-    <!-- Payment Methods -->
-    <div class="section-title">Payment Methods</div>
+    <!-- Cashier Logs -->
+    <div class="section-title">Cashier Logs</div>
     <table>
         <thead>
             <tr>
-                <th>Payment Method</th>
-                <th class="text-center">Transactions</th>
-                <th class="text-right">Total Amount</th>
+                <th style="width: 40%;">Cashier Name</th>
+                <th style="width: 30%;" class="text-right">Transaction Count</th>
+                <th style="width: 30%;" class="text-right">Total Amount</th>
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>Cash</td>
-                <td class="text-center">{{ number_format($cashTransactions) }}</td>
-                <td class="text-right">{{ number_format($cashAmount, 2) }}</td>
-            </tr>
-            <tr>
-                <td>E-wallet (GCash/Maya)</td>
-                <td class="text-center">{{ number_format($ewalletTransactions) }}</td>
-                <td class="text-right">{{ number_format($ewalletAmount, 2) }}</td>
-            </tr>
-            <tr class="total-row">
-                <td>Total</td>
-                <td class="text-center">{{ number_format($cashTransactions + $ewalletTransactions) }}</td>
-                <td class="text-right">{{ number_format($cashAmount + $ewalletAmount, 2) }}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- Transaction List -->
-    <div class="section-title">Transaction Details</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 8%;">ID</th>
-                <th style="width: 15%;">Order Type</th>
-                <th class="text-right" style="width: 15%;">Amount</th>
-                <th style="width: 15%;">Payment</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($transactionList as $transaction)
+            @forelse($data['cashier_summary'] as $cashier)
                 <tr>
-                    <td>{{ $transaction['id'] }}</td>
-                    <td>{{ $transaction['order_type'] }}</td>
-                    <td class="text-right">{{ number_format($transaction['amount'], 2) }}</td>
-                    <td>{{ $transaction['payment_method'] }}</td>
+                    <td>{{ $cashier['cashier_name'] }}</td>
+                    <td class="text-right">{{ number_format($cashier['transaction_count']) }}</td>
+                    <td class="text-right">₱{{ number_format($cashier['total_amount'], 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="no-data">No transactions for this period</td>
+                    <td colspan="3" class="no-data">No cashier logs for this period</td>
                 </tr>
             @endforelse
         </tbody>
@@ -233,5 +116,4 @@
         <p>JEONGOL IZAKAYA • Transaction Report • {{ now()->format('F j, Y') }}</p>
     </div>
 </body>
-
 </html>

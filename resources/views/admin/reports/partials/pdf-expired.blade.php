@@ -142,10 +142,6 @@
             <span class="summary-label">Items Expiring Soon (7 days):</span>
             <span>{{ number_format($reportData['summary']['expiring_soon_count']) }}</span>
         </div>
-        <div class="summary-row">
-            <span class="summary-label">Total Waste:</span>
-            <span>{{ number_format($reportData['summary']['total_waste_qty'], 2) }} kg/pcs</span>
-        </div>
     </div>
 
     <!-- Category Breakdown -->

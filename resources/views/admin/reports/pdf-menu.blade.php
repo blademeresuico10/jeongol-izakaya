@@ -147,19 +147,16 @@
             <span>{{ number_format($totalRevenue, 2) }}</span>
         </div>
         @if($bestSelling)
-        <div class="summary-row">
-            <span class="summary-label">Best Selling Item:</span>
-            <span>{{ $bestSelling['menu_item'] }} ({{ $bestSelling['quantity'] }} sold)</span>
-        </div>
-        <div class="summary-row">
-            <span class="summary-label">Best Seller Revenue:</span>
-            <span>{{ number_format($bestSelling['revenue'], 2) }}</span>
-        </div>
+            <div class="summary-row">
+                <span class="summary-label">Best Selling Item:</span>
+                <span>{{ $bestSelling['menu_item'] }} ({{ $bestSelling['quantity'] }} sold)</span>
+            </div>
+            
         @else
-        <div class="summary-row">
-            <span class="summary-label">Best Selling Item:</span>
-            <span>No sales data available</span>
-        </div>
+            <div class="summary-row">
+                <span class="summary-label">Best Selling Item:</span>
+                <span>No sales data available</span>
+            </div>
         @endif
     </div>
 
@@ -167,58 +164,53 @@
     <div class="section-title">Menu Item Performance</div>
 
     @if($menuItems->count() > 0)
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 8%;" class="text-center">Rank</th>
-                <th style="width: 52%;">Menu Item</th>
-                <th style="width: 20%;" class="text-right">Quantity Sold</th>
-                <th style="width: 20%;" class="text-right">Revenue</th>
-            </tr>
-        </thead>
-        <tbody>
-            @php
-                $hasAnySales = $menuItems->where('quantity', '>', 0)->count() > 0;
-            @endphp
-            
-            @foreach($menuItems as $index => $item)
-            <tr>
-                <td class="text-center">
-                    @if($item['quantity'] > 0)
-                        {{ $index + 1 }}
-                    @else
-                        -
-                    @endif
-                </td>
-                <td>
-                    {{ $item['menu_item'] }}
-                    @if($item['quantity'] == 0)
-                        <span style="font-size: 9px;"> (No sales)</span>
-                    @endif
-                </td>
-                <td class="text-right">
-                    {{ number_format($item['quantity']) }}
-                </td>
-                <td class="text-right">
-                    {{ number_format($item['revenue'], 2) }}
-                </td>
-            </tr>
-            @endforeach
-        </tbody>
-        @if($hasAnySales)
-        <tfoot>
-            <tr class="total-row">
-                <td colspan="2" class="text-right"><strong>TOTAL:</strong></td>
-                <td class="text-right"><strong>{{ number_format($totalItemsSold) }}</strong></td>
-                <td class="text-right"><strong>{{ number_format($totalRevenue, 2) }}</strong></td>
-            </tr>
-        </tfoot>
-        @endif
-    </table>
+        <table class="min-w-full border-collapse border border-gray-200 rounded-lg overflow-hidden">
+            <thead class="bg-gray-100">
+                <tr>
+                    <th style="width: 52%;" class="text-left px-4 py-2 font-semibold text-gray-700">Menu Item</th>
+                    <th style="width: 20%;" class="text-right px-4 py-2 font-semibold text-gray-700">Quantity Sold</th>
+                    <th style="width: 20%;" class="text-right px-4 py-2 font-semibold text-gray-700">Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                @php
+                    $hasAnySales = $menuItems->where('quantity', '>', 0)->count() > 0;
+                @endphp
+
+                @foreach($menuItems as $index => $item)
+                    <tr class="{{ $loop->even ? 'bg-gray-50' : 'bg-white' }}">
+                        <td class="px-4 py-2 text-gray-800">
+                            {{ $item['menu_item'] }}
+                            @if($item['quantity'] == 0)
+                                <span class="text-xs text-gray-500"> (No sales)</span>
+                            @endif
+                        </td>
+                        <td class="text-right px-4 py-2 text-gray-800">
+                            {{ number_format($item['quantity']) }}
+                        </td>
+                        <td class="text-right px-4 py-2 text-gray-800">
+                            {{ number_format($item['revenue'], 2) }}
+                        </td>
+                    </tr>
+                @endforeach
+            </tbody>
+
+            @if($hasAnySales)
+                <tfoot class="bg-gray-100 font-semibold">
+                    <tr>
+                        <td class="text-right px-4 py-2" colspan="2">TOTAL:</td>
+                        <td class="text-right px-4 py-2">
+                            {{ number_format($totalRevenue, 2) }}
+                        </td>
+                    </tr>
+                </tfoot>
+            @endif
+        </table>
+
     @else
-    <div class="no-data">
-        No menu performance data available for this period.
-    </div>
+        <div class="no-data">
+            No menu performance data available for this period.
+        </div>
     @endif
 
     <div class="footer">

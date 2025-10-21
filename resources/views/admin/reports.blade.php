@@ -48,8 +48,8 @@
     }
 </style>
 
-<div id="content-wrapper" class="d-flex flex-column">
-    <div id="content">
+<div id="content-wrapper" class="d-flex flex-column" style="overflow-y: auto; height: 100vh;">
+    <div id="content" style="overflow-y: auto; flex: 1; padding-right: 10px;">
         <!-- Header -->
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 shadow-sm">
             <div class="d-flex align-items-center justify-content-between w-100">
@@ -273,7 +273,7 @@
                                     class="inventory-type-btn px-4 py-3 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors font-medium text-left"
                                     data-type="stock-movement">
                                     <i class="fas fa-exchange-alt text-purple-600 mr-2"></i>
-                                    Stock Movement
+                                    Stock In/Out
                                 </button>
 
                                 <button
@@ -784,6 +784,7 @@
             <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
                 <div class="flex justify-between items-start mb-2">
                     <div class="text-sm font-medium opacity-90">Net Sales</div>
+                    <i class="fas fa-coins text-xl opacity-75"></i>
                 </div>
                 <div class="text-2xl font-bold mb-1">₱${summary.net_sales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
             </div>
@@ -917,106 +918,65 @@
     }
 
     function generateTransactionReport(data) {
-        const summary = data.summary;
-        const transactions = data.transactions;
+        const { summary, cashier_summary = [] } = data;
 
         return `
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Transactions</div>
-                    <i class="fas fa-receipt text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_transactions.toLocaleString()}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Cash Transactions</div>
-                    <i class="fas fa-money-bill-wave text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.cash_transactions.toLocaleString()}</div>
-                <div class="text-sm opacity-90 mt-2">₱${summary.cash_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">E-wallet Transactions</div>
-                    <i class="fas fa-mobile-alt text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.ewallet_transactions.toLocaleString()}</div>
-                <div class="text-sm opacity-90 mt-2">₱${summary.ewallet_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-            </div>
-        </div>
-        
-        <!-- Total Amount Card -->
-        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-lg shadow-md mb-6">
-            <div class="flex justify-between items-center">
-                <div>
-                    <div class="text-sm font-medium opacity-90 mb-1">Total Transaction Amount</div>
-                    <div class="text-4xl font-bold">₱${summary.total_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-                </div>
-                <div class="text-5xl opacity-75">
-                    <i class="fas fa-dollar-sign"></i>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Transaction List -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+
+        <!-- Cashier Logs -->
+        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
             <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-list mr-2 text-purple-600"></i>
-                Transaction List
+                <i class="fas fa-user-tie mr-2 text-purple-600"></i>
+                Cashier Logs
             </h5>
+
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
+                <table class="w-full divide-y divide-gray-200 text-sm">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Order Type</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Amount</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Payment Method</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">
+                                Cashier Name
+                            </th>
+                            <th class="px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
+                                Transaction Count
+                            </th>
+                            <th class="px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
+                                Total Amount
+                            </th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${transactions.length > 0 ? transactions.map(transaction => `
-                            <tr>
-                                <td class="px-4 py-3 text-sm">
-                                    <span class="px-3 py-1 text-xs font-medium rounded-full ${transaction.order_type === 'Reservation' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
-                                        ${transaction.order_type}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">₱${transaction.amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                                <td class="px-4 py-3 text-sm">
-                                    <span class="px-3 py-1 text-xs font-medium rounded-full ${transaction.payment_method === 'Cash' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-            }">
-                                        ${transaction.payment_method}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-center">
-                                    <span class="px-3 py-1 text-xs font-medium rounded-full ${transaction.status === 'Completed' ? 'bg-green-100 text-green-800' :
-                transaction.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-            }">
-                                        ${transaction.status}
-                                    </span>
-                                </td>
-                            </tr>
-                        `).join('') : `
-                            <tr>
-                                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                    No transactions for this period
-                                </td>
-                            </tr>
-                        `}
+                    <tbody class="bg-white divide-y divide-gray-100">
+                        ${cashier_summary.length > 0
+                ? cashier_summary
+                    .map(
+                        (cashier) => `
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-6 py-4 font-medium text-gray-900">
+                                        ${cashier.cashier_name}
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-semibold text-gray-900">
+                                        ${cashier.transaction_count.toLocaleString()}
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-bold text-gray-900">
+                                        ₱${cashier.total_amount.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                    </td>
+                                </tr>`
+                    )
+                    .join('')
+                : `
+                                <tr>
+                                    <td colspan="3" class="px-6 py-8 text-center text-gray-500">
+                                        <i class="fas fa-inbox text-3xl mb-2 block opacity-50"></i>
+                                        <p class="font-medium">No cashier logs for this period</p>
+                                    </td>
+                                </tr>`
+            }
                     </tbody>
                 </table>
             </div>
         </div>
     `;
     }
+
 
     function generateInventoryReport(data) {
         const reportType = data.report_type;
@@ -1041,98 +1001,128 @@
 
         return `
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Stock In</div>
-                <i class="fas fa-arrow-down text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.stock_in.toLocaleString()}</div>
-            <div class="text-xs opacity-75 mt-1">${summary.stock_in_qty} ${summary.unit}</div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Stock Out</div>
-                <i class="fas fa-arrow-up text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.stock_out.toLocaleString()}</div>
-            <div class="text-xs opacity-75 mt-1">${summary.stock_out_qty} ${summary.unit}</div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Expired</div>
-                <i class="fas fa-calendar-times text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.expired.toLocaleString()}</div>
-            <div class="text-xs opacity-75 mt-1">${summary.expired_qty} ${summary.unit}</div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Total Movements</div>
-                <i class="fas fa-exchange-alt text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.total_movements.toLocaleString()}</div>
-        </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+    <!-- Stock In -->
+<div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
+    <div class="flex justify-between items-start mb-2">
+        <div class="text-2xl font-medium opacity-90">Stock In</div>
+        <i class="fas fa-arrow-down text-xl opacity-75"></i>
     </div>
+    <div class="text-xs opacity-90 mt-1 space-y-1 leading-tight">
+        <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_in_kg ?? 0).toLocaleString()}</div>
+        <div class="text-lg"><span class="font-semibold">Pcs:</span> ${(summary.stock_in_pcs ?? 0).toLocaleString()}</div>
+    </div>
+</div>
+
+<!-- Stock Out -->
+<div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
+    <div class="flex justify-between items-start mb-2">
+        <div class="text-2xl font-medium opacity-90">Stock Out</div>
+        <i class="fas fa-arrow-up text-xl opacity-75"></i>
+    </div>
+    <div class="text-xs opacity-90 mt-1 space-y-1 leading-tight">
+        <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_out_kg ?? 0).toLocaleString()}</div>
+        <div class="text-lg"><span class="font-semibold">Pcs:</span> ${(summary.stock_out_pcs ?? 0).toLocaleString()}</div>
+    </div>
+</div>
+
+</div>
+
     
-    <!-- Movement Details Table -->
-    <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-        <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-            <i class="fas fa-history mr-2 text-purple-600"></i>
-            Stock Movement History
-        </h5>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Type</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Before</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">After</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Notes</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    ${movements.length > 0 ? movements.map(move => `
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${move.date}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700">${move.ingredient}</td>
-                            <td class="px-4 py-3 text-sm text-gray-600 capitalize">${move.category || '-'}</td>
-                            <td class="px-4 py-3 text-sm text-center">
-                                <span class="px-3 py-1 text-xs font-medium rounded-full ${move.type === 'stock_in' ? 'bg-green-100 text-green-800' :
-                move.type === 'stock_out' ? 'bg-red-100 text-red-800' :
-                    move.type === 'expired' ? 'bg-orange-100 text-orange-800' :
-                        move.type === 'used' ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-            }">
-                                    ${move.type.replace('_', ' ')}
-                                </span>
-                            </td>
-                            <td class="px-4 py-3 text-sm font-bold text-right ${move.type === 'stock_in' ? 'text-green-700' : 'text-red-700'}">
-                                ${move.type === 'stock_in' ? '+' : '-'}${move.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${move.unit || 'kg'}
-                            </td>
-                            <td class="px-4 py-3 text-sm text-gray-700 text-right">${move.stock_before.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                            <td class="px-4 py-3 text-sm text-gray-900 font-semibold text-right">${move.stock_after.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                            <td class="px-4 py-3 text-sm text-gray-600">${move.notes || '-'}</td>
-                        </tr>
-                    `).join('') : `
-                        <tr>
-                            <td colspan="8" class="px-4 py-8 text-center text-gray-500">
-                                <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                No stock movements for this period
-                            </td>
-                        </tr>
-                    `}
-                </tbody>
-            </table>
-        </div>
+    <!-- Stock Movement History (Grouped) -->
+<div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+    <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+        <i class="fas fa-history mr-2 text-purple-600"></i>
+        Stock Movement History
+    </h5>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Type</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Total Quantity</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                ${(function () {
+                if (!Array.isArray(movements) || movements.length === 0) {
+                    return `
+                            <tr>
+                                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                                    No stock movements for this period
+                                </td>
+                            </tr>`;
+                }
+
+                // ✅ Filter only relevant types
+                const filtered = movements.filter(m =>
+                    ['stock_in', 'stock_out', 'used', 'expired'].includes(m.type)
+                );
+
+                // ✅ Group by date + category + type
+                const grouped = {};
+                filtered.forEach(move => {
+                    const date = move.date.split(' ')[0];
+                    const category = move.category || 'Unknown';
+                    const type = move.type;
+                    const key = `${date}-${category}-${type}`;
+
+                    if (!grouped[key]) grouped[key] = {
+                        date,
+                        category,
+                        type,
+                        totalQty: 0,
+                        unit: move.unit || 'kg'
+                    };
+                    grouped[key].totalQty += move.quantity;
+                });
+
+                return Object.values(grouped)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map(row => {
+                        // Color coding for type
+                        let badgeClass = '';
+                        let label = '';
+                        switch (row.type) {
+                            case 'stock_in':
+                                badgeClass = 'bg-green-100 text-green-700';
+                                label = 'Stock In';
+                                break;
+                            case 'stock_out':
+                                badgeClass = 'bg-red-100 text-red-700';
+                                label = 'Stock Out';
+                                break;
+                            case 'used':
+                                badgeClass = 'bg-yellow-100 text-yellow-700';
+                                label = 'Used';
+                                break;
+                            case 'expired':
+                                badgeClass = 'bg-gray-200 text-gray-700';
+                                label = 'Expired';
+                                break;
+                        }
+
+                        return `
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-3 text-sm text-gray-700 capitalize">${row.category}</td>
+                                    <td class="px-4 py-3 text-sm font-semibold">
+                                        <span class="px-2 py-1 rounded-full text-xs ${badgeClass}">
+                                            ${label}
+                                        </span>
+                                    </td>
+                                    <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
+                                        ${row.totalQty.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${row.unit}
+                                    </td>
+                                </tr>`;
+                    }).join('');
+            })()}
+            </tbody>
+        </table>
     </div>
+</div>
+
 `;
     }
 
@@ -1301,34 +1291,6 @@
 
         return `
     <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Total Consumed</div>
-                <i class="fas fa-chart-line text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.total_consumed.toLocaleString()}</div>
-            <div class="text-xs opacity-75 mt-1">items used</div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Total Quantity</div>
-                <i class="fas fa-weight text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.total_quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-            <div class="text-xs opacity-75 mt-1">kg/pieces</div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Avg Daily Usage</div>
-                <i class="fas fa-calendar-day text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.avg_daily.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-            <div class="text-xs opacity-75 mt-1">kg/pieces per day</div>
-        </div>
-    </div>
     
     <!-- Top Consumed Items -->
     <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm mb-6">
@@ -1357,114 +1319,62 @@
         </div>
     </div>
 
-    <!-- Consumption by Category -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-layer-group mr-2 text-indigo-600"></i>
-                Consumption by Category
-            </h5>
-            <div class="space-y-3">
-                ${summary.by_category.map(cat => `
-                    <div class="border-b border-gray-100 pb-3">
-                        <div class="flex justify-between items-center mb-2">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
-                                    <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
-                                </div>
-                                <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
-                            </div>
-                            <span class="text-sm font-semibold text-gray-900">${cat.percentage}%</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-${cat.color}-500 h-2 rounded-full transition-all duration-500" style="width: ${cat.percentage}%"></div>
-                        </div>
-                        <div class="mt-1 text-xs text-gray-600">
-                            ${cat.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} kg/pieces
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-
-        <!-- Usage Trends -->
-        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-lg p-5 shadow-md">
-            <h5 class="text-lg font-semibold mb-4 flex items-center">
-                <i class="fas fa-chart-bar mr-2"></i>
-                Usage Trends
-            </h5>
-            <div class="space-y-4">
-                <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm opacity-90">Peak Usage Day</span>
-                        <span class="font-bold">${summary.trends.peak_day}</span>
-                    </div>
-                    <div class="text-xs opacity-75">${summary.trends.peak_value.toLocaleString('en-PH', { minimumFractionDigits: 2 })} kg/pieces</div>
-                </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm opacity-90">Average/Day</span>
-                        <span class="font-bold">${summary.trends.avg_per_day.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                    <div class="text-xs opacity-75">kg/pieces per day</div>
-                </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm opacity-90">Trend</span>
-                        <span class="font-bold flex items-center">
-                            ${summary.trends.direction === 'up' ?
-                '<i class="fas fa-arrow-up mr-1"></i>Increasing' :
-                '<i class="fas fa-arrow-down mr-1"></i>Decreasing'}
-                        </span>
-                    </div>
-                    <div class="text-xs opacity-75">${summary.trends.change_percentage}% vs last period</div>
-                </div>
-            </div>
-        </div>
-    </div>
     
-    <!-- Consumption Details Table -->
-    <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-        <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-            <i class="fas fa-table mr-2 text-indigo-600"></i>
-            Consumption Log
-        </h5>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity Used</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Used For</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    ${consumptionData.length > 0 ? consumptionData.map(item => `
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.date}</td>
-                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.ingredient}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700 capitalize">${item.category}</td>
-                            <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
-                            <td class="px-4 py-3 text-sm text-gray-600">
-                                ${item.used_for ?
-                        `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${item.used_for}</span>` :
-                        '<span class="text-gray-400">-</span>'}
-                            </td>
-                        </tr>
-                    `).join('') : `
-                        <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                                <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                No consumption data for this period
-                            </td>
-                        </tr>
-                    `}
-                </tbody>
-            </table>
-        </div>
+<!-- Consumption Details Table -->
+<div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+    <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+        <i class="fas fa-table mr-2 text-indigo-600"></i>
+        Consumption Log
+    </h5>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Total Quantity</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                ${(() => {
+                if (!Array.isArray(consumptionData) || consumptionData.length === 0) {
+                    return `
+                            <tr>
+                                <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                                    No consumption data for this period
+                                </td>
+                            </tr>`;
+                }
+
+                const grouped = {};
+                consumptionData.forEach(item => {
+                    const date = item.date || 'Unknown';
+                    const category = item.category || 'Unknown';
+                    const key = `${date}-${category}`;
+                    if (!grouped[key]) grouped[key] = { date, category, quantity: 0, unit: item.unit || '' };
+                    grouped[key].quantity += item.quantity || 0;
+                });
+
+                return Object.values(grouped)
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map(row => `
+                            <tr>
+                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${row.date}</td>
+                                <td class="px-4 py-3 text-sm text-gray-700 capitalize">${row.category}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
+                                    ${row.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                                    <span class="text-xs text-gray-500 ml-1">${row.unit}</span>
+                                </td>
+                            </tr>
+                        `).join('');
+            })()}
+            </tbody>
+        </table>
     </div>
+</div>
+
+
 `;
     }
 
@@ -1473,7 +1383,6 @@
         const menuItems = data.menu_items;
 
         return `
-            < !--Summary Cards-- >
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="bg-gradient-to-br from-cyan-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
                 <div class="flex justify-between items-start mb-2">
@@ -1506,10 +1415,10 @@
                 `}
             </div>
         </div>
-        
-        <!--Menu Performance Table-- >
-            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-                <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+
+        <!--Menu Performance Table-->
+        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
                     <i class="fas fa-utensils mr-2 text-cyan-600"></i>
                     Menu Performance
                 </h5>
@@ -1525,7 +1434,7 @@
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-200">
                             ${menuItems.length > 0 ? menuItems.map((item, index) => `
-                            <tr class="hover:bg-gray-50 transition-colors ${item.quantity === 0 ? 'bg-gray-50 opacity-60' : ''}">
+                            <tr class=" ${item.quantity === 0 ? 'bg-gray-50 opacity-60' : ''}">
                                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">
                                     ${item.quantity > 0 ? `
                                         <div class="flex items-center">
@@ -1549,7 +1458,7 @@
                                 <td class="px-4 py-3 text-sm text-right ${item.quantity === 0 ? 'text-gray-400' : 'text-gray-900 font-bold'}">
                                     ${item.quantity.toLocaleString()}
                                 </td>
-                                <td class="px-4 py-3 text-sm text-right ${item.quantity === 0 ? 'text-gray-400' : 'text-green-700 font-semibold'}">
+                                <td class="px-4 py-3 text-sm text-right ${item.quantity === 0 ? 'text-gray-400' : 'text-gray-900 font-semibold'}">
                                     ₱${item.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
                                 </td>
                             </tr>
@@ -1567,7 +1476,7 @@
                             <tr>
                                 <td colspan="2" class="px-4 py-3 text-sm text-gray-900">TOTAL</td>
                                 <td class="px-4 py-3 text-sm text-gray-900 text-right">${summary.total_items_sold.toLocaleString()}</td>
-                                <td class="px-4 py-3 text-sm text-green-700 text-right">₱${summary.total_revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                                <td class="px-4 py-3 text-sm text-gray-900 text-right">₱${summary.total_revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                             </tr>
                         </tfoot>
                     ` : ''}

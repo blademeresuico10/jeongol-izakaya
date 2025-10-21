@@ -131,23 +131,6 @@
         </div>
     </div>
 
-    <!-- Summary Section -->
-    <div class="section-title">Consumption Summary</div>
-    <div class="summary-box">
-        <div class="summary-row">
-            <span class="summary-label">Total Items Consumed:</span>
-            <span>{{ number_format($reportData['summary']['total_consumed']) }}</span>
-        </div>
-        <div class="summary-row">
-            <span class="summary-label">Total Quantity:</span>
-            <span>{{ number_format($reportData['summary']['total_quantity'], 2) }} kg/pcs</span>
-        </div>
-        <div class="summary-row">
-            <span class="summary-label">Average Daily Usage:</span>
-            <span>{{ number_format($reportData['summary']['avg_daily'], 2) }} kg/pcs</span>
-        </div>
-    </div>
-
     <!-- Category Breakdown -->
     @if(isset($reportData['summary']['by_category']) && count($reportData['summary']['by_category']) > 0)
     <div class="section-title">Consumption by Category</div>
@@ -207,20 +190,16 @@
         <thead>
             <tr>
                 <th style="width: 15%;">Date</th>
-                <th style="width: 30%;">Ingredient</th>
                 <th style="width: 20%;">Category</th>
                 <th class="text-right" style="width: 20%;">Quantity</th>
-                <th style="width: 15%;">Order #</th>
             </tr>
         </thead>
         <tbody>
             @foreach($reportData['consumption_data'] as $item)
                 <tr>
                     <td>{{ $item['date'] }}</td>
-                    <td>{{ $item['ingredient'] ?? 'N/A' }}</td>
                     <td>{{ ucfirst($item['category'] ?? 'N/A') }}</td>
                     <td class="text-right">{{ number_format($item['quantity'], 2) }} {{ $item['unit'] ?? 'kg' }}</td>
-                    <td>{{ $item['used_for'] ?? '-' }}</td>
                 </tr>
             @endforeach
         </tbody>
