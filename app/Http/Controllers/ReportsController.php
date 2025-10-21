@@ -211,7 +211,7 @@ class ReportsController extends Controller
         $request->validate([
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
-            'report_type' => 'required|in:current-stock,stock-movement,low-stock,batch-tracking,expired,consumption',
+            'report_type' => 'required|in:stock-movement,expired,consumption',
         ]);
 
         $startDate = Carbon::parse($request->start_date)->startOfDay();
@@ -219,14 +219,8 @@ class ReportsController extends Controller
         $reportType = $request->report_type;
 
         switch ($reportType) {
-            case 'current-stock':
-                return $this->getCurrentStockReport();
             case 'stock-movement':
                 return $this->getStockMovementReport($startDate, $endDate);
-            case 'low-stock':
-                return $this->getLowStockReport();
-            case 'batch-tracking':
-                return $this->getBatchTrackingReport();
             case 'expired':
                 return $this->getExpiredItemsReport($startDate, $endDate);
             case 'consumption':
@@ -236,196 +230,48 @@ class ReportsController extends Controller
         }
     }
 
-    private function getCurrentStockReport()
-    {
-        $ingredients = ingredients::with('stockAlertLevel')->get();
-
-        $totalItems = $ingredients->count();
-        $inStock = $ingredients->filter(fn($i) => $i->stocks > ($i->stockAlertLevel->low_stock ?? 0))->count();
-        $lowStock = $ingredients->filter(
-            fn($i) =>
-            $i->stockAlertLevel &&
-                $i->stocks <= $i->stockAlertLevel->low_stock &&
-                $i->stocks > $i->stockAlertLevel->critical_stock
-        )->count();
-        $outOfStock = $ingredients->filter(
-            fn($i) =>
-            $i->stockAlertLevel &&
-                $i->stocks <= $i->stockAlertLevel->critical_stock
-        )->count();
-
-        $categories = $ingredients->groupBy('category')->map(function ($items, $category) {
-            return [
-                'name' => $category,
-                'count' => $items->count(),
-                'icon' => $this->getCategoryIcon($category),
-                'color' => $this->getCategoryColor($category),
-            ];
-        })->values();
-
-        $healthyPercentage = $totalItems > 0 ? round(($inStock / $totalItems) * 100, 1) : 0;
-        $attentionPercentage = $totalItems > 0 ? round((($lowStock + $outOfStock) / $totalItems) * 100, 1) : 0;
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'summary' => [
-                    'total_items' => $totalItems,
-                    'in_stock' => $inStock,
-                    'low_stock' => $lowStock,
-                    'out_of_stock' => $outOfStock,
-                    'healthy_percentage' => $healthyPercentage,
-                    'attention_percentage' => $attentionPercentage,
-                    'categories' => $categories,
-                ],
-                'ingredients' => $ingredients->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'name' => $item->name,
-                        'category' => $item->category,
-                        'stocks' => round($item->stocks, 2),
-                        'unit' => $item->unit,
-                        'status' => $this->getStockStatusText($item),
-                    ];
-                }),
-            ]
-        ]);
-    }
-
     private function getStockMovementReport($startDate, $endDate)
     {
-        $movements = ingredientMovements::with(['ingredient', 'user'])
+        $movements = ingredientMovements::with(['ingredient', 'user', 'ingredientBatch'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
             ->get();
 
         $stockIn = $movements->where('type', 'stock_in')->count();
         $stockOut = $movements->whereIn('type', ['stock_out', 'used'])->count();
-        $adjustments = $movements->where('type', 'adjustment')->count();
+        $expired = $movements->where('type', 'expired')->count();
 
         $stockInQty = $movements->where('type', 'stock_in')->sum('quantity');
         $stockOutQty = $movements->whereIn('type', ['stock_out', 'used'])->sum('quantity');
+        $expiredQty = $movements->where('type', 'expired')->sum('quantity');
 
         return response()->json([
             'success' => true,
             'data' => [
+                'report_type' => 'stock-movement',
                 'summary' => [
                     'stock_in' => $stockIn,
                     'stock_out' => $stockOut,
-                    'adjustments' => $adjustments,
+                    'expired' => $expired,
                     'total_movements' => $movements->count(),
                     'stock_in_qty' => round($stockInQty, 2),
                     'stock_out_qty' => round($stockOutQty, 2),
-                    'unit' => 'kg/L',
+                    'expired_qty' => round($expiredQty, 2),
+                    'unit' => 'kg/pieces',
                 ],
                 'movements' => $movements->map(function ($move) {
                     return [
                         'date' => $move->created_at->format('M d, Y h:i A'),
                         'ingredient' => $move->ingredient->name ?? 'Unknown',
+                        'category' => $move->ingredient->category ?? 'Unknown',
                         'type' => $move->type,
                         'quantity' => round($move->quantity, 2),
+                        'unit' => $move->ingredient->unit ?? 'kg',
                         'stock_before' => round($move->stock_before, 2),
                         'stock_after' => round($move->stock_after, 2),
                         'notes' => $move->notes,
                     ];
-                }),
-            ]
-        ]);
-    }
-
-    private function getLowStockReport()
-    {
-        $ingredients = ingredients::with('stockAlertLevel')
-            ->whereHas('stockAlertLevel')
-            ->get();
-
-        $lowStockItems = $ingredients->filter(function ($item) {
-            return $item->stockAlertLevel &&
-                $item->stocks <= $item->stockAlertLevel->low_stock;
-        });
-
-        $criticalItems = $lowStockItems->filter(function ($item) {
-            return $item->stocks <= $item->stockAlertLevel->critical_stock;
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'summary' => [
-                    'low_stock_count' => $lowStockItems->count(),
-                    'critical_count' => $criticalItems->count(),
-                    'reorder_needed' => $lowStockItems->filter(
-                        fn($i) =>
-                        $i->stockAlertLevel->reorder_quantity > 0
-                    )->count(),
-                ],
-                'low_stock_items' => $lowStockItems->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'name' => $item->name,
-                        'category' => $item->category,
-                        'stocks' => round($item->stocks, 2),
-                        'unit' => $item->unit,
-                        'low_stock' => round($item->stockAlertLevel->low_stock, 2),
-                        'reorder_quantity' => round($item->stockAlertLevel->reorder_quantity, 2),
-                        'priority' => $item->stocks <= $item->stockAlertLevel->critical_stock ? 'Critical' : ($item->stocks <= ($item->stockAlertLevel->low_stock * 0.5) ? 'High' : 'Medium'),
-                    ];
-                })->sortBy(function ($item) {
-                    $priority = ['Critical' => 1, 'High' => 2, 'Medium' => 3];
-                    return $priority[$item['priority']];
                 })->values(),
-                'critical_items' => $criticalItems->map(function ($item) {
-                    return [
-                        'name' => $item->name,
-                        'stocks' => round($item->stocks, 2),
-                        'unit' => $item->unit,
-                    ];
-                })->values(),
-            ]
-        ]);
-    }
-
-    private function getBatchTrackingReport()
-    {
-        $batches = ingredientBatch::with('ingredient')
-            ->whereIn('status', ['active', 'expired'])
-            ->orderBy('expiration_date', 'asc')
-            ->get();
-
-        $today = Carbon::today();
-
-        $activeBatches = $batches->where('status', 'active')->count();
-        $expiredBatches = $batches->where('status', 'expired')->count();
-        $expiringSoon = $batches->filter(function ($batch) use ($today) {
-            $expirationDate = Carbon::parse($batch->expiration_date);
-            $daysLeft = $today->diffInDays($expirationDate, false);
-            return $daysLeft >= 0 && $daysLeft <= 7 && $batch->status === 'active';
-        })->count();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'summary' => [
-                    'total_batches' => $batches->count(),
-                    'active_batches' => $activeBatches,
-                    'expiring_soon' => $expiringSoon,
-                    'expired_batches' => $expiredBatches,
-                ],
-                'batches' => $batches->map(function ($batch) use ($today) {
-                    $expirationDate = Carbon::parse($batch->expiration_date);
-                    $daysLeft = $today->diffInDays($expirationDate, false);
-
-                    return [
-                        'id' => $batch->id,
-                        'ingredient' => $batch->ingredient->name ?? 'Unknown',
-                        'quantity' => round($batch->quantity, 2),
-                        'unit' => $batch->ingredient->unit ?? 'kg',
-                        'arrived_at' => Carbon::parse($batch->arrived_at)->format('M d, Y'),
-                        'expiration_date' => $expirationDate->format('M d, Y'),
-                        'days_left' => (int) $daysLeft,
-                        'status' => $batch->status,
-                    ];
-                }),
             ]
         ]);
     }
@@ -443,25 +289,32 @@ class ReportsController extends Controller
 
         $totalWasteQty = $expiredItems->sum('quantity');
         $totalWasteValue = $expiredItems->sum(function ($item) {
-            // Assuming average cost per kg - adjust based on your pricing logic
-            return $item->quantity * 100; // placeholder value
+            return $item->quantity * 100;
         });
 
+        // Group by category (using your actual categories)
         $byCategory = $expiredItems->groupBy(function ($item) {
             return $item->ingredientBatch->ingredient->category ?? 'Unknown';
         })->map(function ($items, $category) {
             return [
                 'name' => $category,
                 'count' => $items->count(),
-                'value' => $items->sum(fn($i) => $i->quantity * 100),
+                'value' => round($items->sum(fn($i) => $i->quantity * 100), 2),
                 'icon' => $this->getCategoryIcon($category),
                 'color' => $this->getCategoryColor($category),
             ];
         })->values();
 
+        $thisWeekStart = Carbon::now()->startOfWeek();
+        $thisMonthStart = Carbon::now()->startOfMonth();
+
+        $thisWeekExpired = expiredIngredients::whereBetween('expired_at', [$thisWeekStart, Carbon::now()])->get();
+        $thisMonthExpired = expiredIngredients::whereBetween('expired_at', [$thisMonthStart, Carbon::now()])->get();
+
         return response()->json([
             'success' => true,
             'data' => [
+                'report_type' => 'expired',
                 'summary' => [
                     'expired_count' => $expiredItems->count(),
                     'expired_value' => round($totalWasteValue, 2),
@@ -470,34 +323,37 @@ class ReportsController extends Controller
                     'total_waste_value' => round($totalWasteValue, 2),
                     'by_category' => $byCategory,
                     'trend' => [
-                        'this_week' => $expiredItems->where('expired_at', '>=', Carbon::now()->startOfWeek())->count(),
-                        'this_week_value' => round($expiredItems->where('expired_at', '>=', Carbon::now()->startOfWeek())->sum(fn($i) => $i->quantity * 100), 2),
-                        'this_month' => $expiredItems->where('expired_at', '>=', Carbon::now()->startOfMonth())->count(),
-                        'this_month_value' => round($expiredItems->where('expired_at', '>=', Carbon::now()->startOfMonth())->sum(fn($i) => $i->quantity * 100), 2),
-                        'avg_per_week' => round($expiredItems->count() / max(1, $startDate->diffInWeeks($endDate)), 1),
+                        'this_week' => $thisWeekExpired->count(),
+                        'this_week_value' => round($thisWeekExpired->sum(fn($i) => $i->quantity * 100), 2),
+                        'this_month' => $thisMonthExpired->count(),
+                        'this_month_value' => round($thisMonthExpired->sum(fn($i) => $i->quantity * 100), 2),
+                        'avg_per_week' => round($expiredItems->count() / max(1, $startDate->diffInWeeks($endDate) ?: 1), 1),
                     ],
                 ],
                 'expired_items' => $expiredItems->map(function ($item) {
                     $expiredDate = Carbon::parse($item->expired_at);
+                    $ingredient = $item->ingredientBatch->ingredient ?? null;
+
                     return [
-                        'name' => $item->ingredientBatch->ingredient->name ?? 'Unknown',
-                        'category' => $item->ingredientBatch->ingredient->category ?? 'Unknown',
+                        'name' => $ingredient->name ?? 'Unknown',
+                        'category' => $ingredient->category ?? 'Unknown',
                         'batch_id' => $item->ingredient_batch_id,
                         'quantity' => round($item->quantity, 2),
-                        'unit' => $item->ingredientBatch->ingredient->unit ?? 'kg',
+                        'unit' => $ingredient->unit ?? 'kg',
                         'expiration_date' => $expiredDate->format('M d, Y'),
                         'days_expired' => Carbon::now()->diffInDays($expiredDate),
                         'value_lost' => round($item->quantity * 100, 2),
                     ];
-                }),
+                })->values(),
                 'expiring_soon' => $expiringSoonBatches->map(function ($batch) {
                     $expirationDate = Carbon::parse($batch->expiration_date);
                     return [
                         'name' => $batch->ingredient->name,
+                        'category' => $batch->ingredient->category,
                         'expiration_date' => $expirationDate->format('M d, Y'),
-                        'days_until_expiry' => Carbon::today()->diffInDays($expirationDate),
+                        'days_until_expiry' => Carbon::today()->diffInDays($expirationDate, false),
                     ];
-                }),
+                })->values(),
             ]
         ]);
     }
@@ -511,11 +367,12 @@ class ReportsController extends Controller
 
         $totalConsumed = $movements->count();
         $totalQuantity = $movements->sum('quantity');
-        $totalValue = $movements->sum(fn($m) => $m->quantity * 100); // placeholder cost calculation
+        $totalValue = $movements->sum(fn($m) => $m->quantity * 100);
 
         $periodDays = max(1, $startDate->diffInDays($endDate) + 1);
         $avgDaily = $totalQuantity / $periodDays;
 
+        // Group by category (using your actual categories)
         $byCategory = $movements->groupBy(function ($move) {
             return $move->ingredient->category ?? 'Unknown';
         })->map(function ($items, $category) use ($totalQuantity) {
@@ -537,6 +394,7 @@ class ReportsController extends Controller
                 $ingredient = $items->first()->ingredient;
                 return [
                     'name' => $ingredient->name,
+                    'category' => $ingredient->category,
                     'total_consumed' => round($items->sum('quantity'), 2),
                     'unit' => $ingredient->unit,
                     'usage_count' => $items->count(),
@@ -551,13 +409,24 @@ class ReportsController extends Controller
             return Carbon::parse($move->created_at)->format('Y-m-d');
         })->map(fn($items) => $items->sum('quantity'));
 
-        $peakDay = $dailyUsage->keys()->zip($dailyUsage->values())
-            ->sortByDesc(fn($item) => $item[1])
-            ->first();
+        $peakDay = null;
+        if ($dailyUsage->isNotEmpty()) {
+            $maxDay = $dailyUsage->keys()->zip($dailyUsage->values())
+                ->sortByDesc(fn($item) => $item[1])
+                ->first();
+
+            if ($maxDay) {
+                $peakDay = [
+                    'date' => Carbon::parse($maxDay[0])->format('M d, Y'),
+                    'value' => round($maxDay[1], 2),
+                ];
+            }
+        }
 
         return response()->json([
             'success' => true,
             'data' => [
+                'report_type' => 'consumption',
                 'summary' => [
                     'total_consumed' => $totalConsumed,
                     'total_quantity' => round($totalQuantity, 2),
@@ -565,11 +434,11 @@ class ReportsController extends Controller
                     'avg_daily' => round($avgDaily, 2),
                     'by_category' => $byCategory,
                     'trends' => [
-                        'peak_day' => $peakDay ? Carbon::parse($peakDay[0])->format('M d, Y') : 'N/A',
-                        'peak_value' => $peakDay ? round($peakDay[1], 2) : 0,
+                        'peak_day' => $peakDay ? $peakDay['date'] : 'N/A',
+                        'peak_value' => $peakDay ? $peakDay['value'] : 0,
                         'avg_per_day' => round($avgDaily, 2),
-                        'direction' => 'up', // Calculate based on comparison logic
-                        'change_percentage' => 0, // Calculate vs previous period
+                        'direction' => 'up',
+                        'change_percentage' => 0,
                     ],
                 ],
                 'consumption_data' => $movements->map(function ($move) {
@@ -582,7 +451,7 @@ class ReportsController extends Controller
                         'used_for' => $move->order_id ? "Order #{$move->order_id}" : null,
                         'value' => round($move->quantity * 100, 2),
                     ];
-                }),
+                })->values(),
                 'top_consumed' => $topConsumed,
             ]
         ]);
@@ -591,11 +460,10 @@ class ReportsController extends Controller
     private function getCategoryIcon($category)
     {
         $icons = [
-            'vegetable' => 'carrot',
             'meat' => 'drumstick-bite',
-            'spice' => 'pepper-hot',
-            'dairy' => 'cheese',
-            'seafood' => 'fish',
+            'vegetables' => 'carrot',
+            'soupbase' => 'bowl-hot',
+            'beverage' => 'glass-water',
         ];
         return $icons[strtolower($category)] ?? 'box';
     }
@@ -603,31 +471,14 @@ class ReportsController extends Controller
     private function getCategoryColor($category)
     {
         $colors = [
-            'vegetable' => 'green',
             'meat' => 'red',
-            'spice' => 'orange',
-            'dairy' => 'yellow',
-            'seafood' => 'blue',
+            'vegetables' => 'green',
+            'soupbase' => 'orange',
+            'beverage' => 'blue',
         ];
         return $colors[strtolower($category)] ?? 'gray';
     }
 
-    private function getStockStatusText($ingredient)
-    {
-        if (!$ingredient->stockAlertLevel) {
-            return 'In Stock';
-        }
-
-        if ($ingredient->stocks <= $ingredient->stockAlertLevel->critical_stock) {
-            return 'Out of Stock';
-        }
-
-        if ($ingredient->stocks <= $ingredient->stockAlertLevel->low_stock) {
-            return 'Low Stock';
-        }
-
-        return 'In Stock';
-    }
 
     public function getMenuReport(Request $request)
     {
@@ -932,6 +783,203 @@ class ReportsController extends Controller
         }
     }
 
+    private function getStockMovementData($startDate, $endDate)
+    {
+        $movements = ingredientMovements::with(['ingredient', 'user', 'ingredientBatch'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $stockIn = $movements->where('type', 'stock_in')->count();
+        $stockOut = $movements->whereIn('type', ['stock_out', 'used'])->count();
+        $expired = $movements->where('type', 'expired')->count();
+
+        $stockInQty = $movements->where('type', 'stock_in')->sum('quantity');
+        $stockOutQty = $movements->whereIn('type', ['stock_out', 'used'])->sum('quantity');
+        $expiredQty = $movements->where('type', 'expired')->sum('quantity');
+
+        return [
+            'summary' => [
+                'stock_in' => $stockIn,
+                'stock_out' => $stockOut,
+                'expired' => $expired,
+                'total_movements' => $movements->count(),
+                'stock_in_qty' => round($stockInQty, 2),
+                'stock_out_qty' => round($stockOutQty, 2),
+                'expired_qty' => round($expiredQty, 2),
+            ],
+            'movements' => $movements,
+        ];
+    }
+
+    private function getExpiredItemsData($startDate, $endDate)
+    {
+        $expiredItems = expiredIngredients::with(['ingredientBatch.ingredient'])
+            ->whereBetween('expired_at', [$startDate, $endDate])
+            ->get();
+
+        $expiringSoon = ingredientBatch::with('ingredient')
+            ->where('status', 'active')
+            ->whereRaw('DATEDIFF(expiration_date, CURDATE()) BETWEEN 0 AND 7')
+            ->get();
+
+        $totalWasteQty = $expiredItems->sum('quantity');
+
+        $byCategory = $expiredItems->groupBy(function ($item) {
+            return $item->ingredientBatch->ingredient->category ?? 'Unknown';
+        })->map(function ($items, $category) {
+            return [
+                'name' => $category,
+                'count' => $items->count(),
+            ];
+        });
+
+        $thisWeekStart = Carbon::now()->startOfWeek();
+        $thisMonthStart = Carbon::now()->startOfMonth();
+
+        $thisWeekExpired = expiredIngredients::whereBetween('expired_at', [$thisWeekStart, Carbon::now()])->count();
+        $thisMonthExpired = expiredIngredients::whereBetween('expired_at', [$thisMonthStart, Carbon::now()])->count();
+
+        return [
+            'summary' => [
+                'expired_count' => $expiredItems->count(),
+                'expiring_soon_count' => $expiringSoon->count(),
+                'total_waste_qty' => round($totalWasteQty, 2),
+                'by_category' => $byCategory,
+                'trend' => [
+                    'this_week' => $thisWeekExpired,
+                    'this_month' => $thisMonthExpired,
+                    'avg_per_week' => round($expiredItems->count() / max(1, $startDate->diffInWeeks($endDate) ?: 1), 1),
+                ],
+            ],
+            'expired_items' => $expiredItems,
+            'expiring_soon' => $expiringSoon,
+        ];
+    }
+
+    private function getConsumptionData($startDate, $endDate)
+    {
+        $movements = ingredientMovements::with(['ingredient', 'order'])
+            ->where('type', 'used')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get();
+
+        $totalQuantity = $movements->sum('quantity');
+        $periodDays = max(1, $startDate->diffInDays($endDate) + 1);
+
+        $byCategory = $movements->groupBy(function ($move) {
+            return $move->ingredient->category ?? 'Unknown';
+        })->map(function ($items, $category) use ($totalQuantity) {
+            $qty = $items->sum('quantity');
+            return [
+                'name' => $category,
+                'quantity' => round($qty, 2),
+                'percentage' => $totalQuantity > 0 ? round(($qty / $totalQuantity) * 100, 1) : 0,
+            ];
+        });
+
+        $topConsumed = $movements->groupBy('ingredient_id')
+            ->map(function ($items) {
+                $ingredient = $items->first()->ingredient;
+                return [
+                    'name' => $ingredient->name,
+                    'category' => $ingredient->category,
+                    'total_consumed' => round($items->sum('quantity'), 2),
+                    'unit' => $ingredient->unit,
+                    'usage_count' => $items->count(),
+                ];
+            })
+            ->sortByDesc('total_consumed')
+            ->take(10);
+
+        return [
+            'summary' => [
+                'total_consumed' => $movements->count(),
+                'total_quantity' => round($totalQuantity, 2),
+                'avg_daily' => round($totalQuantity / $periodDays, 2),
+                'by_category' => $byCategory,
+            ],
+            'consumption_data' => $movements,
+            'top_consumed' => $topConsumed,
+        ];
+    }
+
+    private function getInventoryPdfFilename($reportType)
+    {
+        $typeNames = [
+            'stock-movement' => 'Stock_Movement_Report',
+            'consumption' => 'Consumption_Report',
+            'expired' => 'Expired_Items_Report',
+        ];
+
+        $typeName = $typeNames[$reportType] ?? 'Inventory_Report';
+        $date = now()->format('Y-m-d_His');
+
+        return $typeName . '_' . $date . '.pdf';
+    }
+
+    private function getInventoryReportData($reportType, $startDate, $endDate)
+    {
+        try {
+            switch ($reportType) {
+                case 'stock-movement':
+                    $response = $this->getStockMovementReport($startDate, $endDate);
+                    break;
+                case 'expired':
+                    $response = $this->getExpiredItemsReport($startDate, $endDate);
+                    break;
+                case 'consumption':
+                    $response = $this->getConsumptionReport($startDate, $endDate);
+                    break;
+                default:
+                    return null;
+            }
+
+            $content = $response->getContent();
+            $data = json_decode($content, true);
+
+
+            return $data['data'] ?? null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    public function inventoryReportPdf(Request $request)
+    {
+        $request->validate([
+            'start_date' => 'required|date',
+            'end_date' => 'required|date',
+            'report_type' => 'required|in:stock-movement,expired,consumption',
+        ]);
+
+        $startDate = Carbon::parse($request->start_date)->startOfDay();
+        $endDate = Carbon::parse($request->end_date)->endOfDay();
+        $reportType = $request->report_type;
+
+        try {
+            $reportData = $this->getInventoryReportData($reportType, $startDate, $endDate);
+
+            $viewName = 'admin.reports.partials.pdf-' . $reportType;
+
+            $pdf = PDF::loadView($viewName, [
+                'reportType' => $reportType,
+                'reportData' => $reportData,
+                'dateFrom' => $startDate,
+                'dateTo' => $endDate,
+                'generatedAt' => now(),
+            ])->setPaper('a4', 'portrait');
+
+            $filename = $this->getInventoryPdfFilename($reportType, $startDate, $endDate);
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate PDF: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     public function menuReportPdf(Request $request)
     {
         $request->validate([

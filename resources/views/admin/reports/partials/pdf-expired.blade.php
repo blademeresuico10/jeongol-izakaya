@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Transaction Report</title>
+    <title>Expired Items Report</title>
     <style>
         body {
             font-size: 11px;
@@ -79,11 +79,6 @@
             text-align: center;
         }
 
-        .total-row {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-
         .summary-box {
             border: 2px solid #000;
             padding: 10px;
@@ -120,35 +115,13 @@
             font-style: italic;
             padding: 15px;
         }
-
-        .status-badge {
-            padding: 2px 6px;
-            border-radius: 3px;
-            font-size: 9px;
-            font-weight: bold;
-        }
-
-        .status-completed {
-            background-color: #d4edda;
-            color: #155724;
-        }
-
-        .status-pending {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-
-        .status-cancelled {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
     </style>
 </head>
 
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="report-title">TRANSACTION REPORT</div>
+        <div class="report-title">EXPIRED ITEMS REPORT</div>
         <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="date-range">
             <strong>Period:</strong> {{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}
@@ -159,78 +132,97 @@
     </div>
 
     <!-- Summary Section -->
-    <div class="section-title">Transaction Summary</div>
+    <div class="section-title">Expiration Summary</div>
     <div class="summary-box">
         <div class="summary-row">
-            <span class="summary-label">Total Transactions:</span>
-            <span>{{ number_format($totalTransactions) }}</span>
+            <span class="summary-label">Total Expired Items:</span>
+            <span>{{ number_format($reportData['summary']['expired_count']) }}</span>
         </div>
-        <div class="summary-row"
-            style="border-top: 2px solid #000; margin-top: 5px; padding-top: 8px; font-weight: bold; font-size: 12px;">
-            <span class="summary-label">Total Amount:</span>
-            <span>{{ number_format($totalAmount, 2) }}</span>
+        <div class="summary-row">
+            <span class="summary-label">Items Expiring Soon (7 days):</span>
+            <span>{{ number_format($reportData['summary']['expiring_soon_count']) }}</span>
+        </div>
+        <div class="summary-row">
+            <span class="summary-label">Total Waste:</span>
+            <span>{{ number_format($reportData['summary']['total_waste_qty'], 2) }} kg/pcs</span>
         </div>
     </div>
 
-    <!-- Payment Methods -->
-    <div class="section-title">Payment Methods</div>
+    <!-- Category Breakdown -->
+    @if(isset($reportData['summary']['by_category']) && count($reportData['summary']['by_category']) > 0)
+    <div class="section-title">Waste by Category</div>
     <table>
         <thead>
             <tr>
-                <th>Payment Method</th>
-                <th class="text-center">Transactions</th>
-                <th class="text-right">Total Amount</th>
+                <th style="width: 60%;">Category</th>
+                <th class="text-right" style="width: 40%;">Items Expired</th>
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>Cash</td>
-                <td class="text-center">{{ number_format($cashTransactions) }}</td>
-                <td class="text-right">{{ number_format($cashAmount, 2) }}</td>
-            </tr>
-            <tr>
-                <td>E-wallet (GCash/Maya)</td>
-                <td class="text-center">{{ number_format($ewalletTransactions) }}</td>
-                <td class="text-right">{{ number_format($ewalletAmount, 2) }}</td>
-            </tr>
-            <tr class="total-row">
-                <td>Total</td>
-                <td class="text-center">{{ number_format($cashTransactions + $ewalletTransactions) }}</td>
-                <td class="text-right">{{ number_format($cashAmount + $ewalletAmount, 2) }}</td>
-            </tr>
+            @foreach($reportData['summary']['by_category'] as $category)
+                <tr>
+                    <td>{{ ucfirst($category['name']) }}</td>
+                    <td class="text-right">{{ number_format($category['count']) }}</td>
+                </tr>
+            @endforeach
         </tbody>
     </table>
+    @endif
 
-    <!-- Transaction List -->
-    <div class="section-title">Transaction Details</div>
+    <!-- Expired Items Details -->
+    <div class="section-title">Expired Items Details</div>
     <table>
         <thead>
             <tr>
-                <th style="width: 8%;">ID</th>
-                <th style="width: 15%;">Order Type</th>
-                <th class="text-right" style="width: 15%;">Amount</th>
-                <th style="width: 15%;">Payment</th>
+                <th style="width: 30%;">Ingredient</th>
+                <th style="width: 20%;">Category</th>
+                <th class="text-center" style="width: 15%;">Batch ID</th>
+                <th class="text-right" style="width: 15%;">Quantity</th>
+                <th class="text-center" style="width: 20%;">Expired On</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($transactionList as $transaction)
+            @forelse($reportData['expired_items'] as $item)
                 <tr>
-                    <td>{{ $transaction['id'] }}</td>
-                    <td>{{ $transaction['order_type'] }}</td>
-                    <td class="text-right">{{ number_format($transaction['amount'], 2) }}</td>
-                    <td>{{ $transaction['payment_method'] }}</td>
+                    <td>{{ $item['name'] ?? 'N/A' }}</td>
+                    <td>{{ ucfirst($item['category'] ?? 'N/A') }}</td>
+                    <td class="text-center">#{{ $item['batch_id'] }}</td>
+                    <td class="text-right">{{ number_format($item['quantity'], 2) }} {{ $item['unit'] ?? 'kg' }}</td>
+                    <td class="text-center">{{ $item['expiration_date'] }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="no-data">No transactions for this period</td>
+                    <td colspan="5" class="no-data">No expired items for this period</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
 
-    <!-- Footer -->
+    <!-- Expiring Soon Alert -->
+    @if(isset($reportData['expiring_soon']) && count($reportData['expiring_soon']) > 0)
+    <div class="section-title">⚠ Items Expiring Soon (Within 7 Days)</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 40%;">Ingredient</th>
+                <th style="width: 30%;">Category</th>
+                <th class="text-center" style="width: 30%;">Expiration Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($reportData['expiring_soon'] as $item)
+                <tr>
+                    <td>{{ $item['name'] }}</td>
+                    <td>{{ ucfirst($item['category']) }}</td>
+                    <td class="text-center">{{ $item['expiration_date'] }}</td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>
+    @endif
+
     <div class="footer">
-        <p>JEONGOL IZAKAYA • Transaction Report • {{ now()->format('F j, Y') }}</p>
+        <p>JEONGOL IZAKAYA • Expired Items Report • {{ now()->format('F j, Y') }}</p>
     </div>
 </body>
 

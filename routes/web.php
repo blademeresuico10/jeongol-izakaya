@@ -179,10 +179,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
         Route::post('/reports/sales', [ReportsController::class, 'getSalesReport'])->name('admin.reports.sales');
         Route::post('/reports/transaction', [ReportsController::class, 'getTransactionReport']);
+        Route::post('/reports/inventory', [ReportsController::class, 'getInventoryReport'])->name('reports.inventory');
         Route::post('/reports/menu', [ReportsController::class, 'getMenuReport']);
+
+        // PDF Export Routes
         Route::get('/reports/sales/pdf', [ReportsController::class, 'salesReportPdf'])->name('admin.sales_report.pdf');
         Route::get('/reports/transaction/pdf', [ReportsController::class, 'transactionReportPdf']);
+        Route::get('/reports/inventory/pdf', [ReportsController::class, 'inventoryReportPdf'])->name('reports.inventory.pdf'); // Changed this line
         Route::get('/reports/menu/pdf', [ReportsController::class, 'menuReportPdf'])->name('admin.menu_report.pdf');
+
+        // Other exports
         Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');
         Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('admin.reports.export-csv');
     });

@@ -270,13 +270,6 @@
                             <label class="text-sm font-medium text-gray-600 mb-3 block">Choose Report</label>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <button
-                                    class="inventory-type-btn px-4 py-3 text-sm border-2 border-blue-500 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors active font-medium text-left"
-                                    data-type="current-stock">
-                                    <i class="fas fa-boxes text-blue-600 mr-2"></i>
-                                    Current Stock
-                                </button>
-
-                                <button
                                     class="inventory-type-btn px-4 py-3 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors font-medium text-left"
                                     data-type="stock-movement">
                                     <i class="fas fa-exchange-alt text-purple-600 mr-2"></i>
@@ -446,13 +439,15 @@
 </div>
 
 <script>
-    let selectedInventoryType = 'current-stock';
+    let selectedInventoryType = null;
     const reportTypesWithDateFilter = ['stock-movement', 'consumption', 'expired'];
 
+    // ===== DOM READY =====
     document.addEventListener('DOMContentLoaded', function () {
         const tabLinks = document.querySelectorAll('.tab-link');
         const tabPanes = document.querySelectorAll('.tab-pane');
 
+        // Tab navigation
         tabLinks.forEach(link => {
             link.addEventListener('click', function () {
                 const targetTab = this.getAttribute('data-tab');
@@ -476,8 +471,8 @@
             });
         });
 
+        // Preset buttons
         const presetButtons = document.querySelectorAll('.preset-btn');
-
         presetButtons.forEach(btn => {
             btn.addEventListener('click', function () {
                 const preset = this.getAttribute('data-preset');
@@ -499,8 +494,8 @@
             });
         });
 
+        // Generate buttons
         const generateButtons = document.querySelectorAll('.generate-btn');
-
         generateButtons.forEach(btn => {
             btn.addEventListener('click', function () {
                 const reportType = this.getAttribute('data-report');
@@ -508,8 +503,8 @@
             });
         });
 
+        // Export buttons
         const exportButtons = document.querySelectorAll('.export-btn');
-
         exportButtons.forEach(btn => {
             btn.addEventListener('click', function () {
                 const reportType = this.getAttribute('data-report');
@@ -517,14 +512,13 @@
             });
         });
 
-
+        // Inventory type buttons
         const inventoryTypeButtons = document.querySelectorAll('.inventory-type-btn');
         const dateSection = document.getElementById('inventory-date-section');
 
         if (dateSection) {
             dateSection.style.display = 'none';
         }
-
 
         inventoryTypeButtons.forEach(btn => {
             btn.addEventListener('click', function () {
@@ -547,10 +541,9 @@
                 }
             });
         });
-
-
     });
 
+    // ===== HELPER FUNCTIONS =====
 
     function getPresetDates(preset) {
         const today = new Date();
@@ -562,17 +555,14 @@
             case 'today':
                 start = end = today;
                 break;
-
             case 'yesterday':
                 start = end = new Date(today.setDate(today.getDate() - 1));
                 break;
-
             case 'this-week':
                 const firstDay = today.getDate() - today.getDay();
                 start = new Date(today.setDate(firstDay));
                 end = new Date();
                 break;
-
             case 'last-week':
                 const lastWeekEnd = new Date(today.setDate(today.getDate() - today.getDay() - 1));
                 const lastWeekStart = new Date(lastWeekEnd);
@@ -580,17 +570,14 @@
                 start = lastWeekStart;
                 end = lastWeekEnd;
                 break;
-
             case 'this-month':
                 start = new Date(today.getFullYear(), today.getMonth(), 1);
                 end = new Date();
                 break;
-
             case 'last-month':
                 start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                 end = new Date(today.getFullYear(), today.getMonth(), 0);
                 break;
-
             default:
                 start = end = today;
         }
@@ -605,6 +592,12 @@
         let startDate, endDate;
 
         if (reportType === 'inventory') {
+            // Check if report type is selected
+            if (!selectedInventoryType) {
+                showAlert('error', 'Please select a report type first');
+                return;
+            }
+
             const dateSection = document.getElementById('inventory-date-section');
 
             if (dateSection.style.display !== 'none') {
@@ -641,7 +634,7 @@
 
         const originalHTML = button.innerHTML;
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner mr-2"></i>Generating...';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
 
         fetchReportData(reportType, startDate, endDate)
             .then(data => {
@@ -658,13 +651,12 @@
             });
     }
 
-
     async function fetchReportData(reportType, startDate, endDate) {
         const endpoints = {
-            'sales': '/admin/reports/sales',
-            'transaction': '/admin/reports/transaction',
-            'inventory': '/admin/reports/inventory',
-            'menu': '/admin/reports/menu'
+            'sales': '/reports/sales',
+            'transaction': '/reports/transaction',
+            'inventory': '/reports/inventory',
+            'menu': '/reports/menu'
         };
 
         const endpoint = endpoints[reportType];
@@ -726,12 +718,9 @@
         const contentDiv = document.getElementById(`${reportType}-report-content`);
         let html = '';
 
-        const reportTypesWithDateFilter = ['stock-movement', 'consumption', 'expired'];
         const shouldShowDateRange = reportType === 'inventory' ? reportTypesWithDateFilter.includes(selectedInventoryType) : true;
 
-        html += `
-        <div class="report-content bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-        `;
+        html += `<div class="report-content bg-white border border-gray-200 rounded-lg p-6 shadow-sm">`;
 
         if (shouldShowDateRange) {
             const formattedStart = new Date(startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -1028,12 +1017,11 @@
         </div>
     `;
     }
+
     function generateInventoryReport(data) {
         const reportType = data.report_type;
 
         switch (reportType) {
-            case 'current-stock':
-                return generateCurrentStockReport(data);
             case 'stock-movement':
                 return generateStockMovementReport(data);
             case 'expired':
@@ -1046,243 +1034,106 @@
     }
 
 
-    function generateCurrentStockReport(data) {
-        const summary = data.summary;
-        const ingredients = data.ingredients;
-
-        return `
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Items</div>
-                    <i class="fas fa-boxes text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_items.toLocaleString()}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">In Stock</div>
-                    <i class="fas fa-check-circle text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.in_stock.toLocaleString()}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-yellow-500 to-orange-500 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Low Stock</div>
-                    <i class="fas fa-exclamation-triangle text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.low_stock.toLocaleString()}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Out of Stock</div>
-                    <i class="fas fa-times-circle text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.out_of_stock.toLocaleString()}</div>
-            </div>
-        </div>
-        
-        <!-- Stock by Category -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-                <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                    <i class="fas fa-layer-group mr-2 text-blue-600"></i>
-                    Stock by Category
-                </h5>
-                <div class="space-y-3">
-                    ${summary.categories.map(cat => `
-                        <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
-                                    <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
-                                </div>
-                                <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
-                            </div>
-                            <span class="text-lg font-semibold text-gray-900">${cat.count} items</span>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <!-- Stock Status Overview -->
-            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-lg p-5 shadow-md">
-                <h5 class="text-lg font-semibold mb-4 flex items-center">
-                    <i class="fas fa-chart-pie mr-2"></i>
-                    Stock Health Status
-                </h5>
-                <div class="space-y-3">
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">Healthy</span>
-                            <span class="font-bold">${summary.healthy_percentage}%</span>
-                        </div>
-                        <div class="w-full bg-white bg-opacity-30 rounded-full h-2">
-                            <div class="bg-green-400 h-2 rounded-full" style="width: ${summary.healthy_percentage}%"></div>
-                        </div>
-                    </div>
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">Needs Attention</span>
-                            <span class="font-bold">${summary.attention_percentage}%</span>
-                        </div>
-                        <div class="w-full bg-white bg-opacity-30 rounded-full h-2">
-                            <div class="bg-yellow-400 h-2 rounded-full" style="width: ${summary.attention_percentage}%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Stock Details Table -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-list mr-2 text-blue-600"></i>
-                Current Stock Details
-            </h5>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Current Stock</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Unit</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${ingredients.length > 0 ? ingredients.map(item => `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.name}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 capitalize">${item.category}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.stocks.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 text-center uppercase">${item.unit}</td>
-                                <td class="px-4 py-3 text-sm text-center">
-                                    <span class="px-3 py-1 text-xs font-medium rounded-full ${item.status === 'In Stock' ? 'bg-green-100 text-green-800' :
-                item.status === 'Low Stock' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-red-100 text-red-800'
-            }">
-                                        ${item.status}
-                                    </span>
-                                </td>
-                            </tr>
-                        `).join('') : `
-                            <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                    No inventory data available
-                                </td>
-                            </tr>
-                        `}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-    }
-
     // Stock Movement Report
     function generateStockMovementReport(data) {
         const summary = data.summary;
         const movements = data.movements;
 
         return `
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Stock In</div>
-                    <i class="fas fa-arrow-down text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.stock_in.toLocaleString()}</div>
-                <div class="text-xs opacity-75 mt-1">${summary.stock_in_qty} ${summary.unit}</div>
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Stock In</div>
+                <i class="fas fa-arrow-down text-xl opacity-75"></i>
             </div>
-            
-            <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Stock Out</div>
-                    <i class="fas fa-arrow-up text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.stock_out.toLocaleString()}</div>
-                <div class="text-xs opacity-75 mt-1">${summary.stock_out_qty} ${summary.unit}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Adjustments</div>
-                    <i class="fas fa-edit text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.adjustments.toLocaleString()}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Movements</div>
-                    <i class="fas fa-exchange-alt text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_movements.toLocaleString()}</div>
-            </div>
+            <div class="text-2xl font-bold mb-1">${summary.stock_in.toLocaleString()}</div>
+            <div class="text-xs opacity-75 mt-1">${summary.stock_in_qty} ${summary.unit}</div>
         </div>
         
-        <!-- Movement Details Table -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-history mr-2 text-purple-600"></i>
-                Stock Movement History
-            </h5>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Type</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Before</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">After</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${movements.length > 0 ? movements.map(move => `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${move.date}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700">${move.ingredient}</td>
-                                <td class="px-4 py-3 text-sm text-center">
-                                    <span class="px-3 py-1 text-xs font-medium rounded-full ${move.type === 'stock_in' ? 'bg-green-100 text-green-800' :
+        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Stock Out</div>
+                <i class="fas fa-arrow-up text-xl opacity-75"></i>
+            </div>
+            <div class="text-2xl font-bold mb-1">${summary.stock_out.toLocaleString()}</div>
+            <div class="text-xs opacity-75 mt-1">${summary.stock_out_qty} ${summary.unit}</div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Expired</div>
+                <i class="fas fa-calendar-times text-xl opacity-75"></i>
+            </div>
+            <div class="text-2xl font-bold mb-1">${summary.expired.toLocaleString()}</div>
+            <div class="text-xs opacity-75 mt-1">${summary.expired_qty} ${summary.unit}</div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Total Movements</div>
+                <i class="fas fa-exchange-alt text-xl opacity-75"></i>
+            </div>
+            <div class="text-2xl font-bold mb-1">${summary.total_movements.toLocaleString()}</div>
+        </div>
+    </div>
+    
+    <!-- Movement Details Table -->
+    <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+        <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+            <i class="fas fa-history mr-2 text-purple-600"></i>
+            Stock Movement History
+        </h5>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Type</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Before</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">After</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Notes</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${movements.length > 0 ? movements.map(move => `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${move.date}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700">${move.ingredient}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600 capitalize">${move.category || '-'}</td>
+                            <td class="px-4 py-3 text-sm text-center">
+                                <span class="px-3 py-1 text-xs font-medium rounded-full ${move.type === 'stock_in' ? 'bg-green-100 text-green-800' :
                 move.type === 'stock_out' ? 'bg-red-100 text-red-800' :
                     move.type === 'expired' ? 'bg-orange-100 text-orange-800' :
                         move.type === 'used' ? 'bg-blue-100 text-blue-800' :
                             'bg-gray-100 text-gray-800'
             }">
-                                        ${move.type.replace('_', ' ')}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm font-bold text-right ${move.type === 'stock_in' ? 'text-green-700' : 'text-red-700'
-            }">
-                                    ${move.type === 'stock_in' ? '+' : '-'}${move.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-700 text-right">${move.stock_before.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-semibold text-right">${move.stock_after.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                                <td class="px-4 py-3 text-sm text-gray-600">${move.notes || '-'}</td>
-                            </tr>
-                        `).join('') : `
-                            <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                    No stock movements for this period
-                                </td>
-                            </tr>
-                        `}
-                    </tbody>
-                </table>
-            </div>
+                                    ${move.type.replace('_', ' ')}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3 text-sm font-bold text-right ${move.type === 'stock_in' ? 'text-green-700' : 'text-red-700'}">
+                                ${move.type === 'stock_in' ? '+' : '-'}${move.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${move.unit || 'kg'}
+                            </td>
+                            <td class="px-4 py-3 text-sm text-gray-700 text-right">${move.stock_before.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                            <td class="px-4 py-3 text-sm text-gray-900 font-semibold text-right">${move.stock_after.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600">${move.notes || '-'}</td>
+                        </tr>
+                    `).join('') : `
+                        <tr>
+                            <td colspan="8" class="px-4 py-8 text-center text-gray-500">
+                                <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                                No stock movements for this period
+                            </td>
+                        </tr>
+                    `}
+                </tbody>
+            </table>
         </div>
-    `;
+    </div>
+`;
     }
 
     // Expired Items Report
@@ -1292,167 +1143,154 @@
         const expiringSoon = data.expiring_soon;
 
         return `
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Expired Items</div>
-                    <i class="fas fa-times-circle text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.expired_count.toLocaleString()}</div>
-                <div class="text-xs opacity-75 mt-1">${summary.expired_value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</div>
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Expired Items</div>
+                <i class="fas fa-times-circle text-xl opacity-75"></i>
             </div>
-            
-            <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Expiring Soon</div>
-                    <i class="fas fa-clock text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.expiring_soon_count.toLocaleString()}</div>
-                <div class="text-xs opacity-75 mt-1">Within 7 days</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Waste</div>
-                    <i class="fas fa-trash-alt text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_waste_qty.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-                <div class="text-xs opacity-75 mt-1">kg/L</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Waste Value</div>
-                    <i class="fas fa-money-bill-wave text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_waste_value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</div>
-            </div>
+            <div class="text-2xl font-bold mb-1">${summary.expired_count.toLocaleString()}</div>
+            <div class="text-xs opacity-75 mt-1">Total items expired</div>
         </div>
         
-        <!-- Expiring Soon Alert -->
-        ${expiringSoon.length > 0 ? `
-        <div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-triangle text-orange-500 text-xl"></i>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-orange-800">Items Expiring Soon!</h3>
-                    <div class="mt-2 text-sm text-orange-700">
-                        <p>The following items will expire within 7 days. Please use or dispose of them accordingly:</p>
-                        <ul class="list-disc list-inside mt-2">
-                            ${expiringSoon.map(item => `<li><strong>${item.name}</strong> - Expires in ${item.days_until_expiry} days (${item.expiration_date})</li>`).join('')}
-                        </ul>
-                    </div>
+        <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Expiring Soon</div>
+                <i class="fas fa-clock text-xl opacity-75"></i>
+            </div>
+            <div class="text-2xl font-bold mb-1">${summary.expiring_soon_count.toLocaleString()}</div>
+            <div class="text-xs opacity-75 mt-1">Within 7 days</div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Total Waste</div>
+                <i class="fas fa-trash-alt text-xl opacity-75"></i>
+            </div>
+            <div class="text-2xl font-bold mb-1">${summary.total_waste_qty.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+            <div class="text-xs opacity-75 mt-1">kg/pieces</div>
+        </div>
+    </div>
+    
+    <!-- Expiring Soon Alert -->
+    ${expiringSoon.length > 0 ? `
+    <div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-orange-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-orange-800">Items Expiring Soon!</h3>
+                <div class="mt-2 text-sm text-orange-700">
+                    <p>The following items will expire within 7 days. Please use or dispose of them accordingly:</p>
+                    <ul class="list-disc list-inside mt-2">
+                        ${expiringSoon.map(item => `<li><strong>${item.name}</strong> (${item.category}) - Expires in ${item.days_until_expiry} days (${item.expiration_date})</li>`).join('')}
+                    </ul>
                 </div>
             </div>
         </div>
-        ` : ''}
-        
-        <!-- Expired Items by Category -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-                <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                    <i class="fas fa-chart-pie mr-2 text-red-600"></i>
-                    Waste by Category
-                </h5>
-                <div class="space-y-3">
-                    ${summary.by_category.map(cat => `
-                        <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                            <div class="flex items-center">
-                                <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
-                                    <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
-                                </div>
-                                <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
-                            </div>
-                            <div class="text-right">
-                                <div class="text-lg font-semibold text-gray-900">${cat.count} items</div>
-                                <div class="text-xs text-gray-500">${cat.value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</div>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <!-- Waste Trend -->
-            <div class="bg-gradient-to-br from-red-500 to-pink-600 text-white rounded-lg p-5 shadow-md">
-                <h5 class="text-lg font-semibold mb-4 flex items-center">
-                    <i class="fas fa-chart-line mr-2"></i>
-                    Waste Trend Analysis
-                </h5>
-                <div class="space-y-4">
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">This Week</span>
-                            <span class="font-bold">${summary.trend.this_week} items</span>
-                        </div>
-                        <div class="text-xs opacity-75">${summary.trend.this_week_value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</div>
-                    </div>
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">This Month</span>
-                            <span class="font-bold">${summary.trend.this_month} items</span>
-                        </div>
-                        <div class="text-xs opacity-75">${summary.trend.this_month_value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</div>
-                    </div>
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">Average/Week</span>
-                            <span class="font-bold">${summary.trend.avg_per_week.toLocaleString('en-PH', { minimumFractionDigits: 1 })} items</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Expired Items Table -->
+    </div>
+    ` : ''}
+    
+    <!-- Expired Items by Category -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
             <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-calendar-times mr-2 text-red-600"></i>
-                Expired Items Details
+                <i class="fas fa-chart-pie mr-2 text-red-600"></i>
+                Waste by Category
             </h5>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Batch ID</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Expired On</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Days Expired</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Value Lost</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${expiredItems.length > 0 ? expiredItems.map(item => `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.name}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 capitalize">${item.category}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 text-center font-mono">#${item.batch_id}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 text-center">${item.expiration_date}</td>
-                                <td class="px-4 py-3 text-sm text-center">
-                                    <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                                        ${item.days_expired} days ago
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-red-700 font-semibold text-right">${item.value_lost.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</td>
-                            </tr>
-                        `).join('') : `
-                            <tr>
-                                <td colspan="7" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-check-circle text-3xl text-green-500 mb-2 block"></i>
-                                    No expired items for this period
-                                </td>
-                            </tr>
-                        `}
-                    </tbody>
-                </table>
+            <div class="space-y-3">
+                ${summary.by_category.map(cat => `
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
+                            </div>
+                            <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-semibold text-gray-900">${cat.count} items</div>
+                        </div>
+                    </div>
+                `).join('')}
             </div>
         </div>
-    `;
+
+        <!-- Waste Trend -->
+        <div class="bg-gradient-to-br from-red-500 to-pink-600 text-white rounded-lg p-5 shadow-md">
+            <h5 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fas fa-chart-line mr-2"></i>
+                Waste Trend Analysis
+            </h5>
+            <div class="space-y-4">
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm opacity-90">This Week</span>
+                        <span class="font-bold">${summary.trend.this_week} items</span>
+                    </div>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm opacity-90">This Month</span>
+                        <span class="font-bold">${summary.trend.this_month} items</span>
+                    </div>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm opacity-90">Average/Week</span>
+                        <span class="font-bold">${summary.trend.avg_per_week.toLocaleString('en-PH', { minimumFractionDigits: 1 })} items</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Expired Items Table -->
+    <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+        <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+            <i class="fas fa-calendar-times mr-2 text-red-600"></i>
+            Expired Items Details
+        </h5>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Batch ID</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Expired On</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Days Expired</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${expiredItems.length > 0 ? expiredItems.map(item => `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.name}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700 capitalize">${item.category}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700 text-center font-mono">#${item.batch_id}</td>
+                            <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700 text-center">${item.expiration_date}</td>
+                            <td class="px-4 py-3 text-sm text-center">
+                                <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                    ${item.days_expired} days ago
+                                </span>
+                            </td>
+                        </tr>
+                    `).join('') : `
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                                <i class="fas fa-check-circle text-3xl text-green-500 mb-2 block"></i>
+                                No expired items for this period
+                            </td>
+                        </tr>
+                    `}
+                </tbody>
+            </table>
+        </div>
+    </div>
+`;
     }
 
     // Consumption Report
@@ -1462,188 +1300,172 @@
         const topConsumed = data.top_consumed;
 
         return `
-        <!-- Summary Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Consumed</div>
-                    <i class="fas fa-chart-line text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_consumed.toLocaleString()}</div>
-                <div class="text-xs opacity-75 mt-1">items used</div>
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Total Consumed</div>
+                <i class="fas fa-chart-line text-xl opacity-75"></i>
             </div>
-            
-            <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Quantity</div>
-                    <i class="fas fa-weight text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-                <div class="text-xs opacity-75 mt-1">kg/L</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Value</div>
-                    <i class="fas fa-dollar-sign text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Avg Daily Usage</div>
-                    <i class="fas fa-calendar-day text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.avg_daily.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-                <div class="text-xs opacity-75 mt-1">kg/L per day</div>
-            </div>
+            <div class="text-2xl font-bold mb-1">${summary.total_consumed.toLocaleString()}</div>
+            <div class="text-xs opacity-75 mt-1">items used</div>
         </div>
         
-        <!-- Top Consumed Items -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm mb-6">
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Total Quantity</div>
+                <i class="fas fa-weight text-xl opacity-75"></i>
+            </div>
+            <div class="text-2xl font-bold mb-1">${summary.total_quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+            <div class="text-xs opacity-75 mt-1">kg/pieces</div>
+        </div>
+        
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
+            <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-medium opacity-90">Avg Daily Usage</div>
+                <i class="fas fa-calendar-day text-xl opacity-75"></i>
+            </div>
+            <div class="text-2xl font-bold mb-1">${summary.avg_daily.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
+            <div class="text-xs opacity-75 mt-1">kg/pieces per day</div>
+        </div>
+    </div>
+    
+    <!-- Top Consumed Items -->
+    <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm mb-6">
+        <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+            <i class="fas fa-trophy mr-2 text-yellow-600"></i>
+            Most Consumed Items
+        </h5>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${topConsumed.map((item, index) => `
+                <div class="flex items-center p-3 bg-gradient-to-r from-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-50 to-white border border-gray-200 rounded-lg">
+                    <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-100 mr-3">
+                        <span class="text-xl font-bold text-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-700">${index + 1}</span>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="font-semibold text-gray-900">${item.name}</div>
+                        <div class="text-xs text-gray-500 capitalize">${item.category || ''}</div>
+                        <div class="text-sm text-gray-600">
+                            ${item.total_consumed.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm font-bold text-gray-900">${item.usage_count} times</div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    </div>
+
+    <!-- Consumption by Category -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
             <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-trophy mr-2 text-yellow-600"></i>
-                Top 10 Most Consumed Items
+                <i class="fas fa-layer-group mr-2 text-indigo-600"></i>
+                Consumption by Category
             </h5>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                ${topConsumed.map((item, index) => `
-                    <div class="flex items-center p-3 bg-gradient-to-r from-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'
-            }-50 to-white border border-gray-200 rounded-lg">
-                        <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'
-            }-100 mr-3">
-                            <span class="text-xl font-bold text-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'
-            }-700">${index + 1}</span>
-                        </div>
-                        <div class="flex-grow">
-                            <div class="font-semibold text-gray-900">${item.name}</div>
-                            <div class="text-sm text-gray-600">
-                                ${item.total_consumed.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}
+            <div class="space-y-3">
+                ${summary.by_category.map(cat => `
+                    <div class="border-b border-gray-100 pb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
+                                </div>
+                                <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
                             </div>
+                            <span class="text-sm font-semibold text-gray-900">${cat.percentage}%</span>
                         </div>
-                        <div class="text-right">
-                            <div class="text-sm font-bold text-gray-900">${item.usage_count} times</div>
-                            <div class="text-xs text-gray-500">${item.value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-${cat.color}-500 h-2 rounded-full transition-all duration-500" style="width: ${cat.percentage}%"></div>
+                        </div>
+                        <div class="mt-1 text-xs text-gray-600">
+                            ${cat.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} kg/pieces
                         </div>
                     </div>
                 `).join('')}
             </div>
         </div>
 
-        <!-- Consumption by Category -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-                <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                    <i class="fas fa-layer-group mr-2 text-indigo-600"></i>
-                    Consumption by Category
-                </h5>
-                <div class="space-y-3">
-                    ${summary.by_category.map(cat => `
-                        <div class="border-b border-gray-100 pb-3">
-                            <div class="flex justify-between items-center mb-2">
-                                <div class="flex items-center">
-                                    <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
-                                        <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
-                                    </div>
-                                    <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
-                                </div>
-                                <span class="text-sm font-semibold text-gray-900">${cat.percentage}%</span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-2">
-                                <div class="bg-${cat.color}-500 h-2 rounded-full transition-all duration-500" style="width: ${cat.percentage}%"></div>
-                            </div>
-                            <div class="flex justify-between mt-1 text-xs text-gray-600">
-                                <span>${cat.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} kg/L</span>
-                                <span>${cat.value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-
-            <!-- Usage Trends -->
-            <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-lg p-5 shadow-md">
-                <h5 class="text-lg font-semibold mb-4 flex items-center">
-                    <i class="fas fa-chart-bar mr-2"></i>
-                    Usage Trends
-                </h5>
-                <div class="space-y-4">
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">Peak Usage Day</span>
-                            <span class="font-bold">${summary.trends.peak_day}</span>
-                        </div>
-                        <div class="text-xs opacity-75">${summary.trends.peak_value.toLocaleString('en-PH', { minimumFractionDigits: 2 })} kg/L</div>
-                    </div>
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">Average/Day</span>
-                            <span class="font-bold">${summary.trends.avg_per_day.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                        </div>
-                        <div class="text-xs opacity-75">kg/L per day</div>
-                    </div>
-                    <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm opacity-90">Trend</span>
-                            <span class="font-bold flex items-center">
-                                ${summary.trends.direction === 'up' ?
-                '<i class="fas fa-arrow-up mr-1"></i>Increasing' :
-                '<i class="fas fa-arrow-down mr-1"></i>Decreasing'
-            }
-                            </span>
-                        </div>
-                        <div class="text-xs opacity-75">${summary.trends.change_percentage}% vs last period</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Consumption Details Table -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-table mr-2 text-indigo-600"></i>
-                Detailed Consumption Log
+        <!-- Usage Trends -->
+        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-lg p-5 shadow-md">
+            <h5 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fas fa-chart-bar mr-2"></i>
+                Usage Trends
             </h5>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity Used</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Used For</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Value</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${consumptionData.length > 0 ? consumptionData.map(item => `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.date}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.ingredient}</td>
-                                <td class="px-4 py-3 text-sm text-gray-700 capitalize">${item.category}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
-                                <td class="px-4 py-3 text-sm text-gray-600">
-                                    ${item.used_for ?
-                    `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${item.used_for}</span>` :
-                    '<span class="text-gray-400">-</span>'
-                }
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-semibold text-right">${item.value.toLocaleString('en-PH', { style: 'currency', currency: 'PHP' })}</td>
-                            </tr>
-                        `).join('') : `
-                            <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                    No consumption data for this period
-                                </td>
-                            </tr>
-                        `}
-                    </tbody>
-                </table>
+            <div class="space-y-4">
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm opacity-90">Peak Usage Day</span>
+                        <span class="font-bold">${summary.trends.peak_day}</span>
+                    </div>
+                    <div class="text-xs opacity-75">${summary.trends.peak_value.toLocaleString('en-PH', { minimumFractionDigits: 2 })} kg/pieces</div>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm opacity-90">Average/Day</span>
+                        <span class="font-bold">${summary.trends.avg_per_day.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div class="text-xs opacity-75">kg/pieces per day</div>
+                </div>
+                <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-sm opacity-90">Trend</span>
+                        <span class="font-bold flex items-center">
+                            ${summary.trends.direction === 'up' ?
+                '<i class="fas fa-arrow-up mr-1"></i>Increasing' :
+                '<i class="fas fa-arrow-down mr-1"></i>Decreasing'}
+                        </span>
+                    </div>
+                    <div class="text-xs opacity-75">${summary.trends.change_percentage}% vs last period</div>
+                </div>
             </div>
         </div>
-    `;
+    </div>
+    
+    <!-- Consumption Details Table -->
+    <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+        <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+            <i class="fas fa-table mr-2 text-indigo-600"></i>
+            Consumption Log
+        </h5>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity Used</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Used For</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${consumptionData.length > 0 ? consumptionData.map(item => `
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.date}</td>
+                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.ingredient}</td>
+                            <td class="px-4 py-3 text-sm text-gray-700 capitalize">${item.category}</td>
+                            <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
+                            <td class="px-4 py-3 text-sm text-gray-600">
+                                ${item.used_for ?
+                        `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${item.used_for}</span>` :
+                        '<span class="text-gray-400">-</span>'}
+                            </td>
+                        </tr>
+                    `).join('') : `
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                                No consumption data for this period
+                            </td>
+                        </tr>
+                    `}
+                </tbody>
+            </table>
+        </div>
+    </div>
+`;
     }
 
     function generateMenuReport(data) {
@@ -1651,7 +1473,7 @@
         const menuItems = data.menu_items;
 
         return `
-        <!-- Summary Cards -->
+            < !--Summary Cards-- >
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="bg-gradient-to-br from-cyan-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
                 <div class="flex justify-between items-start mb-2">
@@ -1685,24 +1507,24 @@
             </div>
         </div>
         
-        <!-- Menu Performance Table -->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-utensils mr-2 text-cyan-600"></i>
-                Menu Performance
-            </h5>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Rank</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Menu Item</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity Sold</th>
-                            <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Gross Sales</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        ${menuItems.length > 0 ? menuItems.map((item, index) => `
+        <!--Menu Performance Table-- >
+            <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+                <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+                    <i class="fas fa-utensils mr-2 text-cyan-600"></i>
+                    Menu Performance
+                </h5>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Rank</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Menu Item</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity Sold</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Gross Sales</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${menuItems.length > 0 ? menuItems.map((item, index) => `
                             <tr class="hover:bg-gray-50 transition-colors ${item.quantity === 0 ? 'bg-gray-50 opacity-60' : ''}">
                                 <td class="px-4 py-3 text-sm text-gray-900 font-medium">
                                     ${item.quantity > 0 ? `
@@ -1739,8 +1561,8 @@
                                 </td>
                             </tr>
                         `}
-                    </tbody>
-                    ${menuItems.length > 0 && summary.total_items_sold > 0 ? `
+                        </tbody>
+                        ${menuItems.length > 0 && summary.total_items_sold > 0 ? `
                         <tfoot class="bg-gray-100 font-semibold">
                             <tr>
                                 <td colspan="2" class="px-4 py-3 text-sm text-gray-900">TOTAL</td>
@@ -1749,17 +1571,17 @@
                             </tr>
                         </tfoot>
                     ` : ''}
-                </table>
+                    </table>
+                </div>
             </div>
-        </div>
-    `;
+        `;
     }
 
     // Export to PDF Function
     function exportToPDF(reportType, button) {
         const originalHTML = button.innerHTML;
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner mr-2"></i>Exporting...';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Exporting...';
 
         let startDate, endDate;
 
@@ -1784,18 +1606,76 @@
             return;
         }
 
+        let url = '';
         if (reportType === 'Sales Report') {
-            window.location.href = `/admin/reports/sales/pdf?start_date=${startDate}&end_date=${endDate}`;
+            url = `/reports/sales/pdf?start_date=${startDate}&end_date=${endDate}`;
         } else if (reportType === 'Transaction Report') {
-            window.location.href = `/admin/reports/transaction/pdf?start_date=${startDate}&end_date=${endDate}`;
+            url = `/reports/transaction/pdf?start_date=${startDate}&end_date=${endDate}`;
         } else if (reportType === 'Menu Performance Report') {
-            window.location.href = `/admin/reports/menu/pdf?start_date=${startDate}&end_date=${endDate}`;
+            url = `/reports/menu/pdf?start_date=${startDate}&end_date=${endDate}`;
+        } else if (reportType === 'Inventory Report') {
+            if (!selectedInventoryType) {
+                showAlert('error', 'Please select an inventory report type first');
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+                return;
+            }
+            url = `/reports/inventory/pdf?start_date=${startDate}&end_date=${endDate}&report_type=${selectedInventoryType}`;
         }
 
-        setTimeout(() => {
-            button.disabled = false;
-            button.innerHTML = originalHTML;
-        }, 1500);
+        // Use fetch to check for errors
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(`Server error: ${response.status} - ${text}`);
+                    });
+                }
+
+                // Get filename from Content-Disposition header or use default
+                let filename = 'report.pdf';
+                const disposition = response.headers.get('Content-Disposition');
+                if (disposition && disposition.includes('filename=')) {
+                    const filenameMatch = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                } else {
+                    // Fallback: Generate filename based on report type
+                    if (reportType === 'Inventory Report' && selectedInventoryType) {
+                        const typeNames = {
+                            'stock-movement': 'Stock_Movement',
+                            'consumption': 'Consumption',
+                            'expired': 'Expired_Items'
+                        };
+                        const typeName = typeNames[selectedInventoryType] || 'Inventory';
+                        filename = `${typeName}.${new Date().toISOString().split('T')[0]}.pdf`;
+                    } else {
+                        filename = `${reportType.replace(/ /g, '_')}.${new Date().toISOString().split('T')[0]}.pdf`;
+                    }
+                }
+
+                return response.blob().then(blob => ({ blob, filename }));
+            })
+            .then(({ blob, filename }) => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showAlert('success', 'PDF downloaded successfully!');
+            })
+            .catch(error => {
+                showAlert('error', 'Failed to export PDF: ' + error.message);
+            })
+            .finally(() => {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+            });
     }
 
     function showAlert(type, message) {

@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Menu Performance Report</title>
+    <title>Stock Movement Report</title>
     <style>
         body {
             font-size: 11px;
@@ -79,11 +79,6 @@
             text-align: center;
         }
 
-        .total-row {
-            background-color: #f5f5f5;
-            font-weight: bold;
-        }
-
         .summary-box {
             border: 2px solid #000;
             padding: 10px;
@@ -103,6 +98,28 @@
 
         .summary-label {
             font-weight: bold;
+        }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .badge-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .badge-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .badge-expired {
+            background-color: #fff3cd;
+            color: #856404;
         }
 
         .footer {
@@ -126,7 +143,7 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="report-title">MENU PERFORMANCE REPORT</div>
+        <div class="report-title">STOCK MOVEMENT REPORT</div>
         <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="date-range">
             <strong>Period:</strong> {{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}
@@ -139,90 +156,69 @@
     <!-- Summary Box -->
     <div class="summary-box">
         <div class="summary-row">
-            <span class="summary-label">Total Items Sold:</span>
-            <span>{{ number_format($totalItemsSold) }}</span>
+            <span class="summary-label">Total Stock In:</span>
+            <span>{{ number_format($reportData['summary']['stock_in']) }} ({{ number_format($reportData['summary']['stock_in_qty'], 2) }} {{ $reportData['summary']['unit'] }})</span>
         </div>
         <div class="summary-row">
-            <span class="summary-label">Total Revenue:</span>
-            <span>{{ number_format($totalRevenue, 2) }}</span>
-        </div>
-        @if($bestSelling)
-        <div class="summary-row">
-            <span class="summary-label">Best Selling Item:</span>
-            <span>{{ $bestSelling['menu_item'] }} ({{ $bestSelling['quantity'] }} sold)</span>
+            <span class="summary-label">Total Stock Out:</span>
+            <span>{{ number_format($reportData['summary']['stock_out']) }} ({{ number_format($reportData['summary']['stock_out_qty'], 2) }} {{ $reportData['summary']['unit'] }})</span>
         </div>
         <div class="summary-row">
-            <span class="summary-label">Best Seller Revenue:</span>
-            <span>{{ number_format($bestSelling['revenue'], 2) }}</span>
+            <span class="summary-label">Expired Items:</span>
+            <span>{{ number_format($reportData['summary']['expired']) }} ({{ number_format($reportData['summary']['expired_qty'], 2) }} {{ $reportData['summary']['unit'] }})</span>
         </div>
-        @else
         <div class="summary-row">
-            <span class="summary-label">Best Selling Item:</span>
-            <span>No sales data available</span>
+            <span class="summary-label">Total Movements:</span>
+            <span>{{ number_format($reportData['summary']['total_movements']) }}</span>
         </div>
-        @endif
     </div>
 
-    <!-- Menu Performance Table -->
-    <div class="section-title">Menu Item Performance</div>
+    <!-- Movement Details -->
+    <div class="section-title">Movement Details</div>
 
-    @if($menuItems->count() > 0)
+    @if(isset($reportData['movements']) && count($reportData['movements']) > 0)
     <table>
         <thead>
             <tr>
-                <th style="width: 8%;" class="text-center">Rank</th>
-                <th style="width: 52%;">Menu Item</th>
-                <th style="width: 20%;" class="text-right">Quantity Sold</th>
-                <th style="width: 20%;" class="text-right">Revenue</th>
+                <th style="width: 12%;">Date</th>
+                <th style="width: 25%;">Ingredient</th>
+                <th style="width: 13%;">Category</th>
+                <th class="text-center" style="width: 10%;">Type</th>
+                <th class="text-right" style="width: 12%;">Quantity</th>
+                <th class="text-right" style="width: 14%;">Before</th>
+                <th class="text-right" style="width: 14%;">After</th>
             </tr>
         </thead>
         <tbody>
-            @php
-                $hasAnySales = $menuItems->where('quantity', '>', 0)->count() > 0;
-            @endphp
-            
-            @foreach($menuItems as $index => $item)
+            @foreach($reportData['movements'] as $move)
             <tr>
+                <td>{{ $move['date'] }}</td>
+                <td>{{ $move['ingredient'] }}</td>
+                <td>{{ ucfirst($move['category']) }}</td>
                 <td class="text-center">
-                    @if($item['quantity'] > 0)
-                        {{ $index + 1 }}
+                    @if($move['type'] === 'stock_in')
+                        <span class="badge badge-in">IN</span>
+                    @elseif(in_array($move['type'], ['stock_out', 'used']))
+                        <span class="badge badge-out">OUT</span>
                     @else
-                        -
+                        <span class="badge badge-expired">EXP</span>
                     @endif
                 </td>
-                <td>
-                    {{ $item['menu_item'] }}
-                    @if($item['quantity'] == 0)
-                        <span style="font-size: 9px;"> (No sales)</span>
-                    @endif
-                </td>
-                <td class="text-right">
-                    {{ number_format($item['quantity']) }}
-                </td>
-                <td class="text-right">
-                    {{ number_format($item['revenue'], 2) }}
-                </td>
+                <td class="text-right">{{ number_format($move['quantity'], 2) }} {{ $move['unit'] }}</td>
+                <td class="text-right">{{ number_format($move['stock_before'], 2) }}</td>
+                <td class="text-right">{{ number_format($move['stock_after'], 2) }}</td>
             </tr>
             @endforeach
         </tbody>
-        @if($hasAnySales)
-        <tfoot>
-            <tr class="total-row">
-                <td colspan="2" class="text-right"><strong>TOTAL:</strong></td>
-                <td class="text-right"><strong>{{ number_format($totalItemsSold) }}</strong></td>
-                <td class="text-right"><strong>{{ number_format($totalRevenue, 2) }}</strong></td>
-            </tr>
-        </tfoot>
-        @endif
     </table>
     @else
     <div class="no-data">
-        No menu performance data available for this period.
+        No stock movements for this period.
     </div>
     @endif
 
     <div class="footer">
-        <p>JEONGOL IZAKAYA • Menu Performance Report • {{ now()->format('F j, Y') }}</p>
+        <p>JEONGOL IZAKAYA • Stock Movement Report • {{ now()->format('F j, Y') }}</p>
     </div>
 </body>
 

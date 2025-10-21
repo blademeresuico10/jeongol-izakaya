@@ -131,8 +131,8 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="report-title">SALES REPORT</div>
+        <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="date-range">
             <strong>Period:</strong> {{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}
         </div>

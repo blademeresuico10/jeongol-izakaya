@@ -28,7 +28,7 @@ class orders extends Model
 
     public function walkin()
     {
-        return $this->belongsTo(walkin::class, 'walk_in_id');
+        return $this->belongsTo(walkin::class, 'walk_in_id', 'id');
     }
 
     public function menu()

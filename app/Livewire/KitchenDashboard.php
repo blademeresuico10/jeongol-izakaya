@@ -7,6 +7,7 @@ use App\Models\orders;
 use App\Models\ingredients;
 use App\Models\table;
 use App\Models\OrderRefill;
+use App\Models\walkin;
 use App\Models\RefillConfiguration;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
