@@ -1495,7 +1495,6 @@ class AdminController extends Controller
     public function getStockBatches(Request $request)
     {
         try {
-            // ✅ Process expired batches BEFORE loading batch list
             ingredientBatch::processExpiredBatches();
 
             $period = $request->get('period', 'thisweek');

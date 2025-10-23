@@ -30,18 +30,17 @@ class StockOrderManagement extends Component
         'orderCompleted' => '$refresh',
     ];
 
-    // NEW METHOD: Create stock order from button click
     public function createStockOrder($ingredientId)
     {
         $ingredient = ingredients::find($ingredientId);
-        
+
         if (!$ingredient) {
             session()->flash('error', 'Ingredient not found.');
             return;
         }
 
         $alertLevel = $ingredient->stockAlertLevel;
-        
+
         if (!$alertLevel) {
             session()->flash('error', 'No stock alert level configured for this ingredient.');
             return;
@@ -66,10 +65,10 @@ class StockOrderManagement extends Component
         ]);
 
         session()->flash('success', "Stock order created successfully for {$ingredient->name}!");
-        
+
         // Switch to pending orders tab
         $this->activeTab = 'pending-orders-list';
-        
+
         $this->dispatch('orderCreated');
     }
 
@@ -117,10 +116,14 @@ class StockOrderManagement extends Component
         $order = StockOrder::with('ingredient')->findOrFail($orderId);
 
         $this->selectedOrder = $orderId;
-        $this->orderedQuantity = $order->quantity;
-        $this->receivedQuantity = $order->quantity;
         $this->ingredientName = $order->ingredient->name;
         $this->unit = $order->ingredient->unit;
+
+        $isPieces = in_array(strtolower($this->unit), ['pieces', 'pcs', 'piece']);
+
+        $this->orderedQuantity = $isPieces ? (int) $order->quantity : $order->quantity;
+        $this->receivedQuantity = $isPieces ? (int) $order->quantity : $order->quantity;
+
         $this->expirationDate = null;
         $this->showReceiveModal = true;
     }
@@ -133,35 +136,37 @@ class StockOrderManagement extends Component
 
     public function confirmReceive()
     {
-        // Check if unit is pieces and validate whole numbers
         $isPieces = in_array(strtolower($this->unit), ['pieces', 'pcs', 'piece']);
-        
+
         if ($isPieces) {
-            // For pieces: validate integer only
             $this->validate([
                 'receivedQuantity' => [
                     'required',
                     'numeric',
                     'min:1',
-                    'regex:/^\d+$/' // Only whole numbers, no decimals
+                    'regex:/^\d+$/'
                 ],
-                'expirationDate' => 'nullable|date|after_or_equal:today',
+                'expirationDate' => 'required|date|after_or_equal:today',
             ], [
                 'receivedQuantity.required' => 'Received quantity is required',
                 'receivedQuantity.numeric' => 'Received quantity must be a number',
                 'receivedQuantity.min' => 'Received quantity must be at least 1',
                 'receivedQuantity.regex' => 'Pieces must be a whole number (no decimals allowed)',
+                'expirationDate.required' => 'Expiration date is required',
+                'expirationDate.date' => 'Please enter a valid date',
                 'expirationDate.after_or_equal' => 'Expiration date cannot be in the past'
             ]);
         } else {
             // For other units: allow decimals
             $this->validate([
                 'receivedQuantity' => 'required|numeric|min:0.01',
-                'expirationDate' => 'nullable|date|after_or_equal:today',
+                'expirationDate' => 'required|date|after_or_equal:today',
             ], [
                 'receivedQuantity.required' => 'Received quantity is required',
                 'receivedQuantity.numeric' => 'Received quantity must be a number',
                 'receivedQuantity.min' => 'Received quantity must be greater than 0',
+                'expirationDate.required' => 'Expiration date is required',
+                'expirationDate.date' => 'Please enter a valid date',
                 'expirationDate.after_or_equal' => 'Expiration date cannot be in the past'
             ]);
         }
@@ -169,47 +174,51 @@ class StockOrderManagement extends Component
         $order = StockOrder::findOrFail($this->selectedOrder);
         $ingredient = $order->ingredient;
 
-        DB::transaction(function () use ($order, $ingredient) {
-            $stockBefore = $ingredient->stocks;
+        try {
+            DB::transaction(function () use ($order, $ingredient) {
+                $stockBefore = $ingredient->stocks;
 
-            $ingredient->stocks += $this->receivedQuantity;
-            $ingredient->save();
+                $ingredient->stocks += $this->receivedQuantity;
+                $ingredient->save();
 
-            $batch = ingredientBatch::create([
-                'ingredient_id' => $ingredient->id,
-                'quantity' => $this->receivedQuantity,
-                'arrived_at' => now(),
-                'expiration_date' => $this->expirationDate,
-                'status' => 'active'
-            ]);
+                $batch = ingredientBatch::create([
+                    'ingredient_id' => $ingredient->id,
+                    'quantity' => $this->receivedQuantity,
+                    'arrived_at' => now(),
+                    'expiration_date' => $this->expirationDate,
+                    'status' => 'active'
+                ]);
 
-            $order->status = 'completed';
-            $order->save();
+                $order->status = 'completed';
+                $order->save();
 
-            ingredientMovements::create([
-                'ingredient_id' => $ingredient->id,
-                'ingredient_batch_id' => $batch->id,
-                'user_id' => Auth::id(),
-                'type' => 'stock_in',
-                'quantity' => $this->receivedQuantity,
-                'stock_before' => $stockBefore,
-                'stock_after' => $ingredient->stocks,
-                'notes' => "Stock order #{$order->id} completed. Ordered: {$this->orderedQuantity} {$this->unit}, Received: {$this->receivedQuantity} {$this->unit}"
-            ]);
-        });
+                ingredientMovements::create([
+                    'ingredient_id' => $ingredient->id,
+                    'ingredient_batch_id' => $batch->id,
+                    'user_id' => Auth::id(),
+                    'type' => 'stock_in',
+                    'quantity' => $this->receivedQuantity,
+                    'stock_before' => $stockBefore,
+                    'stock_after' => $ingredient->stocks,
+                    'notes' => "Stock order #{$order->id} completed. Ordered: {$this->orderedQuantity} {$this->unit}, Received: {$this->receivedQuantity} {$this->unit}"
+                ]);
+            });
 
-        $difference = $this->orderedQuantity - $this->receivedQuantity;
+            $difference = $this->orderedQuantity - $this->receivedQuantity;
 
-        if ($difference > 0) {
-            session()->flash('warning', "Order completed! Shortage: {$difference} {$this->unit}");
-        } elseif ($difference < 0) {
-            session()->flash('success', "Order completed! Excess: " . abs($difference) . " {$this->unit}");
-        } else {
-            session()->flash('success', "Stock received successfully! Added {$this->receivedQuantity} {$this->unit}");
+            if ($difference > 0) {
+                session()->flash('warning', "Order completed! Shortage: {$difference} {$this->unit}");
+            } elseif ($difference < 0) {
+                session()->flash('success', "Order completed! Excess: " . abs($difference) . " {$this->unit}");
+            } else {
+                session()->flash('success', "Stock received successfully! Added {$this->receivedQuantity} {$this->unit}");
+            }
+
+            $this->closeReceiveModal();
+            $this->dispatch('orderCompleted');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to process stock receipt: ' . $e->getMessage());
         }
-
-        $this->closeReceiveModal();
-        $this->dispatch('orderCompleted');
     }
 
     public function switchToPendingTab()
@@ -221,29 +230,24 @@ class StockOrderManagement extends Component
     {
         $ingredients = ingredients::with('stockAlertLevel')->get();
 
-        // Only fetch pending stock orders
         $stockOrders = StockOrder::with('ingredient')
             ->where('status', 'pending')
             ->latest()
             ->get();
 
-        // Get critical stock ingredients with their pending order quantities
         $criticalStockIngredients = $ingredients->filter(
             fn($i) => $i->stockAlertLevel &&
                 $i->stockAlertLevel->critical_stock &&
                 $i->stocks <= $i->stockAlertLevel->critical_stock
         )->map(function ($ingredient) {
-            // Fetch the exact order quantity from stock_orders table
             $pendingOrder = StockOrder::where('ingredient_id', $ingredient->id)
                 ->where('status', 'pending')
                 ->first();
 
             if ($pendingOrder) {
-                // Use the quantity from stock_orders, not from stock_level_alerts
                 $ingredient->pending_order_quantity = $pendingOrder->quantity;
                 $ingredient->pending_order_id = $pendingOrder->id;
             } else {
-                // Fallback to reorder_quantity from stock_level_alerts if no pending order
                 $ingredient->pending_order_quantity = $ingredient->stockAlertLevel->reorder_quantity ?? null;
                 $ingredient->pending_order_id = null;
             }

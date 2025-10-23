@@ -1155,9 +1155,17 @@
 
                                 options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
                                 available.forEach(ing => {
-                                    const stockClass = ing.stocks < 100 ? 'text-danger' : '';
-                                    options += `<option value="${ing.id}" data-unit="${ing.unit}">
-                                ${ing.name} - Stock: ${ing.stocks} ${ing.unit}
+                                    let displayStock = ing.stocks;
+                                    let displayUnit = ing.unit;
+
+                                    if (ing.unit === 'kg') {
+                                        displayStock = ing.stocks * 1000;
+                                        displayUnit = 'grams';
+                                    }
+
+                                    const stockClass = displayStock < 100 ? 'text-danger' : '';
+                                    options += `<option value="${ing.id}" data-unit="${displayUnit}">
+                                ${ing.name}
                             </option>`;
                                 });
                                 options += '</optgroup>';
@@ -1167,13 +1175,21 @@
                             $('#addIngredientModal').modal('show');
                         })
                         .catch(() => {
-                            // Fallback if can't fetch existing
                             let options = '<option value="">Select an ingredient</option>';
                             Object.keys(grouped).forEach(category => {
                                 options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
                                 grouped[category].forEach(ing => {
-                                    options += `<option value="${ing.id}" data-unit="${ing.unit}">
-                                ${ing.name} (Stock: ${ing.stocks} ${ing.unit})
+                                    // Convert kg to grams for display
+                                    let displayStock = ing.stocks;
+                                    let displayUnit = ing.unit;
+
+                                    if (ing.unit === 'kg') {
+                                        displayStock = ing.stocks * 1000;
+                                        displayUnit = 'grams';
+                                    }
+
+                                    options += `<option value="${ing.id}" data-unit="${displayUnit}">
+                                ${ing.name} (Stock: ${displayStock} ${displayUnit})
                             </option>`;
                                 });
                                 options += '</optgroup>';
@@ -1202,13 +1218,13 @@
 
             let defaultQty = 1;
             if (unit === 'grams') {
-                defaultQty = 100;
+                defaultQty = 1;
             } else if (unit === 'pieces') {
                 defaultQty = 1;
             }
 
             $('#ingredientQty').val(defaultQty);
-            $('#unitLabel').text(unit ? ` (${unit})` : '');
+            $('#unitLabel').text(' (grams)');
         });
         $(document).on('change', '#ingredientSelect', function () {
             const selected = $(this).find('option:selected');
@@ -1450,8 +1466,8 @@
     @if(session('new_menu_name'))
         $('#newMenuName').text("{{ session('new_menu_name') }}");
         $('#postMenuCreationModal').modal({
-            backdrop: 'static',  
-            keyboard: false       
+            backdrop: 'static',
+            keyboard: false
         });
     @endif
 

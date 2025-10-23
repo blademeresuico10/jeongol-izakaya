@@ -263,32 +263,36 @@
                                     </div>
                                 </div>
                                 <div class="col-6">
-                                    <label class="font-weight-bold text-success">
-                                        Received Quantity: <span class="text-danger">*</span>
-                                    </label>
-                                    <input type="number" id="receivedQuantityInput"
-                                        class="form-control @error('receivedQuantity') is-invalid @enderror"
-                                        wire:model.lazy="receivedQuantity"
-                                        min="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
-                                        step="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
-                                        placeholder="Enter received quantity">
-                                    @error('receivedQuantity')
-                                        <div class="invalid-feedback d-block">{{ $message }}</div>
-                                    @enderror
+                                <label class="font-weight-bold text-success">
+                                    Received Quantity: <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" id="receivedQuantityInput"
+                                    class="form-control @error('receivedQuantity') is-invalid @enderror"
+                                    wire:model.defer="receivedQuantity"
+                                    min="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
+                                    step="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
                                     @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
-                                        <small class="form-text text-muted">
-                                            <i class="fas fa-info-circle"></i> Whole numbers only (no decimals)
-                                        </small>
+                                        oninput="this.value = Math.floor(Math.abs(this.value))"
                                     @endif
-                                </div>
+                                    placeholder="Enter received quantity"
+                                    required>
+                                @error('receivedQuantity')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                                @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
+                                    <small class="form-text text-muted">
+                                    </small>
+                                @endif
+                            </div>
                             </div>
 
                             <div class="mb-3">
                                 <label class="font-weight-bold">
-                                    Expiration Date: <span class="text-muted">(Optional)</span>
+                                    Expiration Date: <span class="text-danger">*</span>
                                 </label>
                                 <input type="date" class="form-control @error('expirationDate') is-invalid @enderror"
-                                    wire:model="expirationDate" min="{{ date('Y-m-d') }}">
+                                    wire:model.defer="expirationDate" wire:change="$validate('expirationDate')"
+                                    min="{{ date('Y-m-d') }}" required>
                                 @error('expirationDate')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
@@ -342,5 +346,64 @@
                 printWindow.print();
             });
         });
+                protected $rules = [
+            'receivedQuantity' => 'required|numeric|min:0.01',
+            'expirationDate' => 'required|date|after_or_equal:today',
+        ];
+
+        protected $messages = [
+            'receivedQuantity.required' => 'Received quantity is required',
+            'receivedQuantity.numeric' => 'Received quantity must be a number',
+            'receivedQuantity.min' => 'Received quantity must be greater than 0',
+            'expirationDate.required' => 'Expiration date is required',
+            'expirationDate.date' => 'Please enter a valid date',
+            'expirationDate.after_or_equal' => 'Expiration date cannot be in the past',
+        ];
+
+        // Add real-time validation
+        public function updated($propertyName) {
+            $this -> validateOnly($propertyName);
+        }
+
+        // Additional validation for pieces
+        public function updatedReceivedQuantity($value) {
+            if (in_array(strtolower($this -> unit), ['pieces', 'pcs', 'piece'])) {
+                if (!is_numeric($value) || floor($value) != $value) {
+                    $this -> addError('receivedQuantity', 'Pieces must be a whole number (no decimals allowed)');
+                }
+            }
+
+            $this -> validateOnly('receivedQuantity');
+        }
+
+        public function confirmReceive() {
+            // Validate all fields before processing
+            $this -> validate();
+
+            // Additional validation for pieces
+            if (in_array(strtolower($this -> unit), ['pieces', 'pcs', 'piece'])) {
+                if (!is_numeric($this -> receivedQuantity) || floor($this -> receivedQuantity) != $this -> receivedQuantity) {
+                    $this -> addError('receivedQuantity', 'Pieces must be a whole number (no decimals allowed)');
+                    return;
+                }
+            }
+
+            // Check if expiration date is provided
+            if (empty($this -> expirationDate)) {
+                $this -> addError('expirationDate', 'Expiration date is required');
+                return;
+            }
+
+            try {
+                // Your existing code to save the stock receipt
+                // Make sure to include expiration_date in the insert
+
+                session() -> flash('success', 'Stock received successfully');
+                $this -> closeReceiveModal();
+
+            } catch (\Exception $e) {
+                session() -> flash('error', 'Failed to process stock receipt: '.$e -> getMessage());
+            }
+        }
     </script>
 @endpush
