@@ -332,7 +332,6 @@
               </svg>
             </div>
             <p class="text-xl font-semibold text-gray-600 mb-2">No orders yet</p>
-            <p class="text-sm text-gray-400 text-center">Start adding items from the menu</p>
           </div>
 
           <div id="selectedOrdersContainer" class="p-4 space-y-3">
@@ -1490,10 +1489,6 @@
     const mainMenuOrders = orders.filter(item => item.category === 'main');
     const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
 
-    if (totalMainMenuQuantity !== paxCount) {
-      this.showErrorToast('Match your main menu order quantity to your number of pax.');
-      return;
-    }
 
     this.elements.submitBtn.disabled = true;
     this.elements.submitBtn.textContent = "Submitting...";
@@ -1501,8 +1496,6 @@
     const data = this.prepareSubmissionData();
     this.submitOrder(data);
   }
-
-
 
   showErrorToast(message) {
     const toast = document.createElement('div');

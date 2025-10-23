@@ -526,6 +526,7 @@ class CashierController extends Controller
         }
     }
 
+
     public function checkCustomer(Request $request)
     {
         try {
@@ -540,26 +541,27 @@ class CashierController extends Controller
                 ], 400);
             }
 
-            // Check if customer exists with this ID number and ID type
+            // Check if customer exists with same ID number and type
             $customer = customers::where('id_number', $idNumber)
                 ->where('id_type', $idType)
                 ->first();
 
             if (!$customer) {
-                // Check if this ID number was already used today with ANY ID type
-                $hasUsedDiscountWithDifferentIdType = DB::table('transactions')
+                // Check if this ID number with this specific ID type has used discount today
+                $hasUsedDiscountToday = DB::table('transactions')
                     ->join('transaction_details', 'transactions.id', '=', 'transaction_details.transaction_id')
                     ->join('customers', 'transaction_details.customer_id', '=', 'customers.id')
                     ->where('customers.id_number', $idNumber)
+                    ->where('customers.id_type', $idType)
                     ->where('transaction_details.discount_amount', '>', 0)
                     ->whereDate('transactions.created_at', Carbon::today())
                     ->exists();
 
-                if ($hasUsedDiscountWithDifferentIdType) {
+                if ($hasUsedDiscountToday) {
                     return response()->json([
                         'exists' => false,
                         'can_use_discount' => false,
-                        'message' => 'This ID number already received a discount today'
+                        'message' => 'This ID has already received a discount today!'
                     ]);
                 }
 
@@ -574,6 +576,7 @@ class CashierController extends Controller
                 ->join('transaction_details', 'transactions.id', '=', 'transaction_details.transaction_id')
                 ->join('customers', 'transaction_details.customer_id', '=', 'customers.id')
                 ->where('customers.id_number', $idNumber)
+                ->where('customers.id_type', $idType)
                 ->where('transaction_details.discount_amount', '>', 0)
                 ->whereDate('transactions.created_at', Carbon::today())
                 ->exists();
@@ -584,7 +587,7 @@ class CashierController extends Controller
                 'customer_name' => $customer->name,
                 'can_use_discount' => !$hasDiscountToday,
                 'message' => $hasDiscountToday
-                    ? 'This ID number already received a discount today'
+                    ? 'This ID has already received a discount today with the same ID type'
                     : 'Customer can use discount'
             ]);
         } catch (Exception $e) {

@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class ingredientMovements extends Model
 {
+
+    protected $table = 'ingredient_movements';
     protected $fillable = [
         'ingredient_id',
         'ingredient_batch_id',  

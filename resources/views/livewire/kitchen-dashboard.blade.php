@@ -62,7 +62,7 @@
         ?? 'N/A';
         $status = $orderGroup->first()->status ?? 'Pending';
         $statusColor = $status === 'Pending' ? 'bg-red-400' : 'bg-yellow-400';
-        @endphp
+      @endphp
 
         @if(in_array($status, ['Pending', 'Ready']))
         <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col h-[420px]">
@@ -71,8 +71,8 @@
             <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
           </div>
 
-          <!-- Order Items -->
-          <div class="p-4 space-y-2 flex-grow">
+          <!-- Order Items -->  
+          <div class="p-4 space-y-3 flex-1 overflow-y-auto max-h-[280px]">
             @foreach($orderGroup as $order)
             <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
               <span class="font-medium text-sm text-gray-800">
@@ -96,7 +96,7 @@
           </div>
 
           <!-- Action Button -->
-          <div class="p-4 pt-0">
+          <div class="p-4 pt-9">
             @if($status === 'Pending')
             <button wire:click="markAsReady({{ $orderGroup->first()->id }})"
               class="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
@@ -110,8 +110,8 @@
           </div>
         </div>
         @endif
-        @empty
-        @endforelse
+    @empty
+    @endforelse
 
 
         {{-- Pending Refills --}}
@@ -122,53 +122,53 @@
         ?? 'N/A';
         $status = $refill->status ?? 'Pending';
         $statusColor = $status === 'Pending' ? 'bg-blue-400' : 'bg-blue-600';
-        @endphp
+      @endphp
 
         @if(in_array($status, ['Pending', 'Ready']))
         <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col h-fit">
           <!-- Header -->
           <div class="p-4 {{ $statusColor }} text-white">
-            <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
+          <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
           </div>
 
           <!-- Refill Items -->
           <div class="p-4 space-y-2 flex-grow">
-            <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
-              <span class="font-medium text-sm text-gray-800">
-                {{ $refill->quantity }} x {{ $refill->ingredient->name ?? 'Unknown' }} (Refill)
-              </span>
-              <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd" />
-              </svg>
-            </div>
+          <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
+          <span class="font-medium text-sm text-gray-800">
+          {{ $refill->quantity }} x {{ $refill->ingredient->name ?? 'Unknown' }} (Refill)
+          </span>
+          <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd"
+            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+            clip-rule="evenodd" />
+          </svg>
+          </div>
           </div>
 
           <!-- Action Button -->
-          <div class="p-4 pt-0">
-            @if($status === 'Pending')
-            <button wire:click="markAsReady({{ $refill->id }}, 'refill')"
-              class="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
-              Mark as Ready
-            </button>
-            @else
-            <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold cursor-default">
-              Ready
-            </button>
-            @endif
+          <div >
+          @if($status === 'Pending')
+        <button wire:click="markAsReady({{ $refill->id }}, 'refill')"
+          class="w-full bg-white border-2 border-gray-300 text-gray-700 rounded-lg font-semibold ">
+          Mark as Ready
+        </button>
+        @else
+        <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold cursor-default">
+          Ready
+        </button>
+        @endif
           </div>
         </div>
-        @endif
-        @empty
-        @endforelse
+      @endif
+    @empty
+    @endforelse
 
         {{-- Empty State --}}
         @if($this->pendingOrders->isEmpty() && $this->pendingRefills->isEmpty())
-        <div class="col-span-full text-center py-12">
-          <p class="text-gray-500 text-lg">No orders at the moment</p>
-        </div>
-        @endif
+      <div class="col-span-full text-center py-12">
+        <p class="text-gray-500 text-lg">No orders at the moment</p>
+      </div>
+    @endif
 
       </div>
 

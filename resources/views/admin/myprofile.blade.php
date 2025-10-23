@@ -148,6 +148,12 @@
                                 class="w-full px-3 py-2 border rounded text-sm">
                         </div>
 
+                        <div class="mb-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                            <input type="text" name="address" id="address" value="{{ $user->address }}"
+                                class="w-full px-3 py-2 border rounded text-sm">
+                        </div>
+
                         <div class="flex justify-end space-x-3 pt-4 border-t">
                             <button type="button" onclick="closeModal()"
                                 class="px-4 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50">Cancel</button>

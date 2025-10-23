@@ -1454,6 +1454,8 @@ class AdminController extends Controller
     public function getStocks(Request $request)
     {
         try {
+            ingredientBatch::processExpiredBatches();
+
             $ingredients = ingredients::with(['stockAlertLevel'])
                 ->orderBy('name', 'asc')
                 ->paginate(10);
@@ -1493,6 +1495,9 @@ class AdminController extends Controller
     public function getStockBatches(Request $request)
     {
         try {
+            // ✅ Process expired batches BEFORE loading batch list
+            ingredientBatch::processExpiredBatches();
+
             $period = $request->get('period', 'thisweek');
 
             $startDate = $period === 'thisweek'
@@ -1514,8 +1519,9 @@ class AdminController extends Controller
                     'ingredient_batches.arrived_at'
                 )
                 ->where('ingredient_batches.quantity', '>', 0)
+                ->where('ingredient_batches.status', '!=', 'expired') // ✅ Exclude expired batches
                 ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
-                ->whereDate('ingredient_batches.expiration_date', '>', now())
+                ->whereDate('ingredient_batches.expiration_date', '>', now()) // This already filters out expired
                 ->orderBy('ingredient_batches.arrived_at', 'desc')
                 ->paginate(10)
                 ->through(function ($b) {
@@ -1825,8 +1831,6 @@ class AdminController extends Controller
         }
     }
 
-
-
     public function updateBatch(Request $request, $id)
     {
         $request->validate([
@@ -1837,7 +1841,7 @@ class AdminController extends Controller
 
         DB::beginTransaction();
         try {
-            $batch = IngredientBatch::findOrFail($id);
+            $batch = ingredientBatch::findOrFail($id);
             $ingredient = $batch->ingredient;
 
             $oldQty = $batch->quantity;

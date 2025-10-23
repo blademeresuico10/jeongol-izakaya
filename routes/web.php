@@ -238,7 +238,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
         Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
         // Make sure this route exists
-        Route::get('/cashier/check-customer', [CashierController::class, 'checkCustomer'])->name('cashier.check.customer');
+        Route::post('/cashier/check-customer', [CashierController::class, 'checkCustomer'])->name('cashier.check.customer');
     });
 
     Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {

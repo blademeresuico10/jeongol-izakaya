@@ -247,8 +247,8 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label class="small">Quantity</label>
-                        <input type="number" id="editBatchQty" class="form-control form-control-sm" step="0.01"
-                            min="0.01" required>
+                        <input type="number" id="editBatchQty" class="form-control form-control-sm" step="0.01" min="1"
+                            required>
                     </div>
                     <div class="form-group">
                         <label class="small">Arrived Date</label>
@@ -806,13 +806,12 @@
             $.ajax({
                 url: `/ingredient_management/batches/${id}`,
                 method: 'PUT',
-                data: JSON.stringify({
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
                     quantity: $('#editBatchQty').val(),
                     arrived_at: $('#editBatchArrived').val(),
                     expiration_date: $('#editBatchExpiry').val()
-                }),
-                contentType: 'application/json',
-                headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
+                },
                 success: (response) => {
                     if (response.success) {
                         $('#editBatchModal').modal('hide');
@@ -829,6 +828,8 @@
                     }
                 },
                 error: (xhr) => {
+                    console.log('Full error:', xhr);
+                    console.log('Response:', xhr.responseJSON);
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',

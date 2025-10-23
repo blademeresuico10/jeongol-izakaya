@@ -927,7 +927,6 @@
             }
         }
 
-
         updateTotalAfterDiscounts() {
             const itemTotals = document.querySelectorAll('.item-total');
 
@@ -963,9 +962,8 @@
             let breakdownHtml = '';
             const itemGroups = {};
             const mainMenuEntries = [];
-            let itemCounter = 0; // ✅ MAKE SURE THIS IS HERE
+            let itemCounter = 0; 
 
-            // Rest of the function...
             const discountSelectMap = {};
             document.querySelectorAll('.discount-type-select').forEach(select => {
                 const itemIndex = parseInt(select.getAttribute('data-item-index'));
@@ -991,11 +989,11 @@
                 const isDiscountableItem = menuItemData.has_discount === true;
 
                 for (let i = 0; i < qty; i++) {
-                    let finalPrice = itemTotalMap[itemCounter] || price; // ✅ USE itemCounter
+                    let finalPrice = itemTotalMap[itemCounter] || price; 
                     let discountInfo = '';
                     let discountType = 'none';
 
-                    const select = discountSelectMap[itemCounter]; // ✅ USE itemCounter
+                    const select = discountSelectMap[itemCounter]; 
                     if (select) {
                         discountType = select.value;
                         if (discountType !== 'none') {
@@ -1016,7 +1014,7 @@
                             price: finalPrice,
                             hasDiscount: discountInfo !== '',
                             discountType,
-                            index: itemCounter // ✅ USE itemCounter
+                            index: itemCounter 
                         });
                     } else {
                         const groupKey = itemName + discountInfo;
@@ -1027,18 +1025,17 @@
                                 unitPrice: finalPrice,
                                 hasDiscount: discountInfo !== '',
                                 discountType: discountType,
-                                index: itemCounter // ✅ USE itemCounter
+                                index: itemCounter 
                             };
                         }
                         itemGroups[groupKey].count++;
                         itemGroups[groupKey].totalPrice += finalPrice;
                     }
 
-                    itemCounter++; // ✅ INCREMENT itemCounter
+                    itemCounter++; 
                 }
             });
 
-            // Build breakdown display
             let displayItemCounter = 0;
 
             mainMenuEntries.forEach(entry => {
@@ -1094,7 +1091,6 @@
         </div>
     `;
 
-            // --- CASH PAYMENT SECTION ---
             const subtotalEl = document.getElementById('summary_subtotal');
             const advanceEl = document.getElementById('summary_advance');
             const amountDueEl = document.getElementById('summary_amount_due');
@@ -1113,7 +1109,6 @@
                     advanceRow.style.display = advancePayment > 0 ? 'flex' : 'none';
                 }
 
-                // Update min value for cash input
                 const cashInput = document.getElementById('cashReceived');
                 if (cashInput) {
                     cashInput.setAttribute('min', amountDue.toFixed(2));
@@ -1143,17 +1138,15 @@
                     idTypeValue = "N/A";
             }
 
-            // Check if we already have saved data for this item
             const key = `${itemName}_${itemIndex}`;
             const savedData = this.tempCustomerData[key];
-            const savedIdNumber = savedData ? savedData.id_number : ''; // Changed from name to id_number
+            const savedIdNumber = savedData ? savedData.id_number : ''; 
 
             const modalHtml = `
     <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 w-96 max-w-sm mx-4">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">Customer Information</h3>
-                <button id="closeCustomerInfoModal" class="text-gray-400 hover:text-gray-600">X</button>
             </div>
             
             <div class="mb-4 p-3 bg-blue-50 rounded-lg">
@@ -1174,10 +1167,10 @@
                     <label for="customerIdNumber" class="block text-sm font-medium text-gray-700 mb-1">
                         ID Number <span class="text-red-500">*</span>
                     </label>
-                    <input type="text" id="customerIdNumber" name="id_number" required value="${savedIdNumber}"
+                    <input type="text" id="customerIdNumber" name="id_number" required maxlength="12" value="${savedIdNumber}"
                         class="w-full px-3 py-2 border border-gray-300 rounded-md"
                         placeholder="Enter ID number"
-                        oninput="this.value = this.value.replace(/[^a-zA-Z0-9-]/g, '')">
+                        onkeypress="return /[0-9]/i.test(event.key)">
                     <div id="idNumberError" class="text-red-500 text-xs mt-1 hidden">ID number is required</div>
                 </div>
 
@@ -1223,185 +1216,163 @@
 
         setupCustomerInfoModalEvents() {
             const modal = document.getElementById('customerInfoModal');
-            const closeBtn = document.getElementById('closeCustomerInfoModal');
-            const cancelBtn = document.getElementById('cancelCustomerInfo');
             const form = document.getElementById('customerInfoForm');
-            const idNumberInput = document.getElementById('customerIdNumber');
-            const idTypeInput = document.getElementById('customerIdType');
+            const cancelBtn = document.getElementById('cancelCustomerInfo');
 
-            const closeModal = () => {
-                if (modal) {
-                    modal.remove();
+            // Add close button functionality
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', () => {
+                    if (modal) modal.remove();
+                });
+            }
+
+            const checkCustomer = async (idNumber, idType, customerType) => {
+                const idNumberError = document.getElementById('idNumberError');
+                const submitBtn = form?.querySelector('button[type="submit"]');
+
+                try {
+                    const response = await fetch('/cashier/check-customer', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        },
+                        body: JSON.stringify({
+                            id_number: idNumber,
+                            id_type: idType,
+                            discount_type: customerType
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!idNumberError || !submitBtn) {
+                        console.error('Required elements not found');
+                        return false;
+                    }
+
+                    // Check if ID is already used in current transaction for same discount type
+                    const currentDiscountType = form.querySelector('input[name="customer_type"]')?.value;
+                    const currentItemIndex = form.querySelector('input[name="item_index"]')?.value;
+                    const currentItemName = form.querySelector('input[name="item_name"]')?.value;
+
+                    if (!currentDiscountType || !currentItemIndex || !currentItemName) {
+                        console.error('Missing form data');
+                        return false;
+                    }
+
+                    const usedForSameDiscount = Object.entries(this.tempCustomerData).some(([key, data]) => {
+                        const [itemName, index] = key.split('_');
+                        return data.id_number === idNumber &&
+                            data.customer_type === currentDiscountType &&
+                            (itemName !== currentItemName || index !== currentItemIndex);
+                    });
+
+                    if (usedForSameDiscount) {
+                        idNumberError.textContent = 'This ID is already used for this discount type in current transaction';
+                        idNumberError.classList.remove('hidden');
+                        submitBtn.disabled = true;
+                        return false;
+                    }
+
+                    if (!data.can_use_discount) {
+                        idNumberError.textContent = data.message || 'This ID has already been used today';
+                        idNumberError.classList.remove('hidden');
+                        submitBtn.disabled = true;
+                        return false;
+                    }
+
+                    if (data.exists && data.customer_name) {
+                        const customerNameInput = document.getElementById('customerName');
+                        if (customerNameInput) {
+                            customerNameInput.value = data.customer_name;
+                        }
+                    }
+
+                    idNumberError.classList.add('hidden');
+                    submitBtn.disabled = false;
+                    return true;
+
+                } catch (error) {
+                    console.error('Error checking customer:', error);
+                    if (idNumberError && submitBtn) {
+                        idNumberError.textContent = 'Error validating ID number';
+                        idNumberError.classList.remove('hidden');
+                        submitBtn.disabled = true;
+                    }
+                    return false;
                 }
             };
 
-            if (closeBtn) closeBtn.addEventListener('click', closeModal);
-            if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-
-            if (modal) {
-                modal.addEventListener('click', (e) => {
-                    if (e.target === modal) {
-                        closeModal();
-                    }
-                });
-            }
-
-            // ✅ REAL-TIME VALIDATION
-            if (idNumberInput && idTypeInput) {
-                let validationTimeout;
-
-                idNumberInput.addEventListener('input', (e) => {
-                    const idNumber = e.target.value.trim();
-                    const idType = idTypeInput.value;
-                    const idNumberError = document.getElementById('idNumberError');
-
-                    clearTimeout(validationTimeout);
-
-                    if (!idNumber || idNumber.length < 2) {
-                        idNumberError.classList.add('hidden');
-                        return;
-                    }
-
-                    validationTimeout = setTimeout(() => {
-                        idNumberError.textContent = 'Checking...';
-                        idNumberError.classList.remove('hidden', 'text-red-500');
-                        idNumberError.classList.add('text-blue-500');
-
-                        fetch(`/cashier/check-customer?id_number=${encodeURIComponent(idNumber)}&id_type=${encodeURIComponent(idType)}`)
-                            .then(response => response.json())
-                            .then(data => {
-                                const submitBtn = form.querySelector('button[type="submit"]');
-
-                                if (data.exists && !data.can_use_discount) {
-                                    idNumberError.textContent = 'This customer already used their discount today with this ID type.';
-                                    idNumberError.classList.remove('text-blue-500');
-                                    idNumberError.classList.add('text-red-500');
-                                    idNumberError.classList.remove('hidden');
-
-                                    if (submitBtn) {
-                                        submitBtn.disabled = true;
-                                        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-                                    }
-                                } else {
-                                    idNumberError.classList.add('hidden');
-
-                                    if (submitBtn) {
-                                        submitBtn.disabled = false;
-                                        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                                    }
-
-                                    if (data.exists && data.customer_name) {
-                                        const nameInput = document.getElementById('customerName');
-                                        if (nameInput && !nameInput.value) {
-                                            nameInput.value = data.customer_name;
-                                        }
-                                    }
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Validation error:', error);
-                                idNumberError.classList.add('hidden');
-                            });
-                    }, 500);
-                });
-            }
-
             if (form) {
-                form.addEventListener('submit', (e) => {
+                const idNumberInput = document.getElementById('customerIdNumber');
+                if (idNumberInput) {
+                    let timeout = null;
+                    idNumberInput.addEventListener('input', (e) => {
+                        clearTimeout(timeout);
+                        const value = e.target.value;
+                        const idType = document.getElementById('customerIdType')?.value;
+                        const customerType = form.querySelector('input[name="customer_type"]')?.value;
+
+                        if (!idType || !customerType) {
+                            console.error('Missing form values');
+                            return;
+                        }
+
+                        if (value.length < 12) {
+                            const idNumberError = document.getElementById('idNumberError');
+                            if (idNumberError) {
+                                idNumberError.textContent = 'ID number must be 12 characters';
+                                idNumberError.classList.remove('hidden');
+                            }
+                            const submitBtn = form.querySelector('button[type="submit"]');
+                            if (submitBtn) {
+                                submitBtn.disabled = true;
+                            }
+                            return;
+                        }
+
+                        timeout = setTimeout(() => {
+                            checkCustomer(value, idType, customerType);
+                        }, 500);
+                    });
+                }
+
+                form.addEventListener('submit', async (e) => {
                     e.preventDefault();
+                    const idNumber = document.getElementById('customerIdNumber')?.value;
+                    const idType = document.getElementById('customerIdType')?.value;
+                    const customerType = form.querySelector('input[name="customer_type"]')?.value;
 
-                    const formData = new FormData(form);
-                    const customerIdNumber = formData.get('id_number');
-                    const customerName = formData.get('name');
-                    const idType = formData.get('id_type');
-                    const idNumberError = document.getElementById('idNumberError');
-                    let hasError = false;
-
-                    if (!customerIdNumber || customerIdNumber.trim() === '' || customerIdNumber.trim().length === 0) {
-                        idNumberError.textContent = 'ID number is required';
-                        idNumberError.classList.remove('hidden', 'text-blue-500');
-                        idNumberError.classList.add('text-red-500');
-                        hasError = true;
-                    } else if (customerIdNumber.trim().length < 2) {
-                        idNumberError.textContent = 'ID number must be at least 2 characters';
-                        idNumberError.classList.remove('hidden', 'text-blue-500');
-                        idNumberError.classList.add('text-red-500');
-                        hasError = true;
-                    } else {
-                        idNumberError.classList.add('hidden');
-                    }
-
-                    if (hasError) {
-                        this.showToast('Please enter a valid ID number', 'error');
+                    if (!idNumber || !idType || !customerType) {
+                        console.error('Missing form data on submit');
                         return;
                     }
 
-                    const trimmedIdNumber = customerIdNumber.trim();
-                    const trimmedName = customerName ? customerName.trim() : '';
-
-                    const submitBtn = form.querySelector('button[type="submit"]');
-
-                    if (submitBtn) {
-                        submitBtn.disabled = true;
-                        submitBtn.textContent = 'Checking...';
+                    if (idNumber.length < 12) {
+                        return;
                     }
 
-                    fetch(`/cashier/check-customer?id_number=${encodeURIComponent(trimmedIdNumber)}&id_type=${encodeURIComponent(idType)}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.exists && !data.can_use_discount) {
-                                idNumberError.textContent = 'This customer already used their discount today with this ID type.';
-                                idNumberError.classList.remove('text-blue-500');
-                                idNumberError.classList.add('text-red-500');
-                                idNumberError.classList.remove('hidden');
+                    const isValid = await checkCustomer(idNumber, idType, customerType);
+                    if (!isValid) {
+                        return;
+                    }
 
-                                this.showToast('Discount already used today', 'error');
+                    const customerData = {
+                        id_number: idNumber,
+                        name: document.getElementById('customerName')?.value || '',
+                        id_type: idType,
+                        item_name: form.querySelector('input[name="item_name"]')?.value,
+                        item_index: form.querySelector('input[name="item_index"]')?.value,
+                        customer_type: customerType
+                    };
 
-                                if (submitBtn) {
-                                    submitBtn.disabled = true;
-                                    submitBtn.textContent = 'Save';
-                                }
-                                return;
-                            }
-
-                            const customerData = {
-                                id_number: trimmedIdNumber,
-                                name: trimmedName,
-                                id_type: idType,
-                                item_name: formData.get('item_name'),
-                                item_index: formData.get('item_index'),
-                                customer_type: formData.get('customer_type')
-                            };
-
-                            if (this.saveCustomerInfoTemporarily(customerData)) {
-                                this.showToast('Customer information saved', 'success');
-                                closeModal();
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error:', error);
-                            const customerData = {
-                                id_number: trimmedIdNumber,
-                                name: trimmedName,
-                                id_type: idType,
-                                item_name: formData.get('item_name'),
-                                item_index: formData.get('item_index'),
-                                customer_type: formData.get('customer_type')
-                            };
-
-                            if (this.saveCustomerInfoTemporarily(customerData)) {
-                                closeModal();
-                            }
-
-                            if (submitBtn) {
-                                submitBtn.disabled = false;
-                                submitBtn.textContent = 'Save';
-                            }
-                        });
+                    if (this.saveCustomerInfoTemporarily(customerData)) {
+                        if (modal) modal.remove();
+                    }
                 });
             }
         }
-
         saveCustomerInfoTemporarily(customerData) {
             if (!customerData ||
                 !customerData.id_number ||

@@ -921,12 +921,6 @@
       .filter(item => item.category === 'main')
       .reduce((sum, item) => sum + (item.quantity || 1), 0);
 
-    if (mainCount !== pax) {
-      paxInput.classList.add('border-red-500');
-      this.showMessageBox('Match your main menu order to your pax.', 'error');
-      return;
-    }
-
     const advancePayment = parseFloat(this.elements.advancePaymentInput.value) || 0;
     paymentModal.querySelectorAll('.tab-content .amount').forEach(input => {
       input.value = advancePayment;
