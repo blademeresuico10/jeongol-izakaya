@@ -11,19 +11,25 @@ use Illuminate\Support\Facades\Auth;
 
 class ingredientBatch extends Model
 {
-    protected $fillable = ['status', 'ingredient_id', 'arrived_at', 'expiration_date', 'quantity'];
+    protected $fillable = [
+        'status', 
+        'ingredient_id', 
+        'arrived_at', 
+        'expiration_date', 
+        'quantity'
+    ];
 
-    // REMOVED the problematic global scope
+    protected $casts = [
+        'arrived_at' => 'date',
+        'expiration_date' => 'date',
+        'quantity' => 'decimal:2'
+    ];
 
-    /**
-     * Check and process expired batches efficiently
-     * Only checks batches that need checking
-     */
+    
     public static function processExpiredBatches()
     {
         $now = Carbon::now();
 
-        // Only get batches that are expired but not yet marked as expired
         $expiredBatches = self::where('status', '!=', 'expired')
             ->where('quantity', '>', 0)
             ->whereDate('expiration_date', '<', $now)
@@ -40,13 +46,14 @@ class ingredientBatch extends Model
                 $batch->markAsExpired();
                 $processed++;
             } catch (\Exception $e) {
+                continue;
             }
         }
 
         return ['processed' => $processed, 'message' => "$processed batches processed"];
     }
 
-
+  
     public function markAsExpired()
     {
         if ($this->status === 'expired' || $this->quantity <= 0) {
@@ -70,16 +77,16 @@ class ingredientBatch extends Model
             $expiredQty = $this->quantity;
 
             expiredIngredients::create([
+                'ingredient_id' => $this->ingredient_id,     
                 'quantity' => $expiredQty,
                 'expired_at' => Carbon::now(),
-                'ingredient_id' => $this->ingredient_id,     
                 'ingredient_batch_id' => $this->id,
             ]);
 
             ingredientMovements::create([
                 'ingredient_id' => $this->ingredient_id,
                 'ingredient_batch_id' => $this->id,
-                'user_id' => Auth::id() ?? 1,                 
+                'user_id' => Auth::id() ?? 1,
                 'type' => 'expired',
                 'quantity' => $expiredQty,
                 'stock_before' => $ingredient->stocks,
@@ -100,8 +107,19 @@ class ingredientBatch extends Model
         return true;
     }
 
+    
     public function ingredient()
     {
         return $this->belongsTo(ingredients::class);
+    }
+
+    public function expiredRecords()
+    {
+        return $this->hasMany(expiredIngredients::class, 'ingredient_batch_id');
+    }
+
+    public function movements()
+    {
+        return $this->hasMany(ingredientMovements::class, 'ingredient_batch_id');
     }
 }

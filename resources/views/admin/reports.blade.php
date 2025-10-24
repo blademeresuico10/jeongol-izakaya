@@ -1114,7 +1114,7 @@
             </span>
         </td>
         <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
-    ${row.unit === 'pieces'  
+    ${row.unit === 'pieces'
                                 ? Math.round(row.totalQty).toLocaleString('en-PH')
                                 : row.totalQty.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                             } ${row.unit}
@@ -1130,7 +1130,6 @@
 `;
     }
 
-    // Expired Items Report
     function generateExpiredItemsReport(data) {
         const summary = data.summary;
         const expiredItems = data.expired_items;
@@ -1162,8 +1161,17 @@
                 <div class="text-sm font-medium opacity-90">Total Waste</div>
                 <i class="fas fa-trash-alt text-xl opacity-75"></i>
             </div>
-            <div class="text-2xl font-bold mb-1">${summary.total_waste_qty.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-            <div class="text-xs opacity-75 mt-1">kg/pieces</div>
+            <div class="text-2xl font-bold mb-1 space-y-1">
+                ${(summary.total_waste_kg > 0 || summary.total_waste_pieces > 0) ? `
+                    ${summary.total_waste_kg > 0 ? `<div class="text-xl">kg: ${summary.total_waste_kg.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>` : ''}
+                    ${summary.total_waste_pieces > 0 ? `<div class="text-xl">pieces: ${Math.round(summary.total_waste_pieces).toLocaleString('en-PH')}</div>` : ''}
+                ` : `
+                    <div class="text-xl">
+                        <div>kg: 0</div>
+                        <div>pieces: 0</div>
+                    </div>
+                `}
+            </div>
         </div>
     </div>
     
@@ -1179,7 +1187,7 @@
                 <div class="mt-2 text-sm text-orange-700">
                     <p>The following items will expire within 7 days. Please use or dispose of them accordingly:</p>
                     <ul class="list-disc list-inside mt-2">
-                        ${expiringSoon.map(item => `<li><strong>${item.name}</strong> (${item.category}) - Expires in ${item.days_until_expiry} days (${item.expiration_date})</li>`).join('')}
+                        ${expiringSoon.map(item => `<li><strong>${item.name}</strong> (${item.category}) - Expires in ${item.days_until_expiry} ${item.days_until_expiry === 1 ? 'day' : 'days'} (${item.expiration_date})</li>`).join('')}
                     </ul>
                 </div>
             </div>
@@ -1195,7 +1203,7 @@
                 Waste by Category
             </h5>
             <div class="space-y-3">
-                ${summary.by_category.map(cat => `
+                ${summary.by_category.length > 0 ? summary.by_category.map(cat => `
                     <div class="flex justify-between items-center border-b border-gray-100 pb-3">
                         <div class="flex items-center">
                             <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
@@ -1207,7 +1215,11 @@
                             <div class="text-lg font-semibold text-gray-900">${cat.count} items</div>
                         </div>
                     </div>
-                `).join('')}
+                `).join('') : `
+                    <div class="text-center text-gray-500 py-4">
+                        No waste by category
+                    </div>
+                `}
             </div>
         </div>
 
@@ -1220,20 +1232,14 @@
             <div class="space-y-4">
                 <div class="bg-white bg-opacity-20 rounded-lg p-4">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm opacity-90">This Week</span>
-                        <span class="font-bold">${summary.trend.this_week} items</span>
+                        <span class="text-sm text-black/90">This Week</span>
+                        <span class="font-bold text-black/90">${summary.trend.this_week} items</span>
                     </div>
                 </div>
                 <div class="bg-white bg-opacity-20 rounded-lg p-4">
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm opacity-90">This Month</span>
-                        <span class="font-bold">${summary.trend.this_month} items</span>
-                    </div>
-                </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm opacity-90">Average/Week</span>
-                        <span class="font-bold">${summary.trend.avg_per_week.toLocaleString('en-PH', { minimumFractionDigits: 1 })} items</span>
+                        <span class="text-sm text-black/90">This Month</span>
+                        <span class="font-bold text-black/90">${summary.trend.this_month} items</span>
                     </div>
                 </div>
             </div>
@@ -1251,31 +1257,21 @@
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Batch ID</th>
+                        
                         <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
                         <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Expired On</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Days Expired</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     ${expiredItems.length > 0 ? expiredItems.map(item => `
                         <tr class="hover:bg-gray-50 transition-colors">
                             <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.name}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700 capitalize">${item.category}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700 text-center font-mono">#${item.batch_id}</td>
                             <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
                             <td class="px-4 py-3 text-sm text-gray-700 text-center">${item.expiration_date}</td>
-                            <td class="px-4 py-3 text-sm text-center">
-                                <span class="px-3 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
-                                    ${item.days_expired} days ago
-                                </span>
-                            </td>
                         </tr>
                     `).join('') : `
                         <tr>
                             <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                <i class="fas fa-check-circle text-3xl text-green-500 mb-2 block"></i>
                                 No expired items for this period
                             </td>
                         </tr>

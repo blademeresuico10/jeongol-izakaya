@@ -237,7 +237,7 @@ class ReportsController extends Controller
 
             $stockInQtyPcs = $movements->where('type', 'stock_in')
                 ->filter(function ($move) {
-                    return $move->ingredient && $move->ingredient->unit === 'pieces';  
+                    return $move->ingredient && $move->ingredient->unit === 'pieces';
                 })
                 ->sum('quantity');
 
@@ -249,7 +249,7 @@ class ReportsController extends Controller
 
             $stockOutQtyPcs = $movements->whereIn('type', ['stock_out', 'used'])
                 ->filter(function ($move) {
-                    return $move->ingredient && $move->ingredient->unit === 'pieces';  
+                    return $move->ingredient && $move->ingredient->unit === 'pieces';
                 })
                 ->sum('quantity');
 
@@ -287,27 +287,29 @@ class ReportsController extends Controller
 
     private function getExpiredItemsReport($startDate, $endDate)
     {
-        $expiredItems = expiredIngredients::with(['ingredientBatch.ingredient'])
+        $expiredItems = expiredIngredients::with('ingredient')
             ->whereBetween('expired_at', [$startDate, $endDate])
             ->get();
 
         $expiringSoonBatches = ingredientBatch::with('ingredient')
             ->where('status', 'active')
-            ->whereRaw('DATEDIFF(expiration_date, CURDATE()) BETWEEN 0 AND 7')
+            ->whereRaw('DATEDIFF(expiration_date, CURDATE()) BETWEEN 1 AND 7')
             ->get();
 
-        $totalWasteQty = $expiredItems->sum('quantity');
-        $totalWasteValue = $expiredItems->sum(function ($item) {
-            return $item->quantity * 100;
+        // Calculate waste by unit
+        $wasteByUnit = $expiredItems->groupBy(function ($item) {
+            return $item->ingredient->unit ?? 'kg';
         });
 
+        $totalWasteKg = $wasteByUnit->get('kg', collect())->sum('quantity');
+        $totalWastePieces = $wasteByUnit->get('pieces', collect())->sum('quantity');
+
         $byCategory = $expiredItems->groupBy(function ($item) {
-            return $item->ingredientBatch->ingredient->category ?? 'Unknown';
+            return $item->ingredient->category ?? 'Unknown';
         })->map(function ($items, $category) {
             return [
                 'name' => $category,
                 'count' => $items->count(),
-                'value' => round($items->sum(fn($i) => $i->quantity * 100), 2),
                 'icon' => $this->getCategoryIcon($category),
                 'color' => $this->getCategoryColor($category),
             ];
@@ -316,8 +318,8 @@ class ReportsController extends Controller
         $thisWeekStart = Carbon::now()->startOfWeek();
         $thisMonthStart = Carbon::now()->startOfMonth();
 
-        $thisWeekExpired = expiredIngredients::whereBetween('expired_at', [$thisWeekStart, Carbon::now()])->get();
-        $thisMonthExpired = expiredIngredients::whereBetween('expired_at', [$thisMonthStart, Carbon::now()])->get();
+        $thisWeekExpired = expiredIngredients::whereBetween('expired_at', [$thisWeekStart, Carbon::now()])->count();
+        $thisMonthExpired = expiredIngredients::whereBetween('expired_at', [$thisMonthStart, Carbon::now()])->count();
 
         return response()->json([
             'success' => true,
@@ -325,32 +327,24 @@ class ReportsController extends Controller
                 'report_type' => 'expired',
                 'summary' => [
                     'expired_count' => $expiredItems->count(),
-                    'expired_value' => round($totalWasteValue, 2),
                     'expiring_soon_count' => $expiringSoonBatches->count(),
-                    'total_waste_qty' => round($totalWasteQty, 2),
-                    'total_waste_value' => round($totalWasteValue, 2),
+                    'total_waste_kg' => round($totalWasteKg, 2),
+                    'total_waste_pieces' => round($totalWastePieces, 2),
                     'by_category' => $byCategory,
                     'trend' => [
-                        'this_week' => $thisWeekExpired->count(),
-                        'this_week_value' => round($thisWeekExpired->sum(fn($i) => $i->quantity * 100), 2),
-                        'this_month' => $thisMonthExpired->count(),
-                        'this_month_value' => round($thisMonthExpired->sum(fn($i) => $i->quantity * 100), 2),
-                        'avg_per_week' => round($expiredItems->count() / max(1, $startDate->diffInWeeks($endDate) ?: 1), 1),
+                        'this_week' => $thisWeekExpired,
+                        'this_month' => $thisMonthExpired,
                     ],
                 ],
                 'expired_items' => $expiredItems->map(function ($item) {
                     $expiredDate = Carbon::parse($item->expired_at);
-                    $ingredient = $item->ingredientBatch->ingredient ?? null;
+                    $ingredient = $item->ingredient ?? null;
 
                     return [
                         'name' => $ingredient->name ?? 'Unknown',
-                        'category' => $ingredient->category ?? 'Unknown',
-                        'batch_id' => $item->ingredient_batch_id,
                         'quantity' => round($item->quantity, 2),
                         'unit' => $ingredient->unit ?? 'kg',
                         'expiration_date' => $expiredDate->format('M d, Y'),
-                        'days_expired' => Carbon::now()->diffInDays($expiredDate),
-                        'value_lost' => round($item->quantity * 100, 2),
                     ];
                 })->values(),
                 'expiring_soon' => $expiringSoonBatches->map(function ($batch) {
