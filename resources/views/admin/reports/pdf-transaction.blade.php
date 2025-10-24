@@ -10,7 +10,7 @@
             margin: 30px;
             color: #333;
         }
-        .header, .footer {
+        .header {
             text-align: center;
             margin-bottom: 20px;
         }
@@ -31,15 +31,25 @@
             border-bottom: 1px solid #000;
             padding-bottom: 3px;
         }
-        .summary-box {
-            border: 1px solid #000;
-            padding: 10px;
-            margin-bottom: 15px;
+        .cashier-section {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
         }
-        .summary-row {
+        .cashier-header {
+            background-color: #f4f4f4;
+            padding: 10px;
+            border: 1px solid #999;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .cashier-stats {
             display: flex;
             justify-content: space-between;
-            margin: 2px 0;
+            padding: 5px 10px;
+            background-color: #fafafa;
+            border: 1px solid #ddd;
+            border-top: none;
+            margin-bottom: 10px;
         }
         table {
             width: 100%;
@@ -58,16 +68,22 @@
         .text-right {
             text-align: right;
         }
+        .text-center {
+            text-align: center;
+        }
         .no-data {
             text-align: center;
             font-style: italic;
             color: #666;
             padding: 10px 0;
         }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+        }
         .footer p {
             font-size: 10px;
             color: #555;
-            margin-top: 30px;
         }
     </style>
 </head>
@@ -85,31 +101,49 @@
         </div>
     </div>
 
-
     <!-- Cashier Logs -->
     <div class="section-title">Cashier Logs</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 40%;">Cashier Name</th>
-                <th style="width: 30%;" class="text-right">Transaction Count</th>
-                <th style="width: 30%;" class="text-right">Total Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($data['cashier_summary'] as $cashier)
-                <tr>
-                    <td>{{ $cashier['cashier_name'] }}</td>
-                    <td class="text-right">{{ number_format($cashier['transaction_count']) }}</td>
-                    <td class="text-right">₱{{ number_format($cashier['total_amount'], 2) }}</td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="3" class="no-data">No cashier logs for this period</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
+    
+    @forelse($data['cashier_summary'] as $cashier)
+        <div class="cashier-section">
+            <div class="cashier-header">
+                {{ $cashier['cashier_name'] }}
+            </div>
+            <div class="cashier-stats">
+                <span><strong>Transactions:</strong> {{ number_format($cashier['transaction_count']) }}</span>
+                <span><strong>Total Orders:</strong> {{ number_format($cashier['total_orders_count']) }}</span>
+                <span><strong>Total Amount:</strong> {{ number_format($cashier['total_amount'], 2) }}</span>
+            </div>
+            
+            <!-- Orders Breakdown Table -->
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50%;">Menu Item</th>
+                        <th style="width: 15%;" class="text-center">Quantity</th>
+                        <th style="width: 17.5%;" class="text-right">Unit Price</th>
+                        <th style="width: 17.5%;" class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($cashier['orders_breakdown'] as $order)
+                        <tr>
+                            <td>{{ $order['menu_name'] }}</td>
+                            <td class="text-center">{{ number_format($order['quantity']) }}</td>
+                            <td class="text-right">{{ number_format($order['price'], 2) }}</td>
+                            <td class="text-right">{{ number_format($order['total'], 2) }}</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="no-data">No orders found</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    @empty
+        <div class="no-data">No cashier logs for this period</div>
+    @endforelse
 
     <!-- Footer -->
     <div class="footer">

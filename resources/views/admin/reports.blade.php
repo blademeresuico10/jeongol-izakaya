@@ -1009,8 +1009,8 @@
         <i class="fas fa-arrow-down text-xl opacity-75"></i>
     </div>
     <div class="text-xs opacity-90 mt-1 space-y-1 leading-tight">
-        <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_in_kg ?? 0).toLocaleString()}</div>
-        <div class="text-lg"><span class="font-semibold">Pcs:</span> ${(summary.stock_in_pcs ?? 0).toLocaleString()}</div>
+        <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_in_kg ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+<div class="text-lg"><span class="font-semibold">Pcs:</span> ${Math.round(summary.stock_in_pcs ?? 0).toLocaleString('en-PH')}</div>
     </div>
 </div>
 
@@ -1021,8 +1021,8 @@
         <i class="fas fa-arrow-up text-xl opacity-75"></i>
     </div>
     <div class="text-xs opacity-90 mt-1 space-y-1 leading-tight">
-        <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_out_kg ?? 0).toLocaleString()}</div>
-        <div class="text-lg"><span class="font-semibold">Pcs:</span> ${(summary.stock_out_pcs ?? 0).toLocaleString()}</div>
+        <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_out_kg ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+        <div class="text-lg"><span class="font-semibold">Pcs:</span> ${Math.round(summary.stock_out_pcs ?? 0).toLocaleString('en-PH')}</div>
     </div>
 </div>
 
@@ -1105,17 +1105,21 @@
                         }
 
                         return `
-                                <tr class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-4 py-3 text-sm text-gray-700 capitalize">${row.category}</td>
-                                    <td class="px-4 py-3 text-sm font-semibold">
-                                        <span class="px-2 py-1 rounded-full text-xs ${badgeClass}">
-                                            ${label}
-                                        </span>
-                                    </td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
-                                        ${row.totalQty.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${row.unit}
-                                    </td>
-                                </tr>`;
+                              
+                            <tr tr class="hover:bg-gray-50 transition-colors" >
+        <td class="px-4 py-3 text-sm text-gray-700 capitalize">${row.category}</td>
+        <td class="px-4 py-3 text-sm font-semibold">
+            <span class="px-2 py-1 rounded-full text-xs ${badgeClass}">
+                ${label}
+            </span>
+        </td>
+        <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
+    ${row.unit === 'pieces'  
+                                ? Math.round(row.totalQty).toLocaleString('en-PH')
+                                : row.totalQty.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            } ${row.unit}
+</td>
+    </tr > `;
                     }).join('');
             })()}
             </tbody>
@@ -1558,9 +1562,11 @@
                             'expired': 'Expired_Items'
                         };
                         const typeName = typeNames[selectedInventoryType] || 'Inventory';
-                        filename = `${typeName}.${new Date().toISOString().split('T')[0]}.pdf`;
+                        filename = `${typeName}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+                    } else if (reportType === 'Transaction Report') {
+                        filename = `Transaction_Report_${startDate}_to_${endDate}.pdf`;
                     } else {
-                        filename = `${reportType.replace(/ /g, '_')}.${new Date().toISOString().split('T')[0]}.pdf`;
+                        filename = `${reportType.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
                     }
                 }
 
@@ -1579,6 +1585,7 @@
                 showAlert('success', 'PDF downloaded successfully!');
             })
             .catch(error => {
+                console.error('PDF Export Error:', error);
                 showAlert('error', 'Failed to export PDF: ' + error.message);
             })
             .finally(() => {

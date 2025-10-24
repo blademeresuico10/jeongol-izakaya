@@ -44,20 +44,20 @@ class ReportsController extends Controller
         $totalOrders = $transactions->count();
         $averageOrderValue = $totalOrders > 0 ? $totalSales / $totalOrders : 0;
 
-        // Get e-wallet payments with breakdown
-        $gcashTotal = DB::table('reservation_payment_details as rpd')
-            ->join('transactions as t', 'rpd.reservation_id', '=', 't.reservation_id')
-            ->where('t.status', 'Completed')
-            ->whereBetween('t.created_at', [$startDate, $endDate])
-            ->where('rpd.payment_method', 'gcash')
-            ->sum('rpd.advance_payment');
+        $completedTransactionIds = $transactions->pluck('id');
 
-        $mayaTotal = DB::table('reservation_payment_details as rpd')
-            ->join('transactions as t', 'rpd.reservation_id', '=', 't.reservation_id')
-            ->where('t.status', 'Completed')
-            ->whereBetween('t.created_at', [$startDate, $endDate])
-            ->where('rpd.payment_method', 'maya')
-            ->sum('rpd.advance_payment');
+        $completedReservationIds = transaction::where('status', 'Completed')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereNotNull('reservation_id')
+            ->pluck('reservation_id');
+
+        $gcashTotal = DB::table('reservation_payment_details')
+            ->where('payment_method', 'gcash')
+            ->sum('advance_payment');
+
+        $mayaTotal = DB::table('reservation_payment_details')
+            ->where('payment_method', 'maya')
+            ->sum('advance_payment');
 
         $ewalletTotal = $gcashTotal + $mayaTotal;
 
@@ -228,17 +228,30 @@ class ReportsController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
+            // Stock In - filter by ingredient unit
             $stockInQtyKg = $movements->where('type', 'stock_in')
-                ->where('ingredient.unit', 'kg')->sum('quantity');
+                ->filter(function ($move) {
+                    return $move->ingredient && $move->ingredient->unit === 'kg';
+                })
+                ->sum('quantity');
 
             $stockInQtyPcs = $movements->where('type', 'stock_in')
-                ->where('ingredient.unit', 'pcs')->sum('quantity');
+                ->filter(function ($move) {
+                    return $move->ingredient && $move->ingredient->unit === 'pieces';  
+                })
+                ->sum('quantity');
 
-            $stockOutQtyKg = $movements->whereIn('type', ['stock_out', 'used', 'expired'])
-                ->where('ingredient.unit', 'kg')->sum('quantity');
+            $stockOutQtyKg = $movements->whereIn('type', ['stock_out', 'used'])
+                ->filter(function ($move) {
+                    return $move->ingredient && $move->ingredient->unit === 'kg';
+                })
+                ->sum('quantity');
 
-            $stockOutQtyPcs = $movements->whereIn('type', ['stock_out', 'used', 'expired'])
-                ->where('ingredient.unit', 'pcs')->sum('quantity');
+            $stockOutQtyPcs = $movements->whereIn('type', ['stock_out', 'used'])
+                ->filter(function ($move) {
+                    return $move->ingredient && $move->ingredient->unit === 'pieces';  
+                })
+                ->sum('quantity');
 
             $response = [
                 'success' => true,
@@ -262,10 +275,8 @@ class ReportsController extends Controller
                 ]
             ];
 
-
             return response()->json($response);
         } catch (\Throwable $e) {
-
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to generate stock movement report',
@@ -674,6 +685,63 @@ class ReportsController extends Controller
             return back()->with('error', 'Failed to generate PDF report: ' . $e->getMessage());
         }
     }
+    public function transactionReport(Request $request)
+    {
+        $dateFrom = Carbon::parse($request->date_from)->startOfDay();
+        $dateTo = Carbon::parse($request->date_to)->endOfDay();
+        $generatedAt = now();
+
+        // Get cashier summary with detailed orders breakdown
+        $cashierSummary = transaction::query()
+            ->whereBetween('created_at', [$dateFrom, $dateTo])
+            ->where('status', 'completed')
+            ->with(['cashier', 'reservation.orders.menu', 'walkin.orders.menu'])
+            ->get()
+            ->groupBy('cashier_id')
+            ->map(function ($transactions, $cashierId) {
+                $cashier = $transactions->first()->cashier;
+
+                // Collect all orders from all transactions for this cashier
+                $allOrders = collect();
+
+                foreach ($transactions as $transaction) {
+                    if ($transaction->reservation_id && $transaction->reservation) {
+                        $allOrders = $allOrders->merge($transaction->reservation->orders);
+                    } elseif ($transaction->walk_in_id && $transaction->walkin) {
+                        $allOrders = $allOrders->merge($transaction->walkin->orders);
+                    }
+                }
+
+                // Group orders by menu item and sum quantities
+                $ordersBreakdown = $allOrders->groupBy('menu_id')->map(function ($orders) {
+                    $firstOrder = $orders->first();
+                    return [
+                        'menu_name' => $firstOrder->menu->name ?? 'Unknown Item',
+                        'quantity' => $orders->sum('quantity'),
+                        'price' => $firstOrder->price,
+                        'total' => $orders->sum(function ($order) {
+                            return $order->quantity * $order->price;
+                        }),
+                    ];
+                })->values();
+
+                return [
+                    'cashier_name' => $cashier ? $cashier->name : 'Unknown',
+                    'transaction_count' => $transactions->count(),
+                    'orders_breakdown' => $ordersBreakdown, // List of orders
+                    'total_orders_count' => $allOrders->count(),
+                    'total_amount' => $transactions->sum('grand_total'),
+                ];
+            })
+            ->values();
+
+        $data = [
+            'cashier_summary' => $cashierSummary,
+        ];
+
+        return view('reports.transaction', compact('dateFrom', 'dateTo', 'generatedAt', 'data'));
+    }
+
     public function transactionReportPdf(Request $request)
     {
         $request->validate([
@@ -683,41 +751,69 @@ class ReportsController extends Controller
 
         $dateFrom = Carbon::parse($request->start_date)->startOfDay();
         $dateTo = Carbon::parse($request->end_date)->endOfDay();
+        $generatedAt = now();
 
-        $transactions = transaction::with(['reservation.customer', 'walkin', 'cashier'])
+        // Get all completed transactions with their related orders
+        $transactions = transaction::query()
             ->whereBetween('created_at', [$dateFrom, $dateTo])
             ->where('status', 'Completed')
+            ->with(['cashier'])
             ->get();
 
-        $totalTransactions = $transactions->count();
-        $totalAmount = $transactions->sum('grand_total');
+        // Get cashier summary with orders breakdown
+        $cashierSummary = $transactions->groupBy('cashier_id')
+            ->map(function ($cashierTransactions, $cashierId) use ($dateFrom, $dateTo) {
+                $cashier = $cashierTransactions->first()->cashier;
 
-        // Cashier grouping with firstname + lastname
-        $cashierData = $transactions
-            ->groupBy('cashier_id')
-            ->map(function ($group) {
-                $cashier = optional($group->first()->cashier);
+                // Get all reservation IDs and walk-in IDs for this cashier's transactions
+                $reservationIds = $cashierTransactions->pluck('reservation_id')->filter();
+                $walkInIds = $cashierTransactions->pluck('walk_in_id')->filter();
+
+                // Get all orders from reservations
+                $reservationOrders = orders::with('menu')
+                    ->whereIn('reservation_id', $reservationIds)
+                    ->where('status', 'Served')
+                    ->get();
+
+                // Get all orders from walk-ins
+                $walkInOrders = orders::with('menu')
+                    ->whereIn('walk_in_id', $walkInIds)
+                    ->where('status', 'Served')
+                    ->get();
+
+                // Merge all orders
+                $allOrders = $reservationOrders->merge($walkInOrders);
+
+                // Group orders by menu_id and sum quantities
+                $ordersBreakdown = $allOrders->groupBy('menu_id')
+                    ->map(function ($orders) {
+                        $menu = $orders->first()->menu;
+                        $totalQuantity = $orders->sum('quantity');
+                        $price = $orders->first()->price;
+
+                        return [
+                            'menu_name' => $menu->menu_item ?? 'Unknown Item',
+                            'quantity' => $totalQuantity,
+                            'price' => $price,
+                            'total' => $totalQuantity * $price,
+                        ];
+                    })
+                    ->sortByDesc('total')
+                    ->values();
+
                 return [
-                    'cashier_name' => $cashier
-                        ? "{$cashier->firstname} {$cashier->lastname}"
-                        : 'Unknown Cashier',
-                    'transaction_count' => $group->count(),
-                    'total_amount' => $group->sum('grand_total'),
+                    'cashier_name' => $cashier ? ($cashier->firstname . ' ' . $cashier->lastname) : 'Unknown',
+                    'transaction_count' => $cashierTransactions->count(),
+                    'orders_breakdown' => $ordersBreakdown,
+                    'total_orders_count' => $allOrders->count(),
+                    'total_quantity' => $ordersBreakdown->sum('quantity'),
+                    'total_amount' => $cashierTransactions->sum('grand_total'),
                 ];
             })
-            ->values()
-            ->toArray();
+            ->values();
 
         $data = [
-            'summary' => [
-                'total_transactions' => $totalTransactions,
-                'total_amount' => round($totalAmount, 2),
-                'date_range' => [
-                    'from' => $dateFrom->format('M d, Y'),
-                    'to' => $dateTo->format('M d, Y'),
-                ],
-            ],
-            'cashier_summary' => $cashierData,
+            'cashier_summary' => $cashierSummary,
         ];
 
         try {
@@ -725,16 +821,16 @@ class ReportsController extends Controller
                 'data' => $data,
                 'dateFrom' => $dateFrom,
                 'dateTo' => $dateTo,
-                'generatedAt' => now(),
+                'generatedAt' => $generatedAt,
             ])->setPaper('a4', 'portrait');
 
-            return $pdf->download('Transaction_Report_' . now()->format('Ymd_His') . '.pdf');
+            $filename = 'Transaction_Report_' . $dateFrom->format('Y-m-d') . '_to_' . $dateTo->format('Y-m-d') . '.pdf';
+
+            return $pdf->download($filename);
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to generate PDF report: ' . $e->getMessage());
         }
     }
-
-
 
     private function getStockMovementData($startDate, $endDate)
     {

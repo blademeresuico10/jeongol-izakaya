@@ -38,7 +38,6 @@
         <div class="summary-row"><span class="summary-label">Stock Out (Pcs):</span> <span>{{ number_format($reportData['summary']['stock_out_pcs'] ?? 0, 2) }}</span></div>
     </div>
 
-    <!-- Movement Details -->
     <div class="section-title">Movement Summary by Category</div>
 
     @php
@@ -60,7 +59,6 @@
             $grouped[$key]['totalQty'] += $m['quantity'] ?? 0;
         }
 
-        // Sort alphabetically by category then by type
         $grouped = collect($grouped)->sortBy(['category', 'type']);
     @endphp
 

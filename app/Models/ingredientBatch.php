@@ -72,13 +72,14 @@ class ingredientBatch extends Model
             expiredIngredients::create([
                 'quantity' => $expiredQty,
                 'expired_at' => Carbon::now(),
+                'ingredient_id' => $this->ingredient_id,     
                 'ingredient_batch_id' => $this->id,
             ]);
 
             ingredientMovements::create([
                 'ingredient_id' => $this->ingredient_id,
                 'ingredient_batch_id' => $this->id,
-                'user_id' => Auth::id(),
+                'user_id' => Auth::id() ?? 1,                 
                 'type' => 'expired',
                 'quantity' => $expiredQty,
                 'stock_before' => $ingredient->stocks,

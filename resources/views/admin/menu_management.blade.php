@@ -281,7 +281,7 @@
                                 <div class="form-group">
                                     <label class="font-weight-bold">Quantity<span id="unitLabel"
                                             class="text-muted"></span></label>
-                                    <input type="number" id="ingredientQty" class="form-control" min="1" step="any"
+                                    <input type="number" id="ingredientQty" class="form-control" 
                                         placeholder="Enter quantity" required>
                                 </div>
                             </div>
@@ -1218,9 +1218,9 @@
 
             let defaultQty = 1;
             if (unit === 'grams') {
-                defaultQty = 1;
+                defaultQty = 50;
             } else if (unit === 'pieces') {
-                defaultQty = 1;
+                defaultQty = 10;
             }
 
             $('#ingredientQty').val(defaultQty);
