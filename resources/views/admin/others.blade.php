@@ -149,25 +149,29 @@
                     <div class="row">
                         <div class="col-md-3">
                             @php
-                                $defaultHours = $hours->where('is_default', true)->first();
+                                $defaultHours = $allHours->where('is_default', true)->first();
                             @endphp
-                            <div class="border rounded p-2 bg-light mb-2">
-                                <small class="font-weight-bold d-block mb-1">Default Daily Hours</small>
-                                @if($defaultHours)
-                                    @if($defaultHours->is_closed)
-                                        <span class="badge badge-danger">Closed Daily</span>
+                            <div class="border rounded p-2 bg-light mb-2 position-relative">
+                                <small class="font-weight-bold d-block mb-1">Today's Operation Time</small>
+                                @if($todayHours)
+                                    @if($todayHours->is_closed)
+                                        <span class="badge badge-danger">Closed Today</span>
                                     @else
                                         <div class="text-center">
-                                            <strong>{{ date('g:i A', strtotime($defaultHours->open_time)) }}</strong>
+                                            <strong>{{ date('g:i A', strtotime($todayHours->open_time)) }}</strong>
                                             <span class="mx-1">-</span>
-                                            <strong>{{ date('g:i A', strtotime($defaultHours->close_time)) }}</strong>
+                                            <strong>{{ date('g:i A', strtotime($todayHours->close_time)) }}</strong>
                                         </div>
                                     @endif
                                 @else
                                     <span class="text-muted small">Not set</span>
                                 @endif
-                                <hr class="my-1">
-                                <small class="text-muted d-block">Contact admin to change</small>
+
+                                <button class="btn btn-xs btn-primary position-absolute edit-today-hours"
+                                    style="top: 5px; right: 5px; padding: 2px 5px;"
+                                    onclick="openOperatingHoursModal('{{ now()->toDateString() }}', 'today')">
+                                    <i class="fas fa-edit" style="font-size: 9px;"></i>
+                                </button>
                             </div>
 
                             <div class="card border d-flex flex-column" style="height: 250px;">
@@ -177,7 +181,7 @@
                                 <div class="card-body p-0 flex-grow-1" style="overflow-y: auto; max-height: 215px;">
                                     <table class="table table-sm table-bordered mb-0" style="table-layout: fixed;">
                                         <tbody>
-                                            @forelse($hours->where('is_default', false)->sortBy('date') as $hour)
+                                            @forelse($hours->sortBy('date') as $hour)
                                                 <tr>
                                                     <td class="py-1 px-2" style="width: 60%;">
                                                         <small
@@ -194,16 +198,17 @@
                                                     <td class="py-1 px-1 text-center" style="width: 40%;">
                                                         <div class="d-flex justify-content-center">
                                                             <button class="btn btn-xs btn-primary p-1 mr-1 edit-override"
+                                                                onclick="openOperatingHoursModal('{{ \Carbon\Carbon::parse($hour->date)->format('Y-m-d') }}', 'calendar')"
                                                                 data-id="{{ $hour->id }}" data-date="{{ $hour->date }}"
                                                                 data-open="{{ $hour->open_time }}"
                                                                 data-close="{{ $hour->close_time }}"
-                                                                data-closed="{{ $hour->is_closed }}">
+                                                                data-closed="{{ $hour->is_closed }}"
+                                                                data-is-default="{{ $hour->is_default }}">
                                                                 <i class="fas fa-edit" style="font-size: 10px;"></i>
                                                             </button>
                                                             <form
                                                                 action="{{ route('admin.operating_hours.delete', $hour->id) }}"
-                                                                method="POST" class="d-inline"
-                                                                onsubmit="return confirm('Remove?')">
+                                                                method="POST" class="d-inline delete-override-form">
                                                                 @csrf
                                                                 @method('DELETE')
                                                                 <button type="submit" class="btn btn-xs btn-danger p-1">
@@ -228,6 +233,48 @@
                         <div class="col-md-9">
                             <div id="calendar-container" class="border rounded p-2"></div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OPERATING HOURS MODAL -->
+            <div class="modal fade" id="operatingHoursModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header bg-primary text-white py-2">
+                            <h6 class="modal-title mb-0" id="operatingHoursModalTitle">Edit Operating Hours</h6>
+                            <button type="button" class="close text-white"
+                                data-dismiss="modal"><span>&times;</span></button>
+                        </div>
+                        <form id="operatingHoursForm" method="POST">
+                            @csrf
+                            <input type="hidden" name="_method" id="formMethod" value="POST">
+                            <input type="hidden" id="recordId">
+                            <div class="modal-body p-2">
+
+                                <div class="form-group mb-2">
+                                    <label class="small mb-1">Opening</label>
+                                    <input type="time" name="open_time" id="operatingOpenTime"
+                                        class="form-control form-control-sm">
+                                </div>
+                                <div class="form-group mb-2">
+                                    <label class="small mb-1">Closing</label>
+                                    <input type="time" name="close_time" id="operatingCloseTime"
+                                        class="form-control form-control-sm">
+                                </div>
+                                <div class="custom-control custom-checkbox">
+                                    <input type="checkbox" class="custom-control-input" id="operatingClosed"
+                                        name="is_closed" value="1" onchange="toggleOperatingTimes(this)">
+                                    <label class="custom-control-label small" for="operatingClosed">Mark as
+                                        closed</label>
+                                </div>
+                            </div>
+                            <div class="modal-footer p-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                    data-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -363,7 +410,7 @@
             </div>
 
             <!-- Add Stock Alert Modal -->
-            <div class="modal fade" id="addStockAlertModal" tabindex="-1">
+            <div class="modal fade" id="addStockAlertModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header bg-secondary text-white">
@@ -410,7 +457,7 @@
             </div>
 
             <!-- Edit Stock Alert Modal -->
-            <div class="modal fade" id="editStockModal" tabindex="-1">
+            <div class="modal fade" id="editStockModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
@@ -435,7 +482,7 @@
                                     <label>Reorder Quantity</label>
                                     <input type="number" class="form-control" id="reorder-quantity" step="0.01"
                                         required>
-                                   
+
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -449,47 +496,11 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- DATE HOURS MODAL -->
-    <div class="modal fade" id="dateHoursModal" tabindex="-1">
-        <div class="modal-dialog modal-sm">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white py-2">
-                    <h6 class="modal-title mb-0"><span id="modalDate"></span></h6>
-                    <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
-                </div>
-                <form id="dateHoursForm" method="POST">
-                    @csrf
-                    <input type="hidden" name="_method" id="formMethod" value="POST">
-                    <input type="hidden" name="date" id="selectedDate">
-                    <div class="modal-body p-2">
-                        <div class="form-group mb-2">
-                            <label class="small mb-1">Opening</label>
-                            <input type="time" name="open_time" id="modalOpenTime" class="form-control form-control-sm">
-                        </div>
-                        <div class="form-group mb-2">
-                            <label class="small mb-1">Closing</label>
-                            <input type="time" name="close_time" id="modalCloseTime"
-                                class="form-control form-control-sm">
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="modalClosed" name="is_closed"
-                                value="1" onchange="toggleModalTimes(this)">
-                            <label class="custom-control-label small" for="modalClosed">Mark as closed</label>
-                        </div>
-                    </div>
-                    <div class="modal-footer p-2">
-                        <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div>
 
     <!-- ADD DISCOUNT MODAL -->
-    <div class="modal fade" id="addDiscountModal" tabindex="-1">
+    <div class="modal fade" id="addDiscountModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white py-2">
@@ -534,7 +545,7 @@
     </div>
 
     <!-- EDIT DISCOUNT MODAL -->
-    <div class="modal fade" id="editDiscountModal" tabindex="-1">
+    <div class="modal fade" id="editDiscountModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 <div class="modal-header bg-success text-white py-2">
@@ -559,246 +570,210 @@
             </div>
         </div>
     </div>
+</div>
 
 
+@include('admin.layouts.script')
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    @include('admin.layouts.script')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    let currentMonth = {{ now()->month }};
+    let currentYear = {{ now()->year }};
+    const overrides = @json($allHours);
+    const defaultHours = @json($allHours->where('is_default', true)->first());
 
-    <script>
-        let currentMonth = {{ now()->month }};
-        let currentYear = {{ now()->year }};
-        const overrides = @json($hours->where('is_default', false)->keyBy('date'));
+    function renderCalendar() {
+        const date = new Date(currentYear, currentMonth - 1, 1);
+        const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+        const firstDay = date.getDay();
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-        function renderCalendar() {
-            const date = new Date(currentYear, currentMonth - 1, 1);
-            const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-            const firstDay = date.getDay();
-            const today = new Date();
-            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let html = `
+    <div class="month-nav">
+        <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+        <small class="font-weight-bold">${monthNames[currentMonth - 1]} ${currentYear}</small>
+        <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+    </div>
+    <div class="calendar-grid">`;
 
-            let html = `
-        <div class="month-nav">
-            <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
-            <small class="font-weight-bold">${monthNames[currentMonth - 1]} ${currentYear}</small>
-            <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
-        </div>
-        <div class="calendar-grid">`;
+        ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(d => html += `<div class="calendar-header">${d}</div>`);
 
-            ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(d => html += `<div class="calendar-header">${d}</div>`);
-
-            for (let i = 0; i < firstDay; i++) {
-                html += '<div class="calendar-day empty"></div>';
-            }
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const cellDate = new Date(currentYear, currentMonth - 1, day);
-                const isToday = cellDate.toDateString() === today.toDateString();
-                const isPast = cellDate < today && !isToday;
-
-                let classes = 'calendar-day';
-                if (isToday) classes += ' today';
-                if (isPast) classes += ' past';
-                if (overrides[dateStr]) {
-                    classes += overrides[dateStr].is_closed ? ' closed-override' : ' has-override';
-                }
-
-                const onclick = isPast ? '' : `onclick="openDateModal('${dateStr}')"`;
-                html += `<div class="${classes}" ${onclick}>${day}</div>`;
-            }
-
-            html += '</div>';
-            document.getElementById('calendar-container').innerHTML = html;
+        for (let i = 0; i < firstDay; i++) {
+            html += '<div class="calendar-day empty"></div>';
         }
 
-        function changeMonth(direction) {
-            currentMonth += direction;
-            if (currentMonth > 12) {
-                currentMonth = 1;
-                currentYear++;
-            } else if (currentMonth < 1) {
-                currentMonth = 12;
-                currentYear--;
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${currentYear}-${String(currentMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const cellDate = new Date(currentYear, currentMonth - 1, day);
+            cellDate.setHours(0, 0, 0, 0);
+
+            const isToday = cellDate.getTime() === today.getTime();
+            const isPast = cellDate < today;
+
+            const hasOverride = overrides[dateStr] !== undefined && overrides[dateStr] !== null;
+
+
+            let classes = 'calendar-day';
+            if (isToday) classes += ' today';
+            if (isPast) classes += ' past';
+            if (hasOverride) {
+                classes += overrides[dateStr].is_closed ? ' closed-override' : ' has-override';
             }
-            renderCalendar();
+
+            const isClickable = !isPast && !isToday && !hasOverride;
+            const onclickAttr = isClickable ? `onclick="openOperatingHoursModal('${dateStr}', 'calendar')"` : '';
+            const cursorStyle = !isClickable ? 'cursor: not-allowed; opacity: 0.6; background-color: #e0e0e0; color: #9e9e9e;' : 'cursor: pointer;';
+
+            html += `<div class="${classes}" ${onclickAttr} style="${cursorStyle}">${day}</div>`;
         }
 
-        function openDateModal(dateStr) {
-            const override = overrides[dateStr];
-            const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
+        html += '</div>';
+        document.getElementById('calendar-container').innerHTML = html;
+    }
+
+    function changeMonth(direction) {
+        currentMonth += direction;
+        if (currentMonth > 12) {
+            currentMonth = 1;
+            currentYear++;
+        } else if (currentMonth < 1) {
+            currentMonth = 12;
+            currentYear--;
+        }
+        renderCalendar();
+    }
+
+    function openOperatingHoursModal(dateStr, source = 'calendar') {
+        const datePart = dateStr.split(' ')[0];
+
+        const override = overrides[datePart];
+        const isToday = datePart === '{{ now()->toDateString() }}';
+
+        if (override && override.is_default) {
+            $('#operatingHoursModalTitle').text("Edit Default Operating Hours");
+        } else if (source === 'today' || isToday) {
+            $('#operatingHoursModalTitle').text("Edit Today's Hours");
+        } else {
+            const formattedDate = new Date(datePart).toLocaleDateString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 year: 'numeric'
             });
-
-            document.getElementById('modalDate').textContent = formattedDate;
-            document.getElementById('selectedDate').value = dateStr;
-
-            if (override) {
-                document.getElementById('formMethod').value = 'PUT';
-                document.getElementById('dateHoursForm').action = `/operating-hours/${override.id}`;
-                document.getElementById('modalOpenTime').value = override.open_time || '';
-                document.getElementById('modalCloseTime').value = override.close_time || '';
-                document.getElementById('modalClosed').checked = override.is_closed;
-            } else {
-                document.getElementById('formMethod').value = 'POST';
-                document.getElementById('dateHoursForm').action = '{{ route("admin.operating_hours.store") }}';
-                document.getElementById('modalOpenTime').value = '{{ $defaultHours->open_time ?? "11:30" }}';
-                document.getElementById('modalCloseTime').value = '{{ $defaultHours->close_time ?? "20:00" }}';
-                document.getElementById('modalClosed').checked = false;
-            }
-
-            toggleModalTimes(document.getElementById('modalClosed'));
-            $('#dateHoursModal').modal('show');
+            $('#operatingHoursModalTitle').text(`Edit Hours - ${formattedDate}`);
         }
 
-        function toggleModalTimes(checkbox) {
-            const openTime = document.getElementById('modalOpenTime');
-            const closeTime = document.getElementById('modalCloseTime');
+        let dateInput = $('#operatingDate');
+        if (dateInput.length === 0) {
+            $('#operatingHoursForm').prepend('<input type="hidden" name="date" id="operatingDate">');
+            dateInput = $('#operatingDate');
+        }
+        dateInput.val(datePart);
+
+        if (override) {
+            $('#recordId').val(override.id);
+
+            const formatTime = (time) => {
+                if (!time) return '';
+                return time.substring(0, 5);
+            };
+
+            $('#operatingOpenTime').val(formatTime(override.open_time));
+            $('#operatingCloseTime').val(formatTime(override.close_time));
+            $('#operatingClosed').prop('checked', override.is_closed);
+
+            $('#operatingHoursForm').attr('action', `/admin/operating-hours/${override.id}`);
+            $('#formMethod').val('PUT');
+        } else {
+            $('#recordId').val('');
+            $('#operatingOpenTime').val('11:30');
+            $('#operatingCloseTime').val('20:00');
+            $('#operatingClosed').prop('checked', false);
+
+            $('#operatingHoursForm').attr('action', '{{ route("admin.operating_hours.store") }}');
+            $('#formMethod').val('POST');
+        }
+
+        toggleOperatingTimes(document.getElementById('operatingClosed'));
+        $('#operatingHoursModal').modal('show');
+    }
+    function toggleOperatingTimes(checkbox) {
+        const openTime = document.getElementById('operatingOpenTime');
+        const closeTime = document.getElementById('operatingCloseTime');
+        if (openTime && closeTime) {
             openTime.disabled = checkbox.checked;
             closeTime.disabled = checkbox.checked;
             openTime.required = !checkbox.checked;
             closeTime.required = !checkbox.checked;
         }
+    }
 
-        function handleEditDiscount(btn) {
-            document.getElementById('editDiscountPercentage').value = btn.dataset.percentage;
-            document.getElementById('editDiscountForm').action = `/discounts/${btn.dataset.id}`;
-            $('#editDiscountModal').modal('show');
+    function handleEditDiscount(btn) {
+        document.getElementById('editDiscountPercentage').value = btn.dataset.percentage;
+        document.getElementById('editDiscountForm').action = `/discounts/${btn.dataset.id}`;
+        $('#editDiscountModal').modal('show');
+    }
+
+    async function handlePagination(e) {
+        const link = e.target.closest('.pagination a');
+        if (!link) return;
+
+        e.preventDefault();
+
+        const url = new URL(link.href);
+        let section = 'discounts';
+        let sectionId = 'discount-section';
+
+        if (link.closest('#stock-section')) {
+            section = 'stock';
+            sectionId = 'stock-section';
+        } else if (link.closest('#stock-order-section')) {
+            section = 'stock_order';
+            sectionId = 'stock-order-section';
         }
 
-        function handleEditStockLevel(btn) {
-            const { id, ingredient, low, critical } = btn.dataset;
+        const targetDiv = document.getElementById(sectionId);
 
-            document.getElementById('stockIngredientName').textContent = ingredient;
-            document.getElementById('lowStockInput').value = low;
-            document.getElementById('criticalStockInput').value = critical;
-            document.getElementById('modifyStockLevelForm').action = `/stock-levels/${id}`;
+        try {
+            url.searchParams.set('section', section);
 
-            $('#modifyStockLevel').modal('show');
-        }
-
-        function handleEditOrderStock(btn) {
-            const { id, ingredient, quantity, reorderquantity, unit } = btn.dataset;
-            const displayUnit = unit === 'pieces' ? 'pcs' : unit;
-
-            document.getElementById('orderIngredientName').textContent = ingredient;
-            document.getElementById('editReorderPointInput').value = quantity;
-            document.getElementById('editReorderQuantityInput').value = reorderquantity;
-            document.getElementById('editOrderUnit').textContent = displayUnit;
-            document.getElementById('editOrderUnit2').textContent = displayUnit;
-            document.getElementById('editOrderStockForm').action = `/stock-orders/${id}`;
-
-            $('#editOrderStockModal').modal('show');
-        }
-
-        function handleIngredientSelect() {
-            const selectedOption = this.options[this.selectedIndex];
-            const unit = selectedOption.dataset.unit;
-            const displayUnit = unit === 'pieces' ? 'pcs' : unit;
-            document.getElementById('addOrderUnit').textContent = displayUnit || '—';
-        }
-
-        async function handlePagination(e) {
-            const link = e.target.closest('.pagination a');
-            if (!link) return;
-
-            e.preventDefault();
-
-            const url = new URL(link.href);
-            let section = 'discounts';
-            let sectionId = 'discount-section';
-
-            if (link.closest('#stock-section')) {
-                section = 'stock';
-                sectionId = 'stock-section';
-            } else if (link.closest('#stock-order-section')) {
-                section = 'stock_order';
-                sectionId = 'stock-order-section';
-            }
-
-            const targetDiv = document.getElementById(sectionId);
-
-            try {
-                url.searchParams.set('section', section);
-
-                const response = await fetch(url, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const newContent = doc.getElementById(sectionId);
-
-                if (newContent) {
-                    targetDiv.innerHTML = newContent.innerHTML;
-                }
-            } catch (error) {
-                console.error('Pagination failed:', error);
-            }
-        }
-
-        function setupEventDelegation() {
-            document.addEventListener('click', function (e) {
-                if (e.target.closest('.edit-override')) {
-                    const btn = e.target.closest('.edit-override');
-                    openDateModal(btn.dataset.date);
-                }
-
-                if (e.target.closest('.edit-discount')) {
-                    const btn = e.target.closest('.edit-discount');
-                    handleEditDiscount(btn);
-                }
-
-                if (e.target.closest('.edit-stock')) {
-                    const btn = e.target.closest('.edit-stock');
-                    handleEditStockLevel(btn);
-                }
-
-                if (e.target.closest('.edit-order-stock')) {
-                    const btn = e.target.closest('.edit-order-stock');
-                    handleEditOrderStock(btn);
-                }
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
 
-            document.addEventListener('click', handlePagination);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newContent = doc.getElementById(sectionId);
 
-            const ingredientSelect = document.getElementById('ingredientSelect');
-            if (ingredientSelect) {
-                ingredientSelect.addEventListener('change', handleIngredientSelect);
+            if (newContent) {
+                targetDiv.innerHTML = newContent.innerHTML;
             }
+        } catch (error) {
+            console.error('Pagination failed:', error);
         }
+    }
 
-        function showSuccessMessage() {
-            @if(session('success'))
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: '{{ session("success") }}',
-                    timer: 1000,
-                    showConfirmButton: false
-                });
-            @endif
-}
+    function setupEventDelegation() {
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.edit-override')) {
+                const btn = e.target.closest('.edit-override');
+                openOperatingHoursModal(btn.dataset.date, 'list');
+            }
 
-        document.addEventListener('DOMContentLoaded', function () {
-            renderCalendar();
-            setupEventDelegation();
-            showSuccessMessage();
-        });
+            if (e.target.closest('.edit-discount')) {
+                const btn = e.target.closest('.edit-discount');
+                handleEditDiscount(btn);
+            }
 
-        // Add this inside your existing <script> tag
-
-        $(document).ready(function () {
-            // Edit Stock Alert
-            $(document).on('click', '.edit-stock', function () {
-                const id = $(this).data('id');
-                const ingredient = $(this).data('ingredient');
-                const low = $(this).data('low');
-                const critical = $(this).data('critical');
-                const reorder = $(this).data('reorder');
+            if (e.target.closest('.edit-stock')) {
+                const btn = e.target.closest('.edit-stock');
+                const id = btn.dataset.id;
+                const ingredient = btn.dataset.ingredient;
+                const low = btn.dataset.low;
+                const critical = btn.dataset.critical;
+                const reorder = btn.dataset.reorder;
 
                 $('#stock-id').val(id);
                 $('#modal-ingredient-name').text(ingredient);
@@ -807,125 +782,202 @@
                 $('#reorder-quantity').val(reorder);
 
                 $('#editStockModal').modal('show');
-            });
+            }
+        });
 
-            // Submit Edit Stock Form
-            $('#editStockForm').on('submit', function (e) {
+        document.addEventListener('click', handlePagination);
+    }
+
+    function showSuccessMessage() {
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: '{{ session("success") }}',
+                timer: 1000,
+                showConfirmButton: false
+            });
+        @endif
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        renderCalendar();
+        setupEventDelegation();
+        showSuccessMessage();
+
+        const deleteForms = document.querySelectorAll('.delete-override-form');
+        deleteForms.forEach(form => {
+            form.addEventListener('submit', function (e) {
                 e.preventDefault();
-                const id = $('#stock-id').val();
-
-                $.ajax({
-                    url: `/stock-alerts/${id}`,
-                    method: 'PUT',
-                    data: {
-                        _token: $('meta[name="csrf-token"]').attr('content'),
-                        low_stock: $('#low-stock').val(),
-                        critical_stock: $('#critical-stock').val(),
-                        reorder_quantity: $('#reorder-quantity').val()
-                    },
-                    success: function (response) {
-                        $('#editStockModal').modal('hide');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success!',
-                            text: 'Stock alert settings updated successfully',
-                            timer: 2000
-                        }).then(() => {
-                            location.reload();
-                        });
-                    },
-                    error: function (xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: 'Failed to update stock alert'
-                        });
-                    }
-                });
-            });
-
-            // Add Stock Alert
-            $('#addStockAlertForm').on('submit', function (e) {
-                e.preventDefault();
-
-                $.ajax({
-                    url: '/stock-alerts',
-                    method: 'POST',
-                    data: {
-                        _token: $('meta[name="csrf-token"]').attr('content'),
-                        ingredient_id: $('#add-ingredient-id').val(),
-                        low_stock: $('#add-low-stock').val(),
-                        critical_stock: $('#add-critical-stock').val(),
-                        reorder_quantity: $('#add-reorder-quantity').val()
-                    },
-                    success: function (response) {
-                        $('#addStockAlertModal').modal('hide');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Success!',
-                            text: 'Stock alert created successfully',
-                            timer: 2000
-                        }).then(() => {
-                            location.reload();
-                        });
-                    },
-                    error: function (xhr) {
-                        let errorMsg = 'Failed to create stock alert';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMsg = xhr.responseJSON.message;
-                        }
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: errorMsg
-                        });
-                    }
-                });
-            });
-
-            // Delete Stock Alert
-            $(document).on('click', '.delete-stock', function () {
-                const id = $(this).data('id');
-                const ingredient = $(this).data('ingredient');
 
                 Swal.fire({
-                    title: 'Delete Stock Alert?',
-                    html: `Remove stock alert for <strong>${ingredient}</strong>?`,
+                    title: 'Remove Custom Hours?',
+                    text: 'Are you sure you want to remove this custom operating hour?',
                     icon: 'warning',
                     showCancelButton: true,
                     confirmButtonColor: '#dc3545',
                     cancelButtonColor: '#6c757d',
-                    confirmButtonText: 'Yes, Delete',
+                    confirmButtonText: 'Yes',
                     cancelButtonText: 'Cancel'
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        $.ajax({
-                            url: `/stock-alerts/${id}`,
-                            method: 'DELETE',
-                            data: {
-                                _token: $('meta[name="csrf-token"]').attr('content')
-                            },
-                            success: function (response) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Deleted!',
-                                    text: 'Stock alert removed successfully',
-                                    timer: 2000
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            },
-                            error: function (xhr) {
+                        fetch(this.action, {
+                            method: 'POST',
+                            body: new FormData(this),
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Removed!',
+                                        text: 'Custom operating hour removed successfully',
+                                        timer: 1500,
+                                        showConfirmButton: false
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error!',
+                                        text: 'Failed to remove custom operating hour'
+                                    });
+                                }
+                            })
+                            .catch(error => {
                                 Swal.fire({
                                     icon: 'error',
                                     title: 'Error!',
-                                    text: 'Failed to delete stock alert'
+                                    text: 'An error occurred while removing the custom operating hour'
                                 });
-                            }
-                        });
+                            });
                     }
                 });
             });
         });
-    </script>
-</div>
+    });
+
+    $(document).ready(function () {
+        $('#editStockForm').on('submit', function (e) {
+            e.preventDefault();
+            const id = $('#stock-id').val();
+
+            $.ajax({
+                url: `/stock-alerts/${id}`,
+                method: 'PUT',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    low_stock: $('#low-stock').val(),
+                    critical_stock: $('#critical-stock').val(),
+                    reorder_quantity: $('#reorder-quantity').val()
+                },
+                success: function (response) {
+                    $('#editStockModal').modal('hide');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Stock alert settings updated successfully',
+                        timer: 2000
+                    }).then(() => {
+                        location.reload();
+                    });
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: 'Failed to update stock alert'
+                    });
+                }
+            });
+        });
+
+        // Add Stock Alert
+        $('#addStockAlertForm').on('submit', function (e) {
+            e.preventDefault();
+
+            $.ajax({
+                url: '/stock-alerts',
+                method: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    ingredient_id: $('#add-ingredient-id').val(),
+                    low_stock: $('#add-low-stock').val(),
+                    critical_stock: $('#add-critical-stock').val(),
+                    reorder_quantity: $('#add-reorder-quantity').val()
+                },
+                success: function (response) {
+                    $('#addStockAlertModal').modal('hide');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Stock alert created successfully',
+                        timer: 2000
+                    }).then(() => {
+                        location.reload();
+                    });
+                },
+                error: function (xhr) {
+                    let errorMsg = 'Failed to create stock alert';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: errorMsg
+                    });
+                }
+            });
+        });
+
+        // Delete Stock Alert
+        $(document).on('click', '.delete-stock', function () {
+            const id = $(this).data('id');
+            const ingredient = $(this).data('ingredient');
+
+            Swal.fire({
+                title: 'Delete Stock Alert?',
+                html: `Remove stock alert for <strong>${ingredient}</strong>?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, Delete',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/stock-alerts/${id}`,
+                        method: 'DELETE',
+                        data: {
+                            _token: $('meta[name="csrf-token"]').attr('content')
+                        },
+                        success: function (response) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted!',
+                                text: 'Stock alert removed successfully',
+                                timer: 2000
+                            }).then(() => {
+                                location.reload();
+                            });
+                        },
+                        error: function (xhr) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error!',
+                                text: 'Failed to delete stock alert'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>

@@ -37,6 +37,7 @@ class AdminController extends Controller
 
         $todayReservationOrders = orders::whereDate('created_at', $today)
             ->whereNotNull('reservation_id')
+            ->where('status', 'completed')
             ->distinct('reservation_id')
             ->count('reservation_id');
 
@@ -49,15 +50,22 @@ class AdminController extends Controller
 
         $reservationPax = Reservation::whereDate('created_at', $today)
             ->whereHas('orders')
+            ->where('status', 'completed')
             ->sum('pax');
 
         $walkinPax = walkin::whereDate('created_at', $today)
             ->whereHas('orders')
+            ->where('status', 'completed')
             ->sum('pax');
 
         $totalCustomers = $reservationPax + $walkinPax;
 
-        $totalReservations = Reservation::whereDate('created_at', $today)->count();
+        $totalReservations = Reservation::whereDate('created_at', $today)
+            ->where(function ($query) {
+                $query->where('status', 'Active')
+                    ->orWhere('status', 'Completed');
+            })
+            ->count();
 
         $yesterday = Carbon::yesterday();
 
@@ -405,6 +413,34 @@ class AdminController extends Controller
             return redirect()->back()->with('error', 'Failed to change password');
         }
     }
+    public function checkUserAvailability(Request $request)
+    {
+        $field = $request->field;
+        $value = $request->value;
+        $userId = $request->user_id;
+
+        $query = User::where($field, $value);
+
+        if ($userId) {
+            $query->where('id', '!=', $userId);
+        }
+
+        $exists = $query->exists();
+
+        return response()->json(['available' => !$exists]);
+    }
+
+    public function checkCurrentPassword(Request $request)
+    {
+        $userId = $request->user_id;
+        $password = $request->password;
+
+        $user = User::findOrFail($userId);
+
+        $isSamePassword = Hash::check($password, $user->password);
+
+        return response()->json(['is_current' => $isSamePassword]);
+    }
 
     public function users()
     {
@@ -423,11 +459,11 @@ class AdminController extends Controller
             $request->validate([
                 'firstname' => 'required|string|max:255',
                 'lastname' => 'required|string|max:255',
-                'role' => 'required|string|in:Admin,Receptionist,Cashier,Kitchen Staff',
+                'role' => 'required|string|in:Admin,Manager,Receptionist,Cashier,Kitchen Staff',
                 'contact_number' => 'required|string|max:11',
                 'address' => 'required|string|max:255',
                 'username' => 'required|string|unique:users,username',
-                'email' => 'nullable|email|unique:users,email',
+                'email' => 'required|email|unique:users,email',
                 'password' => 'required|string|min:8|confirmed',
                 'profile_picture' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
@@ -438,11 +474,9 @@ class AdminController extends Controller
             throw $e;
         }
 
-        $imageName = null;
-        if ($request->hasFile('image')) {
-            $image = $request->file('image');
-            $imageName = time() . '_' . $image->getClientOriginalName();
-            $image->move(public_path('storage/jeongol_menu'), $imageName);
+        $profilePicturePath = null;
+        if ($request->hasFile('profile_picture')) {
+            $profilePicturePath = $request->file('profile_picture')->store('profile_pictures', 'public');
         }
 
         User::create([
@@ -454,7 +488,7 @@ class AdminController extends Controller
             'email' => $request->email,
             'address' => $request->address,
             'password' => Hash::make($request->password),
-            'profile_picture' => $request->hasFile('profile_picture') ? $request->file('profile_picture')->store('profile_pictures', 'public') : null,
+            'profile_picture' => $profilePicturePath,
             'status' => $request->has('status') ? 'Active' : 'Inactive',
         ]);
 
@@ -505,6 +539,17 @@ class AdminController extends Controller
         }
 
         if ($request->filled('password')) {
+            if (Hash::check($request->password, $user->password)) {
+                if ($request->ajax()) {
+                    return response()->json([
+                        'success' => false,
+                        'errors' => ['password' => ['The new password cannot be the same as your current password.']]
+                    ], 422);
+                }
+                return redirect()->back()
+                    ->withErrors(['password' => 'The new password cannot be the same as your current password.'])
+                    ->withInput();
+            }
             $user->password = Hash::make($request->password);
         }
 
@@ -1119,6 +1164,7 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Menu item deleted successfully!');
     }
 
+
     public function restoreMenu($id)
     {
         $menuItem = DB::table('menu')->where('id', $id)->whereNotNull('deleted_at')->first();
@@ -1155,6 +1201,25 @@ class AdminController extends Controller
         DB::table('menu')->where('id', $id)->delete();
 
         return redirect()->back()->with('success', 'Menu item permanently deleted!');
+    }
+
+    public function checkMenuAvailability(Request $request)
+    {
+        $menuItem = $request->input('menu_item');
+        $menuId = $request->input('menu_id');
+
+        $query = Menu::where('menu_item', $menuItem)
+            ->whereNull('deleted_at');
+
+        if ($menuId) {
+            $query->where('id', '!=', $menuId);
+        }
+
+        $exists = $query->exists();
+
+        return response()->json([
+            'available' => !$exists
+        ]);
     }
 
 
@@ -1946,7 +2011,6 @@ class AdminController extends Controller
             return back()->with('error', 'No pending order found for this ingredient.');
         }
 
-        // Determine stock status
         $stockStatus = 'normal';
         if ($ingredient->stockAlertLevel) {
             if ($ingredient->stocks <= $ingredient->stockAlertLevel->critical_stock) {
@@ -1986,7 +2050,30 @@ class AdminController extends Controller
 
     public function others(Request $request)
     {
-        $hours = OperatingHour::all();
+        $allHours = OperatingHour::all()->mapWithKeys(function ($hour) {
+            if ($hour->date) {
+                $formattedDate = \Carbon\Carbon::parse($hour->date)->format('Y-m-d');
+                return [$formattedDate => [
+                    'id' => $hour->id,
+                    'is_default' => $hour->is_default,
+                    'is_closed' => $hour->is_closed,
+                    'open_time' => $hour->open_time,
+                    'close_time' => $hour->close_time,
+                    'date' => $formattedDate
+                ]];
+            }
+            return [];
+        })->filter(); 
+
+        $hours = OperatingHour::where('is_default', false)
+            ->where('date', '!=', now()->toDateString())
+            ->get();
+
+        $todayHours = OperatingHour::where('date', now()->toDateString())
+            ->orWhere('is_default', true)
+            ->orderBy('is_default', 'asc')
+            ->first();
+
         $menus = menu::whereNull('deleted_at')->get();
         $discounts = MenuDiscount::with('menu')->paginate(6);
         $stock_level = StockAlertLevel::with('ingredient')->paginate(6);
@@ -2002,50 +2089,43 @@ class AdminController extends Controller
             $section = $request->get('section');
 
             if ($section === 'discounts') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
+                return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
             }
 
             if ($section === 'stock') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
+                return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
             }
 
             if ($section === 'stock_order') {
-                return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
+                return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'))->render();
             }
         }
 
-        return view('admin.others', compact('hours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'));
+        return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'));
     }
-
 
     public function storeOperatingHours(Request $request)
     {
         $request->validate([
             'date' => 'required|date|after_or_equal:today',
             'open_time' => 'required_without:is_closed|date_format:H:i',
-            'close_time' => 'required_without:is_closed|date_format:H:i',
-            'is_closed' => 'nullable|boolean'
+            'close_time' => 'required_without:is_closed|date_format:H:i|after:open_time',
+            'is_closed' => 'nullable'
         ]);
 
-        $existing = OperatingHour::where('date', $request->date)
-            ->where('is_default', false)
-            ->first();
+        $isClosed = $request->boolean('is_closed');
 
-        if ($existing) {
-            $existing->update([
-                'open_time' => $request->has('is_closed') ? null : $request->open_time,
-                'close_time' => $request->has('is_closed') ? null : $request->close_time,
-                'is_closed' => $request->has('is_closed')
-            ]);
-        } else {
-            OperatingHour::create([
-                'is_default' => false,
+        OperatingHour::updateOrCreate(
+            [
                 'date' => $request->date,
-                'open_time' => $request->has('is_closed') ? null : $request->open_time,
-                'close_time' => $request->has('is_closed') ? null : $request->close_time,
-                'is_closed' => $request->has('is_closed')
-            ]);
-        }
+                'is_default' => false
+            ],
+            [
+                'open_time' => $isClosed ? null : $request->open_time,
+                'close_time' => $isClosed ? null : $request->close_time,
+                'is_closed' => $isClosed
+            ]
+        );
 
         return redirect()->back()->with('success', 'Date-specific hours set successfully!');
     }
@@ -2055,17 +2135,18 @@ class AdminController extends Controller
         $request->validate([
             'date' => 'required|date',
             'open_time' => 'required_without:is_closed|date_format:H:i',
-            'close_time' => 'required_without:is_closed|date_format:H:i',
-            'is_closed' => 'nullable|boolean'
+            'close_time' => 'required_without:is_closed|date_format:H:i|after:open_time',
+            'is_closed' => 'nullable'
         ]);
 
         $hours = OperatingHour::findOrFail($id);
+        $isClosed = $request->boolean('is_closed');
 
         $hours->update([
             'date' => $request->date,
-            'open_time' => $request->has('is_closed') ? null : $request->open_time,
-            'close_time' => $request->has('is_closed') ? null : $request->close_time,
-            'is_closed' => $request->has('is_closed')
+            'open_time' => $isClosed ? null : $request->open_time,
+            'close_time' => $isClosed ? null : $request->close_time,
+            'is_closed' => $isClosed
         ]);
 
         return redirect()->back()->with('success', 'Operating hours updated successfully!');
@@ -2073,15 +2154,28 @@ class AdminController extends Controller
 
     public function deleteOperatingHours($id)
     {
-        $hours = OperatingHour::findOrFail($id);
+        try {
+            $hours = OperatingHour::findOrFail($id);
 
-        if ($hours->is_default) {
-            return redirect()->back()->with('error', 'Cannot delete default operating hours!');
+            if ($hours->is_default) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot delete default operating hours!'
+                ], 400);
+            }
+
+            $hours->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Date override removed successfully!'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to remove custom operating hour'
+            ], 500);
         }
-
-        $hours->delete();
-
-        return redirect()->back()->with('success', 'Date override removed successfully!');
     }
     public function storeDiscount(Request $request)
     {
@@ -2108,7 +2202,6 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Discount updated successfully!');
     }
 
-    // Store new stock alert
     public function storeStockAlert(Request $request)
     {
         $request->validate([
@@ -2166,6 +2259,7 @@ class AdminController extends Controller
             ->leftJoin('reservations', 'reservation_payment_details.reservation_id', '=', 'reservations.id')
             ->leftJoin('customers', 'reservations.customer_id', '=', 'customers.id')
             ->whereNotNull('reservation_payment_details.payment_proof')
+            ->whereDate('reservation_payment_details.created_at', now()->toDateString())
             ->whereIn('reservation_payment_details.payment_method', ['gcash', 'maya'])
             ->select(
                 'reservation_payment_details.id',
@@ -2178,6 +2272,7 @@ class AdminController extends Controller
 
         return view('admin.ewallet_management', compact('ewallet_details', 'receipts'));
     }
+
     public function ewallet_store(Request $request)
     {
         $request->validate([

@@ -115,6 +115,23 @@
             font-style: italic;
             padding: 15px;
         }
+
+        .type-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .type-used {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+
+        .type-stock-out {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
     </style>
 </head>
 
@@ -131,29 +148,6 @@
         </div>
     </div>
 
-    <!-- Category Breakdown -->
-    @if(isset($reportData['summary']['by_category']) && count($reportData['summary']['by_category']) > 0)
-    <div class="section-title">Consumption by Category</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 40%;">Category</th>
-                <th class="text-right" style="width: 30%;">Quantity</th>
-                <th class="text-right" style="width: 30%;">Percentage</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($reportData['summary']['by_category'] as $category)
-                <tr>
-                    <td>{{ ucfirst($category['name']) }}</td>
-                    <td class="text-right">{{ number_format($category['quantity'], 2) }} kg/pcs</td>
-                    <td class="text-right">{{ number_format($category['percentage'], 1) }}%</td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @endif
-
     <!-- Top Consumed Items -->
     <div class="section-title">Most Consumed Items</div>
     @if(isset($reportData['top_consumed']) && count($reportData['top_consumed']) > 0)
@@ -162,9 +156,7 @@
             <tr>
                 <th style="width: 5%;">#</th>
                 <th style="width: 35%;">Ingredient</th>
-                <th style="width: 25%;">Category</th>
-                <th class="text-right" style="width: 20%;">Quantity</th>
-                <th class="text-right" style="width: 15%;">Times Used</th>
+                <th class="text-right" style="width: 35%;">Quantity</th>
             </tr>
         </thead>
         <tbody>
@@ -172,9 +164,7 @@
                 <tr>
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $item['name'] }}</td>
-                    <td>{{ ucfirst($item['category']) }}</td>
                     <td class="text-right">{{ number_format($item['total_consumed'], 2) }} {{ $item['unit'] }}</td>
-                    <td class="text-right">{{ number_format($item['usage_count']) }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -189,16 +179,34 @@
     <table>
         <thead>
             <tr>
-                <th style="width: 15%;">Date</th>
-                <th style="width: 20%;">Category</th>
-                <th class="text-right" style="width: 20%;">Quantity</th>
+                <th style="width: 15%;">Date & Time</th>
+                <th style="width: 25%;">Ingredient</th>
+                <th style="width: 15%;">Type</th>
+                <th class="text-right" style="width: 25%;">Quantity</th>
             </tr>
         </thead>
         <tbody>
             @foreach($reportData['consumption_data'] as $item)
+                @php
+                    $typeClass = '';
+                    $typeLabel = '';
+                    
+                    if (($item['type'] ?? '') === 'used') {
+                        $typeClass = 'type-used';
+                        $typeLabel = 'Used';
+                    } elseif (($item['type'] ?? '') === 'stock_out') {
+                        $typeClass = 'type-stock-out';
+                        $typeLabel = 'Stock Out';
+                    } else {
+                        $typeLabel = ucfirst($item['type'] ?? 'N/A');
+                    }
+                @endphp
                 <tr>
-                    <td>{{ $item['date'] }}</td>
-                    <td>{{ ucfirst($item['category'] ?? 'N/A') }}</td>
+                    <td>{{ $item['datetime'] ?? $item['date'] }}</td>
+                    <td>{{ $item['ingredient_name'] ?? 'Unknown' }}</td>
+                    <td>
+                        <span class="type-badge {{ $typeClass }}">{{ $typeLabel }}</span>
+                    </td>
                     <td class="text-right">{{ number_format($item['quantity'], 2) }} {{ $item['unit'] ?? 'kg' }}</td>
                 </tr>
             @endforeach

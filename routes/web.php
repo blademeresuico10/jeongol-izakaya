@@ -22,15 +22,12 @@ Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUn
 Route::get('/customer/check-availability', [CustomerController::class, 'checkAvailability'])->name('customer.checkAvailability');
 
 Route::get('/file-serve/{folder}/{filename}', function ($folder, $filename) {
-
     $allowedFolders = ['jeongol_menu', 'payment_proofs', 'profile_pictures'];
     if (!in_array($folder, $allowedFolders)) {
         abort(404, 'Folder not allowed.');
     }
 
-
     $filePath = storage_path("app/public/{$folder}/{$filename}");
-
 
     if (!file_exists($filePath) || !is_readable($filePath)) {
         abort(404, 'File not found.');
@@ -39,6 +36,10 @@ Route::get('/file-serve/{folder}/{filename}', function ($folder, $filename) {
     return Response::file($filePath);
 });
 
+Route::get('/closed', function () {
+    $default = \App\Models\OperatingHour::where('is_default', true)->first();
+    return view('operation_closed', ['default' => $default]);
+})->name('operation_closed');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -54,13 +55,12 @@ Route::middleware('guest')->group(function () {
     Route::post('/login/admin/reset-password', [LoginController::class, 'resetAdminPassword'])->name('admin.password.update');
 });
 
-
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
     Route::post('/force-logout', [LoginController::class, 'forceLogout'])->name('force.logout');
     Route::get('/validate-session', [LoginController::class, 'validateSession'])->name('validate.session');
 
-    // ADMIN  ROUTES
+    // ADMIN ROUTES
     Route::middleware('role:Admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'home'])->name('admin.home');
         Route::get('/home/dashboard-data', [AdminController::class, 'dashboardData'])->name('home.dashboard.data');
@@ -81,7 +81,9 @@ Route::middleware('auth')->group(function () {
         Route::delete('/users/{id}', [AdminController::class, 'destroy'])->name('admin.destroyuser');
         Route::patch('/restoreuser/{id}', [AdminController::class, 'restore'])->name('admin.restoreuser');
         Route::delete('/forcedeleteuser/{id}', [AdminController::class, 'forceDelete'])->name('admin.forcedeleteuser');
-
+        Route::post('/check-user-availability', [AdminController::class, 'checkUserAvailability'])->name('check.user.availability');
+        Route::post('/check-current-password', [AdminController::class, 'checkCurrentPassword'])->name('check.current.password');
+        
         // Menu Management
         Route::get('/menu_management', [AdminController::class, 'menu_management'])->name('admin.menu_management');
         Route::post('/addmenu', [AdminController::class, 'addmenu'])->name('admin.addmenu');
@@ -89,6 +91,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/editmenu/{id}', [AdminController::class, 'editMenu'])->name('admin.editmenu');
         Route::put('/updatemenu/{id}', [AdminController::class, 'updateMenu'])->name('admin.updatemenu');
         Route::delete('/deletemenu/{id}', [AdminController::class, 'deleteMenu'])->name('admin.deleteMenu');
+        Route::post('/check-menu-availability', [AdminController::class, 'checkMenuAvailability'])->name('check.menu.availability');
         Route::patch('/restoremenu/{id}', [AdminController::class, 'restoreMenu'])->name('admin.restoreMenu');
         Route::delete('/forcedeletemenu/{id}', [AdminController::class, 'forceDeleteMenu'])->name('admin.forceDeleteMenu');
         Route::get('/menu_ingredients', [AdminController::class, 'menuIngredients'])->name('admin.menu_ingredients');
@@ -128,7 +131,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('/batches/delete', [AdminController::class, 'deleteBatch'])->name('batches.delete');
 
             // Stock Order Routes
-            Route::get('/available-ingredients', [AdminController::class, 'getAvailableIngredients'])->name('ingredient.available'); // ADD THIS LINE
+            Route::get('/available-ingredients', [AdminController::class, 'getAvailableIngredients'])->name('ingredient.available');
             Route::post('/stock-orders/create', [AdminController::class, 'createStockOrder'])->name('ingredient.stock-orders.create');
             Route::post('/stock-orders/check-all', [AdminController::class, 'checkAllIngredients'])->name('ingredient.stock-orders.check-all');
             Route::post('/stock-orders/{stockOrder}/complete', [AdminController::class, 'completeStockOrder'])->name('ingredient.stock-orders.complete');
@@ -137,8 +140,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/low-stock', [AdminController::class, 'getLowStockIngredients'])->name('ingredient.low-stock');
         });
 
-        Route::get('stock-request/{id}/print', [AdminController::class, 'printStockRequest'])
-            ->name('admin.stock-request.print');
+        Route::get('stock-request/{id}/print', [AdminController::class, 'printStockRequest'])->name('admin.stock-request.print');
 
         // E-Wallet Management
         Route::get('/ewallet', [AdminController::class, 'ewallet_management'])->name('admin.ewallet_management');
@@ -149,14 +151,13 @@ Route::middleware('auth')->group(function () {
         // Others
         Route::get('/miscelanious', [AdminController::class, 'others'])->name('admin.others');
 
-        // Stock Level Management (existing)
+        // Stock Level Management
         Route::put('/stock-levels/{id}', [AdminController::class, 'updateStockLevel'])->name('admin.stock_levels.update');
 
-        // Stock Alert Routes (add these)
+        // Stock Alert Routes
         Route::post('/stock-alerts', [AdminController::class, 'storeStockAlert'])->name('admin.stock-alerts.store');
         Route::put('/stock-alerts/{id}', [AdminController::class, 'updateStockAlert'])->name('admin.stock-alerts.update');
         Route::delete('/stock-alerts/{id}', [AdminController::class, 'deleteStockAlert'])->name('admin.stock-alerts.delete');
-
 
         // Operating Hours Management
         Route::put('/operating-hours/default', [AdminController::class, 'updateDefaultHours'])->name('admin.operating_hours.update_default');
@@ -171,7 +172,7 @@ Route::middleware('auth')->group(function () {
         // Feedback
         Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
 
-        //Stock Order
+        // Stock Order
         Route::put('/stock-orders/{id}', [AdminController::class, 'updateStockOrder'])->name('admin.stock_orders.update');
         Route::post('/stock-orders', [AdminController::class, 'storeStockOrder'])->name('admin.stock_orders.store');
 
@@ -185,7 +186,7 @@ Route::middleware('auth')->group(function () {
         // PDF Export Routes
         Route::get('/reports/sales/pdf', [ReportsController::class, 'salesReportPdf'])->name('admin.sales_report.pdf');
         Route::get('/reports/transaction/pdf', [ReportsController::class, 'transactionReportPdf']);
-        Route::get('/reports/inventory/pdf', [ReportsController::class, 'inventoryReportPdf'])->name('reports.inventory.pdf'); // Changed this line
+        Route::get('/reports/inventory/pdf', [ReportsController::class, 'inventoryReportPdf'])->name('reports.inventory.pdf');
         Route::get('/reports/menu/pdf', [ReportsController::class, 'menuReportPdf'])->name('admin.menu_report.pdf');
 
         // Other exports
@@ -193,55 +194,60 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('admin.reports.export-csv');
     });
 
-    // RECEPTIONIST ONLY ROUTES
-    Route::middleware('role:Receptionist')->prefix('receptionist')->name('receptionist.')->group(function () {
-        Route::get('/home', [ReceptionistController::class, 'home'])->name('home');
-        Route::get('/dashboard', [ReceptionistController::class, 'home']);
-        Route::post('/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('storeReservation');
-        Route::post('/store-walkin', [ReceptionistController::class, 'storeWalkIn'])->name('storeWalkIn');
-        Route::get('/available-times', [ReceptionistController::class, 'getAvailableTimeSlots'])->name('available_times');
-        Route::get('/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('modify_orders');
-        Route::get('/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('view_kitchen');
-        Route::post('/update-order', [ReceptionistController::class, 'updateOrder'])->name('updateOrder');
-        Route::post('/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])->name('accept-reservation');
-        Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment'])->name('showPayment');
-        Route::get('/notifications', [ReceptionistController::class, 'getNotifications'])->name('notifications');
-        Route::post('/cancel-reservation/{id}', [ReceptionistController::class, 'cancelReservation'])->name('cancel-reservation');
-        Route::post('/notifications/{id}/read', [ReceptionistController::class, 'markNotificationAsRead'])->name('notification.read');
-        Route::get('/notifications/unread-count', [ReceptionistController::class, 'getUnreadCount'])->name('notification.unread-count');
-        Route::post('/notifications/mark-all-read', [ReceptionistController::class, 'markAllNotificationsAsRead'])->name('notification.mark-all-read');
-    });
+    Route::middleware('operating.hours')->group(function () {
 
-    Route::middleware('role:Receptionist')->group(function () {
-        Route::get('/view_reservations', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
-    });
+        // RECEPTIONIST ROUTES
+        Route::middleware('role:Receptionist')->prefix('receptionist')->name('receptionist.')->group(function () {
+            Route::get('/home', [ReceptionistController::class, 'home'])->name('home');
+            Route::get('/dashboard', [ReceptionistController::class, 'home']);
+            Route::post('/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('storeReservation');
+            Route::post('/store-walkin', [ReceptionistController::class, 'storeWalkIn'])->name('storeWalkIn');
+            Route::get('/available-times', [ReceptionistController::class, 'getAvailableTimeSlots'])->name('available_times');
+            Route::get('/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('modify_orders');
+            Route::get('/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('view_kitchen');
+            Route::post('/update-order', [ReceptionistController::class, 'updateOrder'])->name('updateOrder');
+            Route::post('/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])->name('accept-reservation');
+            Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment'])->name('showPayment');
+            Route::get('/notifications', [ReceptionistController::class, 'getNotifications'])->name('notifications');
+            Route::post('/cancel-reservation/{id}', [ReceptionistController::class, 'cancelReservation'])->name('cancel-reservation');
+            Route::post('/notifications/{id}/read', [ReceptionistController::class, 'markNotificationAsRead'])->name('notification.read');
+            Route::get('/notifications/unread-count', [ReceptionistController::class, 'getUnreadCount'])->name('notification.unread-count');
+            Route::post('/notifications/mark-all-read', [ReceptionistController::class, 'markAllNotificationsAsRead'])->name('notification.mark-all-read');
+        });
 
-    // KITCHEN STAFF ONLY ROUTES
-    Route::middleware('role:Kitchen Staff')->prefix('kitchen')->name('kitchen.')->group(function () {
-        Route::get('/home', [KitchenController::class, 'home'])->name('home');
-        Route::post('/served', [KitchenController::class, 'markAsServed'])->name('served');
-        Route::post('/unlimited/refill', [KitchenController::class, 'storeUnlimitedRefill'])->name('unlimited.refill');
-        Route::post('/orders/additional', [KitchenController::class, 'storeAdditionalOrder'])->name('orders.additional');
-    });
+        Route::middleware('role:Receptionist')->group(function () {
+            Route::get('/view_reservations', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
+        });
 
-    // CASHIER ONLY ROUTES
-    Route::middleware('role:Cashier')->prefix('cashier')->name('cashier.')->group(function () {
-        Route::get('/home', [CashierController::class, 'home'])->name('home');
-        Route::get('/dashboard', [CashierController::class, 'home']);
-        Route::get('/payments/{id}', [CashierController::class, 'showPayment'])->name('showPayment');
-        Route::post('/print-receipt', [CashierController::class, 'printReceipt']);
-        Route::post('/test-printer', [CashierController::class, 'testPrinter']);
-    });
+        // KITCHEN STAFF ROUTES
+        Route::middleware('role:Kitchen Staff')->prefix('kitchen')->name('kitchen.')->group(function () {
+            Route::get('/home', [KitchenController::class, 'home'])->name('home');
+            Route::post('/served', [KitchenController::class, 'markAsServed'])->name('served');
+            Route::post('/unlimited/refill', [KitchenController::class, 'storeUnlimitedRefill'])->name('unlimited.refill');
+            Route::post('/orders/additional', [KitchenController::class, 'storeAdditionalOrder'])->name('orders.additional');
+        });
 
-    Route::middleware('role:Cashier')->group(function () {
-        Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
-        Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
-        Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
-        // Make sure this route exists
-        Route::post('/cashier/check-customer', [CashierController::class, 'checkCustomer'])->name('cashier.check.customer');
-    });
+        // CASHIER ROUTES
+        Route::middleware('role:Cashier')->prefix('cashier')->name('cashier.')->group(function () {
+            Route::get('/home', [CashierController::class, 'home'])->name('home');
+            Route::get('/dashboard', [CashierController::class, 'home']);
+            Route::get('/payments/{id}', [CashierController::class, 'showPayment'])->name('showPayment');
+            Route::post('/print-receipt', [CashierController::class, 'printReceipt']);
+            Route::post('/test-printer', [CashierController::class, 'testPrinter']);
+        });
 
-    Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {
-        Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
-    });
-});
+        Route::middleware('role:Cashier')->group(function () {
+            Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
+            Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
+            Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
+            Route::post('/cashier/check-customer', [CashierController::class, 'checkCustomer'])->name('cashier.check.customer');
+        });
+
+        // WAIT STAFF ROUTES
+        Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {
+            Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
+        });
+        
+    }); 
+    
+}); 

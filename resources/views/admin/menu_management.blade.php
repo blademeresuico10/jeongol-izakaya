@@ -281,7 +281,7 @@
                                 <div class="form-group">
                                     <label class="font-weight-bold">Quantity<span id="unitLabel"
                                             class="text-muted"></span></label>
-                                    <input type="number" id="ingredientQty" class="form-control" 
+                                    <input type="number" id="ingredientQty" class="form-control"
                                         placeholder="Enter quantity" required>
                                 </div>
                             </div>
@@ -468,7 +468,67 @@
 
 @include('admin.layouts.script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function checkMenuItemAvailability(menuItem, menuId = null) {
+        if (!menuItem || menuItem.trim().length < 3) return;
+
+        $.ajax({
+            url: "{{ route('check.menu.availability') }}",
+            method: 'POST',
+            data: {
+                _token: '{{ csrf_token() }}',
+                menu_item: menuItem,
+                menu_id: menuId
+            },
+            success: function (response) {
+                const menuItemInput = menuId ?
+                    document.getElementById('edit_menu_item' + menuId) :
+                    document.getElementById('menu_item');
+                const menuItemError = menuId ?
+                    document.getElementById('edit_menuItemError' + menuId) :
+                    document.getElementById('menuItemError');
+
+                if (!response.available) {
+                    menuItemError.textContent = 'This menu item already exists';
+                    menuItemError.style.display = 'block';
+                    menuItemInput.classList.add('is-invalid');
+
+                    menuItemInput.value = '';
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Duplicate Menu Item',
+                        text: `"${menuItem}" already exists in the menu`,
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
+                    });
+                } else {
+                    if (menuItemError.textContent.includes('already exists')) {
+                        menuItemError.textContent = '';
+                        menuItemError.style.display = 'none';
+                        menuItemInput.classList.remove('is-invalid');
+                    }
+                }
+            }
+        });
+    }
 
     function initializeMenuFormValidation() {
         // Menu Item Validation
@@ -476,12 +536,14 @@
         const menuItemError = document.getElementById('menuItemError');
 
         if (menuItemInput && menuItemError) {
+            const debouncedMenuCheck = debounce(function (value) {
+                checkMenuItemAvailability(value);
+            }, 500);
+
             $(menuItemInput).off('input.menuItem');
             $(menuItemInput).on('input.menuItem', function () {
-                // Allow letters, numbers, spaces, and common punctuation for menu items
                 this.value = this.value.replace(/[^a-zA-Z0-9\s\-'\"().,&]/g, '');
 
-                // Capitalize first character
                 if (this.value.length > 0) {
                     this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
                 }
@@ -503,6 +565,7 @@
                     menuItemError.textContent = '';
                     menuItemError.style.display = 'none';
                     this.classList.remove('is-invalid');
+                    debouncedMenuCheck(value);
                 }
             });
         }
@@ -616,12 +679,14 @@
         const menuItemError = document.getElementById('edit_menuItemError' + itemId);
 
         if (menuItemInput && menuItemError) {
+            const debouncedEditMenuCheck = debounce(function (value) {
+                checkMenuItemAvailability(value, itemId);
+            }, 500);
+
             $(menuItemInput).off('input.menuItem');
             $(menuItemInput).on('input.menuItem', function () {
-                // Allow letters, numbers, spaces, and common punctuation for menu items
                 this.value = this.value.replace(/[^a-zA-Z0-9\s\-'\"().,&]/g, '');
 
-                // Capitalize first character
                 if (this.value.length > 0) {
                     this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1);
                 }
@@ -643,6 +708,7 @@
                     menuItemError.textContent = '';
                     menuItemError.style.display = 'none';
                     this.classList.remove('is-invalid');
+                    debouncedEditMenuCheck(value);
                 }
             });
         }
@@ -697,7 +763,6 @@
         }
     }
 
-    // Add event listeners for all edit menu modals
     $('[id^="editMenuModal"]').on('shown.bs.modal', function () {
         const modalId = $(this).attr('id');
         const itemId = modalId.replace('editMenuModal', '');
@@ -709,6 +774,26 @@
         const itemId = modalId.replace('editMenuModal', '');
         $(`#editMenuForm${itemId} input, #editMenuForm${itemId} select`).removeClass('is-invalid');
         $(`small[id^="edit_"][id$="Error${itemId}"]`).hide().text('');
+    });
+
+    $('#addMenuForm').on('submit', function (e) {
+        const hasInvalidFields = $(this).find('.is-invalid').length > 0;
+
+        if (hasInvalidFields) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                text: 'Please fix all errors before submitting',
+                toast: true,
+                position: 'top',
+                timer: 3000,
+                showConfirmButton: false,
+                background: '#f8d7da',
+                color: '#721c24'
+            });
+            return false;
+        }
     });
 
     window.showDeleteModal = function (id, itemName) {
@@ -801,13 +886,12 @@
         $('#menuIngredientsModal').on('show.bs.modal', function () {
             const content = document.getElementById('ingredientsContent');
 
-            // Show loading
             content.innerHTML = `
-        <div class="text-center py-4">
-            <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
-            <p class="mt-2">Loading menu ingredients...</p>
-        </div>
-    `;
+                <div class="text-center py-4">
+                    <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                    <p class="mt-2">Loading menu ingredients...</p>
+                </div>
+            `;
 
             fetch("{{ route('admin.menu_ingredients') }}")
                 .then(res => res.json())
@@ -822,98 +906,91 @@
                         const ingList = data.ingredients[menu.id] || [];
                         const hasIngredients = ingList.length > 0;
 
-                        // 🆕 Highlight newly created menus with suggestions
                         const isNewWithSuggestions = hasIngredients && menu.created_recently;
                         const cardClass = isNewWithSuggestions ? 'border-success' : '';
                         const headerClass = isNewWithSuggestions ? 'bg-success text-white' : 'bg-light';
 
                         html += `
-                    <div class="card mb-3 ${cardClass}">
-                        <div class="card-header ${headerClass}">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0 font-weight-bold">
-                                    ${menu.menu_item}
-                                </h6>
-                                <small class="text-${isNewWithSuggestions ? 'white' : 'muted'}">
-                                    Category: ${menu.category}
-                                </small>
-                            </div>
-                        </div>
-                        <div class="card-body p-0">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead class="thead-light">
-                                    <tr>
-                                        <th>Ingredient</th>
-                                        <th>Category</th>
-                                        <th width="150">Quantity (grams/pcs)</th>
-                                        <th width="80">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                `;
+                            <div class="card mb-3 ${cardClass}">
+                                <div class="card-header ${headerClass}">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
+                                        <small class="text-${isNewWithSuggestions ? 'white' : 'muted'}">
+                                            Category: ${menu.category}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm table-hover mb-0">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Ingredient</th>
+                                                <th>Category</th>
+                                                <th width="150">Quantity (grams/pcs)</th>
+                                                <th width="80">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                        `;
 
                         if (ingList.length === 0) {
                             html += `
-                        <tr>
-                            <td colspan="4" class="text-center text-muted py-3">
-                                <i class="fas fa-info-circle"></i> Empty
-                            </td>
-                        </tr>
-                    `;
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-3">
+                                        <i class="fas fa-info-circle"></i> Empty
+                                    </td>
+                                </tr>
+                            `;
                         } else {
                             ingList.forEach(ing => {
                                 html += `
-                            <tr>
-                                <td class="align-middle">
-                                    <strong>${ing.ingredient_name}</strong>
-                                </td>
-                                <td class="align-middle">
-                                    <span class="badge badge-info">${ing.category}</span>
-                                </td>
-                                <td>
-                                    <div class="input-group input-group-sm">
-                                        <input type="number" 
-                                               class="form-control ingredient-qty"
-                                               data-id="${ing.id}" 
-                                               value="${ing.quantity}"
-                                               min="0.01"
-                                               step="any"
-                                               placeholder="Quantity">
-                                        
-                                    </div>
-                                </td>
-                                <td class="align-middle text-center">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-danger removeIngredientBtn" 
-                                            data-id="${ing.id}"
-                                            title="Remove">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </td>
-                            </tr>
-                        `;
+                                    <tr>
+                                        <td class="align-middle">
+                                            <strong>${ing.ingredient_name}</strong>
+                                        </td>
+                                        <td class="align-middle">
+                                            <span class="badge badge-info">${ing.category}</span>
+                                        </td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" 
+                                                       class="form-control ingredient-qty"
+                                                       data-id="${ing.id}" 
+                                                       value="${ing.quantity}"
+                                                       min="0.01"
+                                                       step="any"
+                                                       placeholder="Quantity">
+                                            </div>
+                                        </td>
+                                        <td class="align-middle text-center">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-danger removeIngredientBtn" 
+                                                    data-id="${ing.id}"
+                                                    title="Remove">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
                             });
                         }
 
                         html += `
-                                </tbody>
-                            </table>
-                            <div class="card-footer bg-light">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <button type="button" 
-                                            class="btn btn-sm btn-success addIngredientBtn" 
-                                            data-menu-id="${menu.id}"
-                                            data-menu-name="${menu.menu_item}">
-                                        <i class="fas fa-plus"></i> Add Ingredient
-                                    </button>
-                                    ${hasIngredients ? `
-                                   
-                                    ` : ''}
+                                        </tbody>
+                                    </table>
+                                    <div class="card-footer bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <button type="button"
+                                                class="btn btn-sm btn-success addIngredientBtn"
+                                                data-menu-id="${menu.id}"
+                                                data-menu-name="${menu.menu_item}">
+                                                <i class="fas fa-plus"></i> Add Ingredient
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                `;
+                        `;
                     });
 
                     content.innerHTML = html;
@@ -921,11 +998,11 @@
                 .catch(err => {
                     console.error('Error fetching ingredients:', err);
                     content.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i> 
-                    Failed to load menu ingredients. Please try again.
-                </div>
-            `;
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> 
+                            Failed to load menu ingredients. Please try again.
+                        </div>
+                    `;
                 });
         });
 
@@ -1059,12 +1136,12 @@
                                     const tbody = row.closest('tbody');
                                     if (tbody.find('tr').length === 0) {
                                         tbody.html(`
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-2">
-                                            No ingredients added yet
-                                        </td>
-                                    </tr>
-                                `);
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted py-2">
+                                                    No ingredients added yet
+                                                </td>
+                                            </tr>
+                                        `);
                                     }
                                 });
 
@@ -1163,10 +1240,9 @@
                                         displayUnit = 'grams';
                                     }
 
-                                    const stockClass = displayStock < 100 ? 'text-danger' : '';
                                     options += `<option value="${ing.id}" data-unit="${displayUnit}">
-                                ${ing.name}
-                            </option>`;
+                                        ${ing.name}
+                                    </option>`;
                                 });
                                 options += '</optgroup>';
                             });
@@ -1179,7 +1255,6 @@
                             Object.keys(grouped).forEach(category => {
                                 options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
                                 grouped[category].forEach(ing => {
-                                    // Convert kg to grams for display
                                     let displayStock = ing.stocks;
                                     let displayUnit = ing.unit;
 
@@ -1189,8 +1264,8 @@
                                     }
 
                                     options += `<option value="${ing.id}" data-unit="${displayUnit}">
-                                ${ing.name} (Stock: ${displayStock} ${displayUnit})
-                            </option>`;
+                                        ${ing.name} (Stock: ${displayStock} ${displayUnit})
+                                    </option>`;
                                 });
                                 options += '</optgroup>';
                             });
@@ -1225,11 +1300,6 @@
 
             $('#ingredientQty').val(defaultQty);
             $('#unitLabel').text(' (grams)');
-        });
-        $(document).on('change', '#ingredientSelect', function () {
-            const selected = $(this).find('option:selected');
-            const unit = selected.data('unit');
-            $('#unitLabel').text(unit ? `(${unit})` : '');
         });
 
         $('#addIngredientForm').on('submit', function (e) {
@@ -1299,11 +1369,11 @@
 
                         const content = document.getElementById('ingredientsContent');
                         content.innerHTML = `
-                    <div class="text-center py-3">
-                        <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
-                        <p class="mt-2">Refreshing...</p>
-                    </div>
-                `;
+                            <div class="text-center py-3">
+                                <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                                <p class="mt-2">Refreshing...</p>
+                            </div>
+                        `;
 
                         fetch("{{ route('admin.menu_ingredients') }}")
                             .then(res => res.json())
@@ -1311,72 +1381,72 @@
                                 let html = '';
                                 data.menus.forEach(menu => {
                                     html += `
-                                <div class="card mb-3">
-                                    <div class="card-header bg-light">
-                                        <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
-                                    </div>
-                                    <div class="card-body p-0">
-                                        <table class="table table-sm table-hover mb-0">
-                                            <thead class="thead-light">
-                                                <tr>
-                                                    <th>Ingredient</th>
-                                                    <th width="150">Quantity</th>
-                                                    <th width="80">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                            `;
+                                        <div class="card mb-3">
+                                            <div class="card-header bg-light">
+                                                <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
+                                            </div>
+                                            <div class="card-body p-0">
+                                                <table class="table table-sm table-hover mb-0">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th>Ingredient</th>
+                                                            <th width="150">Quantity</th>
+                                                            <th width="80">Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                    `;
 
                                     const ingList = data.ingredients[menu.id] || [];
 
                                     if (ingList.length === 0) {
                                         html += `
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted py-2">
-                                            No ingredients added yet
-                                        </td>
-                                    </tr>
-                                `;
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted py-2">
+                                                    No ingredients added yet
+                                                </td>
+                                            </tr>
+                                        `;
                                     } else {
                                         ingList.forEach(ing => {
                                             html += `
-                                        <tr>
-                                            <td class="align-middle">${ing.ingredient_name}</td>
-                                            <td>
-                                                <input type="number" 
-                                                       class="form-control form-control-sm ingredient-qty"
-                                                       data-id="${ing.id}" 
-                                                       value="${ing.quantity}"
-                                                       min="0.01"
-                                                       step="any">
-                                            </td>
-                                            <td class="align-middle">
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-danger removeIngredientBtn" 
-                                                        data-id="${ing.id}"
-                                                        title="Remove">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
+                                                <tr>
+                                                    <td class="align-middle">${ing.ingredient_name}</td>
+                                                    <td>
+                                                        <input type="number" 
+                                                               class="form-control form-control-sm ingredient-qty"
+                                                               data-id="${ing.id}" 
+                                                               value="${ing.quantity}"
+                                                               min="0.01"
+                                                               step="any">
+                                                    </td>
+                                                    <td class="align-middle">
+                                                        <button type="button" 
+                                                                class="btn btn-sm btn-danger removeIngredientBtn" 
+                                                                data-id="${ing.id}"
+                                                                title="Remove">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            `;
                                         });
                                     }
 
                                     html += `
-                                            </tbody>
-                                        </table>
-                                        <div class="card-footer bg-light">
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-success addIngredientBtn" 
-                                                    data-menu-id="${menu.id}"
-                                                    data-menu-name="${menu.menu_item}">
-                                                <i class="fas fa-plus"></i> Add Ingredient
-                                            </button>
+                                                    </tbody>
+                                                </table>
+                                                <div class="card-footer bg-light">
+                                                    <button type="button" 
+                                                            class="btn btn-sm btn-success addIngredientBtn" 
+                                                            data-menu-id="${menu.id}"
+                                                            data-menu-name="${menu.menu_item}">
+                                                        <i class="fas fa-plus"></i> Add Ingredient
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                </div>
-                            `;
+                                    `;
                                 });
                                 content.innerHTML = html;
                             });
@@ -1416,22 +1486,25 @@
         });
     });
 
+    // Add CSS to hide number input spinners
     const style = document.createElement('style');
     style.textContent = `
-    input[type="number"].ingredient-qty::-webkit-outer-spin-button,
-    input[type="number"].ingredient-qty::-webkit-inner-spin-button,
-    #ingredientQty::-webkit-outer-spin-button,
-    #ingredientQty::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-    
-    input[type="number"].ingredient-qty,
-    #ingredientQty {
-        -moz-appearance: textfield;
-    }
-`;
+        input[type="number"].ingredient-qty::-webkit-outer-spin-button,
+        input[type="number"].ingredient-qty::-webkit-inner-spin-button,
+        #ingredientQty::-webkit-outer-spin-button,
+        #ingredientQty::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        
+        input[type="number"].ingredient-qty,
+        #ingredientQty {
+            -moz-appearance: textfield;
+        }
+    `;
     document.head.appendChild(style);
+
+    // Session flash messages
     @if(session('success'))
         @if(session('new_menu_name'))
             $('#newMenuName').text("{{ session('new_menu_name') }}");

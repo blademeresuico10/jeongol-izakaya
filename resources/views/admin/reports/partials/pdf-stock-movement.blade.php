@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Stock Movement Report</title>
+    <title>Stock In Report</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 12px; color: #333; }
         .header { text-align: center; margin-bottom: 20px; }
@@ -19,12 +19,13 @@
         .summary-box { margin: 10px 0; }
         .summary-row { display: flex; justify-content: space-between; padding: 3px 0; }
         .summary-label { font-weight: bold; }
+        .no-data { text-align: center; margin-top: 20px; color: #777; }
     </style>
 </head>
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="report-title">STOCK MOVEMENT REPORT</div>
+        <div class="report-title">STOCK IN REPORT</div>
         <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="date-range"><strong>Period:</strong> {{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}</div>
         <div class="generated-info">Generated on: {{ $generatedAt->format('F j, Y g:i A') }}</div>
@@ -34,64 +35,42 @@
     <div class="summary-box">
         <div class="summary-row"><span class="summary-label">Stock In (Kg):</span> <span>{{ number_format($reportData['summary']['stock_in_kg'] ?? 0, 2) }}</span></div>
         <div class="summary-row"><span class="summary-label">Stock In (Pcs):</span> <span>{{ number_format($reportData['summary']['stock_in_pcs'] ?? 0, 2) }}</span></div>
-        <div class="summary-row"><span class="summary-label">Stock Out (Kg):</span> <span>{{ number_format($reportData['summary']['stock_out_kg'] ?? 0, 2) }}</span></div>
-        <div class="summary-row"><span class="summary-label">Stock Out (Pcs):</span> <span>{{ number_format($reportData['summary']['stock_out_pcs'] ?? 0, 2) }}</span></div>
     </div>
 
-    <div class="section-title">Movement Summary by Category</div>
+    <div class="section-title">Stock In History</div>
 
     @php
-        $grouped = [];
-        foreach ($reportData['movements'] ?? [] as $m) {
-            $category = $m['category'] ?? 'Unknown';
-            $type = $m['type'] ?? 'N/A';
-            $unit = $m['unit'] ?? 'kg';
-            $key = $category . '-' . $type;
-
-            if (!isset($grouped[$key])) {
-                $grouped[$key] = [
-                    'category' => $category,
-                    'type' => $type,
-                    'totalQty' => 0,
-                    'unit' => $unit,
-                ];
-            }
-            $grouped[$key]['totalQty'] += $m['quantity'] ?? 0;
-        }
-
-        $grouped = collect($grouped)->sortBy(['category', 'type']);
+        $stockInMovements = collect($reportData['movements'] ?? [])->filter(function($m) {
+            return ($m['type'] ?? '') === 'stock_in';
+        });
     @endphp
 
-    @if($grouped->isEmpty())
-        <div class="no-data" style="text-align:center; margin-top:20px; color:#777;">
-            No stock movements for this period.
+    @if($stockInMovements->isEmpty())
+        <div class="no-data">
+            No stock in movements for this period.
         </div>
     @else
         <table>
             <thead>
                 <tr>
+                    <th>Date & Time</th>
                     <th>Category</th>
-                    <th class="text-center">Type</th>
-                    <th class="text-right">Total Quantity</th>
-                    <th class="text-center">Unit</th>
+                    <th class="text-right">Quantity</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach($grouped as $row)
-                    @php
-                        switch ($row['type']) {
-                            case 'stock_in': $label = 'Stock In'; break;
-                            case 'stock_out': $label = 'Stock Out'; break;
-                            case 'used': $label = 'Used'; break;
-                            case 'expired': $label = 'Expired'; break;
-                            default: $label = ucfirst($row['type']);
-                        }
-                    @endphp
+                @foreach($stockInMovements as $row)
                     <tr>
-                        <td>{{ $row['category'] }}</td>
-                        <td class="text-center">{{ $label }}</td>
-                        <td class="text-right">{{ number_format($row['totalQty'], 2) }}</td>
-                        <td class="text-center">{{ $row['unit'] }}</td>
+                        <td>{{ $row['date'] ?? 'N/A' }}</td>
+                        <td>{{ $row['category'] ?? 'Unknown' }}</td>
+                        <td class="text-right">
+                            @if(($row['unit'] ?? 'kg') === 'pieces')
+                                {{ number_format($row['quantity'] ?? 0, 0) }}
+                            @else
+                                {{ number_format($row['quantity'] ?? 0, 2) }}
+                            @endif
+                            {{ $row['unit'] ?? 'kg' }}
+                        </td>
                     </tr>
                 @endforeach
             </tbody>
@@ -99,7 +78,7 @@
     @endif
 
     <div class="footer">
-        JEONGOL IZAKAYA • Stock Movement Report • {{ now()->format('F j, Y') }}
+        JEONGOL IZAKAYA • Stock In Report • {{ now()->format('F j, Y') }}
     </div>
 </body>
 </html>

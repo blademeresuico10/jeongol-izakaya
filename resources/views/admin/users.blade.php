@@ -221,16 +221,33 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label>Password <span class="text-danger">*</span></label>
-                                            <input type="password" id="password" name="password" class="form-control"
-                                                required minlength="6">
+                                            <div class="input-group">
+                                                <input type="password" id="password" name="password"
+                                                    class="form-control" required minlength="6">
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-outline-secondary" type="button"
+                                                        onclick="togglePassword('password', this)" tabindex="-1">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                             <div class="invalid-feedback"></div>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             <label>Confirm Password <span class="text-danger">*</span></label>
-                                            <input type="password" id="confirm_password" name="password_confirmation"
-                                                class="form-control" required>
+                                            <div class="input-group">
+                                                <input type="password" id="confirm_password"
+                                                    name="password_confirmation" class="form-control" required>
+                                                <div class="input-group-append">
+                                                    <button class="btn btn-outline-secondary" type="button"
+                                                        onclick="togglePassword('confirm_password', this)"
+                                                        tabindex="-1">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                             <div class="invalid-feedback"></div>
                                         </div>
                                     </div>
@@ -364,8 +381,17 @@
                                         </div>
 
                                         <label class="mt-2">Update Password</label>
-                                        <input type="password" name="password" id="edit_password{{ $user->id }}"
-                                            placeholder="Leave blank to keep current" class="form-control" minlength="6">
+                                        <div class="input-group">
+                                            <input type="password" name="password" id="edit_password{{ $user->id }}"
+                                                placeholder="Leave blank to keep current" class="form-control" minlength="6">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-outline-secondary" type="button"
+                                                    onclick="togglePassword('edit_password{{ $user->id }}', this)"
+                                                    tabindex="-1">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
                                         <div>
                                             <small id="edit_passwordError{{ $user->id }}" class="text-danger text-sm"
                                                 style="display: none;"></small>
@@ -593,58 +619,106 @@
             return { strength, level, color, checks };
         }
 
-        function initializePasswordValidation() {
-            const passwordInput = document.getElementById('password');
-            const confirmPasswordInput = document.getElementById('confirm_password');
+        function initializePasswordValidation(passwordInputId, confirmPasswordInputId = null, userId = null) {
+            const passwordInput = document.getElementById(passwordInputId);
+            if (!passwordInput) return;
 
-            if (!passwordInput || !confirmPasswordInput) return;
+            const confirmPasswordInput = confirmPasswordInputId ? document.getElementById(confirmPasswordInputId) : null;
+            const containerId = `strengthContainer_${passwordInputId}`;
+            const isEditMode = passwordInputId.includes('edit_password');
 
-            // Remove existing strength container if any
-            $('#strengthContainer').remove();
+            $(`#${containerId}`).remove();
 
             const strengthContainer = $(`
-                <div id="strengthContainer" class="mt-2" style="display: none;">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="progress flex-grow-1 mr-2" style="height: 8px;">
-                            <div id="strengthProgress" class="progress-bar bg-danger" style="width: 0%"></div>
-                        </div>
-                        <span id="strengthText" class="badge badge-secondary">Weak</span>
-                    </div>
-                    <div id="strengthChecks" class="small text-muted"></div>
-                </div>
-            `);
+    <div id="${containerId}" class="mt-2" style="display: none;">
+        <div class="d-flex align-items-center mb-2">
+            <div class="progress flex-grow-1 mr-2" style="height: 8px;">
+                <div id="strengthProgress_${passwordInputId}" class="progress-bar" style="width: 0%; transition: width 0.3s ease, background-color 0.3s ease;"></div>
+            </div>
+            <span id="strengthText_${passwordInputId}" class="badge" style="min-width: 60px; text-align: center;">Weak</span>
+        </div>
+        <div id="strengthChecks_${passwordInputId}" class="small text-muted"></div>
+        ${isEditMode ? `<div id="currentPasswordWarning_${passwordInputId}" class="alert alert-warning mt-2" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> This is your current password. Please enter a new password.
+        </div>` : ''}
+    </div>
+`);
 
-            $(passwordInput).after(strengthContainer);
+            const parentElement = $(passwordInput).closest('.input-group').length
+                ? $(passwordInput).closest('.input-group')
+                : $(passwordInput);
 
-            // Remove existing event listeners
+            parentElement.after(strengthContainer);
+
+            let debouncedPasswordCheck = null;
+            if (isEditMode && userId) {
+                debouncedPasswordCheck = debounce(function (password) {
+                    $.ajax({
+                        url: "{{ route('check.current.password') }}",
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            user_id: userId,
+                            password: password
+                        },
+                        success: function (response) {
+                            if (response.is_current) {
+                                $(`#currentPasswordWarning_${passwordInputId}`).show();
+                                $(passwordInput).addClass('is-invalid');
+                            } else {
+                                $(`#currentPasswordWarning_${passwordInputId}`).hide();
+                                if ($(`#currentPasswordWarning_${passwordInputId}`).is(':visible')) {
+                                    $(passwordInput).removeClass('is-invalid');
+                                }
+                            }
+                        }
+                    });
+                }, 500);
+            }
+
             $(passwordInput).off('input.passwordValidation');
-            $(confirmPasswordInput).off('input.passwordMatch');
 
             $(passwordInput).on('input.passwordValidation', function () {
                 const password = this.value;
 
                 if (password.length === 0) {
-                    $('#strengthContainer').hide();
-                    $(this).removeClass('is-invalid');
+                    $(`#${containerId}`).hide();
+                    if (isEditMode) {
+                        $(`#currentPasswordWarning_${passwordInputId}`).hide();
+                    }
+                    $(this).removeClass('is-invalid is-valid');
                     return;
                 }
 
                 const result = calculatePasswordStrength(password);
-                $('#strengthContainer').show();
+                $(`#${containerId}`).show();
 
-                const progressBar = $('#strengthProgress');
+                // Update progress bar
+                const progressBar = $(`#strengthProgress_${passwordInputId}`);
                 progressBar.css('width', `${result.strength}%`);
+
+                // Remove ALL possible color classes first
                 progressBar.removeClass('bg-danger bg-warning bg-info bg-success');
+
+                // Add the correct color class based on strength
                 progressBar.addClass(`bg-${result.color}`);
 
-                const strengthText = $('#strengthText');
+                // Update badge text and color
+                const strengthText = $(`#strengthText_${passwordInputId}`);
                 strengthText.text(result.level);
-                strengthText.removeClass('badge-danger badge-warning badge-info badge-success');
+
+                // Remove ALL possible badge color classes first
+                strengthText.removeClass('badge-danger badge-warning badge-info badge-success badge-secondary');
+
+                // Add the correct badge color class
                 strengthText.addClass(`badge-${result.color}`);
 
-                $(this).removeClass('is-invalid');
+                // Update input validation state
+                $(this).removeClass('is-invalid is-valid');
                 if (result.strength < 40) {
                     $(this).addClass('is-invalid');
+                } else {
+                    $(this).addClass('is-valid');
                 }
 
                 const checksHtml = [
@@ -654,53 +728,60 @@
                     ['numbers', 'Number'],
                     ['special', 'Special character']
                 ].map(([key, label]) => `
-                    <div class="d-flex align-items-center">
-                        <span class="mr-1 ${result.checks[key] ? 'text-success' : 'text-danger'}">
-                            ${result.checks[key] ? '✓' : '✗'}
-                        </span>
-                        <span>${label}</span>
-                    </div>
-                `).join('');
-                $('#strengthChecks').html(checksHtml);
+        <div class="d-flex align-items-center" style="line-height: 1.5;">
+            <span class="mr-1 ${result.checks[key] ? 'text-success' : 'text-danger'}" style="font-weight: bold;">
+                ${result.checks[key] ? '✓' : '✗'}
+            </span>
+            <span class="${result.checks[key] ? 'text-success' : 'text-muted'}">${label}</span>
+        </div>
+    `).join('');
+                $(`#strengthChecks_${passwordInputId}`).html(checksHtml);
 
-                if (confirmPasswordInput.value) {
+                if (isEditMode && result.strength >= 40 && debouncedPasswordCheck) {
+                    debouncedPasswordCheck(password);
+                }
+
+                if (confirmPasswordInput && confirmPasswordInput.value) {
                     validatePasswordMatch();
                 }
             });
 
-            function validatePasswordMatch() {
-                const newPassword = passwordInput.value;
-                const confirmPassword = confirmPasswordInput.value;
+            if (confirmPasswordInput) {
+                $(confirmPasswordInput).off('input.passwordMatch');
 
-                $(confirmPasswordInput).removeClass('is-invalid');
+                function validatePasswordMatch() {
+                    const newPassword = passwordInput.value;
+                    const confirmPassword = confirmPasswordInput.value;
 
-                if (!confirmPassword) {
-                    return;
-                } else if (newPassword === confirmPassword) {
-                    confirmPasswordInput.setCustomValidity('');
-                } else {
-                    $(confirmPasswordInput).addClass('is-invalid');
-                    confirmPasswordInput.setCustomValidity('Passwords do not match');
+                    $(confirmPasswordInput).removeClass('is-invalid is-valid');
+
+                    if (!confirmPassword) {
+                        confirmPasswordInput.setCustomValidity('');
+                        return;
+                    }
+
+                    if (newPassword === confirmPassword) {
+                        confirmPasswordInput.setCustomValidity('');
+                        $(confirmPasswordInput).addClass('is-valid');
+                    } else {
+                        $(confirmPasswordInput).addClass('is-invalid');
+                        confirmPasswordInput.setCustomValidity('Passwords do not match');
+                    }
                 }
-            }
 
-            $(confirmPasswordInput).on('input.passwordMatch', validatePasswordMatch);
+                $(confirmPasswordInput).on('input.passwordMatch', validatePasswordMatch);
+            }
         }
 
         function initializeUserFormValidation() {
-            // First Name Validation
             const firstnameInput = document.getElementById('firstname');
             const firstnameError = document.getElementById('firstnameError');
 
             if (firstnameInput && firstnameError) {
                 $(firstnameInput).off('input.firstname');
                 $(firstnameInput).on('input.firstname', function () {
-                    // Remove non-allowed characters first
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
-
-                    // Capitalize first letter of each word
                     this.value = capitalizeWords(this.value);
-
                     const value = this.value.trim();
 
                     if (!value) {
@@ -722,19 +803,14 @@
                 });
             }
 
-            // Last Name Validation
             const lastnameInput = document.getElementById('lastname');
             const lastnameError = document.getElementById('lastnameError');
 
             if (lastnameInput && lastnameError) {
                 $(lastnameInput).off('input.lastname');
                 $(lastnameInput).on('input.lastname', function () {
-                    // Remove non-allowed characters first
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
-
-                    // Capitalize first letter of each word
                     this.value = capitalizeWords(this.value);
-
                     const value = this.value.trim();
 
                     if (!value) {
@@ -756,7 +832,6 @@
                 });
             }
 
-            // Role Validation
             const roleInput = document.getElementById('role');
             const roleError = document.getElementById('roleError');
 
@@ -777,7 +852,6 @@
                 });
             }
 
-            // Contact Number Validation
             const contactNumberInput = document.getElementById('contact_number');
             const contactNumberError = document.getElementById('contactNumberError');
 
@@ -813,12 +887,17 @@
                 });
             }
 
-            // Username Validation
+            // FIXED: Use correct IDs without userId
             const usernameInput = document.getElementById('username');
             const usernameError = document.getElementById('usernameError');
 
             if (usernameInput && usernameError) {
                 $(usernameInput).off('input.username');
+
+                const debouncedUsernameCheck = debounce(function (value) {
+                    checkAvailability('username', value, null, usernameError, usernameInput);
+                }, 500);
+
                 $(usernameInput).on('input.username', function () {
                     this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().replace(/\s/g, '');
                     const value = this.value.trim();
@@ -838,16 +917,22 @@
                         usernameError.textContent = '';
                         usernameError.style.display = 'none';
                         this.classList.remove('is-invalid');
+                        debouncedUsernameCheck(value);
                     }
                 });
             }
 
-            // Email Validation
+            // FIXED: Use correct IDs without userId
             const emailInput = document.getElementById('email');
             const emailError = document.getElementById('emailError');
 
             if (emailInput && emailError) {
                 $(emailInput).off('input.email');
+
+                const debouncedEmailCheck = debounce(function (value) {
+                    checkAvailability('email', value, null, emailError, emailInput);
+                }, 500);
+
                 $(emailInput).on('input.email', function () {
                     const value = this.value.trim();
 
@@ -874,11 +959,11 @@
                         emailError.textContent = '';
                         emailError.style.display = 'none';
                         this.classList.remove('is-invalid');
+                        debouncedEmailCheck(value);
                     }
                 });
             }
 
-            // Address Validation
             const addressInput = document.getElementById('address');
             const addressError = document.getElementById('addressError');
 
@@ -907,261 +992,302 @@
             }
         }
 
+        function checkAvailability(field, value, userId = null, errorElement, inputElement) {
+            if (!value || value.length < 3) return;
+
+            $.ajax({
+                url: "{{ route('check.user.availability') }}",
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    field: field,
+                    value: value,
+                    user_id: userId
+                },
+                success: function (response) {
+                    if (!response.available) {
+                        errorElement.textContent = `This ${field} is already taken`;
+                        errorElement.style.display = 'block';
+                        inputElement.classList.add('is-invalid');
+                    } else {
+                        if (errorElement.textContent.includes('already taken')) {
+                            errorElement.textContent = '';
+                            errorElement.style.display = 'none';
+                            inputElement.classList.remove('is-invalid');
+                        }
+                    }
+                }
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
         function initializeEditUserFormValidation(userId) {
-    // First Name Validation
-    const firstnameInput = document.getElementById('edit_firstname' + userId);
-    const firstnameError = document.getElementById('edit_firstnameError' + userId);
+            const firstnameInput = document.getElementById('edit_firstname' + userId);
+            const firstnameError = document.getElementById('edit_firstnameError' + userId);
 
-    if (firstnameInput && firstnameError) {
-        $(firstnameInput).off('input.firstname');
-        $(firstnameInput).on('input.firstname', function () {
-            this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
-            this.value = capitalizeWords(this.value);
-            const value = this.value.trim();
+            if (firstnameInput && firstnameError) {
+                $(firstnameInput).off('input.firstname');
+                $(firstnameInput).on('input.firstname', function () {
+                    this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
+                    this.value = capitalizeWords(this.value);
+                    const value = this.value.trim();
 
-            if (!value) {
-                firstnameError.textContent = '';
-                firstnameError.style.display = 'none';
-                this.classList.remove('is-invalid');
-                return;
+                    if (!value) {
+                        firstnameError.textContent = '';
+                        firstnameError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        return;
+                    }
+
+                    if (value.length < 2) {
+                        firstnameError.textContent = 'Minimum 2 characters required';
+                        firstnameError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else {
+                        firstnameError.textContent = '';
+                        firstnameError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                    }
+                });
             }
 
-            if (value.length < 2) {
-                firstnameError.textContent = 'Minimum 2 characters required';
-                firstnameError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                firstnameError.textContent = '';
-                firstnameError.style.display = 'none';
-                this.classList.remove('is-invalid');
+            const lastnameInput = document.getElementById('edit_lastname' + userId);
+            const lastnameError = document.getElementById('edit_lastnameError' + userId);
+
+            if (lastnameInput && lastnameError) {
+                $(lastnameInput).off('input.lastname');
+                $(lastnameInput).on('input.lastname', function () {
+                    this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
+                    this.value = capitalizeWords(this.value);
+                    const value = this.value.trim();
+
+                    if (!value) {
+                        lastnameError.textContent = '';
+                        lastnameError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        return;
+                    }
+
+                    if (value.length < 2) {
+                        lastnameError.textContent = 'Minimum 2 characters required';
+                        lastnameError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else {
+                        lastnameError.textContent = '';
+                        lastnameError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                    }
+                });
             }
+
+            const roleInput = document.getElementById('edit_role' + userId);
+            const roleError = document.getElementById('edit_roleError' + userId);
+
+            if (roleInput && roleError) {
+                $(roleInput).off('change.role');
+                $(roleInput).on('change.role', function () {
+                    const value = this.value;
+
+                    if (!value) {
+                        roleError.textContent = 'Please select a role';
+                        roleError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else {
+                        roleError.textContent = '';
+                        roleError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            const contactNumberInput = document.getElementById('edit_contact_number' + userId);
+            const contactNumberError = document.getElementById('edit_contactNumberError' + userId);
+
+            if (contactNumberInput && contactNumberError) {
+                $(contactNumberInput).off('input.contact');
+                $(contactNumberInput).on('input.contact', function () {
+                    this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11);
+                    const value = this.value.trim();
+
+                    if (!value) {
+                        contactNumberError.textContent = '';
+                        contactNumberError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        return;
+                    }
+
+                    if (!value.startsWith('09')) {
+                        contactNumberError.textContent = 'Contact number must start with 09';
+                        contactNumberError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                        return;
+                    }
+
+                    if (value.length < 11) {
+                        contactNumberError.textContent = 'Contact number must be 11 digits';
+                        contactNumberError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else {
+                        contactNumberError.textContent = '';
+                        contactNumberError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+
+            // FIXED: Use correct IDs with userId
+            const usernameInput = document.getElementById('edit_username' + userId);
+            const usernameError = document.getElementById('edit_usernameError' + userId);
+
+            if (usernameInput && usernameError) {
+                $(usernameInput).off('input.username');
+
+                const debouncedUsernameCheck = debounce(function (value) {
+                    checkAvailability('username', value, userId, usernameError, usernameInput);
+                }, 500);
+
+                $(usernameInput).on('input.username', function () {
+                    this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().replace(/\s/g, '');
+                    const value = this.value.trim();
+
+                    if (!value) {
+                        usernameError.textContent = '';
+                        usernameError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        return;
+                    }
+
+                    if (value.length < 3) {
+                        usernameError.textContent = 'Minimum 3 characters required';
+                        usernameError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else {
+                        usernameError.textContent = '';
+                        usernameError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        debouncedUsernameCheck(value);
+                    }
+                });
+            }
+
+            // FIXED: Use correct IDs with userId
+            const emailInput = document.getElementById('edit_email' + userId);
+            const emailError = document.getElementById('edit_emailError' + userId);
+
+            if (emailInput && emailError) {
+                $(emailInput).off('input.email');
+
+                const debouncedEmailCheck = debounce(function (value) {
+                    checkAvailability('email', value, userId, emailError, emailInput);
+                }, 500);
+
+                $(emailInput).on('input.email', function () {
+                    const value = this.value.trim();
+
+                    if (!value) {
+                        emailError.textContent = '';
+                        emailError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        return;
+                    }
+
+                    if (!value.includes('@')) {
+                        emailError.textContent = 'Email must contain @';
+                        emailError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                        return;
+                    }
+
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(value)) {
+                        emailError.textContent = 'Enter a valid email address';
+                        emailError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else {
+                        emailError.textContent = '';
+                        emailError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        debouncedEmailCheck(value);
+                    }
+                });
+            }
+
+            const addressInput = document.getElementById('edit_address' + userId);
+            const addressError = document.getElementById('edit_addressError' + userId);
+
+            if (addressInput && addressError) {
+                $(addressInput).off('input.address');
+                $(addressInput).on('input.address', function () {
+                    const value = this.value.trim();
+
+                    if (!value) {
+                        addressError.textContent = '';
+                        addressError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                        return;
+                    }
+
+                    if (value.length < 5) {
+                        addressError.textContent = 'Minimum 5 characters required';
+                        addressError.style.display = 'block';
+                        this.classList.add('is-invalid');
+                    } else {
+                        addressError.textContent = '';
+                        addressError.style.display = 'none';
+                        this.classList.remove('is-invalid');
+                    }
+                });
+            }
+        }
+
+
+
+        $('[id^="editUserModal"]').on('shown.bs.modal', function () {
+            const modalId = $(this).attr('id');
+            const userId = modalId.replace('editUserModal', '');
+            initializePasswordValidation(`edit_password${userId}`, null, userId);
+            initializeEditUserFormValidation(userId);
         });
-    }
 
-    // Last Name Validation
-    const lastnameInput = document.getElementById('edit_lastname' + userId);
-    const lastnameError = document.getElementById('edit_lastnameError' + userId);
-
-    if (lastnameInput && lastnameError) {
-        $(lastnameInput).off('input.lastname');
-        $(lastnameInput).on('input.lastname', function () {
-            this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
-            this.value = capitalizeWords(this.value);
-            const value = this.value.trim();
-
-            if (!value) {
-                lastnameError.textContent = '';
-                lastnameError.style.display = 'none';
-                this.classList.remove('is-invalid');
-                return;
-            }
-
-            if (value.length < 2) {
-                lastnameError.textContent = 'Minimum 2 characters required';
-                lastnameError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                lastnameError.textContent = '';
-                lastnameError.style.display = 'none';
-                this.classList.remove('is-invalid');
-            }
+        $('[id^="editUserModal"]').on('hidden.bs.modal', function () {
+            const modalId = $(this).attr('id');
+            const userId = modalId.replace('editUserModal', '');
+            $(`#editUserForm${userId} input, #editUserForm${userId} select`).removeClass('is-invalid is-valid');
+            $(`small[id^="edit_"][id$="Error${userId}"]`).hide().text('');
+            $(`[id^="strengthContainer_edit_password${userId}"]`).remove();
         });
-    }
-
-    // Role Validation
-    const roleInput = document.getElementById('edit_role' + userId);
-    const roleError = document.getElementById('edit_roleError' + userId);
-
-    if (roleInput && roleError) {
-        $(roleInput).off('change.role');
-        $(roleInput).on('change.role', function () {
-            const value = this.value;
-
-            if (!value) {
-                roleError.textContent = 'Please select a role';
-                roleError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                roleError.textContent = '';
-                roleError.style.display = 'none';
-                this.classList.remove('is-invalid');
-            }
-        });
-    }
-
-    // Contact Number Validation
-    const contactNumberInput = document.getElementById('edit_contact_number' + userId);
-    const contactNumberError = document.getElementById('edit_contactNumberError' + userId);
-
-    if (contactNumberInput && contactNumberError) {
-        $(contactNumberInput).off('input.contact');
-        $(contactNumberInput).on('input.contact', function () {
-            this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11);
-            const value = this.value.trim();
-
-            if (!value) {
-                contactNumberError.textContent = '';
-                contactNumberError.style.display = 'none';
-                this.classList.remove('is-invalid');
-                return;
-            }
-
-            if (!value.startsWith('09')) {
-                contactNumberError.textContent = 'Contact number must start with 09';
-                contactNumberError.style.display = 'block';
-                this.classList.add('is-invalid');
-                return;
-            }
-
-            if (value.length < 11) {
-                contactNumberError.textContent = 'Contact number must be 11 digits';
-                contactNumberError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                contactNumberError.textContent = '';
-                contactNumberError.style.display = 'none';
-                this.classList.remove('is-invalid');
-            }
-        });
-    }
-
-    // Username Validation
-    const usernameInput = document.getElementById('edit_username' + userId);
-    const usernameError = document.getElementById('edit_usernameError' + userId);
-
-    if (usernameInput && usernameError) {
-        $(usernameInput).off('input.username');
-        $(usernameInput).on('input.username', function () {
-            this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().replace(/\s/g, '');
-            const value = this.value.trim();
-
-            if (!value) {
-                usernameError.textContent = '';
-                usernameError.style.display = 'none';
-                this.classList.remove('is-invalid');
-                return;
-            }
-
-            if (value.length < 3) {
-                usernameError.textContent = 'Minimum 3 characters required';
-                usernameError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                usernameError.textContent = '';
-                usernameError.style.display = 'none';
-                this.classList.remove('is-invalid');
-            }
-        });
-    }
-
-    // Email Validation
-    const emailInput = document.getElementById('edit_email' + userId);
-    const emailError = document.getElementById('edit_emailError' + userId);
-
-    if (emailInput && emailError) {
-        $(emailInput).off('input.email');
-        $(emailInput).on('input.email', function () {
-            const value = this.value.trim();
-
-            if (!value) {
-                emailError.textContent = '';
-                emailError.style.display = 'none';
-                this.classList.remove('is-invalid');
-                return;
-            }
-
-            if (!value.includes('@')) {
-                emailError.textContent = 'Email must contain @';
-                emailError.style.display = 'block';
-                this.classList.add('is-invalid');
-                return;
-            }
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(value)) {
-                emailError.textContent = 'Enter a valid email address';
-                emailError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                emailError.textContent = '';
-                emailError.style.display = 'none';
-                this.classList.remove('is-invalid');
-            }
-        });
-    }
-
-    // Address Validation
-    const addressInput = document.getElementById('edit_address' + userId);
-    const addressError = document.getElementById('edit_addressError' + userId);
-
-    if (addressInput && addressError) {
-        $(addressInput).off('input.address');
-        $(addressInput).on('input.address', function () {
-            const value = this.value.trim();
-
-            if (!value) {
-                addressError.textContent = '';
-                addressError.style.display = 'none';
-                this.classList.remove('is-invalid');
-                return;
-            }
-
-            if (value.length < 5) {
-                addressError.textContent = 'Minimum 5 characters required';
-                addressError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                addressError.textContent = '';
-                addressError.style.display = 'none';
-                this.classList.remove('is-invalid');
-            }
-        });
-    }
-
-    // Password Validation (optional field)
-    const passwordInput = document.getElementById('edit_password' + userId);
-    const passwordError = document.getElementById('edit_passwordError' + userId);
-
-    if (passwordInput && passwordError) {
-        $(passwordInput).off('input.password');
-        $(passwordInput).on('input.password', function () {
-            const value = this.value;
-
-            if (!value) {
-                passwordError.textContent = '';
-                passwordError.style.display = 'none';
-                this.classList.remove('is-invalid');
-                return;
-            }
-
-            if (value.length < 6) {
-                passwordError.textContent = 'Minimum 6 characters required';
-                passwordError.style.display = 'block';
-                this.classList.add('is-invalid');
-            } else {
-                passwordError.textContent = '';
-                passwordError.style.display = 'none';
-                this.classList.remove('is-invalid');
-            }
-        });
-    }
-}
-
-$('[id^="editUserModal"]').on('shown.bs.modal', function () {
-    const modalId = $(this).attr('id');
-    const userId = modalId.replace('editUserModal', '');
-    initializeEditUserFormValidation(userId);
-});
-
-$('[id^="editUserModal"]').on('hidden.bs.modal', function () {
-    const modalId = $(this).attr('id');
-    const userId = modalId.replace('editUserModal', '');
-    $(`#editUserForm${userId} input, #editUserForm${userId} select`).removeClass('is-invalid');
-    $(`small[id^="edit_"][id$="Error${userId}"]`).hide().text('');
-});
 
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
+
+            // Check if there are any validation errors
+            const hasInvalidFields = $(this).find('.is-invalid').length > 0;
+
+            if (hasInvalidFields) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please fix all validation errors before submitting.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#f8d7da',
+                    color: '#721c24'
+                });
+                return false;
+            }
 
             const submitButton = $('#submitBtn');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
@@ -1228,18 +1354,17 @@ $('[id^="editUserModal"]').on('hidden.bs.modal', function () {
             });
         });
 
-        // Modal events
         $('#addUserModal').on('shown.bs.modal', function () {
+            initializePasswordValidation('password', 'confirm_password');
             initializeUserFormValidation();
-            initializePasswordValidation();
             $('input[name="firstname"]').focus();
         });
 
         $('#addUserModal').on('hidden.bs.modal', function () {
             $('#addUserForm')[0].reset();
             $('#submitBtn').prop('disabled', false).html('Add User');
-            $('#strengthContainer').remove();
-            $('input, select').removeClass('is-invalid');
+            $('[id^="strengthContainer_"]').remove();
+            $('input, select').removeClass('is-invalid is-valid');
             $('small[id$="Error"]').hide().text('');
         });
 
@@ -1292,11 +1417,109 @@ $('[id^="editUserModal"]').on('hidden.bs.modal', function () {
             @endif
 
         $('form[action*="updateuser"]').on('submit', function (e) {
-            const submitButton = $(this).find('button[type="submit"]');
+            e.preventDefault(); // Always prevent default first
+
+            const form = $(this);
+            const userId = form.attr('id').replace('editUserForm', '');
+            const passwordInput = $(`#edit_password${userId}`);
+            const passwordValue = passwordInput.val();
+
+            const hasInvalidFields = form.find('.is-invalid').length > 0;
+            const currentPasswordWarning = $(`#currentPasswordWarning_edit_password${userId}`).is(':visible');
+
+            // Check for validation errors
+            if (hasInvalidFields || currentPasswordWarning) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: currentPasswordWarning
+                        ? 'You cannot use your current password as the new password.'
+                        : 'Please fix all validation errors before submitting.',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#f8d7da',
+                    color: '#721c24'
+                });
+                return false;
+            }
+
+            if (passwordValue && passwordValue.trim() !== '') {
+                const submitButton = form.find('button[type="submit"]');
+                submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
+
+                $.ajax({
+                    url: "{{ route('check.current.password') }}",
+                    method: 'POST',
+                    async: false,
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        user_id: userId,
+                        password: passwordValue
+                    },
+                    success: function (response) {
+                        if (response.is_current) {
+                            submitButton.prop('disabled', false).html('Update User');
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Invalid Password',
+                                text: 'You cannot use your current password as the new password.',
+                                toast: true,
+                                position: 'top',
+                                timer: 3000,
+                                showConfirmButton: false,
+                                background: '#f8d7da',
+                                color: '#721c24'
+                            });
+
+                            $(`#currentPasswordWarning_edit_password${userId}`).show();
+                            passwordInput.addClass('is-invalid');
+                        } else {
+                            submitButton.html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+                            form.off('submit').submit();
+                        }
+                    },
+                    error: function () {
+                        submitButton.prop('disabled', false).html('Update User');
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred while validating the password.',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#f8d7da',
+                            color: '#721c24'
+                        });
+                    }
+                });
+                return false;
+            }
+
+            const submitButton = form.find('button[type="submit"]');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
+            form.off('submit').submit();
         });
 
     });
+
+    function togglePassword(inputId, button) {
+        const input = document.getElementById(inputId);
+        const icon = button.querySelector('i');
+
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    }
 </script>
 
 <style>
@@ -1361,5 +1584,26 @@ $('[id^="editUserModal"]').on('hidden.bs.modal', function () {
 
     .form-group label .text-danger {
         font-weight: bold;
+    }
+
+    .input-group {
+        position: relative;
+    }
+
+    .input-group .form-control.is-invalid {
+        border-right: 1px solid #dc3545;
+    }
+
+    .input-group-append .btn {
+        height: 38px;
+        border-left: 0;
+    }
+
+    .input-group .form-control:focus {
+        z-index: 1;
+    }
+
+    #strengthContainer {
+        clear: both;
     }
 </style>

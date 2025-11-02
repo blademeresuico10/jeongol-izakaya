@@ -42,21 +42,17 @@ class StockOrderManagement extends Component
         $alertLevel = $ingredient->stockAlertLevel;
 
         if (!$alertLevel) {
-            session()->flash('error', 'No stock alert level configured for this ingredient.');
             return;
         }
 
-        // Check if there's already a pending order
         $existingOrder = StockOrder::where('ingredient_id', $ingredientId)
             ->where('status', 'pending')
             ->exists();
 
         if ($existingOrder) {
-            session()->flash('info', 'A pending stock order already exists for this ingredient.');
             return;
         }
 
-        // Create the stock order
         StockOrder::create([
             'ingredient_id' => $ingredientId,
             'alert_id' => $alertLevel->id,
@@ -64,9 +60,7 @@ class StockOrderManagement extends Component
             'status' => 'pending',
         ]);
 
-        session()->flash('success', "Stock order created successfully for {$ingredient->name}!");
 
-        // Switch to pending orders tab
         $this->activeTab = 'pending-orders-list';
 
         $this->dispatch('orderCreated');
@@ -132,6 +126,7 @@ class StockOrderManagement extends Component
     {
         $this->showReceiveModal = false;
         $this->reset(['selectedOrder', 'orderedQuantity', 'receivedQuantity', 'ingredientName', 'unit', 'expirationDate']);
+        $this->resetValidation();
     }
 
     public function confirmReceive()
@@ -157,7 +152,6 @@ class StockOrderManagement extends Component
                 'expirationDate.after_or_equal' => 'Expiration date cannot be in the past'
             ]);
         } else {
-            // For other units: allow decimals
             $this->validate([
                 'receivedQuantity' => 'required|numeric|min:0.01',
                 'expirationDate' => 'required|date|after_or_equal:today',
@@ -205,17 +199,19 @@ class StockOrderManagement extends Component
             });
 
             $difference = $this->orderedQuantity - $this->receivedQuantity;
+            $message = '';
 
             if ($difference > 0) {
-                session()->flash('warning', "Order completed! Shortage: {$difference} {$this->unit}");
+                $message = "Order completed!<br>Shortage: <strong>{$difference} {$this->unit}</strong>";
             } elseif ($difference < 0) {
-                session()->flash('success', "Order completed! Excess: " . abs($difference) . " {$this->unit}");
+                $message = "Order completed!<br>Excess: <strong>" . abs($difference) . " {$this->unit}</strong>";
             } else {
-                session()->flash('success', "Stock received successfully! Added {$this->receivedQuantity} {$this->unit}");
+                $message = "Stock received successfully!<br>Added <strong>{$this->receivedQuantity} {$this->unit}</strong>";
             }
 
             $this->closeReceiveModal();
-            $this->dispatch('orderCompleted');
+
+            $this->dispatch('stock-received-success', ['message' => $message]);
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to process stock receipt: ' . $e->getMessage());
         }
@@ -255,23 +251,19 @@ class StockOrderManagement extends Component
             return $ingredient;
         });
 
-        // Get low stock ingredients with their pending order quantities
         $lowStockIngredients = $ingredients->filter(
             fn($i) => $i->stockAlertLevel &&
                 $i->stocks <= $i->stockAlertLevel->low_stock &&
                 (!$i->stockAlertLevel->critical_stock || $i->stocks > $i->stockAlertLevel->critical_stock)
         )->map(function ($ingredient) {
-            // Fetch the exact order quantity from stock_orders table
             $pendingOrder = StockOrder::where('ingredient_id', $ingredient->id)
                 ->where('status', 'pending')
                 ->first();
 
             if ($pendingOrder) {
-                // Use the quantity from stock_orders, not from stock_level_alerts
                 $ingredient->pending_order_quantity = $pendingOrder->quantity;
                 $ingredient->pending_order_id = $pendingOrder->id;
             } else {
-                // Fallback to reorder_quantity from stock_level_alerts if no pending order
                 $ingredient->pending_order_quantity = $ingredient->stockAlertLevel->reorder_quantity ?? null;
                 $ingredient->pending_order_id = null;
             }
@@ -279,14 +271,13 @@ class StockOrderManagement extends Component
             return $ingredient;
         });
 
-        // Calculate request count (only ingredients WITHOUT pending orders)
         $criticalWithoutOrders = $criticalStockIngredients->filter(fn($i) => !$i->pending_order_id);
         $lowWithoutOrders = $lowStockIngredients->filter(fn($i) => !$i->pending_order_id);
         $requestCount = $criticalWithoutOrders->count() + $lowWithoutOrders->count();
 
         return view('livewire.stock-order-management', [
             'stockOrders' => $stockOrders,
-            'allStockRequests' => $stockOrders, // Now only pending orders
+            'allStockRequests' => $stockOrders, 
             'criticalStockIngredients' => $criticalStockIngredients,
             'lowStockIngredients' => $lowStockIngredients,
             'pendingCount' => $stockOrders->count(),

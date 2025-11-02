@@ -275,7 +275,6 @@
                             <div class="space-y-2" id="paymentSummaryContent">
                             </div>
 
-                            <!-- Cash Payment Section (Moved here) -->
                             <div class="mt-6 pt-4 border-t border-gray-300">
                                 <h5 class="text-md font-semibold mb-3">Cash Payment</h5>
 
@@ -318,16 +317,127 @@
                     </div>
 
                     <div class="flex justify-end gap-4 px-6 py-4 border-t border-gray-200">
-                        <button onclick="window.app.printBill()" type="button"
+                        <button onclick="window.app.showPrintModal()" type="button"
                             class="px-6 py-2.5 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-sm">
                             Print Bill
                         </button>
-                        <button onclick="window.app.submitPayment(event)" type="button" id="processPaymentBtn"
+                        <button onclick="window.app.showProcessPaymentModal(event)" type="button" id="processPaymentBtn"
                             class="px-8 py-2.5 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-sm disabled:bg-gray-400"
                             disabled>
                             Process Payment
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="printBillModal"
+            class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Print Bill</h3>
+                </div>
+
+                <div class="px-6 py-4">
+                    <p class="text-gray-700 mb-4">
+                        Print bill for <strong id="printModalCustomerName">Walk-in Customer</strong>?
+                    </p>
+
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 max-h-64 overflow-y-auto">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3">Order Summary</h4>
+                        <div id="printModalOrderItems" class="space-y-2">
+                        </div>
+                        <div class="border-t border-gray-300 mt-3 pt-3">
+                            <div class="flex justify-between items-center font-semibold text-gray-900">
+                                <span>Total:</span>
+                                <span id="printModalTotal" class="text-lg">₱0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                    <button onclick="window.app.closePrintModal()" type="button"
+                        class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium text-sm">
+                        Cancel
+                    </button>
+                    <button onclick="window.app.confirmPrintBill()" type="button"
+                        class="px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-sm">
+                        Print
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="processPaymentModal"
+            class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Confirm Payment</h3>
+                </div>
+
+                <div class="px-6 py-4 max-h-96 overflow-y-auto">
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600">Customer</p>
+                        <p class="font-semibold text-gray-900" id="confirmModalCustomerName">Walk-in Customer</p>
+                    </div>
+
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 mb-4">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3">Order Summary</h4>
+                        <div id="confirmModalOrderItems" class="space-y-2 mb-3">
+                        </div>
+                        <div class="border-t border-gray-300 pt-3 space-y-1 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Subtotal:</span>
+                                <span id="confirmModalSubtotal" class="font-mono">₱0.00</span>
+                            </div>
+                            <div id="confirmModalAdvancePayment" class="flex justify-between hidden">
+                                <span class="text-gray-600">Advance Payment:</span>
+                                <span id="confirmModalAdvanceAmount" class="font-mono">₱0.00</span>
+                            </div>
+                            <div id="confirmModalDiscount" class="flex justify-between hidden">
+                                <span class="text-gray-600">Discount:</span>
+                                <span id="confirmModalDiscountAmount" class="font-mono text-red-600">-₱0.00</span>
+                            </div>
+                            <div
+                                class="flex justify-between items-center font-semibold text-base pt-2 border-t border-gray-400">
+                                <span>Total Amount Due:</span>
+                                <span id="confirmModalTotal" class="text-lg">₱0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border border-gray-200 rounded-lg p-4 bg-blue-50">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-3">Payment Details</h4>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Cash Received:</span>
+                                <span id="confirmModalCashReceived" class="font-mono font-semibold">₱0.00</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-600">Change:</span>
+                                <span id="confirmModalChange"
+                                    class="font-mono font-semibold text-green-600">₱0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="confirmModalDiscountedCustomers" class="mt-4 hidden">
+                        <h4 class="text-sm font-semibold text-gray-700 mb-2">Discounted Customers</h4>
+                        <div id="confirmModalCustomersList" class="space-y-2 text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                    <button onclick="window.app.closeProcessPaymentModal()" type="button"
+                        class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium text-sm">
+                        Cancel
+                    </button>
+                    <button onclick="window.app.confirmProcessPayment()" type="button"
+                        class="px-6 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-sm">
+                        Confirm & Print Receipt
+                    </button>
                 </div>
             </div>
         </div>
@@ -962,7 +1072,7 @@
             let breakdownHtml = '';
             const itemGroups = {};
             const mainMenuEntries = [];
-            let itemCounter = 0; 
+            let itemCounter = 0;
 
             const discountSelectMap = {};
             document.querySelectorAll('.discount-type-select').forEach(select => {
@@ -989,11 +1099,11 @@
                 const isDiscountableItem = menuItemData.has_discount === true;
 
                 for (let i = 0; i < qty; i++) {
-                    let finalPrice = itemTotalMap[itemCounter] || price; 
+                    let finalPrice = itemTotalMap[itemCounter] || price;
                     let discountInfo = '';
                     let discountType = 'none';
 
-                    const select = discountSelectMap[itemCounter]; 
+                    const select = discountSelectMap[itemCounter];
                     if (select) {
                         discountType = select.value;
                         if (discountType !== 'none') {
@@ -1014,7 +1124,7 @@
                             price: finalPrice,
                             hasDiscount: discountInfo !== '',
                             discountType,
-                            index: itemCounter 
+                            index: itemCounter
                         });
                     } else {
                         const groupKey = itemName + discountInfo;
@@ -1025,14 +1135,14 @@
                                 unitPrice: finalPrice,
                                 hasDiscount: discountInfo !== '',
                                 discountType: discountType,
-                                index: itemCounter 
+                                index: itemCounter
                             };
                         }
                         itemGroups[groupKey].count++;
                         itemGroups[groupKey].totalPrice += finalPrice;
                     }
 
-                    itemCounter++; 
+                    itemCounter++;
                 }
             });
 
@@ -1140,7 +1250,7 @@
 
             const key = `${itemName}_${itemIndex}`;
             const savedData = this.tempCustomerData[key];
-            const savedIdNumber = savedData ? savedData.id_number : ''; 
+            const savedIdNumber = savedData ? savedData.id_number : '';
 
             const modalHtml = `
     <div id="customerInfoModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -1401,88 +1511,7 @@
         }
 
         submitPayment(event) {
-            const currentReservationData = this.currentReservationData;
-
-            if (!currentReservationData) {
-                this.showToast("No reservation data available", "error");
-                return;
-            }
-
-            const totalText = document.getElementById("payment_total").textContent;
-            const subtotal = parseFloat(totalText.replace('₱', '').replace(',', ''));
-            const advancePayment = currentReservationData.order_type === 'walkin' ? 0 : parseFloat(currentReservationData.advance_payment || 0);
-            const finalTotal = Math.max(0, subtotal - advancePayment);
-
-            const cashReceived = parseFloat(document.getElementById('cashReceived').value) || 0;
-
-            if (cashReceived < finalTotal) {
-                this.showToast("Insufficient cash amount", "error");
-                return;
-            }
-
-            // Validate discounts
-            const discountSelects = document.querySelectorAll('.discount-type-select');
-            let discountedItems = [];
-            let hasActiveDiscounts = false;
-
-            discountSelects.forEach((select, index) => {
-                if (select.value !== 'none') {
-                    hasActiveDiscounts = true;
-                    let itemName = select.dataset.itemName || '';
-                    if (itemName) {
-                        discountedItems.push({
-                            index: index,
-                            itemName: itemName,
-                            discountType: select.value
-                        });
-                    }
-                }
-            });
-
-            if (hasActiveDiscounts) {
-                let itemsWithoutValidInfo = [];
-
-                discountedItems.forEach(item => {
-                    const key = `${item.itemName}_${item.index}`;
-                    const customerData = this.tempCustomerData[key];
-
-                    if (!customerData ||
-                        !customerData.id_number ||
-                        customerData.id_number.trim() === '') {
-                        itemsWithoutValidInfo.push(item.itemName);
-                    }
-                });
-
-                if (itemsWithoutValidInfo.length > 0) {
-                    this.showToast(`ID number is required for discounted items.`, "error");
-                    return;
-                }
-            }
-
-            const allCustomerData = [];
-            if (hasActiveDiscounts) {
-                discountedItems.forEach(item => {
-                    const key = `${item.itemName}_${item.index}`;
-                    const customerInfo = this.tempCustomerData[key];
-
-                    if (customerInfo &&
-                        customerInfo.id_number &&
-                        customerInfo.id_number.trim() !== '') {
-                        allCustomerData.push({
-                            id_number: customerInfo.id_number.trim(),
-                            name: customerInfo.name ? customerInfo.name.trim() : '',
-                            id_type: customerInfo.id_type,
-                            item_name: customerInfo.item_name,
-                            item_index: parseInt(customerInfo.item_index),
-                            customer_type: customerInfo.customer_type
-                        });
-                    }
-                });
-            }
-
-            const change = cashReceived - finalTotal;
-
-            this.processFinalPayment(finalTotal, subtotal, advancePayment, cashReceived, change, currentReservationData, allCustomerData);
+            this.showProcessPaymentModal(event);
         }
 
         setupCashReceivedInput() {
@@ -1606,7 +1635,6 @@
                             data.transaction_no
                         );
 
-                        this.updateTableStatusAfterPayment(currentReservationData.reservation_id);
                         this.showToast("Payment completed successfully!", "success");
 
                         this.tempCustomerData = {};
@@ -1676,240 +1704,211 @@
                 const item = itemGroups[groupKey];
                 const itemDescription = item.quantity > 1 ? `${item.itemName} x${item.quantity}` : item.itemName;
                 orderItemsHTML += `
-    <tr>
-        <td class="item-desc">${itemDescription}</td>
-        <td class="item-price">${item.unitPrice.toFixed(2)}</td>
-        <td class="item-amount">${item.totalAmount.toFixed(2)}</td>
-    </tr>
-    `;
+        <tr>
+            <td class="item-desc">${itemDescription}</td>
+            <td class="item-price">${item.unitPrice.toFixed(2)}</td>
+            <td class="item-amount">${item.totalAmount.toFixed(2)}</td>
+        </tr>`;
             });
 
             const printHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Jeongol Receipt</title>
-            <style>
-                @media print { 
-                    @page { 
-                        size: 80mm auto;
-                        margin: 0; 
-                    } 
-                    body { 
-                        margin: 0; 
-                        padding: 0; 
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                    }
-                }
-                * {
-                    box-sizing: border-box;
-                    -webkit-font-smoothing: none;
-                    -moz-osx-font-smoothing: grayscale;
-                }
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Receipt</title>
+        <style>
+            @media print { 
+                @page { 
+                    size: 48mm 210mm;
+                    margin: 0; 
+                } 
                 body { 
-                    font-family: 'Courier New', 'Consolas', monospace;
-                    font-size: 12px;
-                    width: 300px;
-                    max-width: 300px;
-                    margin: 0;
-                    padding: 10px;
-                    line-height: 1.4;
-                    color: #000;
-                    background: #fff;
+                    margin: 0; 
+                    padding: 2mm; 
                 }
-                .header {
-                    text-align: center;
-                    border-bottom: 1px dashed #000;
-                    padding-bottom: 6px;
-                    margin-bottom: 6px;
-                    word-wrap: break-word;
-                }
-                .header h3 {
-                    margin: 4px 0;
-                    font-size: 14px;
-                    font-weight: bold;
-                    letter-spacing: 0;
-                }
-                .header p {
-                    margin: 2px 0;
-                    font-size: 11px;
-                    letter-spacing: 0;
-                }
-                .info-section {
-                    margin: 8px 0;
-                    font-size: 11px;
-                }
-                .info-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin: 2px 0;
-                    gap: 4px;
-                }
-                .info-row span:first-child {
-                    flex-shrink: 0;
-                }
-                .info-row span:last-child {
-                    text-align: right;
-                    word-break: break-word;
-                }
-                table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin: 8px 0;
-                    font-size: 11px;
-                }
-                th {
-                    border-top: 1px solid #000;
-                    border-bottom: 1px solid #000;
-                    padding: 4px 2px;
-                    text-align: left;
-                    font-weight: bold;
-                    font-size: 11px;
-                }
-                td {
-                    padding: 3px 2px;
-                    vertical-align: top;
-                    word-wrap: break-word;
-                    border-bottom: 1px solid #ddd;
-                }
-                .item-desc {
-                    width: 40%;
-                    min-width: 80px;
-                }
-                .item-qty {
-                    width: 15%;
-                    text-align: center;
-                    min-width: 25px;
-                }
-                .item-price {
-                    width: 22%;
-                    text-align: right;
-                    min-width: 40px;
-                }
-                .item-amount {
-                    width: 23%;
-                    text-align: right;
-                    min-width: 45px;
-                }
-                .summary {
-                    margin-top: 6px;
-                    border-top: 1px dashed #000;
-                    padding-top: 6px;
-                }
-                .summary-row {
-                    display: flex;
-                    justify-content: space-between;
-                    margin: 3px 0;
-                    font-size: 11px;
-                    gap: 4px;
-                }
-                .summary-row span:first-child {
-                    flex: 1;
-                }
-                .summary-row span:last-child {
-                    text-align: right;
-                    white-space: nowrap;
-                }
-                .total-row {
-                    font-weight: bold;
-                    font-size: 12px;
-                    border-top: 1px solid #000;
-                    padding-top: 4px;
-                    margin-top: 4px;
-                }
-                .footer {
-                    text-align: center;
-                    margin-top: 10px;
-                    border-top: 1px dashed #000;
-                    padding-top: 8px;
-                    font-size: 11px;
-                }
-                .footer p {
-                    margin: 3px 0;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h3>Jeongol Izakaya Hotpot & Grill</h3>
-                <p>Koronadal City, South Cotabato, Philippines</p>
-                <p>VAT Reg. TIN 295-774-127-00003</p>
-                <p style="margin-top: 6px; font-weight: bold;">Receipt</p>
+            }
+            body { 
+                font-family: Arial, Helvetica, sans-serif; 
+                font-size: 7pt;
+                width: 48mm;
+                margin: 0 auto; 
+                padding: 3mm 1mm;
+                line-height: 1.3;
+            }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .separator { 
+                border-top: 1px solid #000; 
+                margin: 2mm 0; 
+            }
+            .header {
+                font-size: 8pt;
+                font-weight: bold;
+                margin-bottom: 1mm;
+            }
+            .subheader {
+                font-size: 7pt;
+                margin-bottom: 1mm;
+            }
+            .title {
+                font-size: 8pt;
+                font-weight: bold;
+                margin: 2mm 0;
+            }
+            .info-row {
+                display: flex;
+                justify-content: space-between;
+                font-size: 7pt;
+                margin: 1mm 0;
+            }
+            table { 
+                width: 100%; 
+                border-collapse: collapse;
+                margin: 2mm 0;
+            }
+            th {
+                font-size: 7pt;
+                font-weight: bold;
+                padding: 1mm 0;
+                border-top: 1px solid #000;
+                border-bottom: 1px solid #000;
+                text-align: left;
+            }
+            td { 
+                padding: 1mm 0;
+                font-size: 6pt;
+                vertical-align: top;
+            }
+            .item-desc {
+                width: 50%;
+                text-align: left;
+            }
+            .item-price {
+                width: 25%;
+                text-align: right;
+            }
+            .item-amount {
+                width: 25%;
+                text-align: right;
+            }
+            .summary {
+                font-size: 7pt;
+                margin-top: 2mm;
+            }
+            .summary-row {
+                display: flex;
+                justify-content: space-between;
+                margin: 1mm 0;
+            }
+            .total-row {
+                font-weight: bold;
+                font-size: 7pt;
+                border-top: 1px solid #000;
+                padding-top: 2mm;
+                margin-top: 2mm;
+            }
+            .footer {
+                font-size: 6pt;
+                margin-top: 3mm;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="center header">Jeongol Izakaya</div>
+        <div class="center header">Hotpot & Grill</div>
+        <div class="center subheader">Koronadal City,</div>
+        <div class="center subheader">South Cotabato, Philippines</div>
+        <div class="center subheader">VAT Reg. TIN</div>
+        <div class="center subheader">295-774-127-00003</div>
+        <div class="center title">SALES INVOICE</div>
+        
+        <div class="separator"></div>
+        
+        <div class="info-row">
+            <span>Date:</span>
+            <span>${dateStr}</span>
+        </div>
+        <div class="info-row">
+            <span>Time:</span>
+            <span>${timeStr}</span>
+        </div>
+        <div class="info-row">
+            <span>Transaction No:</span>
+            <span class="bold">${transactionNo || 'N/A'}</span>
+        </div>
+        <div class="info-row">
+            <span>Cashier:</span>
+            <span>${CASHIER_NAME}</span>
+        </div>
+        
+        <div class="separator"></div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th class="item-desc">ITEM</th>
+                    <th class="item-price">PRICE</th>
+                    <th class="item-amount">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${orderItemsHTML}
+            </tbody>
+        </table>
+        
+        <div class="separator"></div>
+        
+        <div class="summary">
+            <div class="summary-row">
+                <span>VATable Sales:</span>
+                <span>${vatableSales}</span>
             </div>
-            <div class="info-row">
-                <span>Transaction No:</span>
-                <span style="font-weight: bold;">${transactionNo || 'N/A'}</span>
+            <div class="summary-row">
+                <span>VAT (12%):</span>
+                <span>${vat}</span>
             </div>
-
-            <table>
-                <thead>
-                    <tr>
-                        <th class="item-desc">Item Description</th>
-                        <th class="item-price">Price</th>
-                        <th class="item-amount">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${orderItemsHTML}
-                </tbody>
-            </table>
-
-            <div class="summary">
-                <div class="summary-row">
-                    <span>VATable Sales:</span>
-                    <span>${vatableSales}</span>
-                </div>
-                <div class="summary-row">
-                    <span>VAT (12%):</span>
-                    <span>${vat}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Total Sales (VAT Inclusive):</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                </div>
-                ${actualAdvancePayment > 0 ? `
-                <div class="summary-row">
-                    <span>Advance Payment:</span>
-                    <span>${actualAdvancePayment.toFixed(2)}</span>
-                </div>
-                ` : ''}
-                <div class="summary-row">
-                    <span>Discount:</span>
-                    <span>${discountAmount.toFixed(2)}</span>
-                </div>
-                <div class="summary-row total-row">
-                    <span>TOTAL AMOUNT DUE:</span>
-                    <span>${finalTotal.toFixed(2)}</span>
-                </div>
-                <div class="summary-row" style="margin-top: 6px;">
-                    <span>Cash Received:</span>
-                    <span>${cashReceived.toFixed(2)}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Change:</span>
-                    <span>${change.toFixed(2)}</span>
-                </div>
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span>${subtotal.toFixed(2)}</span>
             </div>
-
-            <div class="info-section">
-                <div class="info-row">
-                    <span>Date:</span>
-                    <span>${dateStr} ${timeStr}</span>
-                </div>
-                <div class="info-row">
-                    <span>Cashier:</span>
-                    <span>${CASHIER_NAME}</span>
-                </div>
+            ${actualAdvancePayment > 0 ? `
+            <div class="summary-row">
+                <span>Advance Payment:</span>
+                <span>${actualAdvancePayment.toFixed(2)}</span>
             </div>
-
-            <div class="footer">
-                <p>Thank you for dining with us!</p>
-                <p>Please come again</p>
+            ` : ''}
+            ${discountAmount > 0 ? `
+            <div class="summary-row">
+                <span>Discount:</span>
+                <span>${discountAmount.toFixed(2)}</span>
             </div>
-        </body>
-        </html>
-        `;
+            ` : ''}
+            <div class="summary-row total-row">
+                <span>TOTAL:</span>
+                <span>${finalTotal.toFixed(2)}</span>
+            </div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        <div class="summary">
+            <div class="summary-row">
+                <span>Cash:</span>
+                <span>${cashReceived.toFixed(2)}</span>
+            </div>
+            <div class="summary-row">
+                <span>Change:</span>
+                <span>${change.toFixed(2)}</span>
+            </div>
+        </div>
+        
+        <div class="separator"></div>
+        
+        <div class="center footer">Thank you for dining with us!</div>
+        <div class="center footer">Please come again!</div>
+    </body>
+    </html>
+    `;
 
             const printWindow = window.open('', '_blank', 'width=400,height=600');
             if (!printWindow) {
@@ -1926,36 +1925,6 @@
                     setTimeout(() => printWindow.close(), 100);
                 }, 500);
             };
-        }
-
-        updateTableStatusAfterPayment(reservationId) {
-            const tableElement = document.querySelector(`[data-reservation-id="${reservationId}"]`);
-
-            if (tableElement) {
-                const tableCircle = tableElement.querySelector('.w-16.h-16.rounded-full');
-                const statusText = tableElement.querySelector('.text-red-600, .text-green-600');
-                const countdownElement = tableElement.querySelector('.countdown');
-
-                if (tableCircle) {
-                    tableCircle.classList.remove('bg-red-600');
-                    tableCircle.classList.add('bg-green-600');
-                }
-
-                if (statusText) {
-                    statusText.textContent = 'Available';
-                    statusText.classList.remove('text-red-600');
-                    statusText.classList.add('text-green-600');
-                }
-
-                if (countdownElement && countdownElement.parentElement) {
-                    countdownElement.parentElement.style.display = 'none';
-                }
-
-                tableElement.setAttribute('data-occupied', '0');
-                tableElement.setAttribute('data-reservation-id', '');
-                tableElement.classList.remove('table-occupied');
-                tableElement.classList.add('table-available');
-            }
         }
 
         printBill() {
@@ -1986,80 +1955,110 @@
 
                     let displayName = itemName;
                     let quantity = '1';
-                    const quantityMatch = itemName.match(/(.+)\s+x(\d+)$/); // ✅ FIXED
+                    const quantityMatch = itemName.match(/(.+)\s+x(\d+)$/);
                     if (quantityMatch) {
                         displayName = quantityMatch[1].trim();
                         quantity = quantityMatch[2];
                     }
 
                     itemsHTML += `<tr>
-                    <td style="padding: 3px 2px; font-size: 10px; text-align: left; width: 55%;">${displayName}</td>
-                    <td style="padding: 3px 2px; font-size: 10px; text-align: center; width: 15%;">${quantity}</td>
-                    <td style="padding: 3px 2px; font-size: 10px; text-align: right; width: 30%;">${price}</td>
-                </tr>`;
+                <td style="padding: 3px 2px; font-size: 10px; text-align: left; width: 55%;">${displayName}</td>
+                <td style="padding: 3px 2px; font-size: 10px; text-align: center; width: 15%;">${quantity}</td>
+                <td style="padding: 3px 2px; font-size: 10px; text-align: right; width: 30%;">${price}</td>
+            </tr>`;
                 }
             });
 
             const total = totalElement.textContent.trim();
             const printHTML = `<!DOCTYPE html>
-            <html>
-            <head>
-                <title>Bill</title>
-                <style>
-                    @media print { 
-                        @page { size: 80mm auto; margin: 0; } 
-                        body { margin: 0; padding: 2mm; } 
-                    }
-                    body { 
-                        font-family: "Courier New", monospace; 
-                        font-size: 12px; 
-                        width: 280px; 
-                        margin: 0 auto; 
-                        padding: 8px; 
-                    }
-                    .center { text-align: center; }
-                    .dotted-line { 
-                        border-top: 1px dotted #000; 
-                        margin: 6px 0; 
-                    }
-                    table { 
-                        width: 100%; 
-                        border-collapse: collapse; 
-                    }
-                    th, td { 
-                        padding: 3px 2px; 
-                        font-size: 10px; 
-                    }
-                    th {
-                        border-bottom: 1px dotted #000;
-                        font-weight: bold;
-                    }
-                </style>
-            </head>
-            <body>
-            
-                <div class="center" style="font-size: 20px;"><strong>Bill</strong></div>
-                <div class="dotted-line"></div>
-                <div style="font-size: 13px;">Customer: ${customerName}</div>
-                @foreach ($reservations as $reservation)
-                    <div>Table: {{ $reservation->table?->table_number ?? 'N/A' }}</div>
-                @endforeach
-
-                <div class="dotted-line"></div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="text-align: left; width: 55%;">Item</th>
-                            <th style="text-align: center; width: 15%;">Qty</th>
-                            <th style="text-align: right; width: 30%;">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>${itemsHTML}</tbody>
-                </table>
-                <div class="dotted-line"></div>
-                <div class="center"><strong>TOTAL: ${total}</strong></div>
-            </body>
-            </html>`;
+    <html>
+    <head>
+        <title>Bill</title>
+        <style>
+            @media print { 
+                @page { size: 48mm 210mm; margin: 0; } 
+                body { margin: 0; padding: 2mm; } 
+            }
+            body { 
+                font-family: Arial, Helvetica, sans-serif; 
+                font-size: 7pt;
+                width: 48mm;
+                margin: 0 auto; 
+                padding: 3mm 1mm;
+                line-height: 1.3;
+            }
+            .center { text-align: center; }
+            .bold { font-weight: bold; }
+            .separator { 
+                border-top: 1px solid #000; 
+                margin: 2mm 0; 
+            }
+            .header {
+                font-size: 8pt;
+                font-weight: bold;
+                margin-bottom: 1mm;
+            }
+            .address {
+                font-size: 7pt;
+                margin-bottom: 1mm;
+            }
+            .title {
+                font-size: 8pt;
+                font-weight: bold;
+                margin: 2mm 0;
+            }
+            .info {
+                font-size: 7pt;
+                margin-bottom: 1mm;
+            }
+            table { 
+                width: 100%; 
+                border-collapse: collapse;
+                margin: 2mm 0;
+            }
+            th {
+                font-size: 7pt;
+                font-weight: bold;
+                padding: 1mm 0;
+                border-bottom: 1px solid #000;
+                text-align: left;
+            }
+            td { 
+                padding: 1mm 0;
+                font-size: 6pt;
+            }
+            .total-row {
+                font-size: 7pt;
+                font-weight: bold;
+                padding-top: 2mm;
+            }
+            .footer {
+                font-size: 6pt;
+                margin-top: 3mm;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="center header">Jeongol Izakaya</div>
+        <div class="center address">Koronadal City, South Cotabato.</div>
+        <div class="center title">BILL</div>
+        <div class="separator"></div>
+        <div class="info">Customer: ${customerName}</div>
+        <div class="separator"></div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 55%;">ITEM</th>
+                    <th style="width: 15%; text-align: center;">QTY</th>
+                    <th style="width: 30%; text-align: right;">AMOUNT</th>
+                </tr>
+            </thead>
+            <tbody>${itemsHTML}</tbody>
+        </table>
+        <div class="separator"></div>
+        <div class="center total-row">TOTAL: ${total}</div>
+    </body>
+    </html>`;
 
             const printWindow = window.open('', '_blank', 'width=400,height=600');
             if (!printWindow) {
@@ -2070,13 +2069,278 @@
             printWindow.document.write(printHTML);
             printWindow.document.close();
 
-
             printWindow.onload = function () {
                 setTimeout(() => {
                     printWindow.print();
                     setTimeout(() => printWindow.close(), 100);
                 }, 500);
             };
+        }
+
+        showPrintModal() {
+            const customerName = document.getElementById('payment_customer_name')?.value || 'Walk-in Customer';
+            const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
+            const totalElement = document.getElementById('payment_total');
+
+            if (!paymentSummaryDiv || !totalElement) {
+                this.showToast('No payment summary available', 'error');
+                return;
+            }
+
+            const summaryItems = paymentSummaryDiv.querySelectorAll('.flex.justify-between.items-center.text-sm.py-2');
+            if (summaryItems.length === 0) {
+                this.showToast('No items found in payment summary', 'error');
+                return;
+            }
+
+            document.getElementById('printModalCustomerName').textContent = customerName;
+
+            const orderItemsContainer = document.getElementById('printModalOrderItems');
+            orderItemsContainer.innerHTML = '';
+
+            summaryItems.forEach(item => {
+                const itemNameElement = item.querySelector('.flex-1.pr-2');
+                const priceElement = item.querySelector('.w-20.text-right.font-mono');
+
+                if (itemNameElement && priceElement) {
+                    const itemName = itemNameElement.textContent.trim();
+                    const price = priceElement.textContent.trim();
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex justify-between items-center text-sm py-1';
+                    itemDiv.innerHTML = `
+                <span class="text-gray-700">${itemName}</span>
+                <span class="font-mono text-gray-900">${price}</span>
+            `;
+                    orderItemsContainer.appendChild(itemDiv);
+                }
+            });
+
+            document.getElementById('printModalTotal').textContent = totalElement.textContent.trim();
+
+            document.getElementById('printBillModal').classList.remove('hidden');
+        }
+
+        closePrintModal() {
+            document.getElementById('printBillModal').classList.add('hidden');
+        }
+
+        confirmPrintBill() {
+            this.closePrintModal();
+            this.printBill();
+        }
+
+        showProcessPaymentModal(event) {
+            const currentReservationData = this.currentReservationData;
+
+            if (!currentReservationData) {
+                this.showToast("No reservation data available", "error");
+                return;
+            }
+
+            const totalText = document.getElementById("payment_total").textContent;
+            const subtotal = parseFloat(totalText.replace('₱', '').replace(',', ''));
+            const advancePayment = currentReservationData.order_type === 'walkin' ? 0 : parseFloat(currentReservationData.advance_payment || 0);
+            const finalTotal = Math.max(0, subtotal - advancePayment);
+
+            const cashReceived = parseFloat(document.getElementById('cashReceived').value) || 0;
+
+            if (cashReceived < finalTotal) {
+                this.showToast("Insufficient cash amount", "error");
+                return;
+            }
+
+            const discountSelects = document.querySelectorAll('.discount-type-select');
+            let discountedItems = [];
+            let hasActiveDiscounts = false;
+
+            discountSelects.forEach((select, index) => {
+                if (select.value !== 'none') {
+                    hasActiveDiscounts = true;
+                    let itemName = select.dataset.itemName || '';
+                    if (itemName) {
+                        discountedItems.push({
+                            index: index,
+                            itemName: itemName,
+                            discountType: select.value
+                        });
+                    }
+                }
+            });
+
+            if (hasActiveDiscounts) {
+                let itemsWithoutValidInfo = [];
+
+                discountedItems.forEach(item => {
+                    const key = `${item.itemName}_${item.index}`;
+                    const customerData = this.tempCustomerData[key];
+
+                    if (!customerData || !customerData.id_number || customerData.id_number.trim() === '') {
+                        itemsWithoutValidInfo.push(item.itemName);
+                    }
+                });
+
+                if (itemsWithoutValidInfo.length > 0) {
+                    this.showToast(`ID number is required for discounted items.`, "error");
+                    return;
+                }
+            }
+
+            this.pendingPaymentData = {
+                finalTotal,
+                subtotal,
+                advancePayment,
+                cashReceived,
+                change: cashReceived - finalTotal,
+                currentReservationData,
+                hasActiveDiscounts,
+                discountedItems
+            };
+
+            this.populateProcessPaymentModal();
+        }
+
+        // Add this method to your app object
+        populateProcessPaymentModal() {
+            const data = this.pendingPaymentData;
+            const customerName = document.getElementById('payment_customer_name')?.value || 'Walk-in Customer';
+
+            // Set customer name
+            document.getElementById('confirmModalCustomerName').textContent = customerName;
+
+            // Populate order items
+            const orderItemsContainer = document.getElementById('confirmModalOrderItems');
+            orderItemsContainer.innerHTML = '';
+
+            const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
+            const summaryItems = paymentSummaryDiv.querySelectorAll('.flex.justify-between.items-center.text-sm.py-2');
+
+            summaryItems.forEach(item => {
+                const itemNameElement = item.querySelector('.flex-1.pr-2');
+                const priceElement = item.querySelector('.w-20.text-right.font-mono');
+
+                if (itemNameElement && priceElement) {
+                    const itemName = itemNameElement.textContent.trim();
+                    const price = priceElement.textContent.trim();
+
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'flex justify-between items-center text-sm py-1';
+                    itemDiv.innerHTML = `
+                <span class="text-gray-700">${itemName}</span>
+                <span class="font-mono text-gray-900">${price}</span>
+            `;
+                    orderItemsContainer.appendChild(itemDiv);
+                }
+            });
+
+            // Set amounts
+            document.getElementById('confirmModalSubtotal').textContent = `₱${data.subtotal.toFixed(2)}`;
+
+            // Show/hide advance payment
+            if (data.advancePayment > 0) {
+                document.getElementById('confirmModalAdvancePayment').classList.remove('hidden');
+                document.getElementById('confirmModalAdvanceAmount').textContent = `₱${data.advancePayment.toFixed(2)}`;
+            } else {
+                document.getElementById('confirmModalAdvancePayment').classList.add('hidden');
+            }
+
+            // Calculate and show discount if any
+            let discountAmount = 0;
+            document.querySelectorAll('.discount-type-select').forEach(select => {
+                const discountValue = parseFloat(select.dataset.discountAmount || 0);
+                discountAmount += discountValue;
+            });
+
+            if (discountAmount > 0) {
+                document.getElementById('confirmModalDiscount').classList.remove('hidden');
+                document.getElementById('confirmModalDiscountAmount').textContent = `-₱${discountAmount.toFixed(2)}`;
+            } else {
+                document.getElementById('confirmModalDiscount').classList.add('hidden');
+            }
+
+            document.getElementById('confirmModalTotal').textContent = `₱${data.finalTotal.toFixed(2)}`;
+            document.getElementById('confirmModalCashReceived').textContent = `₱${data.cashReceived.toFixed(2)}`;
+            document.getElementById('confirmModalChange').textContent = `₱${data.change.toFixed(2)}`;
+
+            // Show discounted customers if any
+            if (data.hasActiveDiscounts && data.discountedItems.length > 0) {
+                const customersListContainer = document.getElementById('confirmModalCustomersList');
+                customersListContainer.innerHTML = '';
+
+                data.discountedItems.forEach(item => {
+                    const key = `${item.itemName}_${item.index}`;
+                    const customerInfo = this.tempCustomerData[key];
+
+                    if (customerInfo && customerInfo.id_number) {
+                        const customerDiv = document.createElement('div');
+                        customerDiv.className = 'p-2 bg-gray-100 rounded border border-gray-300';
+                        customerDiv.innerHTML = `
+                    <div class="font-semibold">${customerInfo.name || 'N/A'}</div>
+                    <div class="text-gray-600">ID: ${customerInfo.id_number}</div>
+                    <div class="text-gray-600">Type: ${item.discountType.toUpperCase()}</div>
+                    <div class="text-gray-600">Item: ${item.itemName}</div>
+                `;
+                        customersListContainer.appendChild(customerDiv);
+                    }
+                });
+
+                document.getElementById('confirmModalDiscountedCustomers').classList.remove('hidden');
+            } else {
+                document.getElementById('confirmModalDiscountedCustomers').classList.add('hidden');
+            }
+
+            // Show modal
+            document.getElementById('processPaymentModal').classList.remove('hidden');
+        }
+
+        // Add these methods to your app object
+
+        closeProcessPaymentModal() {
+            document.getElementById('processPaymentModal').classList.add('hidden');
+            this.pendingPaymentData = null;
+        }
+
+        confirmProcessPayment() {
+            if (!this.pendingPaymentData) {
+                this.showToast("Payment data not available", "error");
+                return;
+            }
+
+            const data = this.pendingPaymentData;
+
+            // Collect all customer data
+            const allCustomerData = [];
+            if (data.hasActiveDiscounts) {
+                data.discountedItems.forEach(item => {
+                    const key = `${item.itemName}_${item.index}`;
+                    const customerInfo = this.tempCustomerData[key];
+
+                    if (customerInfo && customerInfo.id_number && customerInfo.id_number.trim() !== '') {
+                        allCustomerData.push({
+                            id_number: customerInfo.id_number.trim(),
+                            name: customerInfo.name ? customerInfo.name.trim() : '',
+                            id_type: customerInfo.id_type,
+                            item_name: customerInfo.item_name,
+                            item_index: parseInt(customerInfo.item_index),
+                            customer_type: customerInfo.customer_type
+                        });
+                    }
+                });
+            }
+
+            // Close modal
+            this.closeProcessPaymentModal();
+
+            // Process payment
+            this.processFinalPayment(
+                data.finalTotal,
+                data.subtotal,
+                data.advancePayment,
+                data.cashReceived,
+                data.change,
+                data.currentReservationData,
+                allCustomerData
+            );
         }
 
 

@@ -596,7 +596,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-      {{ $table->id }}: {{ $table->capacity }},
+        {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
@@ -703,14 +703,32 @@
   renderNotifications(notifications) {
     if (!this.elements.notifList) return;
 
-    if (!notifications.length) {
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const filteredNotifications = notifications.filter(notification => {
+
+      if (notification.reservation_status !== "Pending") return false;
+
+
+      const notifDate = new Date(notification.created_at || notification.date);
+      const notifDay = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate());
+
+
+      return notifDay.getTime() >= yesterday.getTime() && notifDay.getTime() <= today.getTime();
+    });
+
+    if (!filteredNotifications.length) {
       this.elements.notifList.innerHTML = `
             <li class="p-8 text-center">
                 <svg class="w-16 h-16 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                           d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                 </svg>
-                <p class="text-gray-500 font-medium">No notifications</p>
+                <p class="text-gray-500 font-medium">No pending notifications</p>
             </li>
         `;
       return;
@@ -718,12 +736,12 @@
 
     this.elements.notifList.innerHTML = '';
 
-    notifications.sort((a, b) => {
-      const order = { "Pending": 1, "Active": 2, "Rejected": 3 };
-      return (order[a.reservation_status] || 4) - (order[b.reservation_status] || 4);
+
+    filteredNotifications.sort((a, b) => {
+      return new Date(b.created_at || b.date) - new Date(a.created_at || a.date);
     });
 
-    notifications.forEach(notification => {
+    filteredNotifications.forEach(notification => {
       this.renderNotificationItem(notification);
     });
   }
@@ -1461,7 +1479,7 @@
       return;
     }
 
-    /*
+    
     if (!this.isPlacingOrder) {
       const selectedDateTime = new Date(`${date}T${time}`);
       const currentTime = new Date();
@@ -1474,9 +1492,6 @@
         return;
       }
     }
-*/
-    
-
 
     const orders = Object.values(this.selectedOrders || {});
     const hasMain = orders.some(item => item.category === 'main');

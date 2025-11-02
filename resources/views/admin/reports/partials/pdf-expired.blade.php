@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Expired Items Report</title>
+    <title>Expired Ingredients Report</title>
     <style>
         body {
             font-size: 11px;
@@ -71,14 +71,6 @@
             text-transform: uppercase;
         }
 
-        .text-right {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
         .summary-box {
             border: 2px solid #000;
             padding: 10px;
@@ -86,8 +78,6 @@
         }
 
         .summary-row {
-            display: flex;
-            justify-content: space-between;
             padding: 4px 0;
             border-bottom: 1px dotted #ccc;
         }
@@ -121,7 +111,7 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="report-title">EXPIRED ITEMS REPORT</div>
+        <div class="report-title">EXPIRED INGREDIENTS REPORT</div>
         <div class="company-name">JEONGOL IZAKAYA</div>
         <div class="date-range">
             <strong>Period:</strong> {{ $dateFrom->format('F j, Y') }} - {{ $dateTo->format('F j, Y') }}
@@ -135,60 +125,35 @@
     <div class="section-title">Expiration Summary</div>
     <div class="summary-box">
         <div class="summary-row">
-            <span class="summary-label">Total Expired Items:</span>
-            <span>{{ number_format($reportData['summary']['expired_count']) }}</span>
+            <strong>Total Expired Ingredients:</strong> {{ number_format($reportData['summary']['expired_count'] ?? 0) }}
         </div>
         <div class="summary-row">
-            <span class="summary-label">Items Expiring Soon (7 days):</span>
-            <span>{{ number_format($reportData['summary']['expiring_soon_count']) }}</span>
+            <strong>Ingredients Expiring Soon (7 days):</strong> {{ number_format($reportData['summary']['expiring_soon_count'] ?? 0) }}
         </div>
     </div>
 
-    <!-- Category Breakdown -->
-    @if(isset($reportData['summary']['by_category']) && count($reportData['summary']['by_category']) > 0)
-    <div class="section-title">Waste by Category</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 60%;">Category</th>
-                <th class="text-right" style="width: 40%;">Items Expired</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($reportData['summary']['by_category'] as $category)
-                <tr>
-                    <td>{{ ucfirst($category['name']) }}</td>
-                    <td class="text-right">{{ number_format($category['count']) }}</td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
-    @endif
+   
 
-    <!-- Expired Items Details -->
-    <div class="section-title">Expired Items Details</div>
+    <!-- Expired Ingredients Details -->
+    <div class="section-title">Expired Ingredients Details</div>
     <table>
         <thead>
             <tr>
-                <th style="width: 30%;">Ingredient</th>
-                <th style="width: 20%;">Category</th>
-                <th class="text-center" style="width: 15%;">Batch ID</th>
-                <th class="text-right" style="width: 15%;">Quantity</th>
-                <th class="text-center" style="width: 20%;">Expired On</th>
+                <th style="width: 40%;">Ingredient</th>
+                <th style="width: 30%;">Quantity</th>
+                <th  style="width: 30%;">Expired On</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($reportData['expired_items'] as $item)
+            @forelse($reportData['expired_items'] ?? [] as $item)
                 <tr>
                     <td>{{ $item['name'] ?? 'N/A' }}</td>
-                    <td>{{ ucfirst($item['category'] ?? 'N/A') }}</td>
-                    <td class="text-center">#{{ $item['batch_id'] }}</td>
-                    <td class="text-right">{{ number_format($item['quantity'], 2) }} {{ $item['unit'] ?? 'kg' }}</td>
-                    <td class="text-center">{{ $item['expiration_date'] }}</td>
+                    <td class="text-right">{{ number_format($item['quantity'] ?? 0, 2) }} {{ $item['unit'] ?? 'kg' }}</td>
+                    <td class="text-center">{{ $item['expiration_date'] ?? 'N/A' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="no-data">No expired items for this period</td>
+                    <td colspan="3" class="no-data">No expired items for this period</td>
                 </tr>
             @endforelse
         </tbody>
@@ -196,7 +161,7 @@
 
     <!-- Expiring Soon Alert -->
     @if(isset($reportData['expiring_soon']) && count($reportData['expiring_soon']) > 0)
-    <div class="section-title">⚠ Items Expiring Soon (Within 7 Days)</div>
+    <div class="section-title">⚠ Ingredients Expiring Soon (Within 7 Days)</div>
     <table>
         <thead>
             <tr>
@@ -218,7 +183,7 @@
     @endif
 
     <div class="footer">
-        <p>JEONGOL IZAKAYA • Expired Items Report • {{ now()->format('F j, Y') }}</p>
+        <p>JEONGOL IZAKAYA • Expired Ingredients Report • {{ now()->format('F j, Y') }}</p>
     </div>
 </body>
 

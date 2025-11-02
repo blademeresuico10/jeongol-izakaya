@@ -26,7 +26,6 @@
         </div>
     @endif
 
-    <!-- Tabs -->
     <ul class="nav nav-tabs mt-3 mb-3 border-bottom-0" role="tablist">
         <li class="nav-item">
             <a class="nav-link {{ $activeTab === 'stock-requests-list' ? 'active' : '' }}"
@@ -72,7 +71,6 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <!-- Critical Stock Ingredients (without pending orders) -->
                                 @php
                                     $criticalWithoutOrders = $criticalStockIngredients->filter(function ($ingredient) {
                                         return !$ingredient->pending_order_id;
@@ -101,12 +99,15 @@
                                         </td>
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-primary"
-                                                wire:click="createStockOrder({{ $ingredient->id }})"
+                                                onclick="confirmCreateOrder({{ $ingredient->id }})"
                                                 wire:loading.attr="disabled"
                                                 wire:target="createStockOrder({{ $ingredient->id }})">
                                                 <span wire:loading.remove
                                                     wire:target="createStockOrder({{ $ingredient->id }})">
                                                     <i class="fas fa-plus"></i> Create Order
+                                                </span>
+                                                <span wire:loading wire:target="createStockOrder({{ $ingredient->id }})">
+                                                    <i class="fas fa-spinner fa-spin"></i>
                                                 </span>
                                             </button>
                                         </td>
@@ -237,7 +238,6 @@
             </div>
         </div>
 
-        <!-- Receive Stock Modal -->
         @if($showReceiveModal)
             <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
                 <div class="modal-dialog modal-dialog-centered">
@@ -263,38 +263,41 @@
                                     </div>
                                 </div>
                                 <div class="col-6">
-                                <label class="font-weight-bold text-success">
-                                    Received Quantity: <span class="text-danger">*</span>
-                                </label>
-                                <input type="number" id="receivedQuantityInput"
-                                    class="form-control @error('receivedQuantity') is-invalid @enderror"
-                                    wire:model.defer="receivedQuantity"
-                                    min="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
-                                    step="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
+                                    <label class="font-weight-bold text-success">
+                                        Received Quantity: <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="number" id="receivedQuantityInput"
+                                        class="form-control @error('receivedQuantity') is-invalid @enderror"
+                                        wire:model="receivedQuantity"
+                                        min="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
+                                        step="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
+                                        @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
+                                        oninput="this.value = Math.floor(Math.abs(this.value))" @endif
+                                        placeholder="Enter received quantity">
+                                    @error('receivedQuantity')
+                                        <div class="text-danger small mt-1">
+                                            <i class="fas fa-exclamation-circle"></i> {{ $message }}
+                                        </div>
+                                    @enderror
                                     @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
-                                        oninput="this.value = Math.floor(Math.abs(this.value))"
+                                        <small class="form-text text-muted">
+                                            Whole numbers only
+                                        </small>
                                     @endif
-                                    placeholder="Enter received quantity"
-                                    required>
-                                @error('receivedQuantity')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                @enderror
-                                @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
-                                    <small class="form-text text-muted">
-                                    </small>
-                                @endif
-                            </div>
+                                </div>
                             </div>
 
                             <div class="mb-3">
                                 <label class="font-weight-bold">
                                     Expiration Date: <span class="text-danger">*</span>
                                 </label>
-                                <input type="date" class="form-control @error('expirationDate') is-invalid @enderror"
-                                    wire:model.defer="expirationDate" wire:change="$validate('expirationDate')"
-                                    min="{{ date('Y-m-d') }}" required>
+                                <input type="date" id="expirationDateInput"
+                                    class="form-control @error('expirationDate') is-invalid @enderror"
+                                    wire:model="expirationDate" min="{{ date('Y-m-d') }}">
                                 @error('expirationDate')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    <div class="text-danger small mt-1">
+                                        <i class="fas fa-exclamation-circle"></i> {{ $message }}
+                                    </div>
                                 @enderror
                             </div>
 
@@ -303,7 +306,7 @@
                             <button type="button" class="btn btn-secondary" wire:click="closeReceiveModal">
                                 Close
                             </button>
-                            <button type="button" class="btn btn-success" wire:click="confirmReceive"
+                            <button type="button" class="btn btn-success" onclick="confirmReceiveStock()"
                                 wire:loading.attr="disabled" wire:target="confirmReceive">
                                 <span wire:loading.remove wire:target="confirmReceive">
                                     <i class="fas fa-check"></i> Confirm Receipt
@@ -320,6 +323,51 @@
 
     </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    function confirmCreateOrder(ingredientId) {
+        Swal.fire({
+            title: 'Create Stock Order?',
+            text: 'Are you sure you want to create a stock order for this ingredient?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, create it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                @this.call('createStockOrder', ingredientId);
+            }
+        });
+    }
+
+    function confirmReceiveStock() {
+        const receivedQty = document.getElementById('receivedQuantityInput').value;
+        const expirationDate = document.getElementById('expirationDateInput').value;
+
+        if (!receivedQty || !expirationDate) {
+            @this.call('confirmReceive'); 
+            return;
+        }
+
+        Swal.fire({
+            title: 'Confirm Stock Receipt?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Yes!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                @this.call('confirmReceive');
+            }
+        });
+    }
+</script>
+
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -332,6 +380,7 @@
                 document.getElementById('print-stock').textContent = `${data.ingredient.stocks} ${data.ingredient.unit}`;
                 document.getElementById('print-reorder').textContent = `${data.alertLevel.reorder_quantity} ${data.ingredient.unit}`;
                 document.getElementById('print-status').textContent = data.order.status;
+                document.getElementById('print-quantity').textContent = data.order.quantity + ' ' + data.ingredient.unit;
 
                 const printContent = document.getElementById('printable-stock-request').innerHTML;
 
@@ -345,65 +394,15 @@
                 printWindow.focus();
                 printWindow.print();
             });
+
+            window.addEventListener('stock-received-success', event => {
+                Swal.fire({
+                    title: 'Success!',
+                    html: event.detail.message,
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                });
+            });
         });
-                protected $rules = [
-            'receivedQuantity' => 'required|numeric|min:0.01',
-            'expirationDate' => 'required|date|after_or_equal:today',
-        ];
-
-        protected $messages = [
-            'receivedQuantity.required' => 'Received quantity is required',
-            'receivedQuantity.numeric' => 'Received quantity must be a number',
-            'receivedQuantity.min' => 'Received quantity must be greater than 0',
-            'expirationDate.required' => 'Expiration date is required',
-            'expirationDate.date' => 'Please enter a valid date',
-            'expirationDate.after_or_equal' => 'Expiration date cannot be in the past',
-        ];
-
-        // Add real-time validation
-        public function updated($propertyName) {
-            $this -> validateOnly($propertyName);
-        }
-
-        // Additional validation for pieces
-        public function updatedReceivedQuantity($value) {
-            if (in_array(strtolower($this -> unit), ['pieces', 'pcs', 'piece'])) {
-                if (!is_numeric($value) || floor($value) != $value) {
-                    $this -> addError('receivedQuantity', 'Pieces must be a whole number (no decimals allowed)');
-                }
-            }
-
-            $this -> validateOnly('receivedQuantity');
-        }
-
-        public function confirmReceive() {
-            // Validate all fields before processing
-            $this -> validate();
-
-            // Additional validation for pieces
-            if (in_array(strtolower($this -> unit), ['pieces', 'pcs', 'piece'])) {
-                if (!is_numeric($this -> receivedQuantity) || floor($this -> receivedQuantity) != $this -> receivedQuantity) {
-                    $this -> addError('receivedQuantity', 'Pieces must be a whole number (no decimals allowed)');
-                    return;
-                }
-            }
-
-            // Check if expiration date is provided
-            if (empty($this -> expirationDate)) {
-                $this -> addError('expirationDate', 'Expiration date is required');
-                return;
-            }
-
-            try {
-                // Your existing code to save the stock receipt
-                // Make sure to include expiration_date in the insert
-
-                session() -> flash('success', 'Stock received successfully');
-                $this -> closeReceiveModal();
-
-            } catch (\Exception $e) {
-                session() -> flash('error', 'Failed to process stock receipt: '.$e -> getMessage());
-            }
-        }
     </script>
 @endpush

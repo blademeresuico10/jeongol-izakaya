@@ -26,6 +26,12 @@
             margin: 10px 0 0 0;
             font-weight: normal;
         }
+
+        .header .date-info {
+            margin-top: 15px;
+            font-size: 12px;
+            color: #666;
+        }
         
         .info {
             margin: 30px 0;
@@ -113,6 +119,23 @@
             color: #dc3545;
             font-weight: bold;
         }
+
+        .meta-info {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .meta-info p {
+            margin: 5px 0;
+            font-size: 13px;
+        }
+
+        .meta-info strong {
+            color: #495057;
+        }
         
         .signature {
             margin-top: 60px;
@@ -122,6 +145,29 @@
             border-bottom: 1px solid #000;
             width: 300px;
             margin-top: 50px;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+        }
+
+        .signature-box {
+            width: 45%;
+            margin-bottom: 40px;
+        }
+
+        .signature-box .signature-line {
+            border-bottom: 1px solid #000;
+            margin-top: 40px;
+            padding-top: 5px;
+
+        }
+
+        .signature-box p {
+            margin: 5px 0;
+            font-size: 12px;
         }
 
         .footer-note {
@@ -167,10 +213,19 @@
     </div>
     @endif
 
-    <div class="signature">
-        <p><strong>Received By (Supplier):</strong></p>
-        <div class="signature-line"></div>
-        <p>Date: _______________</p>
+    <div class="signature-section">
+        <div class="signature-box">
+            <p><strong>Prepared By:</strong></p>
+            <div class="signature-line"></div>
+            <p><strong>{{ $requestedBy ?? Auth::user()->name }}</strong></p>
+            <p>{{ $date ?? now()->format('F d, Y') }}</p>
+        </div>
+
+        <div class="signature-box">
+            <p><strong>Received By (Supplier):</strong></p>
+            <div class="signature-line"></div>
+            <p>Date: _______________</p>
+        </div>
     </div>
 
 </body>

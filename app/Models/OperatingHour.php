@@ -20,6 +20,6 @@ class OperatingHour extends Model
     protected $casts = [
         'is_default' => 'boolean',
         'is_closed' => 'boolean',
-        'date' => 'date'
+        'date' => 'date:Y-m-d'
     ];
 }
