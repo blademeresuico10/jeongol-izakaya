@@ -459,7 +459,7 @@ class AdminController extends Controller
             $request->validate([
                 'firstname' => 'required|string|max:255',
                 'lastname' => 'required|string|max:255',
-                'role' => 'required|string|in:Admin,Manager,Receptionist,Cashier,Kitchen Staff',
+                'role' => 'required|string|in:Admin,Manager,Receptionist,Cashier,Kitchen Staff, Wait Staff',
                 'contact_number' => 'required|string|max:11',
                 'address' => 'required|string|max:255',
                 'username' => 'required|string|unique:users,username',
@@ -969,10 +969,9 @@ class AdminController extends Controller
 
     private function getSuggestedIngredients($menuCategory)
     {
-        // Define which ingredient categories to suggest for each menu category
         $categoryMapping = [
-            'main' => ['meat', 'vegetables', 'soupbase'],  // Main dishes
-            'add_ons' => ['meat', 'beverage'],             // Add-ons
+            'main' => ['meat', 'vegetables', 'soupbase'], 
+            'add_ons' => ['meat', 'beverage'],             
         ];
 
         $ingredientCategories = $categoryMapping[$menuCategory] ?? [];
@@ -981,7 +980,6 @@ class AdminController extends Controller
             return [];
         }
 
-        // Get all active ingredients from these categories
         $ingredients = DB::table('ingredients')
             ->whereIn('category', $ingredientCategories)
             ->orderBy('category')
@@ -1409,7 +1407,6 @@ class AdminController extends Controller
         }
     }
 
-    // Check all ingredients
     public function checkAllIngredients(Request $request)
     {
         $ingredients = ingredients::with('stockAlertLevel')->get();
@@ -1442,8 +1439,7 @@ class AdminController extends Controller
             })
             ->orderBy('name')
             ->get()
-            ->map(function ($ingredient) {
-                // Determine stock status
+            ->map(function (ingredients $ingredient) {
                 $stockStatus = 'normal';
                 if ($ingredient->stockAlertLevel) {
                     if ($ingredient->stocks <= $ingredient->stockAlertLevel->critical_stock) {
@@ -1469,7 +1465,6 @@ class AdminController extends Controller
         ]);
     }
 
-    // Complete stock order
     public function completeStockOrder(Request $request, StockOrder $stockOrder)
     {
         if ($stockOrder->status !== 'pending') {
@@ -1481,7 +1476,6 @@ class AdminController extends Controller
         return response()->json(['success' => true, 'message' => 'Stock order completed successfully']);
     }
 
-    // Cancel stock order
     public function cancelStockOrder(Request $request, StockOrder $stockOrder)
     {
         if ($stockOrder->status !== 'pending') {
@@ -1581,9 +1575,9 @@ class AdminController extends Controller
                     'ingredient_batches.arrived_at'
                 )
                 ->where('ingredient_batches.quantity', '>', 0)
-                ->where('ingredient_batches.status', '!=', 'expired') // ✅ Exclude expired batches
+                ->where('ingredient_batches.status', '!=', 'expired')
                 ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
-                ->whereDate('ingredient_batches.expiration_date', '>', now()) // This already filters out expired
+                ->whereDate('ingredient_batches.expiration_date', '>', now()) 
                 ->orderBy('ingredient_batches.arrived_at', 'desc')
                 ->paginate(10)
                 ->through(function ($b) {
@@ -1999,7 +1993,6 @@ class AdminController extends Controller
     {
         $ingredient = ingredients::with(['stockAlertLevel', 'stockOrders'])->findOrFail($id);
 
-        // Get the pending order for this ingredient
         $order = $ingredient->stockOrders()
             ->where('status', 'pending')
             ->latest()
@@ -2130,22 +2123,36 @@ class AdminController extends Controller
 
     public function updateOperatingHours(Request $request, $id)
     {
-        $request->validate([
-            'date' => 'required|date',
-            'open_time' => 'required_without:is_closed|date_format:H:i',
-            'close_time' => 'required_without:is_closed|date_format:H:i|after:open_time',
-            'is_closed' => 'nullable'
-        ]);
-
         $hours = OperatingHour::findOrFail($id);
-        $isClosed = $request->boolean('is_closed');
+        $isToday = $hours->date === now()->toDateString();
 
-        $hours->update([
-            'date' => $request->date,
-            'open_time' => $isClosed ? null : $request->open_time,
-            'close_time' => $isClosed ? null : $request->close_time,
-            'is_closed' => $isClosed
-        ]);
+        if ($isToday) {
+            $request->validate([
+                'is_closed' => 'nullable'
+            ]);
+
+            $isClosed = $request->boolean('is_closed');
+
+            $hours->update([
+                'is_closed' => $isClosed
+            ]);
+        } else {
+            $request->validate([
+                'date' => 'required|date',
+                'open_time' => 'required_without:is_closed|date_format:H:i',
+                'close_time' => 'required_without:is_closed|date_format:H:i|after:open_time',
+                'is_closed' => 'nullable'
+            ]);
+
+            $isClosed = $request->boolean('is_closed');
+
+            $hours->update([
+                'date' => $request->date,
+                'open_time' => $isClosed ? null : $request->open_time,
+                'close_time' => $isClosed ? null : $request->close_time,
+                'is_closed' => $isClosed
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Operating hours updated successfully!');
     }
@@ -2219,7 +2226,6 @@ class AdminController extends Controller
         return response()->json(['success' => true, 'message' => 'Stock alert created successfully']);
     }
 
-    // Update stock alert
     public function updateStockAlert(Request $request, $id)
     {
         $request->validate([
@@ -2239,7 +2245,6 @@ class AdminController extends Controller
         return response()->json(['success' => true, 'message' => 'Stock alert updated successfully']);
     }
 
-    // Delete stock alert
     public function deleteStockAlert($id)
     {
         $stockAlert = StockAlertLevel::findOrFail($id);

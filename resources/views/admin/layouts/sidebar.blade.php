@@ -1,6 +1,5 @@
 <ul class="navbar-nav bg-gradient-danger sidebar sidebar-dark accordion" id="accordionSidebar">
 
-    <!-- Sidebar - Brand -->
     <a class="sidebar-brand d-flex align-items-center justify-content-start px-3">
         <div
             style="width: 42px; height: 42px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center;">

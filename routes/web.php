@@ -8,11 +8,9 @@ use App\Http\Controllers\ReceptionistController;
 use App\Http\Controllers\KitchenController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ReportsController;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\WaitingStaffController;
-use Phiki\Phast\Root;
+use App\Models\OperatingHour;
 
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
@@ -36,10 +34,6 @@ Route::get('/file-serve/{folder}/{filename}', function ($folder, $filename) {
     return Response::file($filePath);
 });
 
-Route::get('/closed', function () {
-    $default = \App\Models\OperatingHour::where('is_default', true)->first();
-    return view('operation_closed', ['default' => $default]);
-})->name('operation_closed');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [LoginController::class, 'index'])->name('login');
@@ -63,10 +57,7 @@ Route::middleware('auth')->group(function () {
     // ADMIN ROUTES
     Route::middleware('role:Admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'home'])->name('admin.home');
-        Route::get('/home/dashboard-data', [AdminController::class, 'dashboardData'])->name('home.dashboard.data');
-        Route::get('/home/sales-data', [AdminController::class, 'salesData'])->name('home.sales.data');
-        Route::get('/debug/data', [AdminController::class, 'debugData'])->name('debug.data');
-
+       
         // Profile
         Route::get('/myprofile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::put('/updateprofile/{id}', [AdminController::class, 'updateProfile'])->name('admin.updateprofile');
@@ -76,7 +67,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
         Route::get('/adduser', [AdminController::class, 'adduser'])->name('admin.adduser');
         Route::post('/users/storeUser', [AdminController::class, 'storeUser'])->name('storeUser');
-        Route::get('/edituser/{id}', [AdminController::class, 'edit'])->name('admin.edituser');
         Route::put('/updateuser/{id}', [AdminController::class, 'update'])->name('admin.updateuser');
         Route::delete('/users/{id}', [AdminController::class, 'destroy'])->name('admin.destroyuser');
         Route::patch('/restoreuser/{id}', [AdminController::class, 'restore'])->name('admin.restoreuser');
@@ -86,7 +76,6 @@ Route::middleware('auth')->group(function () {
         
         // Menu Management
         Route::get('/menu_management', [AdminController::class, 'menu_management'])->name('admin.menu_management');
-        Route::post('/addmenu', [AdminController::class, 'addmenu'])->name('admin.addmenu');
         Route::post('/menu_management/storeMenu', [AdminController::class, 'storeMenu'])->name('storeMenu');
         Route::get('/editmenu/{id}', [AdminController::class, 'editMenu'])->name('admin.editmenu');
         Route::put('/updatemenu/{id}', [AdminController::class, 'updateMenu'])->name('admin.updatemenu');
@@ -151,16 +140,12 @@ Route::middleware('auth')->group(function () {
         // Others
         Route::get('/miscelanious', [AdminController::class, 'others'])->name('admin.others');
 
-        // Stock Level Management
-        Route::put('/stock-levels/{id}', [AdminController::class, 'updateStockLevel'])->name('admin.stock_levels.update');
-
         // Stock Alert Routes
         Route::post('/stock-alerts', [AdminController::class, 'storeStockAlert'])->name('admin.stock-alerts.store');
         Route::put('/stock-alerts/{id}', [AdminController::class, 'updateStockAlert'])->name('admin.stock-alerts.update');
         Route::delete('/stock-alerts/{id}', [AdminController::class, 'deleteStockAlert'])->name('admin.stock-alerts.delete');
 
         // Operating Hours Management
-        Route::put('/operating-hours/default', [AdminController::class, 'updateDefaultHours'])->name('admin.operating_hours.update_default');
         Route::post('/operating-hours', [AdminController::class, 'storeOperatingHours'])->name('admin.operating_hours.store');
         Route::put('/operating-hours/{id}', [AdminController::class, 'updateOperatingHours'])->name('admin.operating_hours.update');
         Route::delete('/operating-hours/{id}', [AdminController::class, 'deleteOperatingHours'])->name('admin.operating_hours.delete');
@@ -171,11 +156,7 @@ Route::middleware('auth')->group(function () {
 
         // Feedback
         Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
-
-        // Stock Order
-        Route::put('/stock-orders/{id}', [AdminController::class, 'updateStockOrder'])->name('admin.stock_orders.update');
-        Route::post('/stock-orders', [AdminController::class, 'storeStockOrder'])->name('admin.stock_orders.store');
-
+        
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
         Route::post('/reports/sales', [ReportsController::class, 'getSalesReport'])->name('admin.reports.sales');
@@ -188,66 +169,49 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/transaction/pdf', [ReportsController::class, 'transactionReportPdf']);
         Route::get('/reports/inventory/pdf', [ReportsController::class, 'inventoryReportPdf'])->name('reports.inventory.pdf');
         Route::get('/reports/menu/pdf', [ReportsController::class, 'menuReportPdf'])->name('admin.menu_report.pdf');
-
-        // Other exports
-        Route::get('/reports/export', [AdminController::class, 'export'])->name('admin.reports.export');
-        Route::get('/reports/export-csv', [AdminController::class, 'exportCsv'])->name('admin.reports.export-csv');
     });
 
-    Route::middleware('operating.hours')->group(function () {
+    // RECEPTIONIST ROUTES
+    Route::middleware('role:Receptionist')->prefix('receptionist')->name('receptionist.')->group(function () {
+        Route::get('/home', [ReceptionistController::class, 'home'])->name('home');
+        Route::get('/dashboard', [ReceptionistController::class, 'home']);
+        Route::post('/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('storeReservation');
+        Route::post('/store-walkin', [ReceptionistController::class, 'storeWalkIn'])->name('storeWalkIn');
+        Route::get('/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('modify_orders');
+        Route::post('/update-order', [ReceptionistController::class, 'updateOrder'])->name('updateOrder');
+        Route::post('/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])->name('accept-reservation');
+        Route::get('/notifications', [ReceptionistController::class, 'getNotifications'])->name('notifications');
+        Route::post('/cancel-reservation/{id}', [ReceptionistController::class, 'cancelReservation'])->name('cancel-reservation');
+        Route::post('/notifications/{id}/read', [ReceptionistController::class, 'markNotificationAsRead'])->name('notification.read');
+        Route::get('/notifications/unread-count', [ReceptionistController::class, 'getUnreadCount'])->name('notification.unread-count');
+        Route::post('/notifications/mark-all-read', [ReceptionistController::class, 'markAllNotificationsAsRead'])->name('notification.mark-all-read');
+    });
 
-        // RECEPTIONIST ROUTES
-        Route::middleware('role:Receptionist')->prefix('receptionist')->name('receptionist.')->group(function () {
-            Route::get('/home', [ReceptionistController::class, 'home'])->name('home');
-            Route::get('/dashboard', [ReceptionistController::class, 'home']);
-            Route::post('/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('storeReservation');
-            Route::post('/store-walkin', [ReceptionistController::class, 'storeWalkIn'])->name('storeWalkIn');
-            Route::get('/available-times', [ReceptionistController::class, 'getAvailableTimeSlots'])->name('available_times');
-            Route::get('/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('modify_orders');
-            Route::get('/view_kitchen', [ReceptionistController::class, 'viewKitchen'])->name('view_kitchen');
-            Route::post('/update-order', [ReceptionistController::class, 'updateOrder'])->name('updateOrder');
-            Route::post('/accept-reservation/{id}', [ReceptionistController::class, 'acceptReservation'])->name('accept-reservation');
-            Route::get('/payments/{id}', [ReceptionistController::class, 'showPayment'])->name('showPayment');
-            Route::get('/notifications', [ReceptionistController::class, 'getNotifications'])->name('notifications');
-            Route::post('/cancel-reservation/{id}', [ReceptionistController::class, 'cancelReservation'])->name('cancel-reservation');
-            Route::post('/notifications/{id}/read', [ReceptionistController::class, 'markNotificationAsRead'])->name('notification.read');
-            Route::get('/notifications/unread-count', [ReceptionistController::class, 'getUnreadCount'])->name('notification.unread-count');
-            Route::post('/notifications/mark-all-read', [ReceptionistController::class, 'markAllNotificationsAsRead'])->name('notification.mark-all-read');
-        });
+    Route::middleware('role:Receptionist')->group(function () {
+        Route::get('/view_reservations', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
+    });
 
-        Route::middleware('role:Receptionist')->group(function () {
-            Route::get('/view_reservations', [ReceptionistController::class, 'bookings'])->name('receptionist.bookings');
-        });
+    // KITCHEN STAFF ROUTES
+    Route::middleware('role:Kitchen Staff')->prefix('kitchen')->name('kitchen.')->group(function () {
+        Route::get('/home', [KitchenController::class, 'home'])->name('home');
+    });
 
-        // KITCHEN STAFF ROUTES
-        Route::middleware('role:Kitchen Staff')->prefix('kitchen')->name('kitchen.')->group(function () {
-            Route::get('/home', [KitchenController::class, 'home'])->name('home');
-            Route::post('/served', [KitchenController::class, 'markAsServed'])->name('served');
-            Route::post('/unlimited/refill', [KitchenController::class, 'storeUnlimitedRefill'])->name('unlimited.refill');
-            Route::post('/orders/additional', [KitchenController::class, 'storeAdditionalOrder'])->name('orders.additional');
-        });
+    // CASHIER ROUTES
+    Route::middleware('role:Cashier')->prefix('cashier')->name('cashier.')->group(function () {
+        Route::get('/home', [CashierController::class, 'home'])->name('home');
+        Route::get('/dashboard', [CashierController::class, 'home']);
+    });
 
-        // CASHIER ROUTES
-        Route::middleware('role:Cashier')->prefix('cashier')->name('cashier.')->group(function () {
-            Route::get('/home', [CashierController::class, 'home'])->name('home');
-            Route::get('/dashboard', [CashierController::class, 'home']);
-            Route::get('/payments/{id}', [CashierController::class, 'showPayment'])->name('showPayment');
-            Route::post('/print-receipt', [CashierController::class, 'printReceipt']);
-            Route::post('/test-printer', [CashierController::class, 'testPrinter']);
-        });
+    Route::middleware('role:Cashier')->group(function () {
+        Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
+        Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
+        Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
+        Route::post('/cashier/check-customer', [CashierController::class, 'checkCustomer'])->name('cashier.check.customer');
+    });
 
-        Route::middleware('role:Cashier')->group(function () {
-            Route::get('/orders/{reservationId}', [CashierController::class, 'getOrders']);
-            Route::post('/process-payment', [CashierController::class, 'processPayment'])->name('cashier.process-payment');
-            Route::get('/transaction-receipt/{transactionId}', [CashierController::class, 'getTransactionReceipt'])->name('cashier.transaction-receipt');
-            Route::post('/cashier/check-customer', [CashierController::class, 'checkCustomer'])->name('cashier.check.customer');
-        });
-
-        // WAIT STAFF ROUTES
-        Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {
-            Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
-        });
-        
-    }); 
+    // WAIT STAFF ROUTES
+    Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {
+        Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
+    });
     
-}); 
+});

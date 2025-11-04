@@ -468,7 +468,6 @@
 
 @include('admin.layouts.script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function debounce(func, wait) {
         let timeout;
@@ -531,7 +530,6 @@
     }
 
     function initializeMenuFormValidation() {
-        // Menu Item Validation
         const menuItemInput = document.getElementById('menu_item');
         const menuItemError = document.getElementById('menuItemError');
 
@@ -570,7 +568,6 @@
             });
         }
 
-        // Category Validation
         const categoryInput = document.getElementById('category');
         const categoryError = document.getElementById('categoryError');
 
@@ -591,7 +588,6 @@
             });
         }
 
-        // Image Validation
         const imageInput = document.getElementById('image');
         const imageError = document.getElementById('imageError');
 
@@ -608,7 +604,7 @@
                 }
 
                 const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-                const maxSize = 2 * 1024 * 1024; // 2MB
+                const maxSize = 2 * 1024 * 1024; 
 
                 if (!allowedTypes.includes(file.type)) {
                     imageError.textContent = 'Only JPG, JPEG, PNG, and GIF images are allowed';
@@ -632,7 +628,6 @@
             });
         }
 
-        // Regular Price Validation
         const regularPriceInput = document.getElementById('regular_price');
         const regularPriceError = document.getElementById('regularPriceError');
 
@@ -661,7 +656,6 @@
         }
     }
 
-    // Add Menu Modal Events
     $('#addMenuModal').on('shown.bs.modal', function () {
         initializeMenuFormValidation();
         $('#menu_item').focus();
@@ -674,7 +668,6 @@
     });
 
     function initializeEditMenuFormValidation(itemId) {
-        // Menu Item Validation
         const menuItemInput = document.getElementById('edit_menu_item' + itemId);
         const menuItemError = document.getElementById('edit_menuItemError' + itemId);
 
@@ -713,7 +706,6 @@
             });
         }
 
-        // Category Validation
         const categoryInput = document.getElementById('edit_category' + itemId);
         const categoryError = document.getElementById('edit_categoryError' + itemId);
 
@@ -734,7 +726,6 @@
             });
         }
 
-        // Regular Price Validation
         const regularPriceInput = document.getElementById('edit_regular_price' + itemId);
         const regularPriceError = document.getElementById('edit_regularPriceError' + itemId);
 
@@ -1486,7 +1477,6 @@
         });
     });
 
-    // Add CSS to hide number input spinners
     const style = document.createElement('style');
     style.textContent = `
         input[type="number"].ingredient-qty::-webkit-outer-spin-button,
@@ -1504,7 +1494,6 @@
     `;
     document.head.appendChild(style);
 
-    // Session flash messages
     @if(session('success'))
         @if(session('new_menu_name'))
             $('#newMenuName').text("{{ session('new_menu_name') }}");

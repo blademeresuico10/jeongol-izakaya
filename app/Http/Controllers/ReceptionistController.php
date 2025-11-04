@@ -16,7 +16,6 @@ use App\Models\reservationPayment;
 use App\Models\walkin;
 use App\Models\table;
 
-
 class ReceptionistController extends Controller
 {
     public function home()
@@ -321,7 +320,6 @@ class ReceptionistController extends Controller
 
         $menuItems = DB::table('menu')->select('menu_item', 'regular_price as price')->get();
 
-        // Get valid walk-ins within their time frame
         $validWalkIns = DB::table('walk_ins')
             ->leftJoin('transactions', 'transactions.walk_in_id', '=', 'walk_ins.id')
             ->whereDate('walk_ins.started_at', $targetDate)
@@ -334,7 +332,6 @@ class ReceptionistController extends Controller
             })
             ->pluck('walk_ins.id');
 
-        // Get valid reservations within their time frame
         $validReservations = DB::table('reservations')
             ->leftJoin('transactions', 'transactions.reservation_id', '=', 'reservations.id')
             ->whereDate('reservations.started_at', $targetDate)
@@ -765,7 +762,6 @@ class ReceptionistController extends Controller
         }
     }
 
-    // ADD THESE HELPER METHODS TO ReceptionistController:
     private function createNotification($userId, $reservationId, $message)
     {
         DB::table('reservation_notifications')->insert([

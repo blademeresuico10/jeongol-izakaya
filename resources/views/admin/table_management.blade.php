@@ -204,7 +204,6 @@
     let currentPage = 1;
     let showDeleted = {{ request()->has('show_deleted') ? 'true' : 'false' }};
 
-    // Load tables with pagination
     function loadTables(page = 1) {
         currentPage = page;
 
@@ -214,27 +213,22 @@
             success: function (data) {
                 const $tbody = $('#tablesTableBody').empty();
                 
-                // Update status label
                 $('#tableStatusLabel').text(showDeleted ? '(Deleted)' : '');
                 
-                // Show/hide add button
                 if (showDeleted) {
                     $('#addTableBtn').hide();
                 } else {
                     $('#addTableBtn').show();
-                    // Update next table number in add modal
                     $('input[name="table_number"]').val(data.nextTableNumber);
                 }
                 
                 if (data.tables.data && data.tables.data.length) {
-                    // Clear existing edit modals
                     $('.edit-table-modal').remove();
                     
                     data.tables.data.forEach(table => {
                         let actionsHtml = '';
                         
                         if (table.deleted_at) {
-                            // Deleted table actions
                             actionsHtml = `
                                 <button type="button" class="btn btn-sm btn-success"
                                     onclick="showRestoreModal(${table.id}, '${escapeHtml(table.table_number)}')"
@@ -248,7 +242,6 @@
                                 </button>
                             `;
                         } else {
-                            // Active table actions
                             actionsHtml = `
                                 <a href="#" title="Edit" data-toggle="modal"
                                     data-target="#editTableModal${table.id}"
@@ -262,7 +255,6 @@
                                 </button>
                             `;
                             
-                            // Create edit modal for this table
                             const editModalHtml = `
                                 <div class="modal fade edit-table-modal" id="editTableModal${table.id}" tabindex="-1" data-backdrop="static" data-keyboard="false">
                                     <div class="modal-dialog" role="document">
@@ -291,7 +283,6 @@
                                 </div>
                             `;
                             
-                            // Append edit modal to body
                             $('body').append(editModalHtml);
                         }
                         
@@ -304,7 +295,6 @@
                         `);
                     });
                     
-                    // Bind submit event to dynamically created update forms
                     $('.update-table-form').on('submit', function (e) {
                         const submitButton = $(this).find('button[type="submit"]');
                         submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
@@ -330,7 +320,6 @@
         });
     }
 
-    // Render pagination
     function renderPagination(data) {
         const $pagination = $('#tablesPagination').empty();
 
@@ -339,7 +328,6 @@
         const nav = $('<nav><ul class="pagination pagination-sm justify-content-center mb-0"></ul></nav>');
         const ul = nav.find('ul');
 
-        // Previous button
         ul.append(`
             <li class="page-item ${data.current_page <= 1 ? 'disabled' : ''}">
                 <a class="page-link ${data.current_page <= 1 ? 'disabled' : ''}" 
@@ -351,7 +339,6 @@
             </li>
         `);
 
-        // Page numbers
         let startPage = Math.max(1, data.current_page - 1);
         let endPage = Math.min(data.last_page, data.current_page + 1);
 
@@ -371,7 +358,6 @@
             `);
         }
 
-        // Next button
         ul.append(`
             <li class="page-item ${data.current_page >= data.last_page ? 'disabled' : ''}">
                 <a class="page-link ${data.current_page >= data.last_page ? 'disabled' : ''}" 
@@ -386,20 +372,17 @@
         $pagination.html(nav);
     }
 
-    // Handle pagination clicks
     $(document).on('click', '#tablesPagination .page-link:not(.disabled)', function (e) {
         e.preventDefault();
         const page = $(this).data('page');
         if (page) loadTables(page);
     });
 
-    // Handle tab switching
     $('a[href*="table_management"]').on('click', function(e) {
         e.preventDefault();
         const href = $(this).attr('href');
         showDeleted = href.includes('show_deleted=true');
         
-        // Update button states
         if (showDeleted) {
             $('a[href*="table_management"]').removeClass('btn-primary btn-secondary').addClass('btn-outline-primary btn-outline-secondary');
             $(this).removeClass('btn-outline-secondary').addClass('btn-secondary');
@@ -411,7 +394,6 @@
         loadTables(1);
     });
 
-    // Escape HTML helper
     function escapeHtml(text) {
         if (!text) return '';
         const div = document.createElement('div');
@@ -419,10 +401,8 @@
         return div.innerHTML;
     }
 
-    // Initial load
     loadTables(1);
 
-    // Keep all your existing modal functions
     window.showDeleteModal = function (id, itemName) {
         try {
             const deleteItemNameElement = document.getElementById('deleteItemName');
@@ -524,7 +504,6 @@
             background: '#d4edda',
             color: '#155724'
         });
-        // Reload current page after showing success message
         setTimeout(() => loadTables(currentPage), 500);
     @endif
 
@@ -575,7 +554,6 @@
         });
     @endif
 
-    // Handle add table form submission
     $('form[action="{{ route('storeTable') }}"]').on('submit', function (e) {
         const submitButton = $(this).find('button[type="submit"]');
         submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
@@ -585,7 +563,6 @@
         $('input[name="capacity"]').focus();
     });
 
-    // Input validations
     $(document).on('input', 'input[type="number"]', function () {
         if (this.name === 'table_number' || this.name === 'capacity') {
             this.value = this.value.replace(/\D/g, '');

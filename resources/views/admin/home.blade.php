@@ -705,7 +705,6 @@
     let shownAlerts = new Set();
 
     document.addEventListener('DOMContentLoaded', function () {
-        // Show alerts for critical and low stock items
         const ingredients = document.querySelectorAll('.ingredient-item');
 
         ingredients.forEach((item, index) => {
@@ -713,16 +712,14 @@
             const alertElement = item.querySelector('.floating-stock-alert');
 
             if ((status === 'critical' || status === 'low') && alertElement) {
-                // Stagger the appearance of alerts
                 setTimeout(() => {
                     alertElement.style.display = 'block';
                     alertElement.setAttribute('data-status', status);
 
-                    // Auto-hide after 8 seconds
                     setTimeout(() => {
                         closeAlertWithAnimation(alertElement);
                     }, 8000);
-                }, index * 200); // 200ms delay between each alert
+                }, index * 200);
             }
         });
     });

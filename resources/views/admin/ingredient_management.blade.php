@@ -124,7 +124,6 @@
                             </div>
                         </div>
 
-                        <!-- Stock Order Tab -->
                         <div class="tab-pane fade" id="stock-order" role="tabpanel" aria-labelledby="stock-order-tab">
                             @livewire('stock-order-management')
                         </div>
@@ -275,7 +274,6 @@
 <script>
 
     $(document).ready(function () {
-        // Initialize validation for ingredient form
         function initializeIngredientFormValidation() {
             const ingredientNameInput = document.getElementById('ingredient_name');
             const ingredientNameError = document.getElementById('ingredientNameError');
@@ -345,9 +343,6 @@
             }
         }
 
-
-
-        // Modal event handlers
         $('#addIngredientModal').on('shown.bs.modal', function () {
             initializeIngredientFormValidation();
             $('#ingredient_name').focus();
@@ -414,7 +409,6 @@
             lastweek: 1
         };
 
-        // Load stocks
         function loadStocks(page = 1) {
             currentPages.stocks = page;
             $.get(`/ingredient_management/stocks?page=${page}`, function (data) {
@@ -444,7 +438,6 @@
             });
         }
 
-        // Load batches
         function loadBatches(period, page = 1) {
             const pre = period === 'thisweek' ? 'thisWeek' : 'lastWeek';
             currentPages[period] = page;
@@ -491,7 +484,6 @@
             });
         }
 
-        // Render pagination
         function renderPagination(selector, data, section) {
             const $pagination = $(selector);
             $pagination.empty();
@@ -539,7 +531,6 @@
             $pagination.html(nav);
         }
 
-        // Pagination click handler
         $(document).on('click', '.page-link:not(.disabled)', function (e) {
             e.preventDefault();
             const page = $(this).data('page');
@@ -558,7 +549,6 @@
             }
         });
 
-        // Tab loading
         loadStocks(1);
 
         let tabsLoaded = {
@@ -631,12 +621,10 @@
             }
         });
 
-        // Additional validation on input to prevent decimal entry for pieces
         $('#request_quantity').on('input', function () {
             const unit = $('#request_unit').text();
 
             if (unit && (unit.toLowerCase() === 'pieces' || unit.toLowerCase() === 'pcs' || unit.toLowerCase() === 'piece')) {
-                // Remove any decimal point for pieces
                 let value = $(this).val();
                 if (value.includes('.')) {
                     $(this).val(Math.floor(parseFloat(value)));
@@ -661,7 +649,6 @@
                 return;
             }
 
-            // Additional validation for pieces
             if (unit && (unit.toLowerCase() === 'pieces' || unit.toLowerCase() === 'pcs' || unit.toLowerCase() === 'piece')) {
                 if (parseFloat(quantity) % 1 !== 0) {
                     Swal.fire({
@@ -719,7 +706,7 @@
         });
 
         $('#addStockModal').on('shown.bs.modal', function () {
-            loadAvailableIngredients(); // Load fresh data when modal opens
+            loadAvailableIngredients(); 
         });
 
         $('#addStockModal').on('hidden.bs.modal', function () {
@@ -727,7 +714,6 @@
             $('#request_unit').text('unit');
         });
 
-        // Special submit function for stock orders
         function submitFormStockOrder(form, url) {
             $.ajax({
                 url: url,
@@ -761,8 +747,6 @@
             });
         }
 
-
-        // Submit form helper
         function submitForm(form, url, msg, refreshSection) {
             $.ajax({
                 url,
@@ -800,7 +784,6 @@
             });
         }
 
-        // Update batch
         function updateBatch() {
             const id = $('#editBatchId').val();
             $.ajax({
@@ -843,7 +826,6 @@
             });
         }
 
-        // Edit batch button
         $(document).on('click', '.btn-edit-batch', function () {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
@@ -856,7 +838,6 @@
             $('#editBatchModal').modal('show');
         });
 
-        // Delete batch button
         $(document).on('click', '.btn-del-batch', function () {
             const id = $(this).data('id');
             const name = $(this).data('name');

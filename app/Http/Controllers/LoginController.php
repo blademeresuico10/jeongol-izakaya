@@ -279,7 +279,6 @@ class LoginController extends Controller
             return back()->withErrors(['email' => 'Invalid reset token.']);
         }
 
-        // Find admin user
         $admin = User::where('email', $request->email)
             ->where('role', 'Admin')
             ->where('status', 'Active')
@@ -295,10 +294,10 @@ class LoginController extends Controller
             return back()->withErrors(['email' => 'Admin account not found.']);
         }
 
-        // Update password
+      
         $admin->update(['password' => Hash::make($request->password)]);
 
-        // Clean up
+       
         DB::table('password_reset_tokens')->where('email', $request->email)->delete();
 
         if ($request->expectsJson()) {
@@ -317,7 +316,7 @@ class LoginController extends Controller
         $user = Auth::user();
         $userRole = $user->role ?? null;
 
-        // Mark user as logged out in database
+      
         if ($user) {
             $user->markAsLoggedOut();
         }
@@ -333,9 +332,7 @@ class LoginController extends Controller
         }
     }
 
-    /**
-     * Force logout endpoint for AJAX/API calls
-     */
+   
     public function forceLogout(Request $request)
     {
         $user = Auth::user();

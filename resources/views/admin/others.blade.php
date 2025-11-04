@@ -181,7 +181,7 @@
                                 <div class="card-body p-0 flex-grow-1" style="overflow-y: auto; max-height: 215px;">
                                     <table class="table table-sm table-bordered mb-0" style="table-layout: fixed;">
                                         <tbody>
-                                            @forelse($hours as $hour)
+                                            @forelse($hours->sortBy('date') as $hour)
                                                 <tr>
                                                     <td class="py-1 px-2" style="width: 60%;">
                                                         <small
@@ -673,30 +673,88 @@
                 return time.substring(0, 5);
             };
 
-            $('#operatingOpenTime').val(formatTime(override.open_time));
-            $('#operatingCloseTime').val(formatTime(override.close_time));
-            $('#operatingClosed').prop('checked', override.is_closed);
+            const originalOpenTime = formatTime(override.open_time);
+            const originalCloseTime = formatTime(override.close_time);
+            const originalIsClosed = override.is_closed;
 
-            $('#operatingHoursForm').attr('action', `/admin/operating-hours/${override.id}`);
+            $('#operatingOpenTime').val(originalOpenTime);
+            $('#operatingCloseTime').val(originalCloseTime);
+            $('#operatingClosed').prop('checked', originalIsClosed);
+
+            $('#operatingHoursForm').attr('action', `/operating-hours/${override.id}`);
             $('#formMethod').val('PUT');
+
+            $('#operatingHoursForm').data('originalOpenTime', originalOpenTime);
+            $('#operatingHoursForm').data('originalCloseTime', originalCloseTime);
+            $('#operatingHoursForm').data('originalIsClosed', originalIsClosed);
         } else {
             $('#recordId').val('');
             $('#operatingOpenTime').val('11:30');
             $('#operatingCloseTime').val('20:00');
             $('#operatingClosed').prop('checked', false);
 
-            $('#operatingHoursForm').attr('action', '/admin/operating-hours');
+            $('#operatingHoursForm').attr('action', '/operating-hours');
             $('#formMethod').val('POST');
+
+            $('#operatingHoursForm').removeData('originalOpenTime originalCloseTime originalIsClosed');
         }
 
         if (source === 'today' || isToday) {
-            $('#operatingOpenTime').prop('disabled', true);
-            $('#operatingCloseTime').prop('disabled', true);
+            $('#operatingOpenTime').prop('readonly', true).addClass('bg-light');
+            $('#operatingCloseTime').prop('readonly', true).addClass('bg-light');
+            $('#operatingOpenTime').prop('disabled', false);
+            $('#operatingCloseTime').prop('disabled', false);
         } else {
+            $('#operatingOpenTime').prop('readonly', false).removeClass('bg-light');
+            $('#operatingCloseTime').prop('readonly', false).removeClass('bg-light');
             toggleOperatingTimes(document.getElementById('operatingClosed'));
         }
 
+        checkForChanges();
+
         $('#operatingHoursModal').modal('show');
+    }
+
+    function checkForChanges() {
+        const form = $('#operatingHoursForm');
+        const originalOpenTime = form.data('originalOpenTime');
+        const originalCloseTime = form.data('originalCloseTime');
+        const originalIsClosed = form.data('originalIsClosed');
+
+        if (originalOpenTime === undefined) {
+            $('#operatingHoursForm button[type="submit"]').prop('disabled', false);
+            return;
+        }
+
+        const currentOpenTime = $('#operatingOpenTime').val();
+        const currentCloseTime = $('#operatingCloseTime').val();
+        const currentIsClosed = $('#operatingClosed').prop('checked');
+
+        const hasChanged =
+            currentOpenTime !== originalOpenTime ||
+            currentCloseTime !== originalCloseTime ||
+            currentIsClosed !== originalIsClosed;
+
+        $('#operatingHoursForm button[type="submit"]').prop('disabled', !hasChanged);
+    }
+
+    $(document).ready(function () {
+        $('#operatingOpenTime, #operatingCloseTime, #operatingClosed').on('change input', function () {
+            checkForChanges();
+        });
+    });
+
+    function toggleOperatingTimes(checkbox) {
+        const openTime = document.getElementById('operatingOpenTime');
+        const closeTime = document.getElementById('operatingCloseTime');
+        const isReadonly = openTime.hasAttribute('readonly');
+
+        if (openTime && closeTime && !isReadonly) {
+            openTime.disabled = checkbox.checked;
+            closeTime.disabled = checkbox.checked;
+            openTime.required = !checkbox.checked;
+            closeTime.required = !checkbox.checked;
+        }
     }
 
     function toggleOperatingTimes(checkbox) {
@@ -709,7 +767,6 @@
             closeTime.required = !checkbox.checked;
         }
     }
-
     function toggleOperatingTimes(checkbox) {
         const openTime = document.getElementById('operatingOpenTime');
         const closeTime = document.getElementById('operatingCloseTime');
@@ -909,7 +966,6 @@
             });
         });
 
-        // Add Stock Alert
         $('#addStockAlertForm').on('submit', function (e) {
             e.preventDefault();
 
@@ -948,7 +1004,6 @@
             });
         });
 
-        // Delete Stock Alert
         $(document).on('click', '.delete-stock', function () {
             const id = $(this).data('id');
             const ingredient = $(this).data('ingredient');

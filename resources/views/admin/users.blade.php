@@ -167,6 +167,7 @@
                                                 <option value="Receptionist">Receptionist</option>
                                                 <option value="Cashier">Cashier</option>
                                                 <option value="Kitchen Staff">Kitchen Staff</option>
+                                                <option value="Wait Staff">Wait Staff</option>
                                             </select>
                                             <div>
                                                 <small id="roleError" class="text-danger text-sm"
@@ -336,6 +337,7 @@
                                                     <option value="Cashier" {{ $user->role == 'Cashier' ? 'selected' : '' }}>
                                                         Cashier</option>
                                                     <option value="Kitchen Staff" {{ $user->role == 'Kitchen Staff' ? 'selected' : '' }}>Kitchen Staff</option>
+                                                    <option value="Wait Staff" {{ $user->role == 'Wait Staff' ? 'selected' : '' }}>Wait Staff</option>
                                                 </select>
                                                 <div>
                                                     <small id="edit_roleError{{ $user->id }}" class="text-danger text-sm"
@@ -693,27 +695,20 @@
                 const result = calculatePasswordStrength(password);
                 $(`#${containerId}`).show();
 
-                // Update progress bar
                 const progressBar = $(`#strengthProgress_${passwordInputId}`);
                 progressBar.css('width', `${result.strength}%`);
 
-                // Remove ALL possible color classes first
                 progressBar.removeClass('bg-danger bg-warning bg-info bg-success');
 
-                // Add the correct color class based on strength
                 progressBar.addClass(`bg-${result.color}`);
 
-                // Update badge text and color
                 const strengthText = $(`#strengthText_${passwordInputId}`);
                 strengthText.text(result.level);
 
-                // Remove ALL possible badge color classes first
                 strengthText.removeClass('badge-danger badge-warning badge-info badge-success badge-secondary');
 
-                // Add the correct badge color class
                 strengthText.addClass(`badge-${result.color}`);
 
-                // Update input validation state
                 $(this).removeClass('is-invalid is-valid');
                 if (result.strength < 40) {
                     $(this).addClass('is-invalid');
@@ -887,7 +882,6 @@
                 });
             }
 
-            // FIXED: Use correct IDs without userId
             const usernameInput = document.getElementById('username');
             const usernameError = document.getElementById('usernameError');
 
@@ -922,7 +916,6 @@
                 });
             }
 
-            // FIXED: Use correct IDs without userId
             const emailInput = document.getElementById('email');
             const emailError = document.getElementById('emailError');
 
@@ -1146,7 +1139,6 @@
                 });
             }
 
-            // FIXED: Use correct IDs with userId
             const usernameInput = document.getElementById('edit_username' + userId);
             const usernameError = document.getElementById('edit_usernameError' + userId);
 
@@ -1181,7 +1173,6 @@
                 });
             }
 
-            // FIXED: Use correct IDs with userId
             const emailInput = document.getElementById('edit_email' + userId);
             const emailError = document.getElementById('edit_emailError' + userId);
 
@@ -1271,7 +1262,6 @@
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
 
-            // Check if there are any validation errors
             const hasInvalidFields = $(this).find('.is-invalid').length > 0;
 
             if (hasInvalidFields) {
@@ -1417,7 +1407,7 @@
             @endif
 
         $('form[action*="updateuser"]').on('submit', function (e) {
-            e.preventDefault(); // Always prevent default first
+            e.preventDefault(); 
 
             const form = $(this);
             const userId = form.attr('id').replace('editUserForm', '');
@@ -1427,7 +1417,6 @@
             const hasInvalidFields = form.find('.is-invalid').length > 0;
             const currentPasswordWarning = $(`#currentPasswordWarning_edit_password${userId}`).is(':visible');
 
-            // Check for validation errors
             if (hasInvalidFields || currentPasswordWarning) {
                 Swal.fire({
                     icon: 'error',

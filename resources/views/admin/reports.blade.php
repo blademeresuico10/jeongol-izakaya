@@ -119,7 +119,6 @@
                             <i class="fas fa-filter mr-2 text-gray-600"></i>Filter by Date Range
                         </h5>
 
-                        <!-- Quick Presets -->
                         <div class="mb-4">
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Quick Select</label>
                             <div class="flex flex-wrap gap-2">
@@ -293,7 +292,6 @@
                             </div>
                         </div>
 
-                        <!-- Date Range Filter (conditionally shown) -->
                         <div id="inventory-date-section">
                             <hr class="my-6 border-gray-200">
 
@@ -301,7 +299,6 @@
                                 <i class="fas fa-filter mr-2 text-gray-600"></i>Filter by Date Range
                             </h5>
 
-                            <!-- Quick Presets -->
                             <div class="mb-4">
                                 <label class="text-sm font-medium text-gray-600 mb-2 block">Quick Select</label>
                                 <div class="flex flex-wrap gap-2">
@@ -374,7 +371,6 @@
                             <i class="fas fa-filter mr-2 text-gray-600"></i>Filter by Date Range
                         </h5>
 
-                        <!-- Quick Presets -->
                         <div class="mb-4">
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Quick Select</label>
                             <div class="flex flex-wrap gap-2">
@@ -399,7 +395,6 @@
                             </div>
                         </div>
 
-                        <!-- Custom Date Range -->
                         <div>
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Custom Date Range</label>
                             <div class="flex gap-3 items-center">
@@ -429,7 +424,6 @@
                         </div>
                     </div>
 
-                    <!-- Report Content Area -->
                     <div id="menu-report-content"></div>
                 </div>
 
@@ -442,12 +436,10 @@
     let selectedInventoryType = null;
     const reportTypesWithDateFilter = ['stock-movement', 'consumption', 'expired'];
 
-    // ===== DOM READY =====
     document.addEventListener('DOMContentLoaded', function () {
         const tabLinks = document.querySelectorAll('.tab-link');
         const tabPanes = document.querySelectorAll('.tab-pane');
 
-        // Tab navigation
         tabLinks.forEach(link => {
             link.addEventListener('click', function () {
                 const targetTab = this.getAttribute('data-tab');
@@ -471,7 +463,6 @@
             });
         });
 
-        // Preset buttons
         const presetButtons = document.querySelectorAll('.preset-btn');
         presetButtons.forEach(btn => {
             btn.addEventListener('click', function () {
@@ -494,7 +485,6 @@
             });
         });
 
-        // Generate buttons
         const generateButtons = document.querySelectorAll('.generate-btn');
         generateButtons.forEach(btn => {
             btn.addEventListener('click', function () {
@@ -503,7 +493,6 @@
             });
         });
 
-        // Export buttons
         const exportButtons = document.querySelectorAll('.export-btn');
         exportButtons.forEach(btn => {
             btn.addEventListener('click', function () {
@@ -512,7 +501,6 @@
             });
         });
 
-        // Inventory type buttons
         const inventoryTypeButtons = document.querySelectorAll('.inventory-type-btn');
         const dateSection = document.getElementById('inventory-date-section');
 
@@ -543,7 +531,6 @@
         });
     });
 
-    // ===== HELPER FUNCTIONS =====
 
     function getPresetDates(preset) {
         const today = new Date();
@@ -592,7 +579,6 @@
         let startDate, endDate;
 
         if (reportType === 'inventory') {
-            // Check if report type is selected
             if (!selectedInventoryType) {
                 showAlert('error', 'Please select a report type first');
                 return;
@@ -987,8 +973,6 @@
         }
     }
 
-
-    // Stock Movement Report
     function generateStockMovementReport(data) {
         const summary = data.summary;
         const movements = data.movements;
@@ -1283,7 +1267,6 @@
                 }
 
                 return movements.map(row => {
-                    // Determine badge class based on type
                     let badgeClass = '';
                     let statusLabel = '';
 
@@ -1438,7 +1421,6 @@
         `;
     }
 
-    // Export to PDF Function
     function exportToPDF(reportType, button) {
         const originalHTML = button.innerHTML;
         button.disabled = true;
@@ -1484,7 +1466,6 @@
             url = `/reports/inventory/pdf?start_date=${startDate}&end_date=${endDate}&report_type=${selectedInventoryType}`;
         }
 
-        // Use fetch to check for errors
         fetch(url)
             .then(response => {
                 if (!response.ok) {
@@ -1493,7 +1474,6 @@
                     });
                 }
 
-                // Get filename from Content-Disposition header or use default
                 let filename = 'report.pdf';
                 const disposition = response.headers.get('Content-Disposition');
                 if (disposition && disposition.includes('filename=')) {
@@ -1502,7 +1482,6 @@
                         filename = filenameMatch[1].replace(/['"]/g, '');
                     }
                 } else {
-                    // Fallback: Generate filename based on report type
                     if (reportType === 'Inventory Report' && selectedInventoryType) {
                         const typeNames = {
                             'stock-movement': 'Stock_Movement',
