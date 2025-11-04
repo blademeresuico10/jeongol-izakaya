@@ -174,63 +174,61 @@
                                 </button>
                             </div>
 
-                           <div class="card border d-flex flex-column" style="height: 250px;">
-    <div class="card-header bg-light py-1 px-2">
-        <small class="font-weight-bold">Custom Dates</small>
-    </div>
-    <div class="card-body p-0 flex-grow-1" style="overflow-y: auto; max-height: 215px;">
-        <table class="table table-sm table-bordered mb-0" style="table-layout: fixed;">
-            <tbody>
-                @forelse($hours->filter(function($hour) {
-                    return \Carbon\Carbon::parse($hour->date)->isAfter(\Carbon\Carbon::today());
-                })->sortBy('date') as $hour)
-                    <tr>
-                        <td class="py-1 px-2" style="width: 60%;">
-                            <small
-                                class="font-weight-bold d-block">{{ \Carbon\Carbon::parse($hour->date)->format('M d') }}</small>
-                            <small class="text-muted d-block text-truncate">
-                                @if($hour->is_closed)
-                                    Closed
-                                @else
-                                    {{ date('g:i A', strtotime($hour->open_time)) }} -
-                                    {{ date('g:i A', strtotime($hour->close_time)) }}
-                                @endif
-                            </small>
-                        </td>
-                        <td class="py-1 px-1 text-center" style="width: 40%;">
-                            <div class="d-flex justify-content-center">
-                                <button class="btn btn-xs btn-primary p-1 mr-1 edit-override"
-                                    onclick="openOperatingHoursModal('{{ \Carbon\Carbon::parse($hour->date)->format('Y-m-d') }}', 'calendar')"
-                                    data-id="{{ $hour->id }}" data-date="{{ $hour->date }}"
-                                    data-open="{{ $hour->open_time }}"
-                                    data-close="{{ $hour->close_time }}"
-                                    data-closed="{{ $hour->is_closed }}"
-                                    data-is-default="{{ $hour->is_default }}">
-                                    <i class="fas fa-edit" style="font-size: 10px;"></i>
-                                </button>
-                                <form
-                                    action="{{ route('admin.operating_hours.delete', $hour->id) }}"
-                                    method="POST" class="d-inline delete-override-form">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-xs btn-danger p-1">
-                                        <i class="fas fa-trash" style="font-size: 10px;"></i>
-                                    </button>
-                                </form>
+                            <div class="card border d-flex flex-column" style="height: 250px;">
+                                <div class="card-header bg-light py-1 px-2">
+                                    <small class="font-weight-bold">Custom Dates</small>
+                                </div>
+                                <div class="card-body p-0 flex-grow-1" style="overflow-y: auto; max-height: 215px;">
+                                    <table class="table table-sm table-bordered mb-0" style="table-layout: fixed;">
+                                        <tbody>
+                                            @forelse($hours as $hour)
+                                                <tr>
+                                                    <td class="py-1 px-2" style="width: 60%;">
+                                                        <small
+                                                            class="font-weight-bold d-block">{{ \Carbon\Carbon::parse($hour->date)->format('M d') }}</small>
+                                                        <small class="text-muted d-block text-truncate">
+                                                            @if($hour->is_closed)
+                                                                Closed
+                                                            @else
+                                                                {{ date('g:i A', strtotime($hour->open_time)) }} -
+                                                                {{ date('g:i A', strtotime($hour->close_time)) }}
+                                                            @endif
+                                                        </small>
+                                                    </td>
+                                                    <td class="py-1 px-1 text-center" style="width: 40%;">
+                                                        <div class="d-flex justify-content-center">
+                                                            <button class="btn btn-xs btn-primary p-1 mr-1 edit-override"
+                                                                onclick="openOperatingHoursModal('{{ \Carbon\Carbon::parse($hour->date)->format('Y-m-d') }}', 'calendar')"
+                                                                data-id="{{ $hour->id }}" data-date="{{ $hour->date }}"
+                                                                data-open="{{ $hour->open_time }}"
+                                                                data-close="{{ $hour->close_time }}"
+                                                                data-closed="{{ $hour->is_closed }}"
+                                                                data-is-default="{{ $hour->is_default }}">
+                                                                <i class="fas fa-edit" style="font-size: 10px;"></i>
+                                                            </button>
+                                                            <form
+                                                                action="{{ route('admin.operating_hours.delete', $hour->id) }}"
+                                                                method="POST" class="d-inline delete-override-form">
+                                                                @csrf
+                                                                @method('DELETE')
+                                                                <button type="submit" class="btn btn-xs btn-danger p-1">
+                                                                    <i class="fas fa-trash" style="font-size: 10px;"></i>
+                                                                </button>
+                                                            </form>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @empty
+                                                <tr>
+                                                    <td colspan="2" class="text-center py-2">
+                                                        <small class="text-muted">No custom operating hours</small>
+                                                    </td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </td>
-                    </tr>
-                @empty
-                    <tr>
-                        <td colspan="2" class="text-center py-2">
-                            <small class="text-muted">No custom operating hours</small>
-                        </td>
-                    </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
                         </div>
                         <div class="col-md-9">
                             <div id="calendar-container" class="border rounded p-2"></div>
@@ -251,9 +249,9 @@
                         <form id="operatingHoursForm" method="POST">
                             @csrf
                             <input type="hidden" name="_method" id="formMethod" value="POST">
+                            <input type="hidden" name="date" id="operatingDate">
                             <input type="hidden" id="recordId">
                             <div class="modal-body p-2">
-
                                 <div class="form-group mb-2">
                                     <label class="small mb-1">Opening</label>
                                     <input type="time" name="open_time" id="operatingOpenTime"
@@ -649,7 +647,6 @@
 
     function openOperatingHoursModal(dateStr, source = 'calendar') {
         const datePart = dateStr.split(' ')[0];
-
         const override = overrides[datePart];
         const isToday = datePart === '{{ now()->toDateString() }}';
 
@@ -666,12 +663,7 @@
             $('#operatingHoursModalTitle').text(`Edit Hours - ${formattedDate}`);
         }
 
-        let dateInput = $('#operatingDate');
-        if (dateInput.length === 0) {
-            $('#operatingHoursForm').prepend('<input type="hidden" name="date" id="operatingDate">');
-            dateInput = $('#operatingDate');
-        }
-        dateInput.val(datePart);
+        $('#operatingDate').val(datePart);
 
         if (override) {
             $('#recordId').val(override.id);
@@ -693,13 +685,31 @@
             $('#operatingCloseTime').val('20:00');
             $('#operatingClosed').prop('checked', false);
 
-            $('#operatingHoursForm').attr('action', '{{ route("admin.operating_hours.store") }}');
+            $('#operatingHoursForm').attr('action', '/admin/operating-hours');
             $('#formMethod').val('POST');
         }
 
-        toggleOperatingTimes(document.getElementById('operatingClosed'));
+        if (source === 'today' || isToday) {
+            $('#operatingOpenTime').prop('disabled', true);
+            $('#operatingCloseTime').prop('disabled', true);
+        } else {
+            toggleOperatingTimes(document.getElementById('operatingClosed'));
+        }
+
         $('#operatingHoursModal').modal('show');
     }
+
+    function toggleOperatingTimes(checkbox) {
+        const openTime = document.getElementById('operatingOpenTime');
+        const closeTime = document.getElementById('operatingCloseTime');
+        if (openTime && closeTime) {
+            openTime.disabled = checkbox.checked;
+            closeTime.disabled = checkbox.checked;
+            openTime.required = !checkbox.checked;
+            closeTime.required = !checkbox.checked;
+        }
+    }
+
     function toggleOperatingTimes(checkbox) {
         const openTime = document.getElementById('operatingOpenTime');
         const closeTime = document.getElementById('operatingCloseTime');

@@ -1416,7 +1416,6 @@ class AdminController extends Controller
         $ordersCreated = 0;
 
         foreach ($ingredients as $ingredient) {
-            // Use the correct method name from your ingredients model
             $order = $ingredient->checkAndCreateStockOrder();
 
             if ($order) {
@@ -1435,7 +1434,6 @@ class AdminController extends Controller
         ]);
     }
 
-    // Add this method for getting available ingredients (without pending orders)
     public function getAvailableIngredients()
     {
         $ingredients = ingredients::with('stockAlertLevel')
@@ -2063,10 +2061,11 @@ class AdminController extends Controller
                 ]];
             }
             return [];
-        })->filter(); 
+        })->filter();
 
         $hours = OperatingHour::where('is_default', false)
-            ->where('date', '!=', now()->toDateString())
+            ->where('date', '>', now()->toDateString())
+            ->orderBy('date', 'asc')
             ->get();
 
         $todayHours = OperatingHour::where('date', now()->toDateString())
@@ -2103,7 +2102,6 @@ class AdminController extends Controller
 
         return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'));
     }
-
     public function storeOperatingHours(Request $request)
     {
         $request->validate([
