@@ -10,7 +10,6 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ReportsController;
 use Illuminate\Support\Facades\Response;
 use App\Http\Controllers\WaitingStaffController;
-use App\Models\OperatingHour;
 
 Route::get('/', [CustomerController::class, 'index'])->name('customer.index');
 Route::get('/customer/place_reservation', [CustomerController::class, 'place_reservation'])->name('customer.place_reservation');
@@ -18,6 +17,8 @@ Route::post('/customer/reserve', [CustomerController::class, 'storeReservation']
 Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])->name('customer.feedback');
 Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUnavailableTimes'])->name('customer.unavailable-times');
 Route::get('/customer/check-availability', [CustomerController::class, 'checkAvailability'])->name('customer.checkAvailability');
+Route::post('/customer/check-operating-hours', [CustomerController::class, 'checkOperatingHours'])
+    ->name('customer.check_operating_hours');
 
 Route::get('/file-serve/{folder}/{filename}', function ($folder, $filename) {
     $allowedFolders = ['jeongol_menu', 'payment_proofs', 'profile_pictures'];
@@ -57,7 +58,7 @@ Route::middleware('auth')->group(function () {
     // ADMIN ROUTES
     Route::middleware('role:Admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'home'])->name('admin.home');
-       
+
         // Profile
         Route::get('/myprofile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::put('/updateprofile/{id}', [AdminController::class, 'updateProfile'])->name('admin.updateprofile');
@@ -73,7 +74,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/forcedeleteuser/{id}', [AdminController::class, 'forceDelete'])->name('admin.forcedeleteuser');
         Route::post('/check-user-availability', [AdminController::class, 'checkUserAvailability'])->name('check.user.availability');
         Route::post('/check-current-password', [AdminController::class, 'checkCurrentPassword'])->name('check.current.password');
-        
+
         // Menu Management
         Route::get('/menu_management', [AdminController::class, 'menu_management'])->name('admin.menu_management');
         Route::post('/menu_management/storeMenu', [AdminController::class, 'storeMenu'])->name('storeMenu');
@@ -156,7 +157,7 @@ Route::middleware('auth')->group(function () {
 
         // Feedback
         Route::get('/feedback', [AdminController::class, 'feedback'])->name('admin.feedback');
-        
+
         // Reports
         Route::get('/reports', [ReportsController::class, 'index'])->name('admin.reports');
         Route::post('/reports/sales', [ReportsController::class, 'getSalesReport'])->name('admin.reports.sales');
@@ -213,5 +214,4 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Wait Staff')->prefix('waitstaff')->name('waitstaff.')->group(function () {
         Route::get('/home', [WaitingStaffController::class, 'home'])->name('home');
     });
-    
 });

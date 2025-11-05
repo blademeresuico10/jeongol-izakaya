@@ -7,6 +7,7 @@ use App\Models\table;
 use App\Models\Reservation;
 use App\Models\walkin;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class CustomerTableComponent extends Component
 {
@@ -31,7 +32,6 @@ class CustomerTableComponent extends Component
     {
         $availabilityData = $this->checkAvailability();
         
-        // Apply filter
         if ($this->filterStatus !== 'all') {
             $this->tables = collect($availabilityData)->filter(function($table) {
                 return match($this->filterStatus) {
@@ -97,8 +97,54 @@ class CustomerTableComponent extends Component
         return $availabilityData;
     }
 
+    public function isWithinOperatingHours()
+    {
+        if (!$this->searchDate || !$this->searchTime) {
+            return false;
+        }
+
+        try {
+            $selectedDateTime = Carbon::parse("{$this->searchDate} {$this->searchTime}");
+
+            $operatingHours = DB::table('operating_hours')
+                ->where('date', $this->searchDate)
+                ->first();
+
+            if (!$operatingHours) {
+                $operatingHours = DB::table('operating_hours')
+                    ->where('is_default', true)
+                    ->first();
+            }
+
+            if (!$operatingHours || $operatingHours->is_closed) {
+                return false;
+            }
+
+            $openTime = Carbon::parse("{$this->searchDate} " . $operatingHours->open_time);
+            $closeTime = Carbon::parse("{$this->searchDate} " . $operatingHours->close_time);
+
+            if ($closeTime->lessThan($openTime)) {
+                $closeTime->addDay();
+                if ($selectedDateTime->format('H:i') < $openTime->format('H:i')) {
+                    $selectedDateTime->addDay();
+                }
+            }
+
+            return $selectedDateTime->between($openTime, $closeTime);
+
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
     public function selectTable($tableId)
     {
+        // Check operating hours before allowing selection
+        if (!$this->isWithinOperatingHours()) {
+            session()->flash('error', 'The selected time is outside operating hours. Please choose a different time.');
+            return;
+        }
+
         $this->selectedTable = collect($this->tables)->firstWhere('id', $tableId);
         $this->showModal = true;
     }

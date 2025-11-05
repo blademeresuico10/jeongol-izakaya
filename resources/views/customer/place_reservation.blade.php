@@ -406,11 +406,16 @@
       <div class="flex items-center gap-2">
         <label for="date" class="text-black text-[16px] font-semibold">Date:</label>
         <input type="date" id="date" name="date"
-          class="px-2 py-1 rounded border border-black text-gray-600 text-[12px] focus:outline-none">
+          class="px-2 py-1 rounded border border-black text-gray-600 text-[12px] focus:outline-none"
+          min="{{ date('Y-m-d') }}">
 
         <label for="time" class="text-black text-[16px] font-semibold">Time:</label>
         <input type="time" id="time" name="time"
           class="px-2 py-1 rounded border border-black text-gray-600 text-[12px] focus:outline-none">
+      </div>
+
+      <div id="operatingHoursAlert" class="hidden mt-2 p-3 rounded-lg text-sm text-center max-w-md">
+        <p id="operatingHoursMessage"></p>
       </div>
 
     </div>
@@ -558,6 +563,29 @@
     </div>
   </div>
 
+  <div id="operatingHoursModal" class="fixed inset-0 hidden bg-black/80 items-center justify-center p-4 z-50"
+    style="backdrop-filter: blur(8px);">
+    <div
+      class="bg-gradient-to-br from-red-900 to-red-800 rounded-2xl shadow-2xl w-full max-w-md border-2 border-red-500">
+      <div class="p-6 text-center">
+        <div class="mb-4 flex justify-center">
+          <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
+            <i class="fas fa-clock text-white text-3xl"></i>
+          </div>
+        </div>
+        <h2 class="text-2xl font-bold text-white mb-3">Closed</h2>
+        <p id="modalOperatingMessage" class="text-gray-200 mb-6 text-base leading-relaxed">
+        </p>
+        <div class="space-y-3">
+          <button onclick="closeModal('operatingHoursModal')"
+            class="w-full px-6 py-3 bg-white text-red-900 rounded-lg font-bold hover:bg-gray-100 transition">
+            Got it
+          </button>
+
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="messageBox" style="
   display: none;
@@ -721,19 +749,27 @@
       return selectedDateTime >= acceptableTime;
     }
 
-    updateTableAvailability(tables) {
+    async updateTableAvailability(tables) {
       const dateInput = this.elements.searchDateInput;
       const timeInput = this.elements.searchTimeInput;
       const date = dateInput?.value;
       const time = timeInput?.value;
+
       const allowClick = date && time && this.isAcceptableTime(date, time);
+
+      const withinOperatingHours = await this.checkOperatingHoursForTables(date, time);
 
       if (date && time && !allowClick) {
         [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
         this.showMessageBox('Please reserve a table at least 2 hours before your arrival.', 'warning');
+      } else if (date && time && !withinOperatingHours) {
+        [dateInput, timeInput].forEach(input => input.classList.add('border-red-500'));
+        this.showMessageBox('Selected time is closed.', 'warning');
       } else {
         [dateInput, timeInput].forEach(input => input.classList.remove('border-red-500'));
       }
+
+      const canSelectTable = allowClick && withinOperatingHours;
 
       this.elements.tableLinks.forEach(link => {
         const tableId = parseInt(link.getAttribute('data-table-id'));
@@ -743,7 +779,7 @@
         const tableDiv = link.querySelector('.table');
         let existingLabel = tableDiv.querySelector('.booked-label');
 
-        tableDiv.classList.remove('booked', 'pending', 'available', 'bg-green-100', 'bg-gray-300', 'bg-blue-200');
+        tableDiv.classList.remove('booked', 'pending', 'available', 'bg-green-100', 'bg-gray-300', 'bg-blue-200', 'bg-gray-400');
 
         if (tableData.is_pending) {
           tableDiv.classList.add('pending', 'bg-blue-200');
@@ -757,7 +793,6 @@
           existingLabel.textContent = 'Processing';
 
         } else if (tableData.is_active) {
-          // ACTIVE/WALKIN status - Gray background, not clickable
           tableDiv.classList.add('booked', 'bg-gray-300');
           link.style.pointerEvents = 'none';
 
@@ -769,15 +804,51 @@
           existingLabel.textContent = 'Reserved';
 
         } else {
-          // AVAILABLE - Green background
-          tableDiv.classList.add('available', 'bg-green-100');
-          link.style.pointerEvents = allowClick ? 'auto' : 'none';
+          // Check if outside operating hours
+          if (!withinOperatingHours && date && time) {
+            tableDiv.classList.add('booked', 'bg-gray-400');
+            link.style.pointerEvents = 'none';
 
-          if (existingLabel) {
-            existingLabel.remove();
+            if (!existingLabel) {
+              existingLabel = document.createElement('div');
+              existingLabel.className = 'booked-label';
+              tableDiv.appendChild(existingLabel);
+            }
+            existingLabel.textContent = 'Closed';
+          } else {
+            tableDiv.classList.add('available', 'bg-green-100');
+            link.style.pointerEvents = canSelectTable ? 'auto' : 'none';
+
+            if (existingLabel) {
+              existingLabel.remove();
+            }
           }
         }
       });
+    }
+
+    // Add this new method to check operating hours
+    async checkOperatingHoursForTables(date, time) {
+      if (!date || !time) {
+        return true; // Allow if no date/time selected yet
+      }
+
+      try {
+        const response = await fetch('{{ route("customer.check_operating_hours") }}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+          },
+          body: JSON.stringify({ date, time })
+        });
+
+        const data = await response.json();
+        return data.is_open === true;
+      } catch (error) {
+        console.error('Error checking operating hours:', error);
+        return true; // Default to allowing if check fails
+      }
     }
 
     resetTableAvailability() {
@@ -1250,7 +1321,6 @@
     if (!customerNameInput || !customerNameError) return;
 
     customerNameInput.addEventListener('input', () => {
-      // Remove non-allowed characters
       customerNameInput.value = customerNameInput.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
 
       const value = customerNameInput.value.trim();
@@ -1313,8 +1383,6 @@
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
   }
-
-
 
   validateInputs() {
     let hasError = false;
@@ -1658,5 +1726,62 @@
 
 </script>
 
+<script>
+  let operatingCheckTimeout;
+
+  document.getElementById('date').addEventListener('change', checkOperatingHoursDebounced);
+  document.getElementById('time').addEventListener('change', checkOperatingHoursDebounced);
+
+  function checkOperatingHoursDebounced() {
+    clearTimeout(operatingCheckTimeout);
+    operatingCheckTimeout = setTimeout(checkOperatingHours, 500);
+  }
+
+  async function checkOperatingHours(autoCheck = false) {
+    const date = document.getElementById('date')?.value;
+    const time = document.getElementById('time')?.value;
+    const alert = document.getElementById('operatingHoursAlert');
+    const message = document.getElementById('operatingHoursMessage');
+
+    try {
+      const response = await fetch('{{ route("customer.check_operating_hours") }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        },
+        body: JSON.stringify(autoCheck ? {} : { date, time })
+      });
+
+      const data = await response.json();
+
+      alert.classList.remove('hidden');
+
+      if (autoCheck || !date || !time) {
+        alert.classList.remove('bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
+        alert.classList.add('bg-blue-100', 'text-blue-800');
+        message.innerHTML = `You can only reserve at: ${data.open_time} - ${data.close_time}`;
+      }
+    } catch (error) {
+
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    checkOperatingHours(true);
+  });
+
+  function openModal(id) {
+    const modal = document.getElementById(id);
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeModal(id) {
+    const modal = document.getElementById(id);
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+</script>
 
 </html>

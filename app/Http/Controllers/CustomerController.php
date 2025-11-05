@@ -101,11 +101,90 @@ class CustomerController extends Controller
                 'is_available' => !($isActiveReservation || $isBookedWalkin || $isPendingReservation),
                 'is_pending' => $isPendingReservation,
                 'is_active' => $isActiveReservation || $isBookedWalkin,
-                'is_currently_occupied' => $isCurrentlyOccupied // For debugging
+                'is_currently_occupied' => $isCurrentlyOccupied 
             ];
         }
 
         return response()->json(['tables' => $availabilityData]);
+    }
+
+    public function checkOperatingHours(Request $request)
+    {
+        $date = $request->input('date');
+        $time = $request->input('time');
+
+        $checkDate = $date ?: Carbon::today()->format('Y-m-d');
+
+        $operatingHours = DB::table('operating_hours')
+            ->where('date', $checkDate)
+            ->first();
+
+        if (!$operatingHours) {
+            $operatingHours = DB::table('operating_hours')
+                ->where('is_default', true)
+                ->first();
+        }
+
+        if (!$operatingHours) {
+            return response()->json([
+                'is_open' => false,
+                'message' => 'Operating hours are not set. Please contact us for information.',
+                'open_time' => 'Not Set',
+                'close_time' => 'Not Set'
+            ]);
+        }
+
+        if ($operatingHours->is_closed) {
+            return response()->json([
+                'is_open' => false,
+                'message' => 'We are closed on this date.',
+                'open_time' => 'Closed',
+                'close_time' => 'Closed'
+            ]);
+        }
+
+        $openTimeFormatted = Carbon::parse($operatingHours->open_time)->format('g:i A');
+        $closeTimeFormatted = Carbon::parse($operatingHours->close_time)->format('g:i A');
+
+        if (!$time) {
+            return response()->json([
+                'is_open' => false,
+                'message' => 'Please select both date and time.',
+                'open_time' => $openTimeFormatted,
+                'close_time' => $closeTimeFormatted
+            ]);
+        }
+
+        $selectedDateTime = Carbon::parse("$date $time");
+        $openTime = Carbon::parse("$date " . $operatingHours->open_time);
+        $closeTime = Carbon::parse("$date " . $operatingHours->close_time);
+
+        if ($closeTime->lessThan($openTime)) {
+            $closeTime->addDay();
+            if ($selectedDateTime->format('H:i') < $openTime->format('H:i')) {
+                $selectedDateTime->addDay();
+            }
+        }
+
+        if ($selectedDateTime->between($openTime, $closeTime)) {
+            return response()->json([
+                'is_open' => true,
+                'message' => '',
+                'open_time' => $openTimeFormatted,
+                'close_time' => $closeTimeFormatted
+            ]);
+        } else {
+            return response()->json([
+                'is_open' => false,
+                'message' => sprintf(
+                    'Selected time is outside operating hours (%s - %s).',
+                    $openTimeFormatted,
+                    $closeTimeFormatted
+                ),
+                'open_time' => $openTimeFormatted,
+                'close_time' => $closeTimeFormatted
+            ]);
+        }
     }
 
 
