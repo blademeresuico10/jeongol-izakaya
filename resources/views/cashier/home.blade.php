@@ -1711,7 +1711,7 @@
         </tr>`;
             });
 
-           const printHTML = `
+            const printHTML = `
     <!DOCTYPE html>
     <html>
     <head>
@@ -1719,7 +1719,7 @@
         <style>
             @media print { 
                 @page { 
-                    size: 58mm 210mm;
+                    size: 48mm 210mm;
                     margin: 0; 
                 } 
                 body { 
@@ -1728,102 +1728,87 @@
                 }
             }
             body { 
-                font-family: 'Courier New', Courier, monospace; 
-                font-size: 9pt;
-                width: 58mm;
+                font-family: Arial, Helvetica, sans-serif; 
+                font-size: 7pt;
+                width: 48mm;
                 margin: 0 auto; 
-                padding: 2mm;
-                line-height: 1.2;
+                padding: 3mm 1mm;
+                line-height: 1.3;
             }
             .center { text-align: center; }
             .bold { font-weight: bold; }
             .separator { 
-                border-top: 1px dashed #000; 
+                border-top: 1px solid #000; 
                 margin: 2mm 0; 
             }
             .header {
-                font-size: 10pt;
+                font-size: 8pt;
                 font-weight: bold;
-                margin-bottom: 0mm;
-                line-height: 1.1;
+                margin-bottom: 1mm;
             }
             .subheader {
-                font-size: 8pt;
-                margin-bottom: 0mm;
-                line-height: 1.1;
+                font-size: 7pt;
+                margin-bottom: 1mm;
             }
             .title {
-                font-size: 9pt;
+                font-size: 8pt;
                 font-weight: bold;
-                margin: 2mm 0 1mm 0;
+                margin: 2mm 0;
             }
             .info-row {
                 display: flex;
                 justify-content: space-between;
-                font-size: 8pt;
-                margin: 0.5mm 0;
+                font-size: 7pt;
+                margin: 1mm 0;
             }
-            .items-header {
-                display: flex;
-                justify-content: space-between;
-                font-size: 8pt;
+            table { 
+                width: 100%; 
+                border-collapse: collapse;
+                margin: 2mm 0;
+            }
+            th {
+                font-size: 7pt;
                 font-weight: bold;
                 padding: 1mm 0;
                 border-top: 1px solid #000;
                 border-bottom: 1px solid #000;
+                text-align: left;
             }
-            .items-header span:first-child {
-                flex: 1;
+            td { 
+                padding: 1mm 0;
+                font-size: 6pt;
+                vertical-align: top;
             }
-            .items-header span:nth-child(2),
-            .items-header span:nth-child(3) {
-                width: 20%;
-                text-align: right;
-            }
-            .item-row {
-                font-size: 8pt;
-                margin: 1mm 0;
-            }
-            .item-main {
-                display: flex;
-                justify-content: space-between;
-            }
-            .item-name {
-                flex: 1;
-            }
-            .item-qty {
-                width: 20%;
-                text-align: right;
-            }
-            .item-total {
-                width: 20%;
-                text-align: right;
+            .item-desc {
+                width: 50%;
+                text-align: left;
             }
             .item-price {
-                font-size: 7pt;
-                padding-left: 2mm;
-                color: #333;
+                width: 25%;
+                text-align: right;
+            }
+            .item-amount {
+                width: 25%;
+                text-align: right;
             }
             .summary {
-                font-size: 8pt;
+                font-size: 7pt;
                 margin-top: 2mm;
             }
             .summary-row {
                 display: flex;
                 justify-content: space-between;
-                margin: 0.5mm 0;
-            }
-            .summary-row.indent {
-                padding-left: 3mm;
+                margin: 1mm 0;
             }
             .total-row {
                 font-weight: bold;
-                font-size: 9pt;
-                padding-top: 1mm;
-                margin-top: 1mm;
+                font-size: 7pt;
+                border-top: 1px solid #000;
+                padding-top: 2mm;
+                margin-top: 2mm;
             }
             .footer {
-                font-size: 8pt;
+                font-size: 6pt;
                 margin-top: 3mm;
             }
         </style>
@@ -1858,15 +1843,18 @@
         
         <div class="separator"></div>
         
-        <div class="items-header">
-            <span>ITEM</span>
-            <span>QTY</span>
-            <span>TOTAL</span>
-        </div>
-        
-        <div style="margin: 2mm 0;">
-            ${orderItemsHTML}
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th class="item-desc">ITEM</th>
+                    <th class="item-price">PRICE</th>
+                    <th class="item-amount">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${orderItemsHTML}
+            </tbody>
+        </table>
         
         <div class="separator"></div>
         
@@ -1875,7 +1863,7 @@
                 <span>VATable Sales:</span>
                 <span>${vatableSales}</span>
             </div>
-            <div class="summary-row indent">
+            <div class="summary-row">
                 <span>VAT (12%):</span>
                 <span>${vat}</span>
             </div>
@@ -1885,21 +1873,16 @@
             </div>
             ${actualAdvancePayment > 0 ? `
             <div class="summary-row">
-                <span>Discount:</span>
+                <span>Advance Payment:</span>
                 <span>${actualAdvancePayment.toFixed(2)}</span>
             </div>
             ` : ''}
             ${discountAmount > 0 ? `
             <div class="summary-row">
                 <span>Discount:</span>
-                <span>-${discountAmount.toFixed(2)}</span>
+                <span>${discountAmount.toFixed(2)}</span>
             </div>
             ` : ''}
-        </div>
-        
-        <div class="separator"></div>
-        
-        <div class="summary">
             <div class="summary-row total-row">
                 <span>TOTAL:</span>
                 <span>${finalTotal.toFixed(2)}</span>
