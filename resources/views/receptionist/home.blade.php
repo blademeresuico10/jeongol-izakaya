@@ -215,85 +215,114 @@
       <a class="view-button" href="{{ route('receptionist.modify_orders') }}">View Orders</a>
     </div>
 
-    <div id="tableModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <<div class="modal-content">
-        <span id="closeModal" class="close-modal">&times;</span>
-        <h2 class="text-lg font-bold text-center mb-2">Customer Info and Menu</h2>
+    <!-- Table Modal -->
+    <div id="tableModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
 
-        <div class="modal-section">
-          <label><strong>Customer</strong></label>
-          <input type="text" id="customerName" placeholder="Customer's name" required minlength="3"
-            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full"
-            onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)" />
-          <div>
+        <!-- Modal Header - Fixed at top -->
+        <div class="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          <h2 class="text-lg font-bold text-gray-800">Customer Info and Menu</h2>
+          <button id="closeModal"
+            class="text-gray-400 hover:text-gray-600 text-2xl font-light leading-none">&times;</button>
+        </div>
+
+        <!-- Modal Content - Scrollable -->
+        <div class="flex-1 overflow-y-auto px-4 py-3">
+
+          <!-- Customer Name -->
+          <div class="mb-3">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Customer</label>
+            <input type="text" id="customerName" placeholder="Customer's name" required minlength="3"
+              class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full text-sm"
+              onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)" />
             <small id="customerNameError" class="text-red-600 text-sm hidden"></small>
           </div>
-        </div>
 
-        <div class="modal-section" id="contactinput">
-          <label><strong>Contact Number</strong></label>
-          <input type="text" id="contactNumber" required maxlength="11" placeholder="09xxxxxxxxx"
-            class="border border-gray-400 focus:border-black-500 p-2 rounded w-full"
-            onkeypress="return /[0-9]/i.test(event.key)" />
-          <div>
+          <!-- Contact Number -->
+          <div class="mb-3" id="contactinput">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
+            <input type="text" id="contactNumber" required maxlength="11" placeholder="09xxxxxxxxx"
+              class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full text-sm"
+              onkeypress="return /[0-9]/i.test(event.key)" />
             <small id="contactNumberError" class="text-red-600 text-sm hidden"></small>
           </div>
-        </div>
 
-        <div class="modal-section modal-flex">
-          <div class="modal-column">
-            <label><strong>Pax</strong></label>
-            <input id="numberOfPax" type="number" required
-              class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" />
+          <!-- Pax and Reservation Info -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Pax</label>
+              <input id="numberOfPax" type="number" required
+                class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full text-sm" />
+            </div>
+            <div id="reservationInfoGroup">
+              <label class="block text-sm font-semibold text-gray-700 mb-1">Reserved Now</label>
+              <input
+                class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full mb-2 text-sm"
+                type="date" id="reserved_date" />
+              <input
+                class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full mb-2 text-sm"
+                type="time" id="arrivalTimeInput" min="11:30" max="18:00" required />
+              <p class="text-xs text-gray-600">
+                <strong>Reservation Time Frame:</strong><br>
+                <span id="timeFrameDisplay" class="text-xs font-medium text-red-500"></span>
+              </p>
+            </div>
           </div>
-          <div class="modal-column" id="reservationInfoGroup">
-            <label class="mb-1"><strong>Reserved Now</strong></label>
-            <input class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" type="date"
-              id="reserved_date" />
-            <input class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" type="time"
-              id="arrivalTimeInput" min="11:30" max="18:00" required />
-            <p>
-              <strong>Reservation Time Frame:</strong><br>
-              <span id="timeFrameDisplay" class="text-sm font-medium text-red-500"></span>
-            </p>
-          </div>
-        </div>
 
-        <hr class="mt-2 border-t-10 mb-2 border-black-300">
+          <hr class="my-4 border-gray-300">
 
-        <div class="modal-flex flex-col md:flex-row gap-6">
-          <div class="modal-section flex flex-col gap-6 w-full">
-            @foreach(['main' => 'Main Menu', 'add_ons' => 'Add-ons', 'drinks' => 'Drinks', 'rice' => 'Rice'] as $key => $label)
-            @if(isset($groupedMenu[$key]))
-          <x-menu-category-grid :key="$key" :label="$label" :items="$groupedMenu[$key]" />
+          <!-- Menu Categories Section -->
+          <div class="space-y-6">
+            @foreach($menuCategories as $category)
+            @if(isset($groupedMenu[$category->name]))
+          <x-menu-category-grid :key="strtolower(str_replace(' ', '_', $category->name))" :label="$category->name"
+            :items="$groupedMenu[$category->name]" />
           @endif
       @endforeach
           </div>
 
-          <div class="modal-section">
-            <label><strong>Advance Payment </strong></label>
-            <input class="border border-gray-400 focus:border-gray-700 p-2 rounded w-full" type="number"
-              id="advance_payment" readonly>
-          </div><br><br>
+          <hr class="my-4 border-gray-300">
 
-          <div class="flex justify-center md:items-center mt-4 md:mt-2 mb-3">
+          <!-- Advance Payment -->
+          <div class="mb-3 mt-3">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Advance Payment</label>
+            <input
+              class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full text-sm"
+              type="number" id="advance_payment" readonly>
+          </div>
+
+          <!-- View Orders Button -->
+          <div class="flex justify-center mb-2 mt-4">
             <button type="button" id="viewOrdersBtn"
-              class="inline-btn w-full sm:w-auto text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-3 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
-              <i class="fas fa-shopping-cart text-sm mr-2"></i> View Orders
+              class="w-full sm:w-auto text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 flex items-center justify-center gap-2">
+              <i class="fas fa-shopping-cart text-sm"></i>
+              <span>View Orders</span>
             </button>
+          </div>
+
+          <!-- Orders Notes -->
+          <div class="mb-3">
+            <label class="block text-sm font-semibold text-gray-700 mb-1">Orders Notes</label>
+            <textarea
+              class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full resize-none text-sm"
+              id="customerNotes" rows="3" placeholder="Add notes"></textarea>
+          </div>
+
+        </div>
+
+        <!-- Modal Footer - Fixed at bottom -->
+        <div class="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-4 py-3">
+          <div class="flex justify-end">
+            <button
+              class="bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors duration-200 text-sm"
+              id="submitBtn" type="button">Submit</button>
           </div>
         </div>
 
-        <div class="modal-section">
-          <textarea class="border border-gray-900 focus:border-gray-700 p-2 rounded w-full" id="customerNotes"
-            placeholder="Add notes"></textarea>
-        </div>
-
-        <div class="modal-actions">
-          <button class="pay-btn" id="submitBtn" type="button">Submit</button>
-        </div>
+      </div>
     </div>
 
+    <!-- Orders Panel (Side Panel) -->
     <div id="default-modal"
       class="fixed inset-y-0 right-0 z-50 transform translate-x-full transition-transform duration-300 ease-in-out"
       style="width: 480px;">
@@ -370,6 +399,7 @@
       </div>
     </div>
 
+    <!-- Success Modal -->
     <div id="successModal"
       class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
@@ -596,7 +626,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-        {{ $table->id }}: {{ $table->capacity }},
+      {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
@@ -1479,7 +1509,7 @@
       return;
     }
 
-    
+
     if (!this.isPlacingOrder) {
       const selectedDateTime = new Date(`${date}T${time}`);
       const currentTime = new Date();

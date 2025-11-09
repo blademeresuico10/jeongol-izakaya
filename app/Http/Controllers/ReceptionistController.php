@@ -15,6 +15,8 @@ use App\Models\orders;
 use App\Models\reservationPayment;
 use App\Models\walkin;
 use App\Models\table;
+use App\Models\MenuCategory;
+
 
 class ReceptionistController extends Controller
 {
@@ -22,6 +24,7 @@ class ReceptionistController extends Controller
     {
         $currentTime = Carbon::now();
 
+        // Get tables with active reservations and walk-ins
         $tables = table::with([
             'reservation' => function ($query) use ($currentTime) {
                 $query->where('status', 'Active')
@@ -49,16 +52,30 @@ class ReceptionistController extends Controller
             return $table;
         });
 
+        // Get today's reservations and walk-ins
         $reservation = reservation::whereDate('started_at', Carbon::now()->toDateString())->get();
         $walkin = walkin::whereDate('started_at', Carbon::now()->toDateString())->get();
 
-        $menuItems = menu::all()->map(function ($item) {
-            $processedItem = clone $item;
-            $processedItem->price = $item->regular_price;
-            return $processedItem;
-        });
+        // Get all active menu items with their categories
+        $menuItems = menu::with('category')
+            ->where('status', 'Active')
+            ->whereNull('deleted_at')
+            ->whereHas('category', function ($query) {
+                $query->where('is_active', 1);
+            })
+            ->orderBy('category_id')
+            ->orderBy('menu_item')
+            ->get()
+            ->map(function ($item) {
+                $processedItem = clone $item;
+                $processedItem->price = $item->regular_price;
+                $processedItem->category_name = $item->category->name;
+                return $processedItem;
+            });
 
-        $groupedMenu = $menuItems->groupBy('category');
+        $groupedMenu = $menuItems->groupBy('category_name');
+
+        $menuCategories = MenuCategory::where('is_active', 1)->get();
 
         return view('receptionist.home', compact(
             'tables',
@@ -66,6 +83,7 @@ class ReceptionistController extends Controller
             'reservation',
             'groupedMenu',
             'walkin',
+            'menuCategories'
         ));
     }
 

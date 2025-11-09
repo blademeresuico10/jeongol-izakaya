@@ -1087,13 +1087,15 @@ class AdminController extends Controller
 
     public function editMenu($id)
     {
-        $menuItem = DB::table('menu')->where('id', $id)->whereNull('deleted_at')->first();
+        $menuItem = menu::with('category')->where('id', $id)->whereNull('deleted_at')->first();
 
         if (!$menuItem) {
             return redirect()->route('admin.menu_management')->with('error', 'Menu item not found!');
         }
 
-        return view('admin.editmenu', compact('menuItem'));
+        $categories = MenuCategory::where('is_active', 1)->get();
+
+        return view('admin.editmenu', compact('menuItem', 'categories'));
     }
 
     public function storeCategory(Request $request)
@@ -1146,7 +1148,7 @@ class AdminController extends Controller
                 ],
                 'regular_price' => 'required|numeric|min:0',
                 'status' => 'required|in:Active,Blocked',
-                'category' => 'required|string|max:255',
+                'category_id' => 'required|exists:menu_categories,id',
                 'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             ], [
                 'status.required' => 'Status is required.',
@@ -1157,8 +1159,8 @@ class AdminController extends Controller
                 'regular_price.required' => 'Regular price is required.',
                 'regular_price.numeric' => 'Regular price must be a valid number.',
                 'regular_price.min' => 'Regular price cannot be negative.',
-                'category.required' => 'Category is required.',
-                'category.max' => 'Category cannot exceed 255 characters.',
+                'category_id.required' => 'Category is required.',
+                'category_id.exists' => 'Selected category is invalid.',
                 'image.image' => 'The uploaded file must be an image.',
                 'image.mimes' => 'Image must be a file of type: jpeg, png, jpg, gif.',
                 'image.max' => 'Image size cannot exceed 2MB.',
@@ -1184,7 +1186,7 @@ class AdminController extends Controller
             $updateData = [
                 'menu_item' => $request->menu_item,
                 'regular_price' => $request->regular_price,
-                'category' => $request->category,
+                'category_id' => $request->category_id,
                 'status' => $request->status,
                 'updated_at' => now(),
             ];
@@ -2168,7 +2170,7 @@ class AdminController extends Controller
 
         $menus = menu::whereNull('deleted_at')->get();
         $discounts = MenuDiscount::with('menu')->paginate(6);
-       $stock_level = StockAlertLevel::with(['ingredient.unit'])->paginate(6);
+        $stock_level = StockAlertLevel::with(['ingredient.unit'])->paginate(6);
         $stock_order = StockOrder::with('ingredient')->paginate(6);
         $ingredients = ingredients::orderBy('name')->get();
 
@@ -2196,7 +2198,7 @@ class AdminController extends Controller
         return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'));
     }
 
-    
+
     public function storeOperatingHours(Request $request)
     {
         $request->validate([

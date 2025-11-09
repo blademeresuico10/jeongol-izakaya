@@ -14,4 +14,11 @@ class MenuCategory extends Model
     {
         return $this->hasMany(menu::class, 'category_id');
     }
+
+    public function activeMenus()
+    {
+        return $this->hasMany(menu::class, 'category_id')
+            ->where('status', 'Active')
+            ->whereNull('deleted_at');
+    }
 }

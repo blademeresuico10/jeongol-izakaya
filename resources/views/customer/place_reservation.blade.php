@@ -494,12 +494,16 @@
 
 
           <div class="modal-section flex flex-col gap-6 w-full">
-            @foreach(['main' => 'Main Menu', 'add_ons' => 'Add-ons', 'drinks' => 'Drinks', 'rice' => 'Rice'] as $key => $label)
-            @if(isset($groupedMenu[$key]))
-          <x-menu-category-grid :key="$key" :label="$label" :items="$groupedMenu[$key]" />
-          @endif
-      @endforeach
-          </div>
+    @foreach($menuCategories as $category)
+        @if(isset($groupedMenu[$category->name]))
+            <x-menu-category-grid 
+                :key="strtolower(str_replace(' ', '_', $category->name))" 
+                :label="$category->name" 
+                :items="$groupedMenu[$category->name]" 
+            />
+        @endif
+    @endforeach
+</div>
 
           <div id="orderSummary" class="p-4 bg-white text-sm border rounded overflow-y-auto max-h-40">
             <h4 class="font-bold text-lg mb-4 text-start">Order Summary</h4>
@@ -957,7 +961,7 @@
 
   paymentBtn.addEventListener('click', async () => {
     const orders = Object.values(this.selectedOrders);
-    const hasMain = orders.some(item => item.category === 'main');
+    const hasMain = orders.some(item => item.category === 'Main Course');
 
     const nameInput = document.getElementById('customerName');
     const emailInput = document.getElementById('email');
@@ -1010,7 +1014,7 @@
 
     const pax = parseInt(paxInput?.value || 0);
     const mainCount = orders
-      .filter(item => item.category === 'main')
+      .filter(item => item.category === 'Main Course')
       .reduce((sum, item) => sum + (item.quantity || 1), 0);
 
     const advancePayment = parseFloat(this.elements.advancePaymentInput.value) || 0;
@@ -1163,6 +1167,7 @@
     const category = card.dataset.category;
     const price = parseFloat(card.dataset.price);
 
+
     if (!this.selectedOrders[id]) {
       this.selectedOrders[id] = {
         id, name, category, price,
@@ -1173,6 +1178,7 @@
       this.selectedOrders[id].quantity += 1;
       this.selectedOrders[id].total = this.selectedOrders[id].quantity * price;
     }
+
 
     this.updateOrderSummary();
   }

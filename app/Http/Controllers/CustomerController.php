@@ -22,7 +22,9 @@ class CustomerController extends Controller
 {
     public function index()
     {
-        $mainMenuItems = menu::where('category', 'main')
+        $mainMenuItems = menu::whereHas('category', function ($query) {
+            $query->where('name', 'Main Course');
+        })
             ->where('status', '!=', 'Blocked')
             ->take(3)
             ->get();
@@ -96,21 +98,29 @@ class CustomerController extends Controller
             ->whereDate('started_at', Carbon::now()->toDateString())
             ->get();
 
-        $menuItems = DB::table('menu')->get()->map(function ($item) {
-            $processedItem = clone $item;
-            $processedItem->display_name = $item->display_name ?? $item->menu_item;
-            $processedItem->price = $item->regular_price;
+        $menuItems = DB::table('menu')
+            ->join('menu_categories', 'menu.category_id', '=', 'menu_categories.id')
+            ->select('menu.*', 'menu_categories.name as category_name')
+            ->get()
+            ->map(function ($item) {
+                $processedItem = clone $item;
+                $processedItem->display_name = $item->display_name ?? $item->menu_item;
+                $processedItem->price = $item->regular_price;
+                return $processedItem;
+            });
 
-            return $processedItem;
-        });
+        $groupedMenu = $menuItems->groupBy('category_name');
 
-        $groupedMenu = $menuItems->groupBy('category');
+        $menuCategories = DB::table('menu_categories')
+            ->where('is_active', 1)
+            ->get();
 
         return view('customer.place_reservation', compact(
             'tables',
             'reservations',
             'groupedMenu',
-            'menuItems'
+            'menuItems',
+            'menuCategories'
         ));
     }
 

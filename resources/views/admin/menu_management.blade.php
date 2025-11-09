@@ -512,13 +512,14 @@
 
                                         <div class="form-group">
                                             <label>Category <span class="text-danger">*</span></label>
-                                            <select name="category" id="edit_category{{ $item->id }}" class="form-control"
+                                            <select name="category_id" id="edit_category{{ $item->id }}" class="form-control"
                                                 required>
                                                 <option value="">Select Category</option>
-                                                <option value="main" {{ $item->category == 'main' ? 'selected' : '' }}>Main Dishes
-                                                </option>
-                                                <option value="add_ons" {{ $item->category == 'add_ons' ? 'selected' : '' }}>
-                                                    Add-ons</option>
+                                                @foreach($categories as $category)
+                                                    <option value="{{ $category->id }}" {{ $item->category_id == $category->id ? 'selected' : '' }}>
+                                                        {{ $category->name }}
+                                                    </option>
+                                                @endforeach
                                             </select>
                                             <div>
                                                 <small id="edit_categoryError{{ $item->id }}" class="text-danger text-sm"
