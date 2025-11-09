@@ -137,7 +137,6 @@ class CashierController extends Controller
     public function getOrders($id)
     {
         $now = Carbon::now();
-        $today = Carbon::today();
 
         $reservation = DB::table('reservations')
             ->leftJoin('customers', 'reservations.customer_id', '=', 'customers.id')
@@ -145,7 +144,6 @@ class CashierController extends Controller
             ->leftJoin('tables', 'reservations.table_id', '=', 'tables.id')
             ->where('reservations.id', $id)
             ->where('reservations.status', 'Active')
-            ->whereDate('reservations.started_at', $today)
             ->whereNotExists(function ($query) use ($id) {
                 $query->select(DB::raw(1))
                     ->from('transactions')
@@ -173,7 +171,6 @@ class CashierController extends Controller
                 ->join('tables', 'walk_ins.table_id', '=', 'tables.id')
                 ->where('walk_ins.id', $id)
                 ->where('walk_ins.status', 'Active')
-                ->whereDate('walk_ins.started_at', $today)
                 ->whereNotExists(function ($query) use ($id) {
                     $query->select(DB::raw(1))
                         ->from('transactions')
@@ -225,8 +222,11 @@ class CashierController extends Controller
                 return $order;
             });
 
+        $startTime = Carbon::parse($reservation->reservation_time);
         $endTime = Carbon::parse($reservation->ended_at);
-        $isExpired = $now->greaterThan($endTime);
+        $hasStarted = $now->gte($startTime);
+        $isExpired = $hasStarted && $now->greaterThan($endTime);
+        $daysOverdue = $isExpired ? $now->diffInDays($endTime) : 0;
 
         return response()->json([
             'reservation_id'   => $reservation->reservation_id,
@@ -240,8 +240,10 @@ class CashierController extends Controller
             'advance_payment'  => floatval($reservation->advance_payment ?? 0),
             'table_number'     => $reservation->table_number,
             'order_type'       => $reservation->order_type,
+            'started_at'       => $reservation->reservation_time,
             'ended_at'         => $reservation->ended_at,
             'is_expired'       => $isExpired,
+            'days_overdue'     => $daysOverdue,
             'orders'           => $orders
         ]);
     }

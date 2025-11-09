@@ -906,28 +906,42 @@
     function generateTransactionReport(data) {
         const { transaction_logs = [] } = data;
 
+        // Get unique cashiers
+        const cashiers = [...new Set(transaction_logs
+            .filter(t => t.cashier)
+            .map(t => t.cashier.firstname + ' ' + t.cashier.lastname))];
+
         return `
-        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+    <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+        <div class="flex justify-between items-center mb-4">
+            <h5 class="text-lg font-semibold text-gray-800 flex items-center">
                 <i class="fas fa-receipt mr-2 text-purple-600"></i>
                 Transaction Logs
             </h5>
+            
+            ${cashiers.length > 1 ? `
+            <select id="cashier-filter" class="px-4 py-2 border border-gray-300 rounded-lg text-sm" onchange="filterByCashier(this.value)">
+                <option value="all">All Cashiers</option>
+                ${cashiers.map(name => `<option value="${name}">${name}</option>`).join('')}
+            </select>
+            ` : ''}
+        </div>
 
-            <div class="overflow-x-auto">
-                <table class="w-full divide-y divide-gray-200 text-sm">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Cashier Name</th>
-                            <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Date & Time</th>
-                            <th class="px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-100">
-                        ${transaction_logs.length > 0
+        <div class="overflow-x-auto">
+            <table class="w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Cashier Name</th>
+                        <th class="px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Date & Time</th>
+                        <th class="px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="transaction-tbody" class="bg-white divide-y divide-gray-100">
+                    ${transaction_logs.length > 0
                 ? transaction_logs.map((transaction) => `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-6 py-4 text-gray-900 font-medium">${transaction.cashier_name}</td>
-                                <td class="px-6 py-4 text-gray-900">${new Date(transaction.transaction_date).toLocaleString('en-PH', {
+                        <tr class="transaction-row hover:bg-gray-50 transition-colors" data-cashier="${transaction.cashier ? (transaction.cashier.firstname + ' ' + transaction.cashier.lastname) : 'Unknown'}">
+                            <td class="px-6 py-4 text-gray-900 font-medium">${transaction.cashier ? (transaction.cashier.firstname + ' ' + transaction.cashier.lastname) : 'Unknown'}</td>
+                            <td class="px-6 py-4 text-gray-900">${new Date(transaction.created_at).toLocaleString('en-PH', {
                     year: 'numeric',
                     month: 'short',
                     day: 'numeric',
@@ -935,28 +949,32 @@
                     minute: '2-digit',
                     hour12: true
                 })}</td>
-                                <td class="px-6 py-4 text-right text-gray-900 font-bold">₱${parseFloat(transaction.grand_total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                            </tr>`).join('')
+                            <td class="px-6 py-4 text-right text-gray-900 font-bold" data-amount="${parseFloat(transaction.grand_total)}">₱${parseFloat(transaction.grand_total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                        </tr>`).join('')
                 : `<tr><td colspan="3" class="px-6 py-8 text-center text-gray-500">
-                    <i class="fas fa-inbox text-3xl mb-2 block opacity-50"></i>
-                    <p class="font-medium">No transactions for this period</p>
-                </td></tr>`
+                <i class="fas fa-inbox text-3xl mb-2 block opacity-50"></i>
+                <p class="font-medium">No transactions for this period</p>
+            </td></tr>`
             }
-                    </tbody>
-                </table>
-            </div>
-
-            ${transaction_logs.length > 0 ? `
-                <div class="mt-4 pt-4 border-t border-gray-200">
-                    <div class="flex justify-between items-center">
-                        <span class="text-sm font-medium text-gray-600">Total Transactions: ${transaction_logs.length}</span>
-                        <span class="text-lg font-bold text-gray-900">Grand Total: ₱${transaction_logs.reduce((sum, t) => sum + parseFloat(t.grand_total), 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
-                    </div>
-                </div>
-            ` : ''}
+                </tbody>
+            </table>
         </div>
-    `;
+
+        ${transaction_logs.length > 0 ? `
+            <div id="summary" class="mt-4 pt-4 border-t border-gray-200">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm font-medium text-gray-600">Total Transactions: <span id="total-count">${transaction_logs.length}</span></span>
+                    <span class="text-lg font-bold text-gray-900">Grand Total: ₱<span id="grand-total">${transaction_logs.reduce((sum, t) => sum + parseFloat(t.grand_total), 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span></span>
+                </div>
+            </div>
+        ` : ''}
+    </div>
+
+    
+`;
     }
+
+
 
     function generateInventoryReport(data) {
         const reportType = data.report_type;
@@ -978,80 +996,87 @@
         const movements = data.movements;
 
         return `
-    <!-- Summary Cards -->
-    <div class="grid gap-4 mb-6">
-        <!-- Stock In -->
-        <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-2xl font-medium opacity-90">Stock In</div>
-                <i class="fas fa-arrow-down text-xl opacity-75"></i>
-            </div>
-            <div class="text-xs opacity-90 mt-1 space-y-1 leading-tight">
-                <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_in_kg ?? 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                <div class="text-lg"><span class="font-semibold">Pcs:</span> ${Math.round(summary.stock_in_pcs ?? 0).toLocaleString('en-PH')}</div>
-            </div>
+<!-- Summary Cards -->
+<div class="grid gap-4 mb-6">
+    <!-- Stock In -->
+    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
+        <div class="flex justify-between items-start mb-2">
+            <div class="text-2xl font-medium opacity-90">Stock In</div>
+            <i class="fas fa-arrow-down text-xl opacity-75"></i>
+        </div>
+        <div class="text-xs opacity-90 mt-1 space-y-1 leading-tight">
+            <div class="text-lg"><span class="font-semibold">Kg:</span> ${(summary.stock_in_kg ??
+                0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div class="text-lg"><span class="font-semibold">Pcs:</span> ${Math.round(summary.stock_in_pcs ??
+                    0).toLocaleString('en-PH')}</div>
         </div>
     </div>
+</div>
 
-    <!-- Stock In History -->
-    <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-        <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-            <i class="fas fa-arrow-down mr-2 text-green-600"></i>
-            Stock In History
-        </h5>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date & Time</th>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category</th>
-                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    ${(function () {
+<!-- Stock In History -->
+<div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+    <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+        <i class="fas fa-arrow-down mr-2 text-green-600"></i>
+        Stock In History
+    </h5>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date & Time
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Category
+                    </th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                ${(function () {
                 if (!Array.isArray(movements) || movements.length === 0) {
                     return `
-                                <tr>
-                                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">
-                                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                        No stock in movements for this period
-                                    </td>
-                                </tr>`;
+                <tr>
+                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                        No stock in movements for this period
+                    </td>
+                </tr>`;
                 }
 
                 const stockInOnly = movements.filter(m => m.type === 'stock_in');
 
                 if (stockInOnly.length === 0) {
                     return `
-                                <tr>
-                                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">
-                                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                        No stock in movements for this period
-                                    </td>
-                                </tr>`;
+                <tr>
+                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                        No stock in movements for this period
+                    </td>
+                </tr>`;
                 }
 
                 return stockInOnly.map(row => {
                     return `
-                                <tr class="hover:bg-gray-50 transition-colors">
-                                    <td class="px-4 py-3 text-sm text-gray-700">${row.date}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-700 capitalize">${row.category || 'Unknown'}</td>
-                                    <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
-                                        ${row.unit === 'pieces'
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-sm text-gray-700">${row.date}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700 capitalize">${row.category || 'Unknown'}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
+                        ${row.unit === 'pieces'
                             ? Math.round(row.quantity).toLocaleString('en-PH')
                             : row.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         } ${row.unit}
-                                    </td>
-                                </tr>`;
+                    </td>
+                </tr>`;
                 }).join('');
             })()}
-                </tbody>
-            </table>
-        </div>
+            </tbody>
+        </table>
     </div>
-    `;
+</div>
+`;
     }
+
+
 
     function generateExpiredItemsReport(data) {
         const summary = data.summary;
@@ -1059,150 +1084,159 @@
         const expiringSoon = data.expiring_soon;
 
         return `
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Expired Ingredients</div>
-                <i class="fas fa-times-circle text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.expired_count.toLocaleString()}</div>
-            <div class="text-xs opacity-75 mt-1">Total ingredients expired</div>
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white p-5 rounded-lg shadow-md">
+        <div class="flex justify-between items-start mb-2">
+            <div class="text-sm font-medium opacity-90">Expired Ingredients</div>
+            <i class="fas fa-times-circle text-xl opacity-75"></i>
         </div>
-        
-        <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Expiring Soon</div>
-                <i class="fas fa-clock text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1">${summary.expiring_soon_count.toLocaleString()}</div>
-            <div class="text-xs opacity-75 mt-1">Within 7 days</div>
-        </div>
-        
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
-            <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-medium opacity-90">Total Waste</div>
-                <i class="fas fa-trash-alt text-xl opacity-75"></i>
-            </div>
-            <div class="text-2xl font-bold mb-1 space-y-1">
-                ${(summary.total_waste_kg > 0 || summary.total_waste_pieces > 0) ? `
-                    ${summary.total_waste_kg > 0 ? `<div class="text-xl">kg: ${summary.total_waste_kg.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>` : ''}
-                    ${summary.total_waste_pieces > 0 ? `<div class="text-xl">pieces: ${Math.round(summary.total_waste_pieces).toLocaleString('en-PH')}</div>` : ''}
-                ` : `
-                    <div class="text-xl">
-                        <div>kg: 0</div>
-                        <div>pieces: 0</div>
-                    </div>
-                `}
-            </div>
-        </div>
+        <div class="text-2xl font-bold mb-1">${summary.expired_count.toLocaleString()}</div>
+        <div class="text-xs opacity-75 mt-1">Total ingredients expired</div>
     </div>
-    
-    <!-- Expiring Soon Alert -->
-    ${expiringSoon.length > 0 ? `
-    <div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
-        <div class="flex">
-            <div class="flex-shrink-0">
-                <i class="fas fa-exclamation-triangle text-orange-500 text-xl"></i>
-            </div>
-            <div class="ml-3">
-                <h3 class="text-sm font-medium text-orange-800">Ingredients Expiring Soon!</h3>
-                <div class="mt-2 text-sm text-orange-700">
-                    <p>The following ingredients will expire within 7 days. Please use or dispose of them accordingly:</p>
-                    <ul class="list-disc list-inside mt-2">
-                        ${expiringSoon.map(item => `<li><strong>${item.name}</strong> (${item.category}) - Expires in ${item.days_until_expiry} ${item.days_until_expiry === 1 ? 'day' : 'days'} (${item.expiration_date})</li>`).join('')}
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-    ` : ''}
-    
-    <!-- Expired Ingredients by Category -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                <i class="fas fa-chart-pie mr-2 text-red-600"></i>
-                Waste by Category
-            </h5>
-            <div class="space-y-3">
-                ${summary.by_category.length > 0 ? summary.by_category.map(cat => `
-                    <div class="flex justify-between items-center border-b border-gray-100 pb-3">
-                        <div class="flex items-center">
-                            <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
-                                <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
-                            </div>
-                            <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-lg font-semibold text-gray-900">${cat.count} items</div>
-                        </div>
-                    </div>
-                `).join('') : `
-                    <div class="text-center text-gray-500 py-4">
-                        No waste by category
-                    </div>
-                `}
-            </div>
-        </div>
 
-        <!-- Waste Trend -->
-        <div class="bg-gradient-to-br from-red-500 to-pink-600 text-white rounded-lg p-5 shadow-md">
-            <h5 class="text-lg font-semibold mb-4 flex items-center">
-                <i class="fas fa-chart-line mr-2"></i>
-                Waste Trend Analysis
-            </h5>
-            <div class="space-y-4">
-                <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-black/90">This Week</span>
-                        <span class="font-bold text-black/90">${summary.trend.this_week} items</span>
-                    </div>
-                </div>
-                <div class="bg-white bg-opacity-20 rounded-lg p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-sm text-black/90">This Month</span>
-                        <span class="font-bold text-black/90">${summary.trend.this_month} items</span>
-                    </div>
-                </div>
+    <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg shadow-md">
+        <div class="flex justify-between items-start mb-2">
+            <div class="text-sm font-medium opacity-90">Expiring Soon</div>
+            <i class="fas fa-clock text-xl opacity-75"></i>
+        </div>
+        <div class="text-2xl font-bold mb-1">${summary.expiring_soon_count.toLocaleString()}</div>
+        <div class="text-xs opacity-75 mt-1">Within 7 days</div>
+    </div>
+
+    <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
+        <div class="flex justify-between items-start mb-2">
+            <div class="text-sm font-medium opacity-90">Total Waste</div>
+            <i class="fas fa-trash-alt text-xl opacity-75"></i>
+        </div>
+        <div class="text-2xl font-bold mb-1 space-y-1">
+            ${(summary.total_waste_kg > 0 || summary.total_waste_pieces > 0) ? `
+            ${summary.total_waste_kg > 0 ? `<div class="text-xl">kg: ${summary.total_waste_kg.toLocaleString('en-PH', {
+            minimumFractionDigits: 2
+        })}</div>` : ''}
+            ${summary.total_waste_pieces > 0 ? `<div class="text-xl">pieces:
+                ${Math.round(summary.total_waste_pieces).toLocaleString('en-PH')}</div>` : ''}
+            ` : `
+            <div class="text-xl">
+                <div>kg: 0</div>
+                <div>pieces: 0</div>
+            </div>
+            `}
+        </div>
+    </div>
+</div>
+
+<!-- Expiring Soon Alert -->
+${expiringSoon.length > 0 ? `
+<div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
+    <div class="flex">
+        <div class="flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-orange-500 text-xl"></i>
+        </div>
+        <div class="ml-3">
+            <h3 class="text-sm font-medium text-orange-800">Ingredients Expiring Soon!</h3>
+            <div class="mt-2 text-sm text-orange-700">
+                <p>The following ingredients will expire within 7 days. Please use or dispose of them accordingly:</p>
+                <ul class="list-disc list-inside mt-2">
+                    ${expiringSoon.map(item => `<li><strong>${item.name}</strong> (${item.category}) - Expires in
+                        ${item.days_until_expiry} ${item.days_until_expiry === 1 ? 'day' : 'days'}
+                        (${item.expiration_date})</li>`).join('')}
+                </ul>
             </div>
         </div>
     </div>
-    
-    <!-- Expired Ingredients Table -->
+</div>
+` : ''}
+
+<!-- Expired Ingredients by Category -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
     <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
         <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-            <i class="fas fa-calendar-times mr-2 text-red-600"></i>
-            Expired Ingredients Details
+            <i class="fas fa-chart-pie mr-2 text-red-600"></i>
+            Waste by Category
         </h5>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
-                        
-                        <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
-                        <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Expired On</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    ${expiredItems.length > 0 ? expiredItems.map(item => `
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.name}</td>
-                            <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
-                            <td class="px-4 py-3 text-sm text-gray-700 text-center">${item.expiration_date}</td>
-                        </tr>
-                    `).join('') : `
-                        <tr>
-                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">
-                                No expired items for this period
-                            </td>
-                        </tr>
-                    `}
-                </tbody>
-            </table>
+        <div class="space-y-3">
+            ${summary.by_category.length > 0 ? summary.by_category.map(cat => `
+            <div class="flex justify-between items-center border-b border-gray-100 pb-3">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-${cat.color}-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-${cat.icon} text-${cat.color}-600"></i>
+                    </div>
+                    <span class="font-medium text-gray-700 capitalize">${cat.name}</span>
+                </div>
+                <div class="text-right">
+                    <div class="text-lg font-semibold text-gray-900">${cat.count} items</div>
+                </div>
+            </div>
+            `).join('') : `
+            <div class="text-center text-gray-500 py-4">
+                No waste by category
+            </div>
+            `}
         </div>
     </div>
+
+    <!-- Waste Trend -->
+    <div class="bg-gradient-to-br from-red-500 to-pink-600 text-white rounded-lg p-5 shadow-md">
+        <h5 class="text-lg font-semibold mb-4 flex items-center">
+            <i class="fas fa-chart-line mr-2"></i>
+            Waste Trend Analysis
+        </h5>
+        <div class="space-y-4">
+            <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-black/90">This Week</span>
+                    <span class="font-bold text-black/90">${summary.trend.this_week} items</span>
+                </div>
+            </div>
+            <div class="bg-white bg-opacity-20 rounded-lg p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm text-black/90">This Month</span>
+                    <span class="font-bold text-black/90">${summary.trend.this_month} items</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Expired Ingredients Table -->
+<div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+    <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+        <i class="fas fa-calendar-times mr-2 text-red-600"></i>
+        Expired Ingredients Details
+    </h5>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient
+                    </th>
+
+                    <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity
+                    </th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-black uppercase tracking-wider">Expired On
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                ${expiredItems.length > 0 ? expiredItems.map(item => `
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-sm text-gray-900 font-medium">${item.name}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
+                        ${item.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700 text-center">${item.expiration_date}</td>
+                </tr>
+                `).join('') : `
+                <tr>
+                    <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                        No expired items for this period
+                    </td>
+                </tr>
+                `}
+            </tbody>
+        </table>
+    </div>
+</div>
 `;
     }
 
@@ -1222,18 +1256,22 @@
     </h5>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         ${topConsumed.map((item, index) => `
-            <div class="flex items-center p-3 bg-gradient-to-r from-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-50 to-white border border-gray-200 rounded-lg">
-                <div class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-100 mr-3">
-                    <span class="text-xl font-bold text-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-700">${index + 1}</span>
-                </div>
-                <div class="flex-grow">
-                    <div class="font-semibold text-gray-900">${item.name}</div>
-                    <div class="text-xs text-gray-500 capitalize">${item.category || ''}</div>
-                    <div class="text-sm text-gray-600">
-                        ${item.total_consumed.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}
-                    </div>
+        <div
+            class="flex items-center p-3 bg-gradient-to-r from-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-50 to-white border border-gray-200 rounded-lg">
+            <div
+                class="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-100 mr-3">
+                <span
+                    class="text-xl font-bold text-${index === 0 ? 'yellow' : index === 1 ? 'gray' : index === 2 ? 'orange' : 'blue'}-700">${index
+            + 1}</span>
+            </div>
+            <div class="flex-grow">
+                <div class="font-semibold text-gray-900">${item.name}</div>
+                <div class="text-xs text-gray-500 capitalize">${item.category || ''}</div>
+                <div class="text-sm text-gray-600">
+                    ${item.total_consumed.toLocaleString('en-PH', { minimumFractionDigits: 2 })} ${item.unit}
                 </div>
             </div>
+        </div>
         `).join('')}
     </div>
 </div>
@@ -1248,22 +1286,25 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date & Time</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Date & Time
+                    </th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Ingredient
+                    </th>
                     <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Type</th>
-                    <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity
+                    </th>
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
                 ${(function (movements) {
                 if (!Array.isArray(movements) || movements.length === 0) {
                     return `
-                            <tr>
-                                <td colspan="5" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                    No consumption logs for this period
-                                </td>
-                            </tr>`;
+                <tr>
+                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                        No consumption logs for this period
+                    </td>
+                </tr>`;
                 }
 
                 return movements.map(row => {
@@ -1282,28 +1323,28 @@
                     }
 
                     return `
-                            <tr class="hover:bg-gray-50 transition-colors">
-                                <td class="px-4 py-3 text-sm text-gray-700">
-                                    <div class="font-medium">${row.date}</div>
-                                    <div class="text-xs text-gray-500">${row.time}</div>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">
-                                    ${row.ingredient_name}
-                                </td>
-                               
-                                <td class="px-4 py-3 text-sm">
-                                    <span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeClass}">
-                                        ${statusLabel}
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
-                                    ${row.unit === 'pieces'
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="px-4 py-3 text-sm text-gray-700">
+                        <div class="font-medium">${row.date}</div>
+                        <div class="text-xs text-gray-500">${row.time}</div>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900 font-medium">
+                        ${row.ingredient_name}
+                    </td>
+
+                    <td class="px-4 py-3 text-sm">
+                        <span class="px-2 py-1 rounded-full text-xs font-semibold ${badgeClass}">
+                            ${statusLabel}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
+                        ${row.unit === 'pieces'
                             ? Math.round(row.quantity).toLocaleString('en-PH')
                             : row.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
                         } ${row.unit}
-                                </td>
-                            </tr>
-                        `;
+                    </td>
+                </tr>
+                `;
                 }).join('');
             })(consumptionData)}
             </tbody>
@@ -1318,107 +1359,115 @@
         const menuItems = data.menu_items;
 
         return `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="bg-gradient-to-br from-cyan-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Total Items Sold</div>
-                    <i class="fas fa-shopping-bag text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">${summary.total_items_sold.toLocaleString()}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Gross Sales</div>
-                    <i class="fas fa-dollar-sign text-xl opacity-75"></i>
-                </div>
-                <div class="text-2xl font-bold mb-1">₱${summary.total_revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
-            </div>
-            
-            <div class="bg-gradient-to-br from-yellow-400 to-orange-500 text-white p-5 rounded-lg shadow-md">
-                <div class="flex justify-between items-start mb-2">
-                    <div class="text-sm font-medium opacity-90">Best Seller</div>
-                </div>
-                ${summary.best_selling ? `
-                    <div class="text-lg font-bold mb-1">${summary.best_selling.name}</div>
-                    <div class="flex justify-between text-sm opacity-90">
-                        <span>${summary.best_selling.quantity} sold</span>
-                        <span>₱${summary.best_selling.revenue.toLocaleString('en-PH', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                ` : `
-                    <div class="text-lg font-bold mb-1">No sales yet</div>
-                `}
-            </div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-gradient-to-br from-cyan-500 to-blue-600 text-white p-5 rounded-lg shadow-md">
+        <div class="flex justify-between items-start mb-2">
+            <div class="text-sm font-medium opacity-90">Total Items Sold</div>
+            <i class="fas fa-shopping-bag text-xl opacity-75"></i>
         </div>
+        <div class="text-2xl font-bold mb-1">${summary.total_items_sold.toLocaleString()}</div>
+    </div>
 
-        <!--Menu Performance Table-->
-        <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-            <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
-                    <i class="fas fa-utensils mr-2 text-cyan-600"></i>
-                    Menu Performance
-                </h5>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Rank</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">Menu Item</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Quantity Sold</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium text-black uppercase tracking-wider">Gross Sales</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-200">
-                            ${menuItems.length > 0 ? menuItems.map((item, index) => `
-                            <tr class=" ${item.quantity === 0 ? 'bg-gray-50 opacity-60' : ''}">
-                                <td class="px-4 py-3 text-sm text-gray-900 font-medium">
-                                    ${item.quantity > 0 ? `
-                                        <div class="flex items-center">
-                                            <span class="w-8 h-8 flex items-center justify-center rounded-full ${index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                    index === 1 ? 'bg-gray-200 text-gray-700' :
-                        index === 2 ? 'bg-orange-100 text-orange-700' :
-                            'bg-gray-100 text-gray-600'
-                } font-bold text-xs">
-                                                ${index + 1}
-                                            </span>
-                                            ${index === 0 ? '' : ''}
-                                        </div>
-                                    ` : `
-                                        <span class="text-gray-400">-</span>
-                                    `}
-                                </td>
-                                <td class="px-4 py-3 text-sm ${item.quantity === 0 ? 'text-gray-500' : 'text-gray-900 font-medium'}">
-                                    ${item.menu_item}
-                                    ${item.quantity === 0 ? '<span class="ml-2 text-xs text-red-500">(No sales)</span>' : ''}
-                                </td>
-                                <td class="px-4 py-3 text-sm text-right ${item.quantity === 0 ? 'text-gray-400' : 'text-gray-900 font-bold'}">
-                                    ${item.quantity.toLocaleString()}
-                                </td>
-                                <td class="px-4 py-3 text-sm text-right ${item.quantity === 0 ? 'text-gray-400' : 'text-gray-900 font-semibold'}">
-                                    ₱${item.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-                                </td>
-                            </tr>
-                        `).join('') : `
-                            <tr>
-                                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                    No menu performance data for this period
-                                </td>
-                            </tr>
+    <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-5 rounded-lg shadow-md">
+        <div class="flex justify-between items-start mb-2">
+            <div class="text-sm font-medium opacity-90">Gross Sales</div>
+            <i class="fas fa-dollar-sign text-xl opacity-75"></i>
+        </div>
+        <div class="text-2xl font-bold mb-1">₱${summary.total_revenue.toLocaleString('en-PH', {
+            minimumFractionDigits: 2
+        })}</div>
+    </div>
+
+    <div class="bg-gradient-to-br from-yellow-400 to-orange-500 text-white p-5 rounded-lg shadow-md">
+        <div class="flex justify-between items-start mb-2">
+            <div class="text-sm font-medium opacity-90">Best Seller</div>
+        </div>
+        ${summary.best_selling ? `
+        <div class="text-lg font-bold mb-1">${summary.best_selling.name}</div>
+        <div class="flex justify-between text-sm opacity-90">
+            <span>${summary.best_selling.quantity} sold</span>
+            <span>₱${summary.best_selling.revenue.toLocaleString('en-PH', { maximumFractionDigits: 0 })}</span>
+        </div>
+        ` : `
+        <div class="text-lg font-bold mb-1">No sales yet</div>
+        `}
+    </div>
+</div>
+
+<!--Menu Performance Table-->
+<div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+    <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
+        <i class="fas fa-utensils mr-2 text-cyan-600"></i>
+        Menu Performance
+    </h5>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Rank</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Menu Item</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Quantity Sold</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">Gross Sales</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                ${menuItems && menuItems.length > 0 ? (() => {
+                let rank = 0;
+                return menuItems.map((item) => {
+                    if (item.quantity > 0) rank++;
+                    return `
+                <tr class="${item.quantity === 0 ? 'bg-gray-50 opacity-60' : ''}">
+                    <td class="px-4 py-3 text-sm text-gray-900 font-medium">
+                        ${item.quantity > 0 ? `
+                        <div class="flex items-center">
+                            <span class="w-8 h-8 flex items-center justify-center rounded-full ${rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                                rank === 2 ? 'bg-gray-200 text-gray-700' :
+                                    rank === 3 ? 'bg-orange-100 text-orange-700' :
+                                        'bg-gray-100 text-gray-600'
+                            } font-bold text-xs">
+                                ${rank}
+                            </span>
+                            ${rank === 1 ? '<i class="fas fa-trophy text-yellow-500 ml-2"></i>' : ''}
+                        </div>
+                        ` : `
+                        <span class="text-gray-400">-</span>
                         `}
-                        </tbody>
-                        ${menuItems.length > 0 && summary.total_items_sold > 0 ? `
-                        <tfoot class="bg-gray-100 font-semibold">
-                            <tr>
-                                <td colspan="2" class="px-4 py-3 text-sm text-gray-900">TOTAL</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 text-right">${summary.total_items_sold.toLocaleString()}</td>
-                                <td class="px-4 py-3 text-sm text-gray-900 text-right">₱${summary.total_revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
-                            </tr>
-                        </tfoot>
-                    ` : ''}
-                    </table>
-                </div>
-            </div>
-        `;
+                    </td>
+                    <td class="px-4 py-3 text-sm ${item.quantity === 0 ? 'text-gray-500' : 'text-gray-900 font-medium'}">
+                        ${item.menu_item}
+                        ${item.quantity === 0 ? '<span class="ml-2 text-xs text-red-500">(No sales)</span>' : ''}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-right ${item.quantity === 0 ? 'text-gray-400' : 'text-gray-900 font-bold'}">
+                        ${item.quantity.toLocaleString()}
+                    </td>
+                    <td class="px-4 py-3 text-sm text-right ${item.quantity === 0 ? 'text-gray-400' : 'text-gray-900 font-semibold'}">
+                        ₱${item.revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
+                    </td>
+                </tr>
+                `;
+                }).join('');
+            })() : `
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                        No menu performance data for this period
+                    </td>
+                </tr>
+                `}
+            </tbody>
+            ${menuItems && menuItems.length > 0 && summary.total_items_sold > 0 ? `
+            <tfoot class="bg-gray-100 font-semibold">
+                <tr>
+                    <td colspan="2" class="px-4 py-3 text-sm text-gray-900">TOTAL</td>
+                    <td class="px-4 py-3 text-sm text-gray-900 text-right">${summary.total_items_sold.toLocaleString()}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900 text-right">₱${summary.total_revenue.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                </tr>
+            </tfoot>
+            ` : ''}
+        </table>
+    </div>
+</div>
+`;
     }
 
     function exportToPDF(reportType, button) {
@@ -1453,7 +1502,11 @@
         if (reportType === 'Sales Report') {
             url = `/reports/sales/pdf?start_date=${startDate}&end_date=${endDate}`;
         } else if (reportType === 'Transaction Report') {
-            url = `/reports/transaction/pdf?start_date=${startDate}&end_date=${endDate}`;
+            // Get selected cashier from the filter dropdown
+            const cashierFilter = document.getElementById('cashier-filter');
+            const selectedCashier = cashierFilter ? cashierFilter.value : 'all';
+
+            url = `/reports/transaction/pdf?start_date=${startDate}&end_date=${endDate}&cashier=${encodeURIComponent(selectedCashier)}`;
         } else if (reportType === 'Menu Performance Report') {
             url = `/reports/menu/pdf?start_date=${startDate}&end_date=${endDate}`;
         } else if (reportType === 'Inventory Report') {
@@ -1523,7 +1576,8 @@
 
     function showAlert(type, message) {
         const alertDiv = document.createElement('div');
-        alertDiv.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        alertDiv.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${type === 'success' ? 'bg-green-500' :
+            'bg-red-500'
             } text-white font-medium`;
         alertDiv.style.animation = 'fadeIn 0.3s ease-in';
         alertDiv.textContent = message;
@@ -1535,5 +1589,27 @@
             alertDiv.style.transition = 'opacity 0.3s ease';
             setTimeout(() => alertDiv.remove(), 300);
         }, 3000);
+    }
+</script>
+
+<script>
+    function filterByCashier(cashierName) {
+        const rows = document.querySelectorAll('.transaction-row');
+        let count = 0;
+        let total = 0;
+
+        rows.forEach(row => {
+            const rowCashier = row.getAttribute('data-cashier');
+            if (cashierName === 'all' || rowCashier === cashierName) {
+                row.style.display = '';
+                count++;
+                total += parseFloat(row.querySelector('[data-amount]').getAttribute('data-amount'));
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        document.getElementById('total-count').textContent = count;
+        document.getElementById('grand-total').textContent = total.toLocaleString('en-PH', { minimumFractionDigits: 2 });
     }
 </script>

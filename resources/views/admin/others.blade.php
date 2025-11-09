@@ -369,13 +369,44 @@
                                                     <span class="badge badge-warning badge-sm ml-1">Low</span>
                                                 @endif
                                             </td>
-                                            <td><strong>{{ $stocklevel->ingredient->stocks }}
-                                                    {{ $stocklevel->ingredient->unit }}</strong></td>
-                                            <td>{{ $stocklevel->low_stock }} {{ $stocklevel->ingredient->unit }}</td>
-                                            <td>{{ $stocklevel->critical_stock ?? '—' }}
-                                                {{ $stocklevel->critical_stock ? $stocklevel->ingredient->unit : '' }}
+                                            <td>
+                                                <strong>
+                                                    @if(in_array(strtolower($stocklevel->ingredient->unit->abbreviation), ['pcs', 'pieces', 'pc']))
+                                                        {{ number_format($stocklevel->ingredient->stocks, 0) }}
+                                                    @else
+                                                        {{ $stocklevel->ingredient->stocks }}
+                                                    @endif
+                                                    {{ $stocklevel->ingredient->unit->abbreviation }}
+                                                </strong>
                                             </td>
-                                            <td>{{ $stocklevel->reorder_quantity }} {{ $stocklevel->ingredient->unit }}</td>
+                                            <td>
+                                                @if(in_array(strtolower($stocklevel->ingredient->unit->abbreviation), ['pcs', 'pieces', 'pc']))
+                                                    {{ number_format($stocklevel->low_stock, 0) }}
+                                                @else
+                                                    {{ $stocklevel->low_stock }}
+                                                @endif
+                                                {{ $stocklevel->ingredient->unit->abbreviation }}
+                                            </td>
+                                            <td>
+                                                @if($stocklevel->critical_stock)
+                                                    @if(in_array(strtolower($stocklevel->ingredient->unit->abbreviation), ['pcs', 'pieces', 'pc']))
+                                                        {{ number_format($stocklevel->critical_stock, 0) }}
+                                                    @else
+                                                        {{ $stocklevel->critical_stock }}
+                                                    @endif
+                                                    {{ $stocklevel->ingredient->unit->abbreviation }}
+                                                @else
+                                                    —
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if(in_array(strtolower($stocklevel->ingredient->unit->abbreviation), ['pcs', 'pieces', 'pc']))
+                                                    {{ number_format($stocklevel->reorder_quantity, 0) }}
+                                                @else
+                                                    {{ $stocklevel->reorder_quantity }}
+                                                @endif
+                                                {{ $stocklevel->ingredient->unit->abbreviation }}
+                                            </td>
                                             <td class="text-center">
                                                 <button class="btn btn-xs btn-primary p-1 edit-stock"
                                                     data-id="{{ $stocklevel->id }}"

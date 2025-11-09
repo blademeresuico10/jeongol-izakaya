@@ -11,13 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stock_level_alerts', function (Blueprint $table) {
+        Schema::create('refill_configurations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
-            $table->decimal('low_stock', 8, 2);
-            $table->decimal('critical_stock', 8, 2)->nullable();
-            $table->decimal('reorder_quantity', 10, 2); 
-            $table->timestamps();
+            $table->decimal('quantity_per_plate', 8, 2);
+
             $table->unique('ingredient_id');
         });
     }
@@ -27,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stock_level_alerts');
+        //
     }
 };

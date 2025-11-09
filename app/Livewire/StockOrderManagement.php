@@ -107,13 +107,13 @@ class StockOrderManagement extends Component
 
     public function openReceiveModal($orderId)
     {
-        $order = StockOrder::with('ingredient')->findOrFail($orderId);
+        $order = StockOrder::with('ingredient.unit')->findOrFail($orderId); 
 
         $this->selectedOrder = $orderId;
         $this->ingredientName = $order->ingredient->name;
-        $this->unit = $order->ingredient->unit;
+        $this->unit = $order->ingredient->unit->abbreviation; 
 
-        $isPieces = in_array(strtolower($this->unit), ['pieces', 'pcs', 'piece']);
+        $isPieces = in_array(strtolower($this->unit), ['pieces', 'pcs', 'piece', 'pc']);
 
         $this->orderedQuantity = $isPieces ? (int) $order->quantity : $order->quantity;
         $this->receivedQuantity = $isPieces ? (int) $order->quantity : $order->quantity;
@@ -277,7 +277,7 @@ class StockOrderManagement extends Component
 
         return view('livewire.stock-order-management', [
             'stockOrders' => $stockOrders,
-            'allStockRequests' => $stockOrders, 
+            'allStockRequests' => $stockOrders,
             'criticalStockIngredients' => $criticalStockIngredients,
             'lowStockIngredients' => $lowStockIngredients,
             'pendingCount' => $stockOrders->count(),

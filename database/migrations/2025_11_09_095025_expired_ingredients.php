@@ -11,18 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('menu_ingredients', function (Blueprint $table) {
+        Schema::create('expired_ingredients', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('menu_id')->constrained('menu');
-            $table->foreignId('ingredient_id')->constrained('ingredients');
             $table->decimal('quantity', 8, 2);
+            $table->date('expired_at');
+            $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
+            $table->foreignId('ingredient_batch_id')->constrained('ingredient_batches')->onDelete('cascade');
             $table->timestamps();
         });
     }
 
-    
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('menu_ingredients');
+        //
     }
 };

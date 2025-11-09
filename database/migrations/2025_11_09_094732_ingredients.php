@@ -11,12 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('refill_configurations', function (Blueprint $table) {
+        Schema::create('ingredients', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
-            $table->decimal('quantity_per_plate', 8, 2); 
-
-            $table->unique('ingredient_id');
+            $table->string('name')->unique();
+            $table->foreignId('category_id')->constrained('ingredient_categories')->onDelete('restrict');
+            $table->foreignId('unit_id')->constrained('ingredient_units')->onDelete('restrict');
+            $table->decimal('stocks', 8, 2);
+            $table->timestamps();
         });
     }
 

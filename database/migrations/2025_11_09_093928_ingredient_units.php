@@ -11,12 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expired_ingredients', function (Blueprint $table) {
+        Schema::create('ingredient_units', function (Blueprint $table) {
             $table->id();
-            $table->decimal('quantity', 8, 2);
-            $table->date('expired_at');
-            $table->foreignId('ingredient_batch_id')->constrained('ingredient_batches')->onDelete('cascade');
-            $table->timestamps(); 
+            $table->string('name')->unique(); 
+            $table->string('abbreviation')->unique(); 
         });
     }
 
@@ -25,6 +23,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('ingredient_units');
     }
 };

@@ -26,6 +26,9 @@ use App\Models\OperatingHour;
 use App\Models\MenuDiscount;
 use App\Models\StockAlertLevel;
 use App\Models\StockOrder;
+use App\Models\MenuCategory;
+use App\Models\IngredientCategory;
+use App\Models\IngredientUnit;
 
 class AdminController extends Controller
 {
@@ -223,8 +226,8 @@ class AdminController extends Controller
             ->take(7)
             ->values();
 
-        $ingredients = ingredients::select('id', 'name', 'category', 'unit', 'stocks')
-            ->with(['stockAlertLevel'])
+        $ingredients = ingredients::select('id', 'name', 'category_id', 'unit_id', 'stocks')
+            ->with(['category', 'unit', 'stockAlertLevel']) // Load relationships
             ->get()
             ->map(function ($ingredient) {
                 $alertLevel = $ingredient->stockAlertLevel;
@@ -251,15 +254,15 @@ class AdminController extends Controller
                     }
                 } else {
                     if ($ingredient->stocks < 10) {
-                        $ingredient->status = 'low';
+                        $ingredient->status = 'critical';
                         $ingredient->badge_class = 'bg-danger';
-                        $ingredient->badge_text = 'Low Stock';
+                        $ingredient->badge_text = 'Critical';
                         $ingredient->badge_icon = 'fa-exclamation-triangle';
                         $ingredient->sort_order = 1;
                     } elseif ($ingredient->stocks < 50) {
-                        $ingredient->status = 'medium';
+                        $ingredient->status = 'low';
                         $ingredient->badge_class = 'bg-warning';
-                        $ingredient->badge_text = 'Medium';
+                        $ingredient->badge_text = 'Low Stock';
                         $ingredient->badge_icon = 'fa-exclamation-circle';
                         $ingredient->sort_order = 2;
                     } else {
@@ -621,7 +624,10 @@ class AdminController extends Controller
             $menu = Menu::all();
         }
 
-        return view('admin.menu_management', compact('menu'));
+        $categories = MenuCategory::where('is_active', 1)->get();
+        $allCategories = MenuCategory::all();
+
+        return view('admin.menu_management', compact('menu', 'categories', 'allCategories'));
     }
 
     public function menuIngredients()
@@ -636,13 +642,15 @@ class AdminController extends Controller
             foreach ($menus as $menu) {
                 $ingredients[$menu->id] = DB::table('menu_ingredients as mi')
                     ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
+                    ->join('ingredient_categories as ic', 'i.category_id', '=', 'ic.id')
+                    ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
                     ->where('mi.menu_id', $menu->id)
                     ->select(
                         'mi.id',
                         'mi.quantity',
                         'i.name as ingredient_name',
-                        'i.category',
-                        'i.unit',
+                        'ic.name as category',
+                        'iu.abbreviation as unit',
                         'i.stocks as stock'
                     )
                     ->get();
@@ -669,12 +677,14 @@ class AdminController extends Controller
 
         $ingredients = DB::table('menu_ingredients')
             ->join('ingredients', 'menu_ingredients.ingredient_id', '=', 'ingredients.id')
+            ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
             ->where('menu_ingredients.menu_id', $menu->id)
             ->select(
                 'menu_ingredients.id',
                 'menu_ingredients.menu_id',
                 'menu_ingredients.quantity',
-                'ingredients.name as ingredient_name'
+                'ingredients.name as ingredient_name',
+                'ingredient_units.abbreviation as unit'
             )
             ->get();
 
@@ -686,9 +696,26 @@ class AdminController extends Controller
 
     public function attachIngredient(Request $request, $menuId)
     {
+        // Get the ingredient to check its unit
+        $ingredient = DB::table('ingredients')
+            ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
+            ->where('ingredients.id', $request->ingredient_id)
+            ->select('ingredient_units.abbreviation as unit')
+            ->first();
+
+        $isPieces = in_array(strtolower($ingredient->unit), ['pcs', 'pieces', 'piece', 'pc']);
+
         $request->validate([
             'ingredient_id' => 'required|exists:ingredients,id',
-            'quantity' => 'required|numeric|min:1'
+            'quantity' => [
+                'required',
+                'numeric',
+                $isPieces ? 'integer' : 'min:0.01',
+                $isPieces ? 'min:1' : 'min:0.01'
+            ]
+        ], [
+            'quantity.integer' => 'Quantity must be a whole number for pieces',
+            'quantity.min' => $isPieces ? 'Quantity must be at least 1' : 'Quantity must be greater than 0'
         ]);
 
         $exists = DB::table('menu_ingredients')
@@ -729,7 +756,7 @@ class AdminController extends Controller
         $request->validate([
             'updates' => 'required|array',
             'updates.*.id' => 'required|exists:menu_ingredients,id',
-            'updates.*.quantity' => 'required|numeric|min:0'
+            'updates.*.quantity' => 'required|numeric|min:0.01'
         ]);
 
         foreach ($request->updates as $update) {
@@ -747,8 +774,17 @@ class AdminController extends Controller
     public function getAllIngredients()
     {
         $ingredients = DB::table('ingredients')
-            ->select('id', 'name', 'category', 'unit', 'stocks')
-            ->orderBy('category')
+            ->join('ingredient_categories', 'ingredients.category_id', '=', 'ingredient_categories.id')
+            ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
+            ->select(
+                'ingredients.id',
+                'ingredients.name',
+                'ingredient_categories.name as category',
+                'ingredient_units.abbreviation as unit',
+                'ingredients.stocks'
+            )
+            ->orderBy('ingredient_categories.name')
+            ->orderBy('ingredients.name')
             ->get();
 
         return response()->json([
@@ -970,8 +1006,8 @@ class AdminController extends Controller
     private function getSuggestedIngredients($menuCategory)
     {
         $categoryMapping = [
-            'main' => ['meat', 'vegetables', 'soupbase'], 
-            'add_ons' => ['meat', 'beverage'],             
+            'main' => ['meat', 'vegetables', 'soupbase'],
+            'add_ons' => ['meat', 'beverage'],
         ];
 
         $ingredientCategories = $categoryMapping[$menuCategory] ?? [];
@@ -1060,6 +1096,44 @@ class AdminController extends Controller
         return view('admin.editmenu', compact('menuItem'));
     }
 
+    public function storeCategory(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|min:3|max:255',
+        ]);
+
+        $exists = MenuCategory::whereRaw('LOWER(name) = ?', [strtolower($request->name)])->exists();
+
+        if ($exists) {
+            return response()->json([
+                'errors' => [
+                    'name' => ['This category name already exists.']
+                ]
+            ], 422);
+        }
+
+        MenuCategory::create([
+            'name' => $request->name,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Category added successfully!'
+        ]);
+    }
+    public function updateCategory(Request $request, $id)
+    {
+        $request->validate([
+            'is_active' => 'required|boolean',
+        ]);
+
+        $category = MenuCategory::findOrFail($id);
+        $category->is_active = $request->is_active;
+        $category->save();
+
+        return redirect()->back()->with('success', 'Category status updated successfully!');
+    }
     public function updateMenu(Request $request, $id)
     {
         try {
@@ -1368,18 +1442,28 @@ class AdminController extends Controller
 
     public function ingredient_management()
     {
-        $lowStockIngredients = ingredients::with('stockAlertLevel')
+        $lowStockIngredients = Ingredients::with('stockAlertLevel')
             ->whereHas('stockAlertLevel', function ($query) {
                 $query->whereRaw('ingredients.stocks <= stock_level_alerts.low_stock');
             })
             ->get();
 
-        $allIngredients = ingredients::with('stockAlertLevel')
+        $allIngredients = Ingredients::with('stockAlertLevel')
             ->orderBy('name', 'asc')
             ->get();
 
-        return view('admin.ingredient_management', compact('lowStockIngredients', 'allIngredients'));
+        // Add these lines for the modals
+        $ingredientCategories = IngredientCategory::all();
+        $ingredientUnits = IngredientUnit::all();
+
+        return view('admin.ingredient_management', compact(
+            'lowStockIngredients',
+            'allIngredients',
+            'ingredientCategories',
+            'ingredientUnits'
+        ));
     }
+
 
     public function createStockOrder(Request $request)
     {
@@ -1513,14 +1597,26 @@ class AdminController extends Controller
         try {
             ingredientBatch::processExpiredBatches();
 
-            $ingredients = ingredients::with(['stockAlertLevel'])
-                ->orderBy('name', 'asc')
+            $ingredients = DB::table('ingredients')
+                ->join('ingredient_categories', 'ingredients.category_id', '=', 'ingredient_categories.id')
+                ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
+                ->leftJoin('stock_level_alerts', 'ingredients.id', '=', 'stock_level_alerts.ingredient_id')
+                ->select(
+                    'ingredients.id',
+                    'ingredients.name',
+                    'ingredients.stocks',
+                    'ingredient_categories.name as category',
+                    'ingredient_units.abbreviation as unit',
+                    'stock_level_alerts.low_stock',
+                    'stock_level_alerts.critical_stock'
+                )
+                ->orderBy('ingredients.name', 'asc')
                 ->paginate(10);
 
+            // Transform the data
             $ingredients->getCollection()->transform(function ($ingredient) {
-                $alertLevel = $ingredient->stockAlertLevel;
-                $lowStock = $alertLevel->low_stock ?? 50;
-                $criticalStock = $alertLevel->critical_stock ?? 10;
+                $lowStock = $ingredient->low_stock ?? 50;
+                $criticalStock = $ingredient->critical_stock ?? 10;
 
                 if ($ingredient->stocks <= $criticalStock) {
                     $ingredient->badge_class = 'bg-danger';
@@ -1533,7 +1629,8 @@ class AdminController extends Controller
                     $ingredient->badge_text = 'Good';
                 }
 
-                $ingredient->unit = strtolower($ingredient->unit) === 'pieces' ? 'pcs' : $ingredient->unit;
+                unset($ingredient->low_stock);
+                unset($ingredient->critical_stock);
 
                 return $ingredient;
             });
@@ -1566,25 +1663,28 @@ class AdminController extends Controller
 
             $batches = DB::table('ingredient_batches')
                 ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
+                ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id') // Add this join
                 ->select(
                     'ingredient_batches.id',
                     'ingredients.name as ingredient_name',
                     'ingredient_batches.quantity',
                     'ingredient_batches.expiration_date',
-                    'ingredients.unit',
+                    'ingredient_units.abbreviation as unit', // Change this line
                     'ingredient_batches.arrived_at'
                 )
                 ->where('ingredient_batches.quantity', '>', 0)
                 ->where('ingredient_batches.status', '!=', 'expired')
                 ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
-                ->whereDate('ingredient_batches.expiration_date', '>', now()) 
+                ->whereDate('ingredient_batches.expiration_date', '>', now())
                 ->orderBy('ingredient_batches.arrived_at', 'desc')
                 ->paginate(10)
                 ->through(function ($b) {
+                    $isPieces = in_array(strtolower($b->unit), ['pcs', 'pieces', 'piece', 'pc']);
+
                     return [
                         'id' => $b->id,
                         'ingredient_name' => $b->ingredient_name,
-                        'quantity' => $b->quantity,
+                        'quantity' => $isPieces ? (int)$b->quantity : (float)$b->quantity,
                         'unit' => $b->unit,
                         'arrived_at' => \Carbon\Carbon::parse($b->arrived_at)->format('Y-m-d'),
                         'expiration_date' => \Carbon\Carbon::parse($b->expiration_date)->format('Y-m-d')
@@ -2068,7 +2168,7 @@ class AdminController extends Controller
 
         $menus = menu::whereNull('deleted_at')->get();
         $discounts = MenuDiscount::with('menu')->paginate(6);
-        $stock_level = StockAlertLevel::with('ingredient')->paginate(6);
+       $stock_level = StockAlertLevel::with(['ingredient.unit'])->paginate(6);
         $stock_order = StockOrder::with('ingredient')->paginate(6);
         $ingredients = ingredients::orderBy('name')->get();
 
@@ -2095,6 +2195,8 @@ class AdminController extends Controller
 
         return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'));
     }
+
+    
     public function storeOperatingHours(Request $request)
     {
         $request->validate([

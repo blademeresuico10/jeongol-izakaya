@@ -29,6 +29,12 @@
                     </h5>
                     @if(!request()->has('show_deleted'))
                         <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-warning" data-toggle="modal" data-target="#addCategoryModal">
+                                Add Menu Category
+                            </button>
+                            <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#updateCategoryModal">
+                                Update Menu Category
+                            </button>
                             <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#addMenuModal">
                                 Add Menu
                             </button>
@@ -111,6 +117,94 @@
                 </div>
             </div>
 
+            <div class="modal fade" id="addCategoryModal" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning text-white">
+                            <h5 class="modal-title" id="addCategoryModalLabel">
+                                <i class="fas fa-plus"></i> Add New Menu Category
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form id="addCategoryForm">
+                            @csrf
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="category_name">Category Name <span class="text-danger">*</span></label>
+                                    <input type="text" name="name" id="category_name" class="form-control" required
+                                        minlength="3" placeholder="e.g., Main Course">
+                                    <small id="categoryNameError" class="text-danger" style="display: none;"></small>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-save"></i> Add Category
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="updateCategoryModal" data-backdrop="static" data-keyboard="false">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-info text-white">
+                            <h5 class="modal-title" id="updateCategoryModalLabel">
+                                <i class="fas fa-edit"></i> Update Category Status
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <form id="updateCategoryForm" method="POST">
+                            @csrf
+                            <input type="hidden" name="category_id" id="update_category_id">
+
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="category_select">Select Category <span
+                                            class="text-danger">*</span></label>
+                                    <select id="category_select" class="form-control" required>
+                                        <option value="">Choose a category...</option>
+                                        @foreach($allCategories as $category)
+                                            <option value="{{ $category->id }}" data-status="{{ $category->is_active }}">
+                                                {{ $category->name }}
+
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('category_id')
+                                        <small class="text-danger">{{ $message }}</small>
+                                    @enderror
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Status <span class="text-danger">*</span></label>
+                                    <select name="is_active" id="is_active" class="form-control" required>
+                                        <option value="1">Active</option>
+                                        <option value="0">Inactive</option>
+                                    </select>
+                                    @error('is_active')
+                                        <small class="text-danger">{{ $message }}</small>
+                                    @enderror
+                                </div>
+
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-info">
+                                    <i class="fas fa-save"></i> Update Status
+                                </button>
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal fade" id="addMenuModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -141,18 +235,19 @@
 
                                 <div class="form-group">
                                     <label for="category">Category <span class="text-danger">*</span></label>
-                                    <select name="category" id="category" class="form-control" required>
+                                    <select name="category_id" id="category_id" class="form-control" required>
                                         <option value="">Select Category</option>
-                                        <option value="main" {{ old('category') == 'main' ? 'selected' : '' }}>Main
-                                        </option>
-                                        <option value="add_ons" {{ old('category') == 'add_ons' ? 'selected' : '' }}>
-                                            Add-ons</option>
+                                        @foreach($categories as $category)
+                                            <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                                {{ $category->name }}
+                                            </option>
+                                        @endforeach
                                     </select>
                                     <div>
                                         <small id="categoryError" class="text-danger text-sm"
                                             style="display: none;"></small>
                                     </div>
-                                    @error('category')
+                                    @error('category_id')
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
@@ -604,7 +699,7 @@
                 }
 
                 const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif'];
-                const maxSize = 2 * 1024 * 1024; 
+                const maxSize = 2 * 1024 * 1024;
 
                 if (!allowedTypes.includes(file.type)) {
                     imageError.textContent = 'Only JPG, JPEG, PNG, and GIF images are allowed';
@@ -878,11 +973,11 @@
             const content = document.getElementById('ingredientsContent');
 
             content.innerHTML = `
-                <div class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
-                    <p class="mt-2">Loading menu ingredients...</p>
-                </div>
-            `;
+        <div class="text-center py-4">
+            <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+            <p class="mt-2">Loading menu ingredients...</p>
+        </div>
+    `;
 
             fetch("{{ route('admin.menu_ingredients') }}")
                 .then(res => res.json())
@@ -902,86 +997,100 @@
                         const headerClass = isNewWithSuggestions ? 'bg-success text-white' : 'bg-light';
 
                         html += `
-                            <div class="card mb-3 ${cardClass}">
-                                <div class="card-header ${headerClass}">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
-                                        <small class="text-${isNewWithSuggestions ? 'white' : 'muted'}">
-                                            Category: ${menu.category}
-                                        </small>
-                                    </div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <table class="table table-sm table-hover mb-0">
-                                        <thead class="thead-light">
-                                            <tr>
-                                                <th>Ingredient</th>
-                                                <th>Category</th>
-                                                <th width="150">Quantity (grams/pcs)</th>
-                                                <th width="80">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                        `;
+                    <div class="card mb-3 ${cardClass}">
+                        <div class="card-header ${headerClass}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
+                                <small class="text-${isNewWithSuggestions ? 'white' : 'muted'}">
+                                    Category: ${menu.category}
+                                </small>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>Ingredient</th>
+                                        <th>Category</th>
+                                        <th width="150">Quantity</th>
+                                        <th width="80">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
 
                         if (ingList.length === 0) {
                             html += `
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted py-3">
-                                        <i class="fas fa-info-circle"></i> Empty
-                                    </td>
-                                </tr>
-                            `;
+                        <tr>
+                            <td colspan="4" class="text-center text-muted py-3">
+                                <i class="fas fa-info-circle"></i> Empty
+                            </td>
+                        </tr>
+                    `;
                         } else {
                             ingList.forEach(ing => {
+                                // Check if unit is pieces for input validation
+                                const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(ing.unit.toLowerCase());
+                                const step = isPieces ? '1' : '0.01';
+                                const min = isPieces ? '1' : '0.01';
+                                const oninput = isPieces ? 'this.value = Math.floor(Math.abs(this.value))' : '';
+
+                                // Format display value
+                                const displayQty = isPieces ? Math.floor(ing.quantity) : parseFloat(ing.quantity).toFixed(2);
+
                                 html += `
-                                    <tr>
-                                        <td class="align-middle">
-                                            <strong>${ing.ingredient_name}</strong>
-                                        </td>
-                                        <td class="align-middle">
-                                            <span class="badge badge-info">${ing.category}</span>
-                                        </td>
-                                        <td>
-                                            <div class="input-group input-group-sm">
-                                                <input type="number" 
-                                                       class="form-control ingredient-qty"
-                                                       data-id="${ing.id}" 
-                                                       value="${ing.quantity}"
-                                                       min="0.01"
-                                                       step="any"
-                                                       placeholder="Quantity">
-                                            </div>
-                                        </td>
-                                        <td class="align-middle text-center">
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-danger removeIngredientBtn" 
-                                                    data-id="${ing.id}"
-                                                    title="Remove">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `;
+                            <tr>
+                                <td class="align-middle">
+                                    <strong>${ing.ingredient_name}</strong>
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge badge-info">${ing.category}</span>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <input type="number" 
+                                               class="form-control ingredient-qty"
+                                               data-id="${ing.id}" 
+                                               value="${displayQty}"
+                                               min="${min}"
+                                               step="${step}"
+                                               ${oninput ? `oninput="${oninput}"` : ''}
+                                               placeholder="Quantity">
+                                        <div class="input-group-append">
+                                            <span class="input-group-text">${ing.unit}</span>
+                                        </div>
+                                    </div>
+                                    ${isPieces ? '<small class="text-muted">Whole numbers only</small>' : ''}
+                                </td>
+                                <td class="align-middle text-center">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-danger removeIngredientBtn" 
+                                            data-id="${ing.id}"
+                                            title="Remove">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
                             });
                         }
 
                         html += `
-                                        </tbody>
-                                    </table>
-                                    <div class="card-footer bg-light">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <button type="button"
-                                                class="btn btn-sm btn-success addIngredientBtn"
-                                                data-menu-id="${menu.id}"
-                                                data-menu-name="${menu.menu_item}">
-                                                <i class="fas fa-plus"></i> Add Ingredient
-                                            </button>
-                                        </div>
-                                    </div>
+                                </tbody>
+                            </table>
+                            <div class="card-footer bg-light">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <button type="button"
+                                        class="btn btn-sm btn-success addIngredientBtn"
+                                        data-menu-id="${menu.id}"
+                                        data-menu-name="${menu.menu_item}">
+                                        <i class="fas fa-plus"></i> Add Ingredient
+                                    </button>
                                 </div>
                             </div>
-                        `;
+                        </div>
+                    </div>
+                `;
                     });
 
                     content.innerHTML = html;
@@ -989,11 +1098,11 @@
                 .catch(err => {
                     console.error('Error fetching ingredients:', err);
                     content.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle"></i> 
-                            Failed to load menu ingredients. Please try again.
-                        </div>
-                    `;
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> 
+                    Failed to load menu ingredients. Please try again.
+                </div>
+            `;
                 });
         });
 
@@ -1003,7 +1112,9 @@
 
             document.querySelectorAll('.ingredient-qty').forEach(input => {
                 const value = parseFloat(input.value);
-                if (isNaN(value) || value <= 0) {
+                const min = parseFloat(input.min);
+
+                if (isNaN(value) || value < min) {
                     hasError = true;
                     input.classList.add('is-invalid');
                 } else {
@@ -1019,7 +1130,7 @@
                 Swal.fire({
                     icon: 'warning',
                     title: 'Invalid Input',
-                    text: 'Please enter valid quantities (greater than 0)',
+                    text: 'Please enter valid quantities',
                     toast: true,
                     position: 'top',
                     timer: 3000,
@@ -1551,4 +1662,56 @@
     $('#postMenuCreationModal').on('hidden.bs.modal', function () {
         clearTimeout(autoCloseTimer);
     });
+
+    $(document).ready(function () {
+        $('#addCategoryForm').on('submit', function (e) {
+            e.preventDefault();
+
+            $('#categoryNameError').hide().text('');
+
+            $.ajax({
+                url: "{{ route('storeCategory') }}",
+                method: 'POST',
+                data: $(this).serialize(),
+                success: function (response) {
+                    $('#addCategoryModal').modal('hide');
+
+                    $('#addCategoryForm')[0].reset();
+
+                    alert('Category added successfully!');
+
+                    location.reload();
+                },
+                error: function (xhr) {
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        if (errors.name) {
+                            $('#categoryNameError').text(errors.name[0]).show();
+                        }
+                    } else {
+                        alert('An error occurred. Please try again.');
+                    }
+                }
+            });
+        });
+    });
+
+    document.getElementById('category_select').addEventListener('change', function () {
+        const categoryId = this.value;
+        const selectedOption = this.options[this.selectedIndex];
+        const currentStatus = selectedOption.getAttribute('data-status');
+
+        if (categoryId) {
+            // Update form action with the category ID
+            document.getElementById('updateCategoryForm').action = `/update-category/${categoryId}`;
+
+            // Set hidden input
+            document.getElementById('update_category_id').value = categoryId;
+
+            // Set current status
+            document.getElementById('is_active').value = currentStatus == '1' ? '1' : '0';
+        }
+    });
+
+
 </script>

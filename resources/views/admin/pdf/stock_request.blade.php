@@ -1,27 +1,28 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="utf-8">
     <title>Purchase Order</title>
     <style>
-        body { 
+        body {
             font-family: Arial, sans-serif;
             padding: 40px;
             color: #333;
         }
-        
+
         .header {
             text-align: center;
             border-bottom: 2px solid #000;
             padding-bottom: 20px;
             margin-bottom: 30px;
         }
-        
+
         .header h1 {
             margin: 0;
             font-size: 28px;
         }
-        
+
         .header h3 {
             margin: 10px 0 0 0;
             font-weight: normal;
@@ -32,11 +33,11 @@
             font-size: 12px;
             color: #666;
         }
-        
+
         .info {
             margin: 30px 0;
         }
-        
+
         .info p {
             margin: 8px 0;
             font-size: 14px;
@@ -91,25 +92,25 @@
             background: #ffc107;
             color: #000;
         }
-        
+
         .order-table {
             width: 100%;
             border-collapse: collapse;
             margin: 30px 0;
         }
-        
+
         .order-table th,
         .order-table td {
             border: 1px solid #000;
             padding: 15px;
             text-align: left;
         }
-        
+
         .order-table th {
             background: #f0f0f0;
             font-weight: bold;
         }
-        
+
         .quantity {
             font-size: 18px;
             font-weight: bold;
@@ -136,11 +137,11 @@
         .meta-info strong {
             color: #495057;
         }
-        
+
         .signature {
             margin-top: 60px;
         }
-        
+
         .signature-line {
             border-bottom: 1px solid #000;
             width: 300px;
@@ -179,6 +180,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="header">
         <h1>JEONGOL IZAKAYA</h1>
@@ -198,9 +200,14 @@
                 <td>
                     <strong>{{ $ingredient['name'] }}</strong>
                 </td>
-               
+
                 <td class="quantity" style="text-align: center;">
-                    {{ $order['quantity'] }} {{ $ingredient['unit'] }}
+                    @if(in_array(strtolower($ingredient['unit']['abbreviation']), ['pcs', 'pieces', 'piece', 'pc']))
+                        {{ number_format($order['quantity'], 0) }}
+                    @else
+                        {{ number_format($order['quantity'], 2) }}
+                    @endif
+                    {{ $ingredient['unit']['abbreviation'] }}
                 </td>
                 <td style="text-align: center;"></td>
             </tr>
@@ -208,9 +215,9 @@
     </table>
 
     @if(isset($order['notes']) && $order['notes'])
-    <div class="footer-note">
-        <strong>Notes:</strong> {{ $order['notes'] }}
-    </div>
+        <div class="footer-note">
+            <strong>Notes:</strong> {{ $order['notes'] }}
+        </div>
     @endif
 
     <div class="signature-section">
@@ -229,4 +236,5 @@
     </div>
 
 </body>
+
 </html>

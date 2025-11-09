@@ -12,11 +12,11 @@ return new class extends Migration
         Schema::create('menu', function (Blueprint $table) {
             $table->id();
             $table->string('menu_item')->unique();
-            $table->decimal('regular_price', 10, 2); 
+            $table->decimal('regular_price', 10, 2);
             $table->string('image')->nullable();
-            $table->string('category');
-            $table->boolean('has_customer_discount')->default(false); 
-            $table->enum('status',['Active', 'Blocked'])->default('Active');
+            $table->foreignId('category_id')->constrained('menu_categories')->onDelete('restrict');
+            $table->boolean('has_customer_discount')->default(false);
+            $table->enum('status', ['Active', 'Blocked'])->default('Active');
             $table->timestamps();
             $table->softDeletes();
         });

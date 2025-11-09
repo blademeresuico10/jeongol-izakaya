@@ -12,7 +12,6 @@
                     <div class="flex justify-center">
                         <div class="relative h-40 w-48 bg-white rounded-3xl shadow-md flex items-center justify-center {{ $isOccupied ? 'table-occupied' : 'table-available' }}">
                            
-
                             <div class="flex flex-col items-center mt-6">
                                 <div class="w-20 h-20 rounded-full {{ $isOccupied ? 'bg-red-600 pulse-red' : 'bg-green-600' }} text-white flex items-center justify-center shadow">
                                     <span class="text-lg font-semibold">T-{{ $table->table_number }}</span>
@@ -20,7 +19,14 @@
 
                                 @if($isOccupied)
                                     @if(isset($table->is_expired) && $table->is_expired)
-                                        <span class="text-red-600 font-bold mt-2">TIME'S UP!</span>
+                                        <span class="text-red-600 font-bold mt-2 animate-pulse">
+                                            00:00:00    
+                                            @if(isset($table->days_overdue) && $table->days_overdue > 0)
+                                                <span class="block text-xs">({{ $table->days_overdue }} day(s) overdue)</span>
+                                            @endif
+                                        </span>
+                                    @elseif(isset($table->is_upcoming) && $table->is_upcoming)
+                                        <span class="text-orange-600 font-medium mt-2">Reserved</span>
                                     @elseif(isset($table->remaining_seconds) && $table->remaining_seconds > 0)
                                         <span class="text-red-600 font-medium mt-2 flex items-center space-x-1">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -76,10 +82,19 @@
             document.querySelectorAll('.countdown').forEach(el => {
                 let sec = parseInt(el.dataset.seconds) || 0;
 
+                // If seconds is already 0 or negative, don't start countdown
+                if (sec <= 0) {
+                    el.textContent = "00:00:00";
+                    const parent = el.closest('.flex.items-center');
+                    if (parent) {
+                        parent.innerHTML = '<span class="text-red-600 font-bold animate-pulse">TIME\'S UP!</span>';
+                    }
+                    return;
+                }
+
                 const timer = setInterval(() => {
                     if (sec <= 0) {
                         el.textContent = "00:00:00";
-                        // Change text to TIME'S UP! when countdown reaches 0
                         const parent = el.closest('.flex.items-center');
                         if (parent) {
                             parent.innerHTML = '<span class="text-red-600 font-bold animate-pulse">TIME\'S UP!</span>';

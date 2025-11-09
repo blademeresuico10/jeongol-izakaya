@@ -21,22 +21,17 @@ class CashierTableLayout extends Component
     public function loadData()
     {
         $now = Carbon::now();
-        $today = Carbon::today();
 
         $activeReservations = reservation::with('table')
             ->where('status', 'Active')
-            ->whereDate('started_at', $today)
-            ->where('started_at', '<=', $now)
-            ->where('ended_at', '>=', $now)
             ->whereDoesntHave('transactions')
+            ->orderBy('started_at', 'asc')
             ->get();
 
         $activeWalkins = walkin::with('table')
             ->where('status', 'Active')
-            ->whereDate('started_at', $today)
-            ->where('started_at', '<=', $now)
-            ->where('ended_at', '>=', $now)
             ->whereDoesntHave('transactions')
+            ->orderBy('started_at', 'asc')
             ->get();
 
         $this->tables = table::all()->map(function ($table) use ($activeReservations, $activeWalkins, $now) {
@@ -44,23 +39,35 @@ class CashierTableLayout extends Component
             $session = $activeWalkins->firstWhere('table_id', $table->id);
 
             if ($res) {
+                $startTime = Carbon::parse($res->started_at);
+                $endTime = Carbon::parse($res->ended_at);
+                
+                $hasStarted = $now->gte($startTime);
+                $secondsRemaining = $now->diffInSeconds($endTime, false);
+                
                 $table->current_reservation_id = $res->id;
                 $table->current_session_id = null;
                 $table->is_walk_in = false;
-                
-                $endTime = Carbon::parse($res->ended_at);
-                $table->remaining_seconds = max(0, $now->diffInSeconds($endTime, false));
-                $table->is_expired = false;
+                $table->remaining_seconds = $secondsRemaining;
+                $table->is_expired = $hasStarted && $secondsRemaining <= 0;
+                $table->is_upcoming = !$hasStarted;
+                $table->days_overdue = $table->is_expired ? $now->diffInDays($endTime) : 0;
                 $table->is_occupied = true;
                 
             } elseif ($session) {
+                $startTime = Carbon::parse($session->started_at);
+                $endTime = Carbon::parse($session->ended_at);
+                
+                $hasStarted = $now->gte($startTime);
+                $secondsRemaining = $now->diffInSeconds($endTime, false);
+                
                 $table->current_reservation_id = null;
                 $table->current_session_id = $session->id;
                 $table->is_walk_in = true;
-                
-                $endTime = Carbon::parse($session->ended_at);
-                $table->remaining_seconds = max(0, $now->diffInSeconds($endTime, false));
-                $table->is_expired = false;
+                $table->remaining_seconds = $secondsRemaining;
+                $table->is_expired = $hasStarted && $secondsRemaining <= 0;
+                $table->is_upcoming = !$hasStarted;
+                $table->days_overdue = $table->is_expired ? $now->diffInDays($endTime) : 0;
                 $table->is_occupied = true;
                 
             } else {
@@ -69,6 +76,8 @@ class CashierTableLayout extends Component
                 $table->is_walk_in = false;
                 $table->remaining_seconds = null;
                 $table->is_expired = false;
+                $table->is_upcoming = false;
+                $table->days_overdue = 0;
                 $table->is_occupied = false;
             }
 

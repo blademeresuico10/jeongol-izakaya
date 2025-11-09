@@ -53,13 +53,17 @@ class ReportsController extends Controller
 
         $gcashTotal = DB::table('reservation_payment_details as rpd')
             ->join('reservations as r', 'rpd.reservation_id', '=', 'r.id')
-            ->whereIn('r.status', ['Active', 'Completed'])
+            ->join('transactions as t', 'r.id', '=', 't.reservation_id')
+            ->where('t.status', 'Completed')
+            ->whereBetween('t.created_at', [$startDate, $endDate])
             ->where('rpd.payment_method', 'gcash')
             ->sum('rpd.advance_payment');
 
         $mayaTotal = DB::table('reservation_payment_details as rpd')
             ->join('reservations as r', 'rpd.reservation_id', '=', 'r.id')
-            ->whereIn('r.status', ['Active', 'Completed'])
+            ->join('transactions as t', 'r.id', '=', 't.reservation_id')
+            ->where('t.status', 'Completed')
+            ->whereBetween('t.created_at', [$startDate, $endDate])
             ->where('rpd.payment_method', 'maya')
             ->sum('rpd.advance_payment');
 
@@ -141,15 +145,7 @@ class ReportsController extends Controller
             ->where('status', 'completed')
             ->with('cashier')
             ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($transaction) {
-                return [
-                    'transaction_id' => $transaction->id,
-                    'transaction_date' => $transaction->created_at->format('Y-m-d H:i:s'),
-                    'cashier_name' => $transaction->cashier ? ($transaction->cashier->firstname . ' ' . $transaction->cashier->lastname) : 'Unknown',
-                    'grand_total' => $transaction->grand_total,
-                ];
-            });
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -425,7 +421,6 @@ class ReportsController extends Controller
         return $colors[strtolower($category)] ?? 'gray';
     }
 
-
     public function getMenuReport(Request $request)
     {
         $request->validate([
@@ -436,10 +431,12 @@ class ReportsController extends Controller
         $startDate = Carbon::parse($request->start_date)->startOfDay();
         $endDate = Carbon::parse($request->end_date)->endOfDay();
 
+        // Get completed transaction IDs
         $completedTransactionIds = transaction::where('status', 'Completed')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->pluck('id');
 
+        // Get reservation orders
         $reservationOrders = orders::with('menu')
             ->where('status', 'Served')
             ->whereHas('reservation', function ($query) use ($completedTransactionIds) {
@@ -449,6 +446,7 @@ class ReportsController extends Controller
             })
             ->get();
 
+        // Get walk-in orders
         $walkinOrders = orders::with('menu')
             ->where('status', 'Served')
             ->whereHas('walkin', function ($query) use ($completedTransactionIds) {
@@ -458,48 +456,62 @@ class ReportsController extends Controller
             })
             ->get();
 
+        // Merge all served orders
         $servedOrders = $reservationOrders->merge($walkinOrders);
 
+        // Calculate total items sold (sum of quantities)
         $totalItemsSold = $servedOrders->sum('quantity');
 
-        $totalRevenue = $servedOrders->sum(function ($order) {
-            return $order->quantity * $order->price;
-        });
+        // Calculate total revenue using menu's regular_price
+        $totalRevenue = $servedOrders->reduce(function ($carry, $order) {
+            if ($order->menu) {
+                return $carry + ($order->quantity * $order->menu->regular_price);
+            }
+            return $carry;
+        }, 0);
 
+        // Group by menu and calculate performance
         $menuPerformance = $servedOrders->groupBy('menu_id')->map(function ($orders) {
             $menu = $orders->first()->menu;
+
             if (!$menu) {
                 return null;
             }
 
+            // Sum quantities for this menu item
             $quantity = $orders->sum('quantity');
-            $revenue = $orders->sum(function ($order) {
-                return $order->quantity * $order->price;
-            });
+
+            // Calculate revenue using menu's regular_price
+            $revenue = $quantity * $menu->regular_price;
 
             return [
                 'menu_id' => $menu->id,
                 'menu_item' => $menu->menu_item,
+                'category' => $menu->category,
                 'quantity' => $quantity,
-                'revenue' => $revenue,
+                'revenue' => round($revenue, 2),
             ];
         })->filter()->sortByDesc('quantity')->values();
 
+        // Get best selling item
         $bestSelling = $menuPerformance->first();
 
+        // Get menu items with zero sales
         $soldMenuIds = $menuPerformance->pluck('menu_id')->toArray();
         $zeroSalesItems = Menu::whereNotIn('id', $soldMenuIds)
-            ->where('status', 'available')
+            ->where('status', 'Active')
             ->get()
             ->map(function ($menu) {
                 return [
                     'menu_id' => $menu->id,
                     'menu_item' => $menu->menu_item,
+                    'category' => $menu->category,
                     'quantity' => 0,
                     'revenue' => 0,
                 ];
             });
 
+        // Combine sold items with zero-sales items
         $allMenuItems = $menuPerformance->concat($zeroSalesItems);
 
         return response()->json([
@@ -511,13 +523,14 @@ class ReportsController extends Controller
                     'best_selling' => $bestSelling ? [
                         'name' => $bestSelling['menu_item'],
                         'quantity' => $bestSelling['quantity'],
-                        'revenue' => round($bestSelling['revenue'], 2),
+                        'revenue' => $bestSelling['revenue'],
                     ] : null,
                 ],
                 'menu_items' => $allMenuItems,
             ]
         ]);
     }
+
     public function salesReportPdf(Request $request)
     {
         $request->validate([
@@ -628,22 +641,33 @@ class ReportsController extends Controller
         }
     }
 
+    // Controller Method
     public function transactionReportPdf(Request $request)
     {
         $request->validate([
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
+            'cashier'    => 'nullable|string', // Add cashier filter
         ]);
 
         $dateFrom    = Carbon::parse($request->input('start_date'))->startOfDay();
         $dateTo      = Carbon::parse($request->input('end_date'))->endOfDay();
+        $selectedCashier = $request->input('cashier'); // Get selected cashier
         $generatedAt = now();
 
-        // Fetch transactions in the same way as getTransactionReport
-        $transactionLogs = transaction::whereBetween('created_at', [$dateFrom, $dateTo])
+        // Fetch transactions
+        $query = transaction::whereBetween('created_at', [$dateFrom, $dateTo])
             ->where('status', 'completed')
-            ->with('cashier')
-            ->orderBy('created_at', 'desc')
+            ->with('cashier');
+
+        // Filter by cashier if specified
+        if ($selectedCashier && $selectedCashier !== 'all') {
+            $query->whereHas('cashier', function ($q) use ($selectedCashier) {
+                $q->whereRaw("CONCAT(firstname, ' ', lastname) = ?", [$selectedCashier]);
+            });
+        }
+
+        $transactionLogs = $query->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($transaction) {
                 return [
@@ -658,6 +682,9 @@ class ReportsController extends Controller
 
         $data = [
             'transaction_logs' => $transactionLogs,
+            'total_transactions' => $transactionLogs->count(),
+            'grand_total' => $transactionLogs->sum('grand_total'),
+            'selected_cashier' => $selectedCashier && $selectedCashier !== 'all' ? $selectedCashier : null,
         ];
 
         try {
@@ -668,7 +695,8 @@ class ReportsController extends Controller
                 'generatedAt' => $generatedAt,
             ])->setPaper('a4', 'portrait');
 
-            $filename = 'Transaction_Report_' . $dateFrom->format('Y-m-d') . '_to_' . $dateTo->format('Y-m-d') . '.pdf';
+            $cashierSuffix = $data['selected_cashier'] ? '_' . str_replace(' ', '_', $data['selected_cashier']) : '';
+            $filename = 'Transaction_Report_' . $dateFrom->format('Y-m-d') . '_to_' . $dateTo->format('Y-m-d') . $cashierSuffix . '.pdf';
 
             return $pdf->download($filename);
         } catch (\Exception $e) {
@@ -789,9 +817,13 @@ class ReportsController extends Controller
 
         $totalItemsSold = $servedOrders->sum('quantity');
 
-        $totalRevenue = $servedOrders->sum(function ($order) {
-            return $order->quantity * $order->price;
-        });
+        // Calculate total revenue using menu's regular_price
+        $totalRevenue = $servedOrders->reduce(function ($carry, $order) {
+            if ($order->menu) {
+                return $carry + ($order->quantity * $order->menu->regular_price);
+            }
+            return $carry;
+        }, 0);
 
         $menuPerformance = $servedOrders->groupBy('menu_id')->map(function ($orders) {
             $menu = $orders->first()->menu;
@@ -800,15 +832,15 @@ class ReportsController extends Controller
             }
 
             $quantity = $orders->sum('quantity');
-            $revenue = $orders->sum(function ($order) {
-                return $order->quantity * $order->price;
-            });
+
+            // Calculate revenue using menu's regular_price
+            $revenue = $quantity * $menu->regular_price;
 
             return [
                 'menu_id' => $menu->id,
                 'menu_item' => $menu->menu_item,
                 'quantity' => $quantity,
-                'revenue' => $revenue,
+                'revenue' => round($revenue, 2),
             ];
         })->filter()->sortByDesc('quantity')->values();
 
@@ -816,7 +848,7 @@ class ReportsController extends Controller
 
         $soldMenuIds = $menuPerformance->pluck('menu_id')->toArray();
         $zeroSalesItems = Menu::whereNotIn('id', $soldMenuIds)
-            ->where('status', 'available')
+            ->where('status', 'Active')
             ->get()
             ->map(function ($menu) {
                 return [

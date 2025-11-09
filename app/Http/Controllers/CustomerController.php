@@ -16,6 +16,7 @@ use App\Models\orders;
 use App\Models\menu;
 use App\Models\walkin;
 use App\Models\table;
+use Illuminate\Support\Facades\Http;
 
 class CustomerController extends Controller
 {
@@ -27,6 +28,65 @@ class CustomerController extends Controller
             ->get();
 
         return view('customer.index', compact('mainMenuItems'));
+    }
+
+    public function checkEmail(Request $request)
+    {
+        $email = trim($request->email);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'exists' => false,
+                'valid' => false,
+                'reason' => 'invalid_format'
+            ]);
+        }
+
+        if (User::where('email', $email)->exists()) {
+            return response()->json([
+                'exists' => true,
+                'valid' => true,
+                'reason' => 'duplicate'
+            ]);
+        }
+
+        try {
+            $apiKey = env('MAILBOXLAYER_KEY');
+            $response = Http::timeout(5)->get('https://apilayer.net/api/check', [
+                'access_key' => $apiKey,
+                'email' => $email,
+                'smtp' => 1,
+                'format' => 1,
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                if (isset($data['error'])) {
+                    throw new \Exception('API returned error');
+                }
+
+                $isValid = ($data['format_valid'] ?? false) &&
+                    ($data['mx_found'] ?? false) &&
+                    ($data['smtp_check'] ?? true);
+
+                return response()->json([
+                    'exists' => false,
+                    'valid' => $isValid,
+                    'reason' => $isValid ? 'verified' : 'smtp_failed'
+                ]);
+            }
+        } catch (\Exception $e) {
+        }
+
+        $domain = substr(strrchr($email, "@"), 1);
+        $validDomain = checkdnsrr($domain, 'MX');
+
+        return response()->json([
+            'exists' => false,
+            'valid' => $validDomain,
+            'reason' => $validDomain ? 'domain_valid' : 'domain_invalid',
+        ]);
     }
 
     public function place_reservation(Request $request)
@@ -101,7 +161,7 @@ class CustomerController extends Controller
                 'is_available' => !($isActiveReservation || $isBookedWalkin || $isPendingReservation),
                 'is_pending' => $isPendingReservation,
                 'is_active' => $isActiveReservation || $isBookedWalkin,
-                'is_currently_occupied' => $isCurrentlyOccupied 
+                'is_currently_occupied' => $isCurrentlyOccupied
             ];
         }
 

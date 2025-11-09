@@ -417,12 +417,16 @@
                     data.ingredients.data.forEach(i => {
                         const status = i.badge_text || 'Good';
                         const badgeClass = i.badge_class || 'bg-success';
+
+                        const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(i.unit.toLowerCase());
+                        const formattedStock = isPieces ? Math.floor(i.stocks) : parseFloat(i.stocks).toFixed(2);
+
                         $tbody.append(`
                         <tr>
                             <td class="font-weight-bold">${i.name}</td>
                             <td class="text-capitalize">${i.category}</td>
                             <td>
-                                <span class="font-semibold">${parseFloat(i.stocks).toFixed(2)}</span>
+                                <span class="font-semibold">${formattedStock}</span>
                                 <span>${i.unit}</span>
                                 <span class="ml-2 px-2 py-1 text-white text-xs font-semibold rounded ${badgeClass}">
                                     ${status}
@@ -458,10 +462,14 @@
                     const $tb = $(`#${pre}TableBody`).empty();
 
                     data.batches.data.forEach(b => {
+                        // Check if unit is pieces
+                        const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(b.unit.toLowerCase());
+                        const formattedQty = isPieces ? Math.floor(b.quantity) : parseFloat(b.quantity).toFixed(2);
+
                         $tb.append(`
                         <tr>
                             <td>${b.ingredient_name}</td>
-                            <td>${parseFloat(b.quantity).toFixed(2)} ${b.unit}</td>
+                            <td>${formattedQty} ${b.unit}</td>
                             <td>${new Date(b.arrived_at).toLocaleDateString()}</td>
                             <td>${new Date(b.expiration_date).toLocaleDateString()}</td>
                             <td class="text-center">
@@ -706,7 +714,7 @@
         });
 
         $('#addStockModal').on('shown.bs.modal', function () {
-            loadAvailableIngredients(); 
+            loadAvailableIngredients();
         });
 
         $('#addStockModal').on('hidden.bs.modal', function () {

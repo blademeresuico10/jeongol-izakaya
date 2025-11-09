@@ -107,7 +107,7 @@
           </div>
 
           <!-- Refill Items -->
-          <div class="p-4 space-y-2 flex-grow">
+          <div class="p-4 space-y-3 flex-grow">
           <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
           <span class="font-medium text-sm text-gray-800">
           {{ $refill->quantity }} x {{ $refill->ingredient->name ?? 'Unknown' }} (Refill)

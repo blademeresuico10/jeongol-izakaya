@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ingredients extends Model
 {
-    protected $fillable = ['name', 'category', 'unit', 'stocks'];
+    protected $fillable = ['name', 'category_id', 'unit_id', 'stocks'];
 
     protected static function boot()
     {
@@ -15,6 +15,16 @@ class ingredients extends Model
         static::updated(function ($ingredient) {
             $ingredient->checkAndCreateStockOrder();
         });
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(IngredientCategory::class, 'category_id');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(IngredientUnit::class, 'unit_id');
     }
 
     public function batches()
@@ -129,7 +139,6 @@ class ingredients extends Model
         return 'normal';
     }
 
-
     public function getStockStatusBadge()
     {
         $status = $this->getStockStatus();
@@ -142,5 +151,13 @@ class ingredients extends Model
         ];
 
         return $badges[$status] ?? $badges['unknown'];
+    }
+
+    public function formatQuantity($quantity)
+    {
+        if (in_array(strtolower($this->unit->abbreviation), ['pcs', 'pieces', 'pc'])) {
+            return number_format($quantity, 0);
+        }
+        return $quantity;
     }
 }

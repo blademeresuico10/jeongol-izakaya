@@ -125,14 +125,16 @@
     <div class="section-title">Expiration Summary</div>
     <div class="summary-box">
         <div class="summary-row">
-            <strong>Total Expired Ingredients:</strong> {{ number_format($reportData['summary']['expired_count'] ?? 0) }}
+            <strong>Total Expired Ingredients:</strong>
+            {{ number_format($reportData['summary']['expired_count'] ?? 0) }}
         </div>
         <div class="summary-row">
-            <strong>Ingredients Expiring Soon (7 days):</strong> {{ number_format($reportData['summary']['expiring_soon_count'] ?? 0) }}
+            <strong>Ingredients Expiring Soon (7 days):</strong>
+            {{ number_format($reportData['summary']['expiring_soon_count'] ?? 0) }}
         </div>
     </div>
 
-   
+
 
     <!-- Expired Ingredients Details -->
     <div class="section-title">Expired Ingredients Details</div>
@@ -141,7 +143,7 @@
             <tr>
                 <th style="width: 40%;">Ingredient</th>
                 <th style="width: 30%;">Quantity</th>
-                <th  style="width: 30%;">Expired On</th>
+                <th style="width: 30%;">Expired On</th>
             </tr>
         </thead>
         <tbody>
@@ -161,25 +163,25 @@
 
     <!-- Expiring Soon Alert -->
     @if(isset($reportData['expiring_soon']) && count($reportData['expiring_soon']) > 0)
-    <div class="section-title">⚠ Ingredients Expiring Soon (Within 7 Days)</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 40%;">Ingredient</th>
-                <th style="width: 30%;">Category</th>
-                <th class="text-center" style="width: 30%;">Expiration Date</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($reportData['expiring_soon'] as $item)
+        <div class="section-title">Ingredients Expiring Soon (Within 7 Days)</div>
+        <table>
+            <thead>
                 <tr>
-                    <td>{{ $item['name'] }}</td>
-                    <td>{{ ucfirst($item['category']) }}</td>
-                    <td class="text-center">{{ $item['expiration_date'] }}</td>
+                    <th style="width: 40%;">Ingredient</th>
+                    <th style="width: 30%;">Category</th>
+                    <th class="text-center" style="width: 30%;">Expiration Date</th>
                 </tr>
-            @endforeach
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                @foreach($reportData['expiring_soon'] as $item)
+                    <tr>
+                        <td>{{ $item['name'] }}</td>
+                        <td>{{ ucfirst($item['category']) }}</td>
+                        <td class="text-center">{{ $item['expiration_date'] }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
     @endif
 
     <div class="footer">

@@ -955,7 +955,7 @@
     this.resetReservationForm();
   });
 
-  paymentBtn.addEventListener('click', () => {
+  paymentBtn.addEventListener('click', async () => {
     const orders = Object.values(this.selectedOrders);
     const hasMain = orders.some(item => item.category === 'main');
 
@@ -979,6 +979,27 @@
     if (emptyFields.length > 0) {
       emptyFields.forEach(f => f.classList.add('border-red-500'));
       this.showMessageBox('Please fill out all required fields.', 'error');
+      return;
+    }
+
+    if (!this.validateEmail(emailInput.value.trim())) {
+      emailInput.classList.add('border-red-500');
+      this.showMessageBox('Please enter a valid email address.', 'error');
+      return;
+    }
+
+    try {
+      const response = await fetch(`{{ route('customer.check_email') }}?email=${encodeURIComponent(emailInput.value.trim())}`);
+      const data = await response.json();
+
+      if (!data.valid) {
+        emailInput.classList.add('border-red-500');
+        this.showMessageBox('This email address does not exist or is invalid.', 'error');
+        return;
+      }
+    } catch (error) {
+      emailInput.classList.add('border-red-500');
+      this.showMessageBox('Error validating email. Please try again.', 'error');
       return;
     }
 
@@ -1346,36 +1367,56 @@
 
 
   initializeEmailValidation() {
-    const { emailInput } = this.elements;
+    const emailInput = document.getElementById('email');
     const emailError = document.getElementById('emailError');
     if (!emailInput || !emailError) return;
 
+    let debounceTimer;
+    let lastInvalid = true;
+
     emailInput.addEventListener('input', () => {
       const value = emailInput.value.trim();
+      clearTimeout(debounceTimer);
 
       if (!value) {
         emailError.textContent = 'Email is required';
         emailError.classList.remove('hidden');
         emailInput.classList.add('input-error');
-        return;
-      }
-
-      if (!value.includes('@')) {
-        emailError.textContent = 'Email must contain @';
-        emailError.classList.remove('hidden');
-        emailInput.classList.add('input-error');
+        lastInvalid = true;
         return;
       }
 
       if (!this.validateEmail(value)) {
-        emailError.textContent = 'Enter a valid email address!)';
+        emailError.textContent = 'Enter a valid email address';
         emailError.classList.remove('hidden');
         emailInput.classList.add('input-error');
-      } else {
-        emailError.textContent = '';
-        emailError.classList.add('hidden');
-        emailInput.classList.remove('input-error');
+        lastInvalid = true;
+        return;
       }
+
+      debounceTimer = setTimeout(() => {
+        fetch(`{{ route('customer.check_email') }}?email=${encodeURIComponent(value)}`)
+          .then(response => response.json())
+          .then(data => {
+            if (!data.valid) {
+              emailError.textContent = 'This email address does not exist.';
+              emailError.classList.remove('hidden');
+              emailInput.classList.add('input-error');
+              lastInvalid = true;
+            } else {
+              emailError.textContent = '';
+              emailError.classList.add('hidden');
+              emailInput.classList.remove('input-error');
+              lastInvalid = false;
+            }
+          })
+          .catch(() => {
+            emailError.textContent = 'Error checking email. Please try again.';
+            emailError.classList.remove('hidden');
+            emailInput.classList.add('input-error');
+            lastInvalid = true;
+          });
+      }, 600);
     });
   }
 
@@ -1383,6 +1424,8 @@
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
   }
+
+
 
   validateInputs() {
     let hasError = false;

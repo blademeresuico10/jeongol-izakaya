@@ -325,6 +325,11 @@
                                     </div>
                                     <h5 class="card-title mb-0 fw-bold text-gray-800">Ingredients Stock</h5>
                                 </div>
+                                <div>
+                                    <i class="fas fa-bell"
+                                        style="color: #9ca3af; font-size: 1.8rem; margin-right: 1rem; cursor: pointer;"
+                                        data-bs-toggle="modal" data-bs-target="#notificationModal"></i>
+                                </div>
                             </div>
                         </div>
                         <div class="card-body" style="max-height: 500px; overflow-y: auto;">
@@ -347,7 +352,7 @@
                                         <div>
                                             <h6 class="mb-0 fw-semibold" style="color: #1f2937;">{{ $ingredient->name }}
                                             </h6>
-                                            <small class="text-muted">{{ $ingredient->category }}</small>
+                                            <small class="text-muted">{{ $ingredient->category->name ?? 'N/A' }}</small>
                                         </div>
                                     </div>
                                     <div>
@@ -417,11 +422,35 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Notification Modal -->
+            <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                    <div class="modal-content border-0 shadow-lg rounded-4">
+                        <div class="modal-header border-0 pb-0">
+                            <div class="d-flex align-items-center">
+                                <div class="p-2 rounded-3 me-3" style="background-color: rgba(50, 30, 233, 0.1);">
+                                    <i class="fas fa-bell fs-5" style="color: #321ee9;"></i>
+                                </div>
+                                <h5 class="modal-title fw-bold text-gray-800" id="notificationModalLabel">Notifications
+                                </h5>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body" style="max-height: 400px;">
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-secondary rounded-3"
+                                data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {

@@ -47,17 +47,13 @@
         </li>
     </ul>
 
-    <!-- Tab Contents -->
     <div class="tab-content">
 
-        <!-- Stock Alerts Tab - Only show ingredients WITHOUT pending orders -->
+        <!-- Stock Alerts Tab -->
         <div class="tab-pane fade {{ $activeTab === 'stock-requests-list' ? 'show active' : '' }}">
-
             <div class="card shadow-sm mb-3">
                 <div class="p-3">
-                    <h5 class="mb-3 font-weight-bold text-dark">
-                        Low Stock Alerts
-                    </h5>
+                    <h5 class="mb-3 font-weight-bold text-dark">Low Stock Alerts</h5>
 
                     <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                         <table class="table table-sm table-bordered mb-0">
@@ -83,11 +79,24 @@
                                             <i class="fas fa-exclamation-circle text-danger"></i>
                                             <strong>{{ $ingredient->name }}</strong>
                                         </td>
-                                        <td><span class="text-danger font-weight-bold">{{ $ingredient->stocks }}
-                                                {{ $ingredient->unit }}</span></td>
+                                        <td>
+                                            <span class="text-danger font-weight-bold">
+                                                @if(in_array(strtolower($ingredient->unit->abbreviation), ['pcs', 'pieces', 'piece', 'pc']))
+                                                    {{ number_format($ingredient->stocks, 0) }}
+                                                @else
+                                                    {{ number_format($ingredient->stocks, 2) }}
+                                                @endif
+                                                {{ $ingredient->unit->abbreviation }}
+                                            </span>
+                                        </td>
                                         <td>
                                             @if($ingredient->stockAlertLevel)
-                                                {{ $ingredient->stockAlertLevel->reorder_quantity }} {{ $ingredient->unit }}
+                                                @if(in_array(strtolower($ingredient->unit->abbreviation), ['pcs', 'pieces', 'piece', 'pc']))
+                                                    {{ number_format($ingredient->stockAlertLevel->reorder_quantity, 0) }}
+                                                @else
+                                                    {{ number_format($ingredient->stockAlertLevel->reorder_quantity, 2) }}
+                                                @endif
+                                                {{ $ingredient->unit->abbreviation }}
                                             @else
                                                 <span class="text-muted">N/A</span>
                                             @endif
@@ -102,8 +111,7 @@
                                                 onclick="confirmCreateOrder({{ $ingredient->id }})"
                                                 wire:loading.attr="disabled"
                                                 wire:target="createStockOrder({{ $ingredient->id }})">
-                                                <span wire:loading.remove
-                                                    wire:target="createStockOrder({{ $ingredient->id }})">
+                                                <span wire:loading.remove wire:target="createStockOrder({{ $ingredient->id }})">
                                                     <i class="fas fa-plus"></i> Create Order
                                                 </span>
                                                 <span wire:loading wire:target="createStockOrder({{ $ingredient->id }})">
@@ -126,11 +134,19 @@
                                             <i class="fas fa-exclamation-triangle text-warning"></i>
                                             <strong>{{ $ingredient->name }}</strong>
                                         </td>
-                                        <td><span class="text-warning font-weight-bold">{{ $ingredient->stocks }}
-                                                {{ $ingredient->unit }}</span></td>
+                                        <td>
+                                            <span class="text-warning font-weight-bold">
+                                                @if(in_array(strtolower($ingredient->unit->abbreviation), ['pcs', 'pieces', 'piece', 'pc']))
+                                                    {{ number_format($ingredient->stocks, 0) }}
+                                                @else
+                                                    {{ number_format($ingredient->stocks, 2) }}
+                                                @endif
+                                                {{ $ingredient->unit->abbreviation }}
+                                            </span>
+                                        </td>
                                         <td>
                                             @if($ingredient->stockAlertLevel)
-                                                {{ $ingredient->stockAlertLevel->reorder_quantity }} {{ $ingredient->unit }}
+                                                {{ number_format($ingredient->stockAlertLevel->reorder_quantity, 2) }} {{ $ingredient->unit->abbreviation }}
                                             @else
                                                 <span class="text-muted">N/A</span>
                                             @endif
@@ -145,8 +161,7 @@
                                                 wire:click="createStockOrder({{ $ingredient->id }})"
                                                 wire:loading.attr="disabled"
                                                 wire:target="createStockOrder({{ $ingredient->id }})">
-                                                <span wire:loading.remove
-                                                    wire:target="createStockOrder({{ $ingredient->id }})">
+                                                <span wire:loading.remove wire:target="createStockOrder({{ $ingredient->id }})">
                                                     <i class="fas fa-plus"></i> Create Order
                                                 </span>
                                                 <span wire:loading wire:target="createStockOrder({{ $ingredient->id }})">
@@ -160,7 +175,8 @@
                                 @if($criticalWithoutOrders->count() == 0 && $lowWithoutOrders->count() == 0)
                                     <tr>
                                         <td colspan="5" class="text-center text-muted py-4">
-                                            <p class="mb-0">No low stock ingredient!</p>
+                                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                            <p class="mb-0">No low stock ingredients!</p>
                                         </td>
                                     </tr>
                                 @endif
@@ -175,12 +191,10 @@
         <div class="tab-pane fade {{ $activeTab === 'pending-orders-list' ? 'show active' : '' }}">
             <div class="card shadow-sm mb-3">
                 <div class="p-3">
-                    <h5 class="mb-3 font-weight-bold text-dark">
-                        Pending Stock Orders
-                    </h5>
+                    <h5 class="mb-3 font-weight-bold text-dark">Pending Stock Orders</h5>
 
                     <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                        <table class="table table-sm table-bordered  mb-0">
+                        <table class="table table-sm table-bordered mb-0">
                             <thead class="bg-warning text-dark font-weight-bold sticky-top">
                                 <tr>
                                     <th>Ingredient</th>
@@ -197,15 +211,29 @@
                                         <td>
                                             <strong>{{ $order->ingredient->name }}</strong>
                                             @if($order->ingredient->getStockStatus() === 'critical')
-                                                <i class="fas fa-exclamation-circle text-danger ml-1"
-                                                    title="Critical stock"></i>
+                                                <i class="fas fa-exclamation-circle text-danger ml-1" title="Critical stock"></i>
                                             @elseif($order->ingredient->getStockStatus() === 'low')
                                                 <i class="fas fa-exclamation-triangle text-warning ml-1" title="Low stock"></i>
                                             @endif
                                         </td>
-                                        <td>{{ $order->ingredient->stocks }} {{ $order->ingredient->unit }}</td>
-                                        <td><strong>{{ $order->quantity }}
-                                                {{ $order->ingredient->unit }}</strong></td>
+                                        <td>
+                                            @if(in_array(strtolower($order->ingredient->unit->abbreviation), ['pcs', 'pieces', 'piece', 'pc']))
+                                                {{ number_format($order->ingredient->stocks, 0) }}
+                                            @else
+                                                {{ number_format($order->ingredient->stocks, 2) }}
+                                            @endif
+                                            {{ $order->ingredient->unit->abbreviation }}
+                                        </td>
+                                        <td>
+                                            <strong>
+                                                @if(in_array(strtolower($order->ingredient->unit->abbreviation), ['pcs', 'pieces', 'piece', 'pc']))
+                                                    {{ number_format($order->quantity, 0) }}
+                                                @else
+                                                    {{ number_format($order->quantity, 2) }}
+                                                @endif
+                                                {{ $order->ingredient->unit->abbreviation }}
+                                            </strong>
+                                        </td>
                                         <td>
                                             <span class="badge badge-warning">
                                                 <i class="fas fa-clock"></i> Pending
@@ -227,6 +255,7 @@
                                 @empty
                                     <tr>
                                         <td colspan="6" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2"></i>
                                             <p class="mb-0">No pending stock orders.</p>
                                         </td>
                                     </tr>
@@ -238,14 +267,13 @@
             </div>
         </div>
 
+        <!-- Receive Stock Modal -->
         @if($showReceiveModal)
             <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
-                            <h5 class="modal-title">
-                                Confirm Stock Receipt
-                            </h5>
+                            <h5 class="modal-title">Confirm Received Stock</h5>
                             <button type="button" class="close text-white" wire:click="closeReceiveModal">
                                 <span>&times;</span>
                             </button>
@@ -259,30 +287,34 @@
                                 <div class="col-6">
                                     <label class="font-weight-bold">Ordered Quantity:</label>
                                     <div class="form-control bg-light">
-                                        {{ $orderedQuantity }} {{ $unit }}
+                                        @if(in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']))
+                                            {{ number_format($orderedQuantity, 0) }}
+                                        @else
+                                            {{ number_format($orderedQuantity, 2) }}
+                                        @endif
+                                        {{ $unit }}
                                     </div>
                                 </div>
                                 <div class="col-6">
                                     <label class="font-weight-bold text-success">
                                         Received Quantity: <span class="text-danger">*</span>
                                     </label>
-                                    <input type="number" id="receivedQuantityInput"
+                                    <input type="number" 
+                                        id="receivedQuantityInput"
                                         class="form-control @error('receivedQuantity') is-invalid @enderror"
                                         wire:model="receivedQuantity"
-                                        min="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
-                                        step="{{ in_array(strtolower($unit), ['pieces', 'pcs', 'piece']) ? '1' : '0.01' }}"
-                                        @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
-                                        oninput="this.value = Math.floor(Math.abs(this.value))" @endif
+                                        min="{{ in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']) ? '1' : '0.01' }}"
+                                        step="{{ in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']) ? '1' : '0.01' }}"
+                                        @if(in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']))
+                                            oninput="this.value = Math.floor(Math.abs(this.value))"
+                                        @endif
                                         placeholder="Enter received quantity">
                                     @error('receivedQuantity')
                                         <div class="text-danger small mt-1">
                                             <i class="fas fa-exclamation-circle"></i> {{ $message }}
                                         </div>
                                     @enderror
-                                    @if(in_array(strtolower($unit), ['pieces', 'pcs', 'piece']))
-                                        <small class="form-text text-muted">
-                                            Whole numbers only
-                                        </small>
+                                    @if(in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']))
                                     @endif
                                 </div>
                             </div>
@@ -291,23 +323,26 @@
                                 <label class="font-weight-bold">
                                     Expiration Date: <span class="text-danger">*</span>
                                 </label>
-                                <input type="date" id="expirationDateInput"
+                                <input type="date" 
+                                    id="expirationDateInput"
                                     class="form-control @error('expirationDate') is-invalid @enderror"
-                                    wire:model="expirationDate" min="{{ date('Y-m-d') }}">
+                                    wire:model="expirationDate" 
+                                    min="{{ date('Y-m-d') }}">
                                 @error('expirationDate')
                                     <div class="text-danger small mt-1">
                                         <i class="fas fa-exclamation-circle"></i> {{ $message }}
                                     </div>
                                 @enderror
                             </div>
-
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" wire:click="closeReceiveModal">
                                 Close
                             </button>
-                            <button type="button" class="btn btn-success" onclick="confirmReceiveStock()"
-                                wire:loading.attr="disabled" wire:target="confirmReceive">
+                            <button type="button" class="btn btn-success" 
+                                onclick="confirmReceiveStock()"
+                                wire:loading.attr="disabled" 
+                                wire:target="confirmReceive">
                                 <span wire:loading.remove wire:target="confirmReceive">
                                     <i class="fas fa-check"></i> Confirm Receipt
                                 </span>
@@ -323,6 +358,7 @@
 
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
@@ -353,7 +389,7 @@
         }
 
         Swal.fire({
-            title: 'Confirm Stock Receipt?',
+            title: 'Confirm Received Stock?',
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#28a745',
@@ -373,17 +409,15 @@
         document.addEventListener('DOMContentLoaded', function () {
             window.addEventListener('print-stock-request', event => {
                 const data = event.detail[0];
-
                 document.getElementById('print-date').textContent = data.date;
                 document.getElementById('print-user').textContent = data.requestedBy;
                 document.getElementById('print-ingredient').textContent = data.ingredient.name;
-                document.getElementById('print-stock').textContent = `${data.ingredient.stocks} ${data.ingredient.unit}`;
-                document.getElementById('print-reorder').textContent = `${data.alertLevel.reorder_quantity} ${data.ingredient.unit}`;
+                document.getElementById('print-stock').textContent = `${data.ingredient.stocks} ${data.ingredient.unit.abbreviation}`;
+                document.getElementById('print-reorder').textContent = `${data.alertLevel.reorder_quantity} ${data.ingredient.unit.abbreviation}`;
                 document.getElementById('print-status').textContent = data.order.status;
-                document.getElementById('print-quantity').textContent = data.order.quantity + ' ' + data.ingredient.unit;
+                document.getElementById('print-quantity').textContent = data.order.quantity + ' ' + data.ingredient.unit.abbreviation;
 
                 const printContent = document.getElementById('printable-stock-request').innerHTML;
-
                 const printWindow = window.open('', '', 'width=800,height=600');
                 printWindow.document.write('<html><head><title>Stock Request Preview</title>');
                 printWindow.document.write('<style>body{font-family:Arial,sans-serif;color:#333;font-size:14px;padding:20px;} h2{margin-bottom:10px;}</style>');

@@ -17,8 +17,10 @@ Route::post('/customer/reserve', [CustomerController::class, 'storeReservation']
 Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])->name('customer.feedback');
 Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUnavailableTimes'])->name('customer.unavailable-times');
 Route::get('/customer/check-availability', [CustomerController::class, 'checkAvailability'])->name('customer.checkAvailability');
-Route::post('/customer/check-operating-hours', [CustomerController::class, 'checkOperatingHours'])
-    ->name('customer.check_operating_hours');
+Route::post('/customer/check-operating-hours', [CustomerController::class, 'checkOperatingHours'])->name('customer.check_operating_hours');
+
+Route::get('/check-email', [CustomerController::class, 'checkEmail'])->name('customer.check_email');
+
 
 Route::get('/file-serve/{folder}/{filename}', function ($folder, $filename) {
     $allowedFolders = ['jeongol_menu', 'payment_proofs', 'profile_pictures'];
@@ -92,7 +94,9 @@ Route::middleware('auth')->group(function () {
         Route::delete('/menu_ingredients/{id}', [AdminController::class, 'removeMenuIngredient'])->name('menu_ingredients.remove');
         Route::get('/menu/{menuId}/existing-ingredients', [AdminController::class, 'getExistingIngredients'])->name('menu.existing-ingredients');
         Route::get('/menu/{menuId}/suggested-ingredients', [AdminController::class, 'getSuggestedIngredientsApi'])->name('menu.suggested-ingredients');
-
+        Route::post('/store-category', [AdminController::class, 'storeCategory'])->name('storeCategory');
+        Route::post('/update-category/{id}', [AdminController::class, 'updateCategory'])->name('updateCategory');
+    
         // Table Management
         Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
         Route::post('/addtable', [AdminController::class, 'addtable'])->name('admin.addtable');

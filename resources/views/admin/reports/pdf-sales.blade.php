@@ -149,7 +149,7 @@
             <span>{{ number_format($grossSales, 2) }}</span>
         </div>
         <div class="summary-row">
-            <span class="summary-label">Less: Discounts:</span>
+            <span class="summary-label">Discounts:</span>
             <span>{{ number_format($totalDiscounts, 2) }}</span>
         </div>
         <div class="summary-row">
