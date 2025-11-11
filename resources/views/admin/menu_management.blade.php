@@ -134,7 +134,10 @@
                                 <div class="form-group">
                                     <label for="category_name">Category Name <span class="text-danger">*</span></label>
                                     <input type="text" name="name" id="category_name" class="form-control" required
-                                        minlength="3" placeholder="e.g., Main Course">
+                                        minlength="3" placeholder="e.g., Main Course"
+                                        style="text-transform: capitalize;" pattern="[A-Za-z\s]+"
+                                        title="Only letters are allowed"
+                                        oninput="this.value = this.value.replace(/[0-9]/g, '').replace(/\b\w/g, char => char.toUpperCase())">
                                     <small id="categoryNameError" class="text-danger" style="display: none;"></small>
                                 </div>
                             </div>
@@ -1676,10 +1679,18 @@
                 data: $(this).serialize(),
                 success: function (response) {
                     $('#addCategoryModal').modal('hide');
-
                     $('#addCategoryForm')[0].reset();
 
-                    alert('Category added successfully!');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Category added successfully!',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#d4edda',
+                        color: '#155724'
+                    });
 
                     location.reload();
                 },
@@ -1703,13 +1714,10 @@
         const currentStatus = selectedOption.getAttribute('data-status');
 
         if (categoryId) {
-            // Update form action with the category ID
             document.getElementById('updateCategoryForm').action = `/update-category/${categoryId}`;
 
-            // Set hidden input
             document.getElementById('update_category_id').value = categoryId;
 
-            // Set current status
             document.getElementById('is_active').value = currentStatus == '1' ? '1' : '0';
         }
     });

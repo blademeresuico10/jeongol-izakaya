@@ -219,14 +219,12 @@
     <div id="tableModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
 
-        <!-- Modal Header - Fixed at top -->
         <div class="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
           <h2 class="text-lg font-bold text-gray-800">Customer Info and Menu</h2>
           <button id="closeModal"
             class="text-gray-400 hover:text-gray-600 text-2xl font-light leading-none">&times;</button>
         </div>
 
-        <!-- Modal Content - Scrollable -->
         <div class="flex-1 overflow-y-auto px-4 py-3">
 
           <!-- Customer Name -->
@@ -310,7 +308,6 @@
 
         </div>
 
-        <!-- Modal Footer - Fixed at bottom -->
         <div class="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-4 py-3">
           <div class="flex justify-end">
             <button
@@ -322,7 +319,6 @@
       </div>
     </div>
 
-    <!-- Orders Panel (Side Panel) -->
     <div id="default-modal"
       class="fixed inset-y-0 right-0 z-50 transform translate-x-full transition-transform duration-300 ease-in-out"
       style="width: 480px;">

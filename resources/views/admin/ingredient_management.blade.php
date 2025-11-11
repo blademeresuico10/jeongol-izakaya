@@ -36,6 +36,14 @@
 
                         <button class="btn btn-info btn-sm" data-toggle="modal" data-target="#addIngredientModal">Add
                             Ingredient</button>
+
+                        <button class="btn btn-success btn-sm" data-toggle="modal"
+                            data-target="#addUnitOfMeasureModal">Add Unit of Measure</button>
+
+                        <button class="btn btn-secondary btn-sm" data-toggle="modal"
+                            data-target="#addIngredientCategoryModal">
+                            Add Ingredient Category
+                        </button>
                     </div>
                 </div>
 
@@ -193,31 +201,35 @@
                 <div class="modal-body">
                     <div class="form-group">
                         <label>Ingredient Name <span class="text-danger">*</span></label>
-                        <input type="text" name="name" id="ingredient_name" class="form-control" required minlength="2">
+                        <input type="text" name="name" id="ingredient_name" class="form-control" required minlength="2"
+                            placeholder="e.g., Meat" style="text-transform: capitalize;" pattern="[A-Za-z\s]+"
+                            title="Only letters are allowed"
+                            oninput="this.value = this.value.replace(/[0-9]/g, '').replace(/\b\w/g, char => char.toUpperCase())">
                         <div>
                             <small id="ingredientNameError" class="text-danger text-sm" style="display: none;"></small>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Category <span class="text-danger">*</span></label>
-                        <select name="category" id="ingredient_category" class="form-control" required>
+                        <select name="category_id" id="ingredient_category" class="form-control" required>
                             <option value="">Select Category</option>
-                            <option value="meat">Meat</option>
-                            <option value="vegetables">Vegetables</option>
-                            <option value="soupbase">Soup Base</option>
-                            <option value="beverage">Beverage</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
                         </select>
                         <div>
                             <small id="ingredientCategoryError" class="text-danger text-sm"
                                 style="display: none;"></small>
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label>Unit <span class="text-danger">*</span></label>
-                        <select name="unit" id="ingredient_unit" class="form-control" required>
+                        <select name="unit_id" id="ingredient_unit" class="form-control" required>
                             <option value="">Select Unit</option>
-                            <option value="kg">Kilograms</option>
-                            <option value="pieces">Pieces</option>
+                            @foreach($units as $unit)
+                                <option value="{{ $unit->id }}">{{ $unit->name }} ({{ $unit->abbreviation }})</option>
+                            @endforeach
                         </select>
                         <div>
                             <small id="ingredientUnitError" class="text-danger text-sm" style="display: none;"></small>
@@ -261,6 +273,74 @@
                 <div class="modal-footer p-2">
                     <button type="submit" class="btn btn-warning btn-sm">Update</button>
                     <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addUnitOfMeasureModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Add New Unit of Measure</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form id="addUnitOfMeasureForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Type of unit <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="unit_name" class="form-control" required minlength="2"
+                            placeholder="e.g., Kilograms" style="text-transform: capitalize;" pattern="[A-Za-z\s]+"
+                            title="Only letters are allowed"
+                            oninput="this.value = this.value.replace(/[0-9]/g, '').replace(/\b\w/g, char => char.toUpperCase())">
+                        <div>
+                            <small id="unitNameError" class="text-danger text-sm" style="display: none;"></small>
+                        </div>
+                        <br>
+                        <label>Abbreviation <span class="text-danger">*</span></label>
+                        <input type="text" name="abbreviation" id="unit_abbreviation" class="form-control" required
+                            minlength="1" placeholder="e.g., kg" pattern="[A-Za-z]+" title="Only letters are allowed"
+                            maxlength="10" oninput="this.value = this.value.replace(/[0-9\s]/g, '')">
+                        <div>
+                            <small id="unitAbbreviationError" class="text-danger text-sm"
+                                style="display: none;"></small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Add Unit of Measure</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addIngredientCategoryModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">Add New Ingredient Category</h5>
+                <button type="button" class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form id="addIngredientCategoryForm">
+                @csrf
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Category Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="category_name" class="form-control" required minlength="3"
+                            placeholder="e.g., Main Course" style="text-transform: capitalize;" pattern="[A-Za-z\s]+"
+                            title="Only letters are allowed"
+                            oninput="this.value = this.value.replace(/[0-9]/g, '').replace(/\b\w/g, char => char.toUpperCase())">
+                        <div>
+                            <small id="CategoryNameError" class="text-danger text-sm" style="display: none;"></small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-info">Add Category</button>
                 </div>
             </form>
         </div>
@@ -353,6 +433,7 @@
             $('#addIngredientForm input, #addIngredientForm select').removeClass('is-invalid');
             $('small[id*="ingredient"]').hide().text('');
         });
+
 
 
         function loadAvailableIngredients() {
@@ -890,6 +971,111 @@
                             });
                         }
                     });
+                }
+            });
+        });
+
+        // Add Ingredient Category
+        $('#addIngredientCategoryForm').on('submit', function (e) {
+            e.preventDefault();
+            $('#CategoryNameError').hide().text('');
+
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.text();
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-2"></span>Adding...');
+
+            $.ajax({
+                url: "{{ route('ingredient.addCategory') }}",
+                method: 'POST',
+                data: $(this).serialize(),
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function (response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Category added successfully',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+
+                    setTimeout(() => {
+                        $('#addIngredientCategoryModal').modal('hide');
+                        $('#addIngredientCategoryForm')[0].reset();
+                        location.reload();
+                    }, 500);
+                },
+                error: function (xhr) {
+                    submitBtn.prop('disabled', false).text(originalText);
+
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        if (errors.name) {
+                            $('#CategoryNameError').text(errors.name[0]).show();
+                        }
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred. Please try again.'
+                        });
+                    }
+                }
+            });
+        });
+
+        // Add Unit of Measure
+        $('#addUnitOfMeasureForm').on('submit', function (e) {
+            e.preventDefault();
+            $('#unitNameError, #unitAbbreviationError').hide().text('');
+
+            const submitBtn = $(this).find('button[type="submit"]');
+            const originalText = submitBtn.text();
+            submitBtn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-2"></span>Adding...');
+
+            $.ajax({
+                url: "{{ route('ingredient.addUnit') }}",
+                method: 'POST',
+                data: $(this).serialize(),
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function (response) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Unit of measure added successfully',
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false
+                    });
+
+                    setTimeout(() => {
+                        $('#addUnitOfMeasureModal').modal('hide');
+                        $('#addUnitOfMeasureForm')[0].reset();
+                        location.reload();
+                    }, 500);
+                },
+                error: function (xhr) {
+                    submitBtn.prop('disabled', false).text(originalText);
+
+                    if (xhr.status === 422) {
+                        let errors = xhr.responseJSON.errors;
+                        if (errors.name) {
+                            $('#unitNameError').text(errors.name[0]).show();
+                        }
+                        if (errors.abbreviation) {
+                            $('#unitAbbreviationError').text(errors.abbreviation[0]).show();
+                        }
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'An error occurred. Please try again.'
+                        });
+                    }
                 }
             });
         });

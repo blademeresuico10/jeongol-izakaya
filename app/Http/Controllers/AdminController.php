@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\feedback;
 use App\Models\transaction;
 use Carbon\Carbon;
+use Illuminate\Support\Str;
 use App\Models\customers;
 use App\Models\reservation;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -1454,15 +1455,14 @@ class AdminController extends Controller
             ->orderBy('name', 'asc')
             ->get();
 
-        // Add these lines for the modals
-        $ingredientCategories = IngredientCategory::all();
-        $ingredientUnits = IngredientUnit::all();
+        $categories = DB::table('ingredient_categories')->select('id', 'name')->get();
+        $units = DB::table('ingredient_units')->select('id', 'name', 'abbreviation')->get();
 
         return view('admin.ingredient_management', compact(
             'lowStockIngredients',
             'allIngredients',
-            'ingredientCategories',
-            'ingredientUnits'
+            'categories',
+            'units'
         ));
     }
 
@@ -1746,28 +1746,78 @@ class AdminController extends Controller
     {
         $request->validate([
             'name' => 'required|string|unique:ingredients,name',
-            'category' => 'required|in:meat,vegetables,soupbase,beverage',
-            'unit' => 'required|in:kg,pieces'
+            'category_id' => 'required|exists:ingredient_categories,id',
+            'unit_id' => 'required|exists:ingredient_units,id'
         ]);
 
         try {
             $ingredientId = DB::table('ingredients')->insertGetId([
                 'name' => $request->name,
-                'category' => $request->category,
-                'unit' => $request->unit,
-                'stocks' => 0,
+                'category_id' => $request->category_id,
+                'unit_id' => $request->unit_id,
+                'stocks' => 0.00,
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Ingredient added successfully'
+                'message' => 'Ingredient added successfully',
+                'ingredient_id' => $ingredientId
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to add ingredient: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addIngredientCategory(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|min:2|unique:ingredient_categories,name'
+        ]);
+
+        try {
+            IngredientCategory::create([
+                'name' => $request->name,
+                'slug' => Str::slug($request->name, '-'),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ingredient category added successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add category: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function addIngredientUnit(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|min:2|unique:ingredient_units,name',
+            'abbreviation' => 'required|string|min:1|unique:ingredient_units,abbreviation'
+        ]);
+
+        try {
+            IngredientUnit::create([
+                'name' => $request->name,
+                'abbreviation' => $request->abbreviation,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Unit of measure added successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to add unit: ' . $e->getMessage()
             ], 500);
         }
     }

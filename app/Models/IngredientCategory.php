@@ -8,6 +8,8 @@ class IngredientCategory extends Model
 {
     protected $fillable = ['name', 'slug'];
 
+    public $timestamps = false;
+    
     public function ingredients()
     {
         return $this->hasMany(ingredients::class, 'category_id');

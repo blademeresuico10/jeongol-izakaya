@@ -113,6 +113,8 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [AdminController::class, 'ingredient_management'])->name('admin.ingredient_management');
             Route::get('/stocks', [AdminController::class, 'getStocks'])->name('ingredient.stocks');
             Route::post('/storeIngredient', [AdminController::class, 'storeIngredient'])->name('storeIngredient');
+            Route::post('/addIngredientCategory', [AdminController::class, 'addIngredientCategory'])->name('ingredient.addCategory');
+            Route::post('/addIngredientUnit', [AdminController::class, 'addIngredientUnit'])->name('ingredient.addUnit');
             Route::post('/add-stock', [AdminController::class, 'addStock'])->name('ingredient.addStock');
             Route::post('/update-stock', [AdminController::class, 'updateStock'])->name('ingredient.updateStock');
             Route::get('/addStockForm', [AdminController::class, 'addStockForm'])->name('ingredient.addStockForm');

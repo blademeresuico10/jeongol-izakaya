@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class IngredientUnit extends Model
 {
     protected $fillable = ['name', 'abbreviation'];
+    public $timestamps = false;
 
     public function ingredients()
     {
