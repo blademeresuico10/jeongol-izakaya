@@ -52,11 +52,9 @@ class ReceptionistController extends Controller
             return $table;
         });
 
-        // Get today's reservations and walk-ins
         $reservation = reservation::whereDate('started_at', Carbon::now()->toDateString())->get();
         $walkin = walkin::whereDate('started_at', Carbon::now()->toDateString())->get();
 
-        // Get all active menu items with their categories
         $menuItems = menu::with('category')
             ->where('status', 'Active')
             ->whereNull('deleted_at')

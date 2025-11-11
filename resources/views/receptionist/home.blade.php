@@ -622,7 +622,7 @@
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
-      {{ $table->id }}: {{ $table->capacity }},
+        {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
 
@@ -1505,7 +1505,6 @@
       return;
     }
 
-
     if (!this.isPlacingOrder) {
       const selectedDateTime = new Date(`${date}T${time}`);
       const currentTime = new Date();
@@ -1520,16 +1519,23 @@
     }
 
     const orders = Object.values(this.selectedOrders || {});
-    const hasMain = orders.some(item => item.category === 'main');
+
+    // Fix: Check for "Main Course" instead of "main"
+    const hasMain = orders.some(item => {
+      const category = (item.category || '').toLowerCase();
+      return category === 'main course' || category === 'main';
+    });
 
     if (!hasMain) {
       this.showErrorToast('You must order at least one main menu item.');
       return;
     }
 
-    const mainMenuOrders = orders.filter(item => item.category === 'main');
+    const mainMenuOrders = orders.filter(item => {
+      const category = (item.category || '').toLowerCase();
+      return category === 'main course' || category === 'main';
+    });
     const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
-
 
     this.elements.submitBtn.disabled = true;
     this.elements.submitBtn.textContent = "Submitting...";

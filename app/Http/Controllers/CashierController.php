@@ -12,6 +12,8 @@ use App\Models\reservation;
 use App\Models\walkin;
 use Illuminate\Support\Facades\Log;
 use App\Models\orders;
+use App\Models\menu;
+use App\Models\MenuCategory;
 
 class CashierController extends Controller
 {
@@ -20,7 +22,22 @@ class CashierController extends Controller
         $now = Carbon::now();
 
         $tables = DB::table('tables')->get();
-        $menuItems = DB::table('menu')->get();
+
+        $menuItems = menu::with(['category', 'menuDiscount'])
+            ->where('status', 'Active')
+            ->whereNull('deleted_at')
+            ->get();
+
+        $menuCategories = MenuCategory::where('is_active', true)->get();
+
+        $mainCategory = $menuCategories->first(function ($cat) {
+            return stripos($cat->name, 'main') !== false ||
+                stripos($cat->name, 'Main Course') !== false;
+        });
+
+        if (!$mainCategory) {
+            Log::warning('Main category not found in menu_categories table');
+        }
 
         $reservations = reservation::with('table')
             ->where('status', 'Active')
@@ -65,7 +82,6 @@ class CashierController extends Controller
                 $table->is_walk_in = false;
 
                 $endTime = Carbon::parse($res->ended_at);
-
                 $secondsRemaining = $now->diffInSeconds($endTime, false);
                 $table->remaining_seconds = max(0, $secondsRemaining);
 
@@ -79,7 +95,6 @@ class CashierController extends Controller
                 $table->is_walk_in = true;
 
                 $endTime = Carbon::parse($session->ended_at);
-
                 $secondsRemaining = $now->diffInSeconds($endTime, false);
                 $table->remaining_seconds = max(0, $secondsRemaining);
 
@@ -108,8 +123,13 @@ class CashierController extends Controller
             $pwdDisc     = $discounts->firstWhere('discount_type', 'PWD');
 
             $menuData[] = [
+                'id'              => $item->id,
                 'menu_item'       => $item->menu_item,
                 'regular_price'   => (float) $item->regular_price,
+                'category_id'     => $item->category_id,
+                'category_name'   => $item->category->name ?? 'Uncategorized',
+                'image'           => $item->image,
+                'status'          => $item->status,
                 'student_percent' => $studentDisc->discount_percentage ?? null,
                 'govt_percent'    => $govtDisc->discount_percentage ?? null,
                 'senior_percent'  => $seniorDisc->discount_percentage ?? null,
@@ -120,7 +140,8 @@ class CashierController extends Controller
 
         $groupedMenu = [];
         foreach ($menuItems as $item) {
-            $groupedMenu[$item->category][] = $item;
+            $categoryName = $item->category->name ?? 'Uncategorized';
+            $groupedMenu[$categoryName][] = $item;
         }
 
         return view('cashier.home', compact(
@@ -130,7 +151,9 @@ class CashierController extends Controller
             'walkin',
             'groupedMenu',
             'occupiedTables',
-            'menuData'
+            'menuData',
+            'menuCategories',
+            'mainCategory'
         ));
     }
 
@@ -248,7 +271,8 @@ class CashierController extends Controller
         ]);
     }
 
-    private function calculateDiscountedPrice($menuItem, $regularPrice, $customerType)
+    // IMPROVED: Cache menu discounts to avoid repeated queries
+    private function calculateDiscountedPrice($menuId, $regularPrice, $customerType)
     {
         if ($customerType === 'regular' || $customerType === 'none') {
             return $regularPrice;
@@ -265,11 +289,7 @@ class CashierController extends Controller
             return $regularPrice;
         }
 
-        $menuId = DB::table('menu')->where('menu_item', $menuItem)->value('id');
-        if (!$menuId) {
-            return $regularPrice;
-        }
-
+        // Query by menu ID instead of menu item name
         if (is_array($discountType)) {
             $discount = DB::table('menu_discounts')
                 ->where('menu_id', $menuId)
@@ -285,6 +305,7 @@ class CashierController extends Controller
         if ($discount) {
             $discountedPrice = $regularPrice * (1 - ($discount->discount_percentage / 100));
 
+            // Round to nearest whole number
             $decimalPart = $discountedPrice - floor($discountedPrice);
             if ($decimalPart >= 0.5) {
                 $discountedPrice = ceil($discountedPrice);
@@ -297,7 +318,6 @@ class CashierController extends Controller
 
         return $regularPrice;
     }
-
 
     public function processPayment(Request $request)
     {

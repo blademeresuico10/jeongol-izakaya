@@ -846,7 +846,6 @@
             const mainMenuEntries = [];
             let itemCounter = 0;
 
-            // Create a map of discount selects by their item index
             const discountSelectMap = {};
             document.querySelectorAll('.discount-type-select').forEach(select => {
                 const itemIndex = parseInt(select.getAttribute('data-item-index'));
@@ -855,7 +854,6 @@
                 }
             });
 
-            // Create a map of item totals by their item index
             const itemTotalMap = {};
             document.querySelectorAll('.item-total').forEach(total => {
                 const itemIndex = parseInt(total.getAttribute('data-item-index'));
@@ -870,10 +868,8 @@
                 const qty = parseInt(order.quantity) || 1;
 
                 for (let i = 0; i < qty; i++) {
-                    // Get the final price from the item total map
                     let finalPrice = itemTotalMap[itemCounter] || price;
 
-                    // Get discount info if available
                     let discountInfo = '';
                     let discountType = 'none';
 

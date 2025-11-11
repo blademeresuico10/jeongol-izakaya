@@ -25,12 +25,16 @@ class CashierTableLayout extends Component
         $activeReservations = reservation::with('table')
             ->where('status', 'Active')
             ->whereDoesntHave('transactions')
+            ->where('started_at', '<=', $now)
+            ->where('ended_at', '>=', $now)
             ->orderBy('started_at', 'asc')
             ->get();
 
         $activeWalkins = walkin::with('table')
             ->where('status', 'Active')
             ->whereDoesntHave('transactions')
+            ->where('started_at', '<=', $now)
+            ->where('ended_at', '>=', $now)
             ->orderBy('started_at', 'asc')
             ->get();
 
@@ -39,37 +43,29 @@ class CashierTableLayout extends Component
             $session = $activeWalkins->firstWhere('table_id', $table->id);
 
             if ($res) {
-                $startTime = Carbon::parse($res->started_at);
                 $endTime = Carbon::parse($res->ended_at);
-                
-                $hasStarted = $now->gte($startTime);
                 $secondsRemaining = $now->diffInSeconds($endTime, false);
-                
+
                 $table->current_reservation_id = $res->id;
                 $table->current_session_id = null;
                 $table->is_walk_in = false;
                 $table->remaining_seconds = $secondsRemaining;
-                $table->is_expired = $hasStarted && $secondsRemaining <= 0;
-                $table->is_upcoming = !$hasStarted;
+                $table->is_expired = $secondsRemaining <= 0;
+                $table->is_upcoming = false; // Always false since we only fetch active ones
                 $table->days_overdue = $table->is_expired ? $now->diffInDays($endTime) : 0;
                 $table->is_occupied = true;
-                
             } elseif ($session) {
-                $startTime = Carbon::parse($session->started_at);
                 $endTime = Carbon::parse($session->ended_at);
-                
-                $hasStarted = $now->gte($startTime);
                 $secondsRemaining = $now->diffInSeconds($endTime, false);
-                
+
                 $table->current_reservation_id = null;
                 $table->current_session_id = $session->id;
                 $table->is_walk_in = true;
                 $table->remaining_seconds = $secondsRemaining;
-                $table->is_expired = $hasStarted && $secondsRemaining <= 0;
-                $table->is_upcoming = !$hasStarted;
+                $table->is_expired = $secondsRemaining <= 0;
+                $table->is_upcoming = false; 
                 $table->days_overdue = $table->is_expired ? $now->diffInDays($endTime) : 0;
                 $table->is_occupied = true;
-                
             } else {
                 $table->current_reservation_id = null;
                 $table->current_session_id = null;
