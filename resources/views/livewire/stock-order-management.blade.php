@@ -111,7 +111,8 @@
                                                 onclick="confirmCreateOrder({{ $ingredient->id }})"
                                                 wire:loading.attr="disabled"
                                                 wire:target="createStockOrder({{ $ingredient->id }})">
-                                                <span wire:loading.remove wire:target="createStockOrder({{ $ingredient->id }})">
+                                                <span wire:loading.remove
+                                                    wire:target="createStockOrder({{ $ingredient->id }})">
                                                     <i class="fas fa-plus"></i> Create Order
                                                 </span>
                                                 <span wire:loading wire:target="createStockOrder({{ $ingredient->id }})">
@@ -146,7 +147,8 @@
                                         </td>
                                         <td>
                                             @if($ingredient->stockAlertLevel)
-                                                {{ number_format($ingredient->stockAlertLevel->reorder_quantity, 2) }} {{ $ingredient->unit->abbreviation }}
+                                                {{ number_format($ingredient->stockAlertLevel->reorder_quantity, 2) }}
+                                                {{ $ingredient->unit->abbreviation }}
                                             @else
                                                 <span class="text-muted">N/A</span>
                                             @endif
@@ -161,7 +163,8 @@
                                                 wire:click="createStockOrder({{ $ingredient->id }})"
                                                 wire:loading.attr="disabled"
                                                 wire:target="createStockOrder({{ $ingredient->id }})">
-                                                <span wire:loading.remove wire:target="createStockOrder({{ $ingredient->id }})">
+                                                <span wire:loading.remove
+                                                    wire:target="createStockOrder({{ $ingredient->id }})">
                                                     <i class="fas fa-plus"></i> Create Order
                                                 </span>
                                                 <span wire:loading wire:target="createStockOrder({{ $ingredient->id }})">
@@ -211,7 +214,8 @@
                                         <td>
                                             <strong>{{ $order->ingredient->name }}</strong>
                                             @if($order->ingredient->getStockStatus() === 'critical')
-                                                <i class="fas fa-exclamation-circle text-danger ml-1" title="Critical stock"></i>
+                                                <i class="fas fa-exclamation-circle text-danger ml-1"
+                                                    title="Critical stock"></i>
                                             @elseif($order->ingredient->getStockStatus() === 'low')
                                                 <i class="fas fa-exclamation-triangle text-warning ml-1" title="Low stock"></i>
                                             @endif
@@ -299,15 +303,13 @@
                                     <label class="font-weight-bold text-success">
                                         Received Quantity: <span class="text-danger">*</span>
                                     </label>
-                                    <input type="number" 
-                                        id="receivedQuantityInput"
+                                    <input type="number" id="receivedQuantityInput"
                                         class="form-control @error('receivedQuantity') is-invalid @enderror"
                                         wire:model="receivedQuantity"
                                         min="{{ in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']) ? '1' : '0.01' }}"
                                         step="{{ in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']) ? '1' : '0.01' }}"
                                         @if(in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']))
-                                            oninput="this.value = Math.floor(Math.abs(this.value))"
-                                        @endif
+                                        oninput="this.value = Math.floor(Math.abs(this.value))" @endif
                                         placeholder="Enter received quantity">
                                     @error('receivedQuantity')
                                         <div class="text-danger small mt-1">
@@ -323,11 +325,9 @@
                                 <label class="font-weight-bold">
                                     Expiration Date: <span class="text-danger">*</span>
                                 </label>
-                                <input type="date" 
-                                    id="expirationDateInput"
+                                <input type="date" id="expirationDateInput"
                                     class="form-control @error('expirationDate') is-invalid @enderror"
-                                    wire:model="expirationDate" 
-                                    min="{{ date('Y-m-d') }}">
+                                    wire:model="expirationDate" min="{{ date('Y-m-d') }}">
                                 @error('expirationDate')
                                     <div class="text-danger small mt-1">
                                         <i class="fas fa-exclamation-circle"></i> {{ $message }}
@@ -339,12 +339,10 @@
                             <button type="button" class="btn btn-secondary" wire:click="closeReceiveModal">
                                 Close
                             </button>
-                            <button type="button" class="btn btn-success" 
-                                onclick="confirmReceiveStock()"
-                                wire:loading.attr="disabled" 
-                                wire:target="confirmReceive">
+                            <button type="button" class="btn btn-success" onclick="confirmReceiveStock()"
+                                wire:loading.attr="disabled" wire:target="confirmReceive">
                                 <span wire:loading.remove wire:target="confirmReceive">
-                                    <i class="fas fa-check"></i> Confirm Receipt
+                                    <i class="fas fa-check"></i> Confirm
                                 </span>
                                 <span wire:loading wire:target="confirmReceive">
                                     <i class="fas fa-spinner fa-spin"></i> Processing...
@@ -362,6 +360,18 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    document.addEventListener('livewire:initialized', () => {
+        Livewire.on('stock-received-success', () => {
+            Swal.fire({
+                position: 'center',
+                icon: 'success',
+                title: 'Stock received successfully',
+                showConfirmButton: false,
+                timer: 3000
+            });
+        });
+    });
+
     function confirmCreateOrder(ingredientId) {
         Swal.fire({
             title: 'Create Stock Order?',
@@ -384,7 +394,7 @@
         const expirationDate = document.getElementById('expirationDateInput').value;
 
         if (!receivedQty || !expirationDate) {
-            @this.call('confirmReceive'); 
+            @this.call('confirmReceive');
             return;
         }
 
@@ -394,7 +404,7 @@
             showCancelButton: true,
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Yes!',
+            confirmButtonText: 'Yes, Confirm',
             cancelButtonText: 'Cancel'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -406,37 +416,26 @@
 
 @push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            window.addEventListener('print-stock-request', event => {
-                const data = event.detail[0];
-                document.getElementById('print-date').textContent = data.date;
-                document.getElementById('print-user').textContent = data.requestedBy;
-                document.getElementById('print-ingredient').textContent = data.ingredient.name;
-                document.getElementById('print-stock').textContent = `${data.ingredient.stocks} ${data.ingredient.unit.abbreviation}`;
-                document.getElementById('print-reorder').textContent = `${data.alertLevel.reorder_quantity} ${data.ingredient.unit.abbreviation}`;
-                document.getElementById('print-status').textContent = data.order.status;
-                document.getElementById('print-quantity').textContent = data.order.quantity + ' ' + data.ingredient.unit.abbreviation;
+        window.addEventListener('print-stock-request', event => {
+            const data = event.detail[0];
+            document.getElementById('print-date').textContent = data.date;
+            document.getElementById('print-user').textContent = data.requestedBy;
+            document.getElementById('print-ingredient').textContent = data.ingredient.name;
+            document.getElementById('print-stock').textContent = `${data.ingredient.stocks} ${data.ingredient.unit.abbreviation}`;
+            document.getElementById('print-reorder').textContent = `${data.alertLevel.reorder_quantity} ${data.ingredient.unit.abbreviation}`;
+            document.getElementById('print-status').textContent = data.order.status;
+            document.getElementById('print-quantity').textContent = data.order.quantity + ' ' + data.ingredient.unit.abbreviation;
 
-                const printContent = document.getElementById('printable-stock-request').innerHTML;
-                const printWindow = window.open('', '', 'width=800,height=600');
-                printWindow.document.write('<html><head><title>Stock Request Preview</title>');
-                printWindow.document.write('<style>body{font-family:Arial,sans-serif;color:#333;font-size:14px;padding:20px;} h2{margin-bottom:10px;}</style>');
-                printWindow.document.write('</head><body>');
-                printWindow.document.write(printContent);
-                printWindow.document.write('</body></html>');
-                printWindow.document.close();
-                printWindow.focus();
-                printWindow.print();
-            });
-
-            window.addEventListener('stock-received-success', event => {
-                Swal.fire({
-                    title: 'Success!',
-                    html: event.detail.message,
-                    icon: 'success',
-                    confirmButtonColor: '#28a745'
-                });
-            });
+            const printContent = document.getElementById('printable-stock-request').innerHTML;
+            const printWindow = window.open('', '', 'width=800,height=600');
+            printWindow.document.write('<html><head><title>Stock Request Preview</title>');
+            printWindow.document.write('<style>body{font-family:Arial,sans-serif;color:#333;font-size:14px;padding:20px;} h2{margin-bottom:10px;}</style>');
+            printWindow.document.write('</head><body>');
+            printWindow.document.write(printContent);
+            printWindow.document.write('</body></html>');
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
         });
     </script>
 @endpush

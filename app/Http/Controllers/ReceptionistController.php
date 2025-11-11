@@ -24,7 +24,6 @@ class ReceptionistController extends Controller
     {
         $currentTime = Carbon::now();
 
-        // Get tables with active reservations and walk-ins
         $tables = table::with([
             'reservation' => function ($query) use ($currentTime) {
                 $query->where('status', 'Active')
@@ -85,7 +84,63 @@ class ReceptionistController extends Controller
         ));
     }
 
+    public function getOperatingHours(Request $request)
+    {
+        $date = $request->input('date');
 
+        if (!$date) {
+            return response()->json(['success' => false, 'message' => 'Date is required']);
+        }
+
+        $parsedDate = Carbon::parse($date);
+
+        $specificHours = DB::table('operating_hours')
+            ->where('date', $parsedDate->toDateString())
+            ->first();
+
+        if ($specificHours) {
+            if ($specificHours->is_closed) {
+                return response()->json([
+                    'success' => true,
+                    'is_closed' => true,
+                    'message' => 'Restaurant is closed on this date'
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'is_closed' => false,
+                'open_time' => substr($specificHours->open_time, 0, 5), 
+                'close_time' => substr($specificHours->close_time, 0, 5) 
+            ]);
+        }
+
+        $defaultHours = DB::table('operating_hours')
+            ->where('is_default', true)
+            ->first();
+
+        if (!$defaultHours) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No operating hours configured'
+            ]);
+        }
+
+        if ($defaultHours->is_closed) {
+            return response()->json([
+                'success' => true,
+                'is_closed' => true,
+                'message' => 'Restaurant is closed'
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'is_closed' => false,
+            'open_time' => substr($defaultHours->open_time, 0, 5), 
+            'close_time' => substr($defaultHours->close_time, 0, 5) 
+        ]);
+    }
     public function storeReservation(Request $request)
     {
         $data = $request->json()->all();
@@ -107,6 +162,48 @@ class ReceptionistController extends Controller
             ])->validate();
 
             $userId = Auth::id();
+            $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
+            $endDateTime = $reservedDateTime->copy()->addHours(2);
+
+            if ($reservedDateTime->toDateString() < now()->toDateString()) {
+                return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
+            }
+
+            // Check operating hours
+            $specificHours = DB::table('operating_hours')
+                ->where('date', $reservedDateTime->toDateString())
+                ->first();
+
+            $operatingHours = $specificHours ?? DB::table('operating_hours')
+                ->where('is_default', true)
+                ->first();
+
+            if (!$operatingHours) {
+                return response()->json(['success' => false, 'message' => 'Operating hours not configured.']);
+            }
+
+            if ($operatingHours->is_closed) {
+                return response()->json(['success' => false, 'message' => 'Restaurant is closed on this date.']);
+            }
+
+            $openTime = Carbon::parse($reservedDateTime->toDateString() . ' ' . $operatingHours->open_time);
+            $closeTime = Carbon::parse($reservedDateTime->toDateString() . ' ' . $operatingHours->close_time);
+
+            // Check if reservation time is within operating hours
+            if ($reservedDateTime->lt($openTime) || $reservedDateTime->gte($closeTime)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Reservation time must be between {$operatingHours->open_time} and {$operatingHours->close_time}."
+                ]);
+            }
+
+            // Check if end time exceeds closing time
+            if ($endDateTime->gt($closeTime)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Reservation would extend beyond closing time ({$operatingHours->close_time})."
+                ]);
+            }
 
             $customer = DB::table('customers')
                 ->where('name', $validated['customer_name'])
@@ -122,13 +219,6 @@ class ReceptionistController extends Controller
                 ]);
             } else {
                 $customerId = $customer->id;
-            }
-
-            $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
-            $endDateTime = $reservedDateTime->copy()->addHours(2);
-
-            if ($reservedDateTime->toDateString() < now()->toDateString()) {
-                return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
 
             $reservationConflict = DB::table('reservations')

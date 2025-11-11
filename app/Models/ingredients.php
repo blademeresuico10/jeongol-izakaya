@@ -160,4 +160,6 @@ class ingredients extends Model
         }
         return $quantity;
     }
+
+    
 }

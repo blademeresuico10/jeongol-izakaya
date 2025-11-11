@@ -96,7 +96,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/menu/{menuId}/suggested-ingredients', [AdminController::class, 'getSuggestedIngredientsApi'])->name('menu.suggested-ingredients');
         Route::post('/store-category', [AdminController::class, 'storeCategory'])->name('storeCategory');
         Route::post('/update-category/{id}', [AdminController::class, 'updateCategory'])->name('updateCategory');
-    
+
         // Table Management
         Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
         Route::post('/addtable', [AdminController::class, 'addtable'])->name('admin.addtable');
@@ -123,14 +123,15 @@ Route::middleware('auth')->group(function () {
             Route::get('/expiry-data', [AdminController::class, 'expiryData'])->name('ingredients.expiry_data');
             Route::get('/expired-only', [AdminController::class, 'getExpiredOnly'])->name('ingredients.expired_only');
             Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
-            Route::put('/batches/{id}', [AdminController::class, 'updateBatch'])->name('batches.update');
-            Route::delete('/batches/delete', [AdminController::class, 'deleteBatch'])->name('batches.delete');
+
 
             // Stock Order Routes
             Route::get('/available-ingredients', [AdminController::class, 'getAvailableIngredients'])->name('ingredient.available');
             Route::post('/stock-orders/create', [AdminController::class, 'createStockOrder'])->name('ingredient.stock-orders.create');
             Route::post('/stock-orders/check-all', [AdminController::class, 'checkAllIngredients'])->name('ingredient.stock-orders.check-all');
             Route::post('/stock-orders/{stockOrder}/complete', [AdminController::class, 'completeStockOrder'])->name('ingredient.stock-orders.complete');
+            Route::put('/ingredient_management/stock-batches/{id}/expire', [AdminController::class, 'markExpired']);
+            Route::put('/ingredient_management/stock-batches/{id}/update', [AdminController::class, 'updateBatch'])->name('ingredient.updateBatch');
             Route::post('/stock-orders/{stockOrder}/cancel', [AdminController::class, 'cancelStockOrder'])->name('ingredient.stock-orders.cancel');
             Route::get('/stock-orders', [AdminController::class, 'getStockOrders'])->name('ingredient.stock-orders');
             Route::get('/low-stock', [AdminController::class, 'getLowStockIngredients'])->name('ingredient.low-stock');
@@ -182,6 +183,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Receptionist')->prefix('receptionist')->name('receptionist.')->group(function () {
         Route::get('/home', [ReceptionistController::class, 'home'])->name('home');
         Route::get('/dashboard', [ReceptionistController::class, 'home']);
+        Route::get('/api/operating-hours', [ReceptionistController::class, 'getOperatingHours'])->name('operating_hours');
         Route::post('/store-reservation', [ReceptionistController::class, 'storeReservation'])->name('storeReservation');
         Route::post('/store-walkin', [ReceptionistController::class, 'storeWalkIn'])->name('storeWalkIn');
         Route::get('/modify_orders', [ReceptionistController::class, 'modifyOrders'])->name('modify_orders');

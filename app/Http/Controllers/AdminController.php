@@ -1519,7 +1519,7 @@ class AdminController extends Controller
 
     public function getAvailableIngredients()
     {
-        $ingredients = ingredients::with('stockAlertLevel')
+        $ingredients = ingredients::with(['stockAlertLevel', 'unit'])
             ->whereDoesntHave('stockOrders', function ($query) {
                 $query->where('status', 'pending');
             })
@@ -1538,7 +1538,7 @@ class AdminController extends Controller
                 return [
                     'id' => $ingredient->id,
                     'name' => $ingredient->name,
-                    'unit' => $ingredient->unit,
+                    'unit' => $ingredient->unit->abbreviation ?? 'unit',
                     'stocks' => $ingredient->stocks,
                     'stock_status' => $stockStatus,
                     'reorder_quantity' => $ingredient->stockAlertLevel->reorder_quantity ?? 0,
@@ -1562,6 +1562,8 @@ class AdminController extends Controller
         return response()->json(['success' => true, 'message' => 'Stock order completed successfully']);
     }
 
+
+
     public function cancelStockOrder(Request $request, StockOrder $stockOrder)
     {
         if ($stockOrder->status !== 'pending') {
@@ -1571,6 +1573,39 @@ class AdminController extends Controller
         $stockOrder->cancel();
 
         return response()->json(['success' => true, 'message' => 'Stock order cancelled']);
+    }
+
+    public function markExpired($id)
+    {
+        try {
+            $batch = ingredientBatch::findOrFail($id);
+
+            if ($batch->status === 'expired') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Batch is already marked as expired.'
+                ], 400);
+            }
+
+            $result = $batch->markAsExpired();
+
+            if ($result) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Batch marked as expired and stock deducted successfully.'
+                ], 200);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Could not mark batch as expired. It may not be past expiration date yet.'
+                ], 400);
+            }
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to mark batch as expired: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     public function getStockOrders()
@@ -1615,7 +1650,6 @@ class AdminController extends Controller
                 ->orderBy('ingredients.name', 'asc')
                 ->paginate(10);
 
-            // Transform the data
             $ingredients->getCollection()->transform(function ($ingredient) {
                 $lowStock = $ingredient->low_stock ?? 50;
                 $criticalStock = $ingredient->critical_stock ?? 10;
@@ -1665,13 +1699,15 @@ class AdminController extends Controller
 
             $batches = DB::table('ingredient_batches')
                 ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
-                ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id') // Add this join
+                ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
                 ->select(
                     'ingredient_batches.id',
+                    'ingredient_batches.batch_code', // ✅ ADDED
+                    'ingredient_batches.status', // ✅ ADDED
                     'ingredients.name as ingredient_name',
                     'ingredient_batches.quantity',
                     'ingredient_batches.expiration_date',
-                    'ingredient_units.abbreviation as unit', // Change this line
+                    'ingredient_units.abbreviation as unit',
                     'ingredient_batches.arrived_at'
                 )
                 ->where('ingredient_batches.quantity', '>', 0)
@@ -1685,6 +1721,8 @@ class AdminController extends Controller
 
                     return [
                         'id' => $b->id,
+                        'batch_code' => $b->batch_code,
+                        'status' => $b->status,
                         'ingredient_name' => $b->ingredient_name,
                         'quantity' => $isPieces ? (int)$b->quantity : (float)$b->quantity,
                         'unit' => $b->unit,

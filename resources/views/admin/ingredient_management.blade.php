@@ -82,18 +82,24 @@
 
                             <div class="tab-content">
                                 <div class="tab-pane fade show active" id="thisweek" role="tabpanel">
-                                    <div id="thisWeekEmpty" class="text-center py-4 text-muted d-none">No stock batches
-                                        added this week</div>
+                                    <div id="thisWeekLoading" class="text-center py-4 text-muted d-none">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                    </div>
+                                    <div id="thisWeekEmpty" class="text-center py-4 text-muted d-none">
+                                        No stock batches added this week
+                                    </div>
                                     <div id="thisWeekContent" class="d-none">
                                         <div class="table-responsive">
-                                            <table class="table table-bordered">
+                                            <table class="table table-bordered ">
                                                 <thead class="thead-light">
                                                     <tr>
+                                                        <th>Batch Code</th> <!-- ✅ ADDED -->
                                                         <th>Ingredient</th>
                                                         <th>Quantity</th>
                                                         <th>Arrived Date</th>
                                                         <th>Expiration Date</th>
-                                                        <th width="100">Actions</th>
+                                                        <th width="150" class="text-center">Actions</th>
+                                                        <!-- ✅ Increased width -->
                                                     </tr>
                                                 </thead>
                                                 <tbody id="thisWeekTableBody"></tbody>
@@ -106,19 +112,23 @@
                                 </div>
 
                                 <div class="tab-pane fade" id="lastweek" role="tabpanel">
-                                    <div id="lastWeekLoading" class="text-center py-4 text-muted">Loading...</div>
-                                    <div id="lastWeekEmpty" class="text-center py-4 text-muted d-none">No stock batches
-                                        from previous week</div>
+                                    <div id="lastWeekLoading" class="text-center py-4 text-muted">
+                                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                                    </div>
+                                    <div id="lastWeekEmpty" class="text-center py-4 text-muted d-none">
+                                        No stock batches from previous week
+                                    </div>
                                     <div id="lastWeekContent" class="d-none">
                                         <div class="table-responsive">
-                                            <table class="table table-bordered">
+                                            <table class="table table-bordered ">
                                                 <thead class="thead-light">
                                                     <tr>
+                                                        <th>Batch Code</th>
                                                         <th>Ingredient</th>
                                                         <th>Quantity</th>
                                                         <th>Arrived Date</th>
                                                         <th>Expiration Date</th>
-                                                        <th width="100">Actions</th>
+                                                        <th width="150" class="text-center">Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody id="lastWeekTableBody"></tbody>
@@ -158,10 +168,14 @@
                         <select name="ingredient_id" id="request_ingredient_id" class="form-control" required>
                             <option value="">-- Select Ingredient --</option>
                             @foreach($allIngredients ?? [] as $ingredient)
+                                @php
+                                    // Make sure we have the unit loaded
+                                    $unitAbbr = $ingredient->unit ? $ingredient->unit->abbreviation : 'unit';
+                                    $reorderQty = $ingredient->stockAlertLevel ? $ingredient->stockAlertLevel->reorder_quantity : 0;
+                                @endphp
                                 <option value="{{ $ingredient->id }}" data-name="{{ $ingredient->name }}"
-                                    data-unit="{{ $ingredient->unit }}"
-                                    data-reorder="{{ $ingredient->stockAlertLevel->reorder_quantity ?? 0 }}">
-                                    {{ $ingredient->name }}
+                                    data-unit="{{ $unitAbbr }}" data-reorder="{{ $reorderQty }}">
+                                    {{ $ingredient->name }} ({{ $unitAbbr }})
                                 </option>
                             @endforeach
                         </select>
@@ -171,7 +185,7 @@
                         <label>Quantity <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <input type="number" name="quantity" id="request_quantity" class="form-control" step="0.01"
-                                min="1" required>
+                                min="0.01" required>
                             <div class="input-group-append">
                                 <span class="input-group-text" id="request_unit">unit</span>
                             </div>
@@ -188,6 +202,7 @@
         </div>
     </div>
 </div>
+
 
 {{-- Add Ingredient Modal --}}
 <div class="modal fade" id="addIngredientModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
@@ -246,7 +261,7 @@
 </div>
 
 {{-- Edit Batch Modal --}}
-<div class="modal fade" id="editBatchModal" tabindex="-1">
+<div class="modal fade" id="stockBatchModal" tabindex="-1">
     <div class="modal-dialog modal-sm">
         <div class="modal-content">
             <div class="modal-header bg-warning text-dark">
@@ -475,7 +490,7 @@
             });
         }
 
-        $('#addStockModal, #addIngredientModal, #editBatchModal').modal({
+        $('#addStockModal, #addIngredientModal, #stockBatchModal').modal({
             backdrop: 'static',
             keyboard: false,
             show: false
@@ -524,54 +539,141 @@
         }
 
         function loadBatches(period, page = 1) {
-            const pre = period === 'thisweek' ? 'thisWeek' : 'lastWeek';
-            currentPages[period] = page;
+    const pre = period === 'thisweek' ? 'thisWeek' : 'lastWeek';
+    currentPages[period] = page;
 
-            if (page === 1 && $(`#${pre}TableBody`).is(':empty')) {
-                $(`#${pre}Loading`).removeClass('d-none');
-                $(`#${pre}Empty, #${pre}Content`).addClass('d-none');
-            }
+    if (page === 1 && $(`#${pre}TableBody`).is(':empty')) {
+        $(`#${pre}Loading`).removeClass('d-none');
+        $(`#${pre}Empty, #${pre}Content`).addClass('d-none');
+    }
 
-            $.get(`/ingredient_management/stock-batches?period=${period}&page=${page}`, function (data) {
-                if ($(`#${pre}Loading`).is(':visible')) {
-                    $(`#${pre}Loading`).addClass('d-none');
-                }
+    $.get(`/ingredient_management/stock-batches?period=${period}&page=${page}`, function (data) {
+        $(`#${pre}Loading`).addClass('d-none');
 
-                if (data.batches.data && data.batches.data.length) {
-                    $(`#${pre}Content`).removeClass('d-none');
-                    $(`#${pre}Empty`).addClass('d-none');
-                    const $tb = $(`#${pre}TableBody`).empty();
+        if (data.batches.data && data.batches.data.length) {
+            $(`#${pre}Content`).removeClass('d-none');
+            $(`#${pre}Empty`).addClass('d-none');
+            const $tb = $(`#${pre}TableBody`).empty();
 
-                    data.batches.data.forEach(b => {
-                        // Check if unit is pieces
-                        const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(b.unit.toLowerCase());
-                        const formattedQty = isPieces ? Math.floor(b.quantity) : parseFloat(b.quantity).toFixed(2);
+            data.batches.data.forEach(b => {
+                const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(b.unit.toLowerCase());
+                const formattedQty = isPieces ? Math.floor(b.quantity) : parseFloat(b.quantity).toFixed(2);
 
-                        $tb.append(`
-                        <tr>
-                            <td>${b.ingredient_name}</td>
-                            <td>${formattedQty} ${b.unit}</td>
-                            <td>${new Date(b.arrived_at).toLocaleDateString()}</td>
-                            <td>${new Date(b.expiration_date).toLocaleDateString()}</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-warning btn-edit-batch" data-id="${b.id}" 
-                                    data-qty="${b.quantity}" data-arrived="${b.arrived_at}" data-exp="${b.expiration_date}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger btn-del-batch" data-id="${b.id}" data-name="${b.ingredient_name}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `);
-                    });
-                    renderPagination(`#${period}Pagination`, data.batches, period);
-                } else {
-                    $(`#${pre}Empty`).removeClass('d-none');
-                    $(`#${pre}Content`).addClass('d-none');
-                }
+                const expired = b.status === 'expired' || b.quantity <= 0;
+
+                const expirationDate = new Date(b.expiration_date);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                expirationDate.setHours(0, 0, 0, 0);
+                const daysUntilExpiry = Math.ceil((expirationDate - today) / (1000 * 60 * 60 * 24));
+
+                $tb.append(`
+                    <tr>
+                        <td>
+                            <code class="text-dark bg-light px-2 py-1 rounded">${b.batch_code || 'N/A'}</code>
+                        </td>
+                        <td>
+                            <strong>${b.ingredient_name}</strong>
+                        </td>
+                        <td>
+                            <span class="font-weight-medium">${formattedQty}</span> ${b.unit}
+                        </td>
+                        <td>
+                            ${new Date(b.arrived_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            })}
+                        </td>
+                        <td>
+                            <div>
+                                ${new Date(b.expiration_date).toLocaleDateString('en-US', {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                })}
+                            </div>
+                            ${!expired && daysUntilExpiry <= 30 ?
+                                `<small class="text-${daysUntilExpiry <= 7 ? 'danger' : 'warning'} font-weight-bold">
+                                    (${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} left)
+                                </small>`
+                                : ''
+                            }
+                        </td>
+                        <td class="text-center">
+                            ${expired
+                                ? `<span class="badge badge-danger px-3 py-auto">
+                                    <i class="fas fa-times-circle"></i> Expired
+                                   </span>`
+                                : `
+                                <div class="d-flex justify-content-center gap-2">
+                                    <button class="btn btn-sm btn-primary btn-edit-batch" 
+                                        data-id="${b.id}"
+                                        data-batch-code="${b.batch_code || 'N/A'}"
+                                        data-ingredient="${b.ingredient_name}"
+                                        data-quantity="${b.quantity}"
+                                        data-arrived="${b.arrived_at}"
+                                        data-expiry="${b.expiration_date}"
+                                        data-unit="${b.unit}"
+                                        title="Edit batch details"
+                                        style="min-width: 70px;">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger btn-expire-batch" 
+                                        data-id="${b.id}" 
+                                        data-name="${b.batch_code || b.ingredient_name}"
+                                        title="Mark as expired"
+                                        style="min-width: 80px;">
+                                        <i class="fas fa-ban"></i> Expire
+                                    </button>
+                                </div>
+                                `
+                            }
+                        </td>
+                    </tr>
+                `);
             });
+
+            renderPagination(`#${period}Pagination`, data.batches, period);
+        } else {
+            $(`#${pre}Empty`).removeClass('d-none');
+            $(`#${pre}Content`).addClass('d-none');
         }
+    }).fail(function (xhr, status, error) {
+        $(`#${pre}Loading`).addClass('d-none');
+        $(`#${pre}Content, #${pre}Empty`).addClass('d-none');
+
+        Swal.fire({
+            icon: 'error',
+            title: 'Failed to Load Batches',
+            text: 'Unable to fetch batch data. Please try again.',
+            confirmButtonColor: '#dc3545'
+        });
+    });
+}
+        
+        $(document).on('click', '.btn-edit-batch', function () {
+            const batchId = $(this).data('id');
+            const batchCode = $(this).data('batch-code');
+            const ingredient = $(this).data('ingredient');
+            const quantity = $(this).data('quantity');
+            const arrivedAt = $(this).data('arrived');
+            const expiryDate = $(this).data('expiry');
+            const unit = $(this).data('unit');
+
+            $('#editBatchId').val(batchId);
+            $('#editBatchQty').val(quantity);
+            $('#editBatchArrived').val(arrivedAt);
+            $('#editBatchExpiry').val(expiryDate);
+
+            $('#stockBatchModal .modal-title').text(`Edit Batch: ${batchCode}`);
+
+            const today = new Date().toISOString().split('T')[0];
+            $('#editBatchExpiry').attr('min', today);
+
+            $('#stockBatchModal').modal('show');
+        });
+
 
         function renderPagination(selector, data, section) {
             const $pagination = $(selector);
@@ -873,107 +975,9 @@
             });
         }
 
-        function updateBatch() {
-            const id = $('#editBatchId').val();
-            $.ajax({
-                url: `/ingredient_management/batches/${id}`,
-                method: 'PUT',
-                data: {
-                    _token: $('meta[name="csrf-token"]').attr('content'),
-                    quantity: $('#editBatchQty').val(),
-                    arrived_at: $('#editBatchArrived').val(),
-                    expiration_date: $('#editBatchExpiry').val()
-                },
-                success: (response) => {
-                    if (response.success) {
-                        $('#editBatchModal').modal('hide');
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Batch updated successfully',
-                            toast: true,
-                            position: 'top',
-                            timer: 3000,
-                            showConfirmButton: false
-                        });
-                        const period = $('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek';
-                        loadBatches(period, currentPages[period]);
-                    }
-                },
-                error: (xhr) => {
-                    console.log('Full error:', xhr);
-                    console.log('Response:', xhr.responseJSON);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: xhr.responseJSON?.message || 'Update failed',
-                        toast: true,
-                        position: 'top',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }
-            });
-        }
 
-        $(document).on('click', '.btn-edit-batch', function () {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            const minDate = tomorrow.toISOString().split('T')[0];
 
-            $('#editBatchId').val($(this).data('id'));
-            $('#editBatchQty').val($(this).data('qty'));
-            $('#editBatchArrived').val($(this).data('arrived'));
-            $('#editBatchExpiry').val($(this).data('exp')).attr('min', minDate);
-            $('#editBatchModal').modal('show');
-        });
 
-        $(document).on('click', '.btn-del-batch', function () {
-            const id = $(this).data('id');
-            const name = $(this).data('name');
-            Swal.fire({
-                title: 'Delete Batch?',
-                text: `Remove ${name} batch?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                confirmButtonText: 'Delete'
-            }).then(r => {
-                if (r.isConfirmed) {
-                    $.ajax({
-                        url: `/ingredient_management/batches/delete`,
-                        method: 'DELETE',
-                        data: JSON.stringify({ batch_id: id }),
-                        contentType: 'application/json',
-                        headers: { 'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') },
-                        success: (response) => {
-                            if (response.success) {
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Batch removed successfully',
-                                    toast: true,
-                                    position: 'top',
-                                    timer: 3000,
-                                    showConfirmButton: false
-                                });
-                                const period = $('.nav-link.active[data-toggle="pill"]').attr('href').includes('thisweek') ? 'thisweek' : 'lastweek';
-                                loadBatches(period, currentPages[period]);
-                            }
-                        },
-                        error: (xhr) => {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: xhr.responseJSON?.message || 'Delete failed',
-                                toast: true,
-                                position: 'top',
-                                timer: 3000,
-                                showConfirmButton: false
-                            });
-                        }
-                    });
-                }
-            });
-        });
 
         // Add Ingredient Category
         $('#addIngredientCategoryForm').on('submit', function (e) {
@@ -1080,6 +1084,55 @@
             });
         });
     });
+
+    $(document).on('click', '.btn-expire-batch', function () {
+    const id = $(this).data('id');
+    const code = $(this).data('name');
+
+    Swal.fire({
+        title: 'Mark Batch as Expired?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-ban"></i> Yes, Mark as Expired',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            $.ajax({
+                url: `/ingredient_management/stock-batches/${id}/expire`,
+                type: 'PUT',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function (res) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Batch Expired!',
+                        text: res.message || 'Batch has been marked as expired successfully',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        timerProgressBar: true
+                    });
+
+                    const activePeriod = $('#thisweek-tab').hasClass('active') ? 'thisweek' : 'lastweek';
+                    loadBatches(activePeriod, currentPages[activePeriod]);
+                },
+                error: function (xhr) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Failed!',
+                        text: xhr.responseJSON?.message || 'Failed to mark batch as expired. Please try again.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            });
+        }
+    });
+});
+
 
 
 </script>

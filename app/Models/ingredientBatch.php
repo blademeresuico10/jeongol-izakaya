@@ -14,6 +14,7 @@ class ingredientBatch extends Model
     protected $fillable = [
         'status', 
         'ingredient_id', 
+        'batch_code',
         'arrived_at', 
         'expiration_date', 
         'quantity'

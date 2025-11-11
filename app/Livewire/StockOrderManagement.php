@@ -107,11 +107,11 @@ class StockOrderManagement extends Component
 
     public function openReceiveModal($orderId)
     {
-        $order = StockOrder::with('ingredient.unit')->findOrFail($orderId); 
+        $order = StockOrder::with('ingredient.unit')->findOrFail($orderId);
 
         $this->selectedOrder = $orderId;
         $this->ingredientName = $order->ingredient->name;
-        $this->unit = $order->ingredient->unit->abbreviation; 
+        $this->unit = $order->ingredient->unit->abbreviation;
 
         $isPieces = in_array(strtolower($this->unit), ['pieces', 'pcs', 'piece', 'pc']);
 
@@ -169,14 +169,19 @@ class StockOrderManagement extends Component
         $ingredient = $order->ingredient;
 
         try {
-            DB::transaction(function () use ($order, $ingredient) {
+            $batchCode = null; 
+
+            DB::transaction(function () use ($order, $ingredient, &$batchCode) {
                 $stockBefore = $ingredient->stocks;
 
                 $ingredient->stocks += $this->receivedQuantity;
                 $ingredient->save();
 
+                $batchCode = 'BO-' . str_pad($order->id, 5, '0', STR_PAD_LEFT) . '-' . now()->format('Ymd');
+
                 $batch = ingredientBatch::create([
-                    'ingredient_id' => $ingredient->id,
+                    'ingredient_id' => $ingredient->id, 
+                    'batch_code' => $batchCode,
                     'quantity' => $this->receivedQuantity,
                     'arrived_at' => now(),
                     'expiration_date' => $this->expirationDate,
@@ -194,24 +199,15 @@ class StockOrderManagement extends Component
                     'quantity' => $this->receivedQuantity,
                     'stock_before' => $stockBefore,
                     'stock_after' => $ingredient->stocks,
-                    'notes' => "Stock order #{$order->id} completed. Ordered: {$this->orderedQuantity} {$this->unit}, Received: {$this->receivedQuantity} {$this->unit}"
+                    'notes' => "Stock order #{$order->id} completed. Batch: {$batchCode}. Ordered: {$this->orderedQuantity} {$this->unit}, Received: {$this->receivedQuantity} {$this->unit}"
                 ]);
             });
 
             $difference = $this->orderedQuantity - $this->receivedQuantity;
-            $message = '';
-
-            if ($difference > 0) {
-                $message = "Order completed!<br>Shortage: <strong>{$difference} {$this->unit}</strong>";
-            } elseif ($difference < 0) {
-                $message = "Order completed!<br>Excess: <strong>" . abs($difference) . " {$this->unit}</strong>";
-            } else {
-                $message = "Stock received successfully!<br>Added <strong>{$this->receivedQuantity} {$this->unit}</strong>";
-            }
 
             $this->closeReceiveModal();
 
-            $this->dispatch('stock-received-success', ['message' => $message]);
+            $this->dispatch('stock-received-success');
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to process stock receipt: ' . $e->getMessage());
         }

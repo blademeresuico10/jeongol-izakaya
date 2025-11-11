@@ -51,7 +51,7 @@ class CashierTableLayout extends Component
                 $table->is_walk_in = false;
                 $table->remaining_seconds = $secondsRemaining;
                 $table->is_expired = $secondsRemaining <= 0;
-                $table->is_upcoming = false; // Always false since we only fetch active ones
+                $table->is_upcoming = false; 
                 $table->days_overdue = $table->is_expired ? $now->diffInDays($endTime) : 0;
                 $table->is_occupied = true;
             } elseif ($session) {

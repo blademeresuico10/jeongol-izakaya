@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('ingredient_batches', function (Blueprint $table) {
             $table->id();
+            $table->string('batch_code')->unique()->after('id');
             $table->enum('status', ['active', 'expired'])->default('active');
             $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
             $table->date('arrived_at');

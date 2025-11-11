@@ -1235,20 +1235,17 @@
     this.elements.advancePayment.parentElement.style.display = '';
     this.elements.contactInput.style.display = '';
 
-    // Set minimum date to today
     const today = now.getFullYear() + '-' +
       String(now.getMonth() + 1).padStart(2, '0') + '-' +
       String(now.getDate()).padStart(2, '0');
     this.elements.reservedDate.value = today;
     this.elements.reservedDate.min = today;
 
-    // Set default time to 2 hours from now
     const twoHoursLater = new Date(now.getTime() + (2 * 60 * 60 * 1000));
     const hours = twoHoursLater.getHours().toString().padStart(2, '0');
     const minutes = twoHoursLater.getMinutes().toString().padStart(2, '0');
     this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
 
-    // Add validation event listeners
     const validateReservationTime = () => {
       const selectedDate = this.elements.reservedDate.value;
       const selectedTime = this.elements.arrivalTimeInput.value;
@@ -1262,12 +1259,10 @@
       if (selectedDateTime < minAllowedTime) {
         this.showToast('Reservation must be at least 2 hours from now', 'error');
 
-        // Reset to minimum allowed time
         const resetHours = minAllowedTime.getHours().toString().padStart(2, '0');
         const resetMinutes = minAllowedTime.getMinutes().toString().padStart(2, '0');
         this.elements.arrivalTimeInput.value = `${resetHours}:${resetMinutes}`;
 
-        // If the min time goes to next day, update date
         if (minAllowedTime.getDate() !== currentTime.getDate()) {
           const newDate = minAllowedTime.getFullYear() + '-' +
             String(minAllowedTime.getMonth() + 1).padStart(2, '0') + '-' +
@@ -1277,14 +1272,11 @@
       }
     };
 
-    // Remove old listeners if they exist
     this.elements.reservedDate.removeEventListener('change', this.validateReservationTime);
     this.elements.arrivalTimeInput.removeEventListener('change', this.validateReservationTime);
 
-    // Store the function reference for removal later
     this.validateReservationTime = validateReservationTime;
 
-    // Add new listeners
     this.elements.reservedDate.addEventListener('change', validateReservationTime);
     this.elements.arrivalTimeInput.addEventListener('change', validateReservationTime);
     this.elements.arrivalTimeInput.addEventListener('blur', validateReservationTime);
@@ -1505,6 +1497,55 @@
       return;
     }
 
+    // Fetch operating hours for the selected date
+    try {
+      // Changed from /api/operating-hours to /receptionist/api/operating-hours
+      const hoursResponse = await fetch(`/receptionist/api/operating-hours?date=${date}`);
+
+      if (!hoursResponse.ok) {
+        this.showErrorToast('Unable to verify operating hours.');
+        return;
+      }
+
+      const hoursData = await hoursResponse.json();
+
+      if (!hoursData.success) {
+        this.showErrorToast(hoursData.message || 'Unable to verify operating hours.');
+        return;
+      }
+
+      if (hoursData.is_closed) {
+        this.showErrorToast('The restaurant is closed on this date.');
+        dateInput.classList.add('border-red-500');
+        return;
+      }
+
+      const selectedTime = time; 
+      const openTime = hoursData.open_time;
+      const closeTime = hoursData.close_time;
+
+      if (selectedTime < openTime || selectedTime >= closeTime) { 
+        this.showErrorToast(`Operating hours are ${openTime} to ${closeTime}. Please choose a time within these hours.`);
+        timeInput.classList.add('border-red-500');
+        return;
+      }
+
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const endHours = hours + 2;
+      const endTime = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+      if (endTime > closeTime) {
+        this.showErrorToast(`Your reservation would extend beyond closing time (${closeTime}).`);
+        timeInput.classList.add('border-red-5 00');
+        return;
+      }
+
+    } catch (error) {
+      console.error('Error fetching operating hours:', error);
+      this.showErrorToast('Unable to verify operating hours. Please try again.');
+      return;
+    }
+
     if (!this.isPlacingOrder) {
       const selectedDateTime = new Date(`${date}T${time}`);
       const currentTime = new Date();
@@ -1520,7 +1561,6 @@
 
     const orders = Object.values(this.selectedOrders || {});
 
-    // Fix: Check for "Main Course" instead of "main"
     const hasMain = orders.some(item => {
       const category = (item.category || '').toLowerCase();
       return category === 'main course' || category === 'main';
@@ -1535,7 +1575,6 @@
       const category = (item.category || '').toLowerCase();
       return category === 'main course' || category === 'main';
     });
-    const totalMainMenuQuantity = mainMenuOrders.reduce((sum, item) => sum + item.quantity, 0);
 
     this.elements.submitBtn.disabled = true;
     this.elements.submitBtn.textContent = "Submitting...";
@@ -1715,8 +1754,6 @@
     return errorModal;
   }
 
-
-
   animateFlyToCart(imageEl, targetSelector) {
     const imgRect = imageEl.getBoundingClientRect();
     const targetEl = document.querySelector(targetSelector);
@@ -1764,7 +1801,6 @@
     });
   }
 }
-
 
   const dashboard = new ReceptionistDashboard();
 
