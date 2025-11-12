@@ -365,7 +365,7 @@
             Swal.fire({
                 position: 'center',
                 icon: 'success',
-                title: 'Stock received successfully',
+                title: 'New Stock Added!',
                 showConfirmButton: false,
                 timer: 3000
             });

@@ -13,6 +13,7 @@ use App\Models\reservation;
 use App\Models\walkin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\MenuCategory;
 use App\Models\RefillConfiguration;
 
 class WaitStaffDashboard extends Component
@@ -46,7 +47,7 @@ class WaitStaffDashboard extends Component
                 });
         }, 'walkin' => function ($query) use ($now) {
             $query->where('status', 'Active')
-            ->whereDate('started_at', $now->toDateString())
+                ->whereDate('started_at', $now->toDateString())
                 ->where('started_at', '<=', $now)
                 ->where('ended_at', '>=', $now);
         }])
@@ -69,19 +70,16 @@ class WaitStaffDashboard extends Component
 
     public function loadMenuItems()
     {
-        $menus = Menu::where('status', 'Active')
+        $categories = MenuCategory::where('is_active', 1)
+            ->with(['activeMenus' => function ($query) {
+                $query->orderBy('menu_item');
+            }])
+            ->orderBy('name')
             ->get();
 
-        $categoryLabels = [
-            'main' => 'Main Dishes',
-            'add_ons' => 'Add-Ons',
-        ];
-
-        $this->menuItems = $menus->groupBy('category')->mapWithKeys(function ($items, $key) use ($categoryLabels) {
-            $displayName = $categoryLabels[$key] ?? ucfirst($key);
-
+        $this->menuItems = $categories->mapWithKeys(function ($category) {
             return [
-                $displayName => $items->map(function ($item) {
+                $category->name => $category->activeMenus->map(function ($item) {
                     return [
                         'id' => $item->id,
                         'menu_item' => $item->menu_item,
@@ -90,6 +88,8 @@ class WaitStaffDashboard extends Component
                     ];
                 })->values()
             ];
+        })->filter(function ($items) {
+            return $items->isNotEmpty();
         });
     }
 
@@ -394,7 +394,6 @@ class WaitStaffDashboard extends Component
 
         DB::beginTransaction();
         try {
-            // Serve all ready orders
             $readyOrders = orders::query()
                 ->when($reservation, fn($q) => $q->where('reservation_id', $reservation->id))
                 ->when($walkin, fn($q) => $q->where('walk_in_id', $walkin->id))
@@ -408,7 +407,6 @@ class WaitStaffDashboard extends Component
                 $order->save();
             }
 
-            // Serve all ready refills
             $orderIds = orders::query()
                 ->when($reservation, fn($q) => $q->where('reservation_id', $reservation->id))
                 ->when($walkin, fn($q) => $q->where('walk_in_id', $walkin->id))
@@ -606,7 +604,7 @@ class WaitStaffDashboard extends Component
     public function addOrder($tableId, $menuId, $quantity = 1, $note = null)
     {
         $table = table::find($tableId);
-        $menu = Menu::find($menuId);
+        $menu = menu::find($menuId);
 
         if (!$menu) {
             session()->flash('error', 'Menu item not found');

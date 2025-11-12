@@ -233,18 +233,17 @@ class KitchenDashboard extends Component
                     throw new \Exception("Refill configuration not found for {$ingredient->name}");
                 }
 
-                $gramsPerPlate = $config->quantity_per_plate;
-                $totalGrams = $gramsPerPlate * $refill->quantity;
-                $totalKg = $totalGrams / 1000;
+                $quantityPerPlate = $config->quantity_per_plate;
+                $totalQuantity = $quantityPerPlate * $refill->quantity;
 
-                if ($ingredient->stocks < $totalKg) {
+                if ($ingredient->stocks < $totalQuantity) {
                     throw new \Exception(
-                        "Insufficient stock for '{$ingredient->name}'. Required: {$totalKg} kg, Available: {$ingredient->stocks} kg"
+                        "Insufficient stock for '{$ingredient->name}'. Required: {$totalQuantity} kg, Available: {$ingredient->stocks} kg"
                     );
                 }
 
                 $stockBefore = $ingredient->stocks;
-                $stockAfter = $stockBefore - $totalKg;
+                $stockAfter = $stockBefore - $totalQuantity;
 
                 DB::table('ingredients')->where('id', $ingredient->id)
                     ->update(['stocks' => $stockAfter, 'updated_at' => now()]);
@@ -255,16 +254,16 @@ class KitchenDashboard extends Component
                     'user_id' => Auth::id(),
                     'order_id' => $refill->order_id,
                     'type' => 'used',
-                    'quantity' => $totalKg,
+                    'quantity' => $totalQuantity,
                     'stock_before' => $stockBefore,
                     'stock_after' => $stockAfter,
                     'notes' => sprintf(
-                        "Refill #%d: %dx %s - Deducted %.3f kg (%.0f g per plate)",
+                        "Refill #%d: %dx %s - Deducted %.3f kg (%.3f kg per plate)",
                         $refill->id,
                         $refill->quantity,
                         $ingredient->name,
-                        $totalKg,
-                        $gramsPerPlate
+                        $totalQuantity,
+                        $quantityPerPlate
                     ),
                     'created_at' => now(),
                     'updated_at' => now()
@@ -310,37 +309,37 @@ class KitchenDashboard extends Component
 
                     $menuItem = $singleOrder->menu;
                     $menuIngredients = DB::table('menu_ingredients')
-                        ->where('menu_id', $menuItem->id)
+                        ->join('ingredients', 'menu_ingredients.ingredient_id', '=', 'ingredients.id')
+                        ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
+                        ->where('menu_ingredients.menu_id', $menuItem->id)
+                        ->select(
+                            'menu_ingredients.*',
+                            'ingredients.id as ingredient_id',
+                            'ingredients.name as ingredient_name',
+                            'ingredients.stocks',
+                            'ingredient_units.abbreviation as unit'
+                        )
                         ->get();
 
                     foreach ($menuIngredients as $menuIngredient) {
-                        $ingredient = DB::table('ingredients')->find($menuIngredient->ingredient_id);
-                        if (!$ingredient) continue;
-
-                        // Adjust deduction formula based on unit
-                        if ($ingredient->unit === 'pieces') {
-                            // For items like Coke, Coco Island
-                            $quantityNeeded = $menuIngredient->quantity * $singleOrder->quantity;
-                        } else {
-                            // For items in kg (meat, veggies, soupbase)
-                            $quantityNeeded = ($menuIngredient->quantity / 1000) * $singleOrder->quantity;
-                        }
+                        // Calculate quantity needed (already stored in kg or pieces)
+                        $quantityNeeded = $menuIngredient->quantity * $singleOrder->quantity;
 
                         // Check stock
-                        if ($ingredient->stocks < $quantityNeeded) {
+                        if ($menuIngredient->stocks < $quantityNeeded) {
                             throw new \Exception(
-                                "Insufficient stock for '{$ingredient->name}'. Required: {$quantityNeeded} {$ingredient->unit}, Available: {$ingredient->stocks} {$ingredient->unit}"
+                                "Insufficient stock for '{$menuIngredient->ingredient_name}'. Required: {$quantityNeeded} {$menuIngredient->unit}, Available: {$menuIngredient->stocks} {$menuIngredient->unit}"
                             );
                         }
 
-                        $stockBefore = $ingredient->stocks;
+                        $stockBefore = $menuIngredient->stocks;
                         $stockAfter = $stockBefore - $quantityNeeded;
 
-                        DB::table('ingredients')->where('id', $ingredient->id)
+                        DB::table('ingredients')->where('id', $menuIngredient->ingredient_id)
                             ->update(['stocks' => $stockAfter, 'updated_at' => now()]);
 
                         DB::table('ingredient_movements')->insert([
-                            'ingredient_id' => $ingredient->id,
+                            'ingredient_id' => $menuIngredient->ingredient_id,
                             'ingredient_batch_id' => null,
                             'user_id' => Auth::id(),
                             'order_id' => $singleOrder->id,
@@ -349,16 +348,15 @@ class KitchenDashboard extends Component
                             'stock_before' => $stockBefore,
                             'stock_after' => $stockAfter,
                             'notes' => sprintf(
-                                "Order #%d: %dx %s (%s) - Deducted %.3f %s of %s (%.0f %s per serving)",
+                                "Order #%d: %dx %s - Deducted %.3f %s of %s (%.3f %s per serving)",
                                 $singleOrder->id,
                                 $singleOrder->quantity,
                                 $menuItem->menu_item,
-                                $menuItem->category,
                                 $quantityNeeded,
-                                $ingredient->unit,
-                                $ingredient->name,
+                                $menuIngredient->unit,
+                                $menuIngredient->ingredient_name,
                                 $menuIngredient->quantity,
-                                $ingredient->unit
+                                $menuIngredient->unit
                             ),
                             'created_at' => now(),
                             'updated_at' => now()

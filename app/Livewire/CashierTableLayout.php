@@ -26,7 +26,6 @@ class CashierTableLayout extends Component
             ->where('status', 'Active')
             ->whereDoesntHave('transactions')
             ->where('started_at', '<=', $now)
-            ->where('ended_at', '>=', $now)
             ->orderBy('started_at', 'asc')
             ->get();
 
@@ -34,7 +33,6 @@ class CashierTableLayout extends Component
             ->where('status', 'Active')
             ->whereDoesntHave('transactions')
             ->where('started_at', '<=', $now)
-            ->where('ended_at', '>=', $now)
             ->orderBy('started_at', 'asc')
             ->get();
 

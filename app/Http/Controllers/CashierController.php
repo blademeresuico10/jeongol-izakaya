@@ -271,7 +271,32 @@ class CashierController extends Controller
         ]);
     }
 
-    // IMPROVED: Cache menu discounts to avoid repeated queries
+    public function getUnpaidOrders()
+    {
+        // Get walk-in orders without transactions
+        $walkinOrders = orders::whereNotNull('walk_in_id')
+            ->whereHas('walkIn', function ($query) {
+                $query->where('status', 'Active')
+                    ->whereDoesntHave('transactions');
+            })
+            ->with(['walkIn.customer', 'walkIn.table', 'menu'])
+            ->get();
+
+        // Get reservation orders without transactions
+        $reservationOrders = orders::whereNotNull('reservation_id')
+            ->whereHas('reservation', function ($query) {
+                $query->where('status', 'Active')
+                    ->whereDoesntHave('transactions');
+            })
+            ->with(['reservation.customer', 'reservation.table', 'menu'])
+            ->get();
+
+        // Combine both collections
+        $allUnpaidOrders = $walkinOrders->concat($reservationOrders);
+
+        return $allUnpaidOrders;
+    }
+
     private function calculateDiscountedPrice($menuId, $regularPrice, $customerType)
     {
         if ($customerType === 'regular' || $customerType === 'none') {
@@ -289,7 +314,6 @@ class CashierController extends Controller
             return $regularPrice;
         }
 
-        // Query by menu ID instead of menu item name
         if (is_array($discountType)) {
             $discount = DB::table('menu_discounts')
                 ->where('menu_id', $menuId)
@@ -305,7 +329,6 @@ class CashierController extends Controller
         if ($discount) {
             $discountedPrice = $regularPrice * (1 - ($discount->discount_percentage / 100));
 
-            // Round to nearest whole number
             $decimalPart = $discountedPrice - floor($discountedPrice);
             if ($decimalPart >= 0.5) {
                 $discountedPrice = ceil($discountedPrice);

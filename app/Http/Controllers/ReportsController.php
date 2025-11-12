@@ -182,36 +182,40 @@ class ReportsController extends Controller
     private function getStockMovementReport($startDate, $endDate)
     {
         try {
-            $movements = ingredientMovements::with(['ingredient'])
+            $movements = ingredientMovements::with(['ingredient.unit', 'ingredient.category'])
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->orderBy('created_at', 'desc')
                 ->get();
 
             $stockInQtyKg = $movements->where('type', 'stock_in')
-                ->filter(function ($move) {
-                    return $move->ingredient && $move->ingredient->unit === 'kg';
-                })
+                ->filter(fn($move) => $move->ingredient && $move->ingredient->unit && $move->ingredient->unit->abbreviation === 'kg')
                 ->sum('quantity');
 
             $stockInQtyPcs = $movements->where('type', 'stock_in')
-                ->filter(function ($move) {
-                    return $move->ingredient && $move->ingredient->unit === 'pieces';
-                })
+                ->filter(fn($move) => $move->ingredient && $move->ingredient->unit && in_array($move->ingredient->unit->abbreviation, ['pcs', 'pieces', 'pc', 'piece']))
                 ->sum('quantity');
 
             $stockOutQtyKg = $movements->whereIn('type', ['stock_out', 'used'])
-                ->filter(function ($move) {
-                    return $move->ingredient && $move->ingredient->unit === 'kg';
-                })
+                ->filter(fn($move) => $move->ingredient && $move->ingredient->unit && $move->ingredient->unit->abbreviation === 'kg')
                 ->sum('quantity');
 
             $stockOutQtyPcs = $movements->whereIn('type', ['stock_out', 'used'])
-                ->filter(function ($move) {
-                    return $move->ingredient && $move->ingredient->unit === 'pieces';
-                })
+                ->filter(fn($move) => $move->ingredient && $move->ingredient->unit && in_array($move->ingredient->unit->abbreviation, ['pcs', 'pieces', 'pc', 'piece']))
                 ->sum('quantity');
 
-            $response = [
+            $mappedMovements = $movements->map(function ($move) {
+                $ingredient = $move->ingredient;
+
+                return [
+                    'date' => $move->created_at->format('M d, Y h:i A'),
+                    'category' => $ingredient && $ingredient->category ? $ingredient->category->name : 'Unknown',
+                    'type' => $move->type,
+                    'quantity' => round($move->quantity, 2),
+                    'unit' => $ingredient && $ingredient->unit ? $ingredient->unit->abbreviation : 'kg',
+                ];
+            })->values();
+
+            return response()->json([
                 'success' => true,
                 'data' => [
                     'report_type' => 'stock-movement',
@@ -221,19 +225,9 @@ class ReportsController extends Controller
                         'stock_out_kg' => round($stockOutQtyKg, 2),
                         'stock_out_pcs' => round($stockOutQtyPcs, 2),
                     ],
-                    'movements' => $movements->map(function ($move) {
-                        return [
-                            'date' => $move->created_at->format('M d, Y h:i A'),
-                            'category' => $move->ingredient->category ?? 'Unknown',
-                            'type' => $move->type,
-                            'quantity' => round($move->quantity, 2),
-                            'unit' => $move->ingredient->unit ?? 'kg',
-                        ];
-                    })->values(),
-                ]
-            ];
-
-            return response()->json($response);
+                    'movements' => $mappedMovements,
+                ],
+            ]);
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,
@@ -243,84 +237,10 @@ class ReportsController extends Controller
         }
     }
 
-    private function getExpiredItemsReport($startDate, $endDate)
-    {
-        $expiredItems = expiredIngredients::with('ingredient')
-            ->whereBetween('expired_at', [$startDate, $endDate])
-            ->get();
-
-        $expiringSoonBatches = ingredientBatch::with('ingredient')
-            ->where('status', 'active')
-            ->whereRaw('DATEDIFF(expiration_date, CURDATE()) BETWEEN 1 AND 7')
-            ->get();
-
-        $wasteByUnit = $expiredItems->groupBy(function ($item) {
-            return $item->ingredient->unit ?? 'kg';
-        });
-
-        $totalWasteKg = $wasteByUnit->get('kg', collect())->sum('quantity');
-        $totalWastePieces = $wasteByUnit->get('pieces', collect())->sum('quantity');
-
-        $byCategory = $expiredItems->groupBy(function ($item) {
-            return $item->ingredient->category ?? 'Unknown';
-        })->map(function ($items, $category) {
-            return [
-                'name' => $category,
-                'count' => $items->count(),
-                'icon' => $this->getCategoryIcon($category),
-                'color' => $this->getCategoryColor($category),
-            ];
-        })->values();
-
-        $thisWeekStart = Carbon::now()->startOfWeek();
-        $thisMonthStart = Carbon::now()->startOfMonth();
-
-        $thisWeekExpired = expiredIngredients::whereBetween('expired_at', [$thisWeekStart, Carbon::now()])->count();
-        $thisMonthExpired = expiredIngredients::whereBetween('expired_at', [$thisMonthStart, Carbon::now()])->count();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'report_type' => 'expired',
-                'summary' => [
-                    'expired_count' => $expiredItems->count(),
-                    'expiring_soon_count' => $expiringSoonBatches->count(),
-                    'total_waste_kg' => round($totalWasteKg, 2),
-                    'total_waste_pieces' => round($totalWastePieces, 2),
-                    'by_category' => $byCategory,
-                    'trend' => [
-                        'this_week' => $thisWeekExpired,
-                        'this_month' => $thisMonthExpired,
-                    ],
-                ],
-                'expired_items' => $expiredItems->map(function ($item) {
-                    $expiredDate = Carbon::parse($item->expired_at);
-                    $ingredient = $item->ingredient ?? null;
-
-                    return [
-                        'name' => $ingredient->name ?? 'Unknown',
-                        'quantity' => round($item->quantity, 2),
-                        'unit' => $ingredient->unit ?? 'kg',
-                        'expiration_date' => $expiredDate->format('M d, Y'),
-                    ];
-                })->values(),
-                'expiring_soon' => $expiringSoonBatches->map(function ($batch) {
-                    $expirationDate = Carbon::parse($batch->expiration_date);
-                    return [
-                        'name' => $batch->ingredient->name,
-                        'category' => $batch->ingredient->category,
-                        'expiration_date' => $expirationDate->format('M d, Y'),
-                        'days_until_expiry' => Carbon::today()->diffInDays($expirationDate, false),
-                    ];
-                })->values(),
-            ]
-        ]);
-    }
 
     private function getConsumptionReport($startDate, $endDate)
     {
-        // Get both 'used' and 'stock_out' movements
-        $movements = ingredientMovements::with(['ingredient', 'order'])
+        $movements = ingredientMovements::with(['ingredient.category', 'ingredient.unit', 'order'])
             ->whereIn('type', ['used', 'stock_out'])
             ->whereBetween('created_at', [$startDate, $endDate])
             ->orderBy('created_at', 'desc')
@@ -339,10 +259,10 @@ class ReportsController extends Controller
                 'time' => Carbon::parse($move->created_at)->format('h:i A'),
                 'datetime' => Carbon::parse($move->created_at)->format('M d, Y h:i A'),
                 'ingredient_name' => $ingredient->name ?? 'Unknown',
-                'category' => $ingredient->category ?? 'Unknown',
+                'category' => $ingredient && $ingredient->category ? $ingredient->category->name : 'Unknown',
                 'quantity' => round($move->quantity, 2),
-                'unit' => $ingredient->unit ?? 'kg',
-                'type' => $move->type, // ✅ Added type field
+                'unit' => $ingredient && $ingredient->unit ? $ingredient->unit->abbreviation : 'kg',
+                'type' => $move->type,
                 'order_id' => $move->order_id ?? null,
                 'notes' => $move->notes ?? '',
             ];
@@ -353,9 +273,9 @@ class ReportsController extends Controller
                 $ingredient = $items->first()->ingredient;
                 return [
                     'name' => $ingredient->name ?? 'Unknown',
-                    'category' => $ingredient->category ?? 'Unknown',
+                    'category' => $ingredient && $ingredient->category ? $ingredient->category->name : 'Unknown',
                     'total_consumed' => round($items->sum('quantity'), 2),
-                    'unit' => $ingredient->unit ?? 'kg',
+                    'unit' => $ingredient && $ingredient->unit ? $ingredient->unit->abbreviation : 'kg',
                     'value' => round($items->sum(fn($i) => $i->quantity * 100), 2),
                 ];
             })
@@ -363,9 +283,8 @@ class ReportsController extends Controller
             ->take(10)
             ->values();
 
-        $dailyUsage = $movements->groupBy(function ($move) {
-            return Carbon::parse($move->created_at)->format('Y-m-d');
-        })->map(fn($items) => $items->sum('quantity'));
+        $dailyUsage = $movements->groupBy(fn($move) => Carbon::parse($move->created_at)->format('Y-m-d'))
+            ->map(fn($items) => $items->sum('quantity'));
 
         $peakDay = null;
         if ($dailyUsage->isNotEmpty()) {
@@ -396,6 +315,82 @@ class ReportsController extends Controller
                 'consumption_data' => $allMovements,
                 'top_consumed' => $topConsumed,
             ],
+        ]);
+    }
+
+    private function getExpiredItemsReport($startDate, $endDate)
+    {
+        $expiredItems = expiredIngredients::with(['ingredient.category', 'ingredient.unit'])
+            ->whereBetween('expired_at', [$startDate, $endDate])
+            ->get();
+
+        $expiringSoonBatches = ingredientBatch::with(['ingredient.category', 'ingredient.unit'])
+            ->where('status', 'active')
+            ->whereRaw('DATEDIFF(expiration_date, CURDATE()) BETWEEN 1 AND 7')
+            ->get();
+
+        $wasteByUnit = $expiredItems->groupBy(function ($item) {
+            return $item->ingredient && $item->ingredient->unit ? $item->ingredient->unit->abbreviation : 'kg';
+        });
+
+        $totalWasteKg = $wasteByUnit->get('kg', collect())->sum('quantity');
+        $totalWastePcs = $wasteByUnit->get('pcs', collect())->sum('quantity');
+
+        $byCategory = $expiredItems->groupBy(function ($item) {
+            return $item->ingredient && $item->ingredient->category ? $item->ingredient->category->name : 'Unknown';
+        })->map(function ($items, $category) {
+            return [
+                'name' => $category,
+                'count' => $items->count(),
+                'icon' => $this->getCategoryIcon($category),
+                'color' => $this->getCategoryColor($category),
+            ];
+        })->values();
+
+        $thisWeekStart = Carbon::now()->startOfWeek();
+        $thisMonthStart = Carbon::now()->startOfMonth();
+
+        $thisWeekExpired = expiredIngredients::whereBetween('expired_at', [$thisWeekStart, Carbon::now()])->count();
+        $thisMonthExpired = expiredIngredients::whereBetween('expired_at', [$thisMonthStart, Carbon::now()])->count();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'report_type' => 'expired',
+                'summary' => [
+                    'expired_count' => $expiredItems->count(),
+                    'expiring_soon_count' => $expiringSoonBatches->count(),
+                    'total_waste_kg' => round($totalWasteKg, 2),
+                    'total_waste_pcs' => round($totalWastePcs, 2),
+                    'by_category' => $byCategory,
+                    'trend' => [
+                        'this_week' => $thisWeekExpired,
+                        'this_month' => $thisMonthExpired,
+                    ],
+                ],
+                'expired_items' => $expiredItems->map(function ($item) {
+                    $expiredDate = Carbon::parse($item->expired_at);
+                    $ingredient = $item->ingredient ?? null;
+
+                    return [
+                        'name' => $ingredient->name ?? 'Unknown',
+                        'quantity' => round($item->quantity, 2),
+                        'unit' => $ingredient && $ingredient->unit ? $ingredient->unit->abbreviation : 'kg',
+                        'expiration_date' => $expiredDate->format('M d, Y'),
+                    ];
+                })->values(),
+                'expiring_soon' => $expiringSoonBatches->map(function ($batch) {
+                    $ingredient = $batch->ingredient ?? null;
+                    $expirationDate = Carbon::parse($batch->expiration_date);
+                    return [
+                        'name' => $ingredient->name ?? 'Unknown',
+                        'category' => $ingredient && $ingredient->category ? $ingredient->category->name : 'Unknown',
+                        'expiration_date' => $expirationDate->format('M d, Y'),
+                        'days_until_expiry' => Carbon::today()->diffInDays($expirationDate, false),
+                        'unit' => $ingredient && $ingredient->unit ? $ingredient->unit->abbreviation : 'kg',
+                    ];
+                })->values(),
+            ]
         ]);
     }
 
@@ -431,12 +426,10 @@ class ReportsController extends Controller
         $startDate = Carbon::parse($request->start_date)->startOfDay();
         $endDate = Carbon::parse($request->end_date)->endOfDay();
 
-        // Get completed transaction IDs
         $completedTransactionIds = transaction::where('status', 'Completed')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->pluck('id');
 
-        // Get reservation orders
         $reservationOrders = orders::with('menu')
             ->where('status', 'Served')
             ->whereHas('reservation', function ($query) use ($completedTransactionIds) {
@@ -446,7 +439,6 @@ class ReportsController extends Controller
             })
             ->get();
 
-        // Get walk-in orders
         $walkinOrders = orders::with('menu')
             ->where('status', 'Served')
             ->whereHas('walkin', function ($query) use ($completedTransactionIds) {
@@ -456,13 +448,10 @@ class ReportsController extends Controller
             })
             ->get();
 
-        // Merge all served orders
         $servedOrders = $reservationOrders->merge($walkinOrders);
 
-        // Calculate total items sold (sum of quantities)
         $totalItemsSold = $servedOrders->sum('quantity');
 
-        // Calculate total revenue using menu's regular_price
         $totalRevenue = $servedOrders->reduce(function ($carry, $order) {
             if ($order->menu) {
                 return $carry + ($order->quantity * $order->menu->regular_price);
@@ -470,7 +459,6 @@ class ReportsController extends Controller
             return $carry;
         }, 0);
 
-        // Group by menu and calculate performance
         $menuPerformance = $servedOrders->groupBy('menu_id')->map(function ($orders) {
             $menu = $orders->first()->menu;
 
@@ -478,10 +466,8 @@ class ReportsController extends Controller
                 return null;
             }
 
-            // Sum quantities for this menu item
             $quantity = $orders->sum('quantity');
 
-            // Calculate revenue using menu's regular_price
             $revenue = $quantity * $menu->regular_price;
 
             return [
@@ -511,7 +497,6 @@ class ReportsController extends Controller
                 ];
             });
 
-        // Combine sold items with zero-sales items
         $allMenuItems = $menuPerformance->concat($zeroSalesItems);
 
         return response()->json([
@@ -641,26 +626,23 @@ class ReportsController extends Controller
         }
     }
 
-    // Controller Method
     public function transactionReportPdf(Request $request)
     {
         $request->validate([
             'start_date' => 'required|date',
             'end_date'   => 'required|date|after_or_equal:start_date',
-            'cashier'    => 'nullable|string', // Add cashier filter
+            'cashier'    => 'nullable|string',
         ]);
 
         $dateFrom    = Carbon::parse($request->input('start_date'))->startOfDay();
         $dateTo      = Carbon::parse($request->input('end_date'))->endOfDay();
-        $selectedCashier = $request->input('cashier'); // Get selected cashier
+        $selectedCashier = $request->input('cashier');
         $generatedAt = now();
 
-        // Fetch transactions
         $query = transaction::whereBetween('created_at', [$dateFrom, $dateTo])
             ->where('status', 'completed')
             ->with('cashier');
 
-        // Filter by cashier if specified
         if ($selectedCashier && $selectedCashier !== 'all') {
             $query->whereHas('cashier', function ($q) use ($selectedCashier) {
                 $q->whereRaw("CONCAT(firstname, ' ', lastname) = ?", [$selectedCashier]);
@@ -817,7 +799,6 @@ class ReportsController extends Controller
 
         $totalItemsSold = $servedOrders->sum('quantity');
 
-        // Calculate total revenue using menu's regular_price
         $totalRevenue = $servedOrders->reduce(function ($carry, $order) {
             if ($order->menu) {
                 return $carry + ($order->quantity * $order->menu->regular_price);
@@ -833,7 +814,6 @@ class ReportsController extends Controller
 
             $quantity = $orders->sum('quantity');
 
-            // Calculate revenue using menu's regular_price
             $revenue = $quantity * $menu->regular_price;
 
             return [

@@ -82,7 +82,6 @@
             document.querySelectorAll('.countdown').forEach(el => {
                 let sec = parseInt(el.dataset.seconds) || 0;
 
-                // If seconds is already 0 or negative, don't start countdown
                 if (sec <= 0) {
                     el.textContent = "00:00:00";
                     const parent = el.closest('.flex.items-center');

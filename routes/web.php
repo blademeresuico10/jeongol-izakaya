@@ -18,7 +18,8 @@ Route::post('/customer/feedback', [CustomerController::class, 'storeFeedback'])-
 Route::get('/reservations/unavailable-times', [CustomerController::class, 'getUnavailableTimes'])->name('customer.unavailable-times');
 Route::get('/customer/check-availability', [CustomerController::class, 'checkAvailability'])->name('customer.checkAvailability');
 Route::post('/customer/check-operating-hours', [CustomerController::class, 'checkOperatingHours'])->name('customer.check_operating_hours');
-
+Route::post('/customer/unavailable-slots', [CustomerController::class, 'getUnavailableSlots'])
+    ->name('customer.get_unavailable_slots');
 Route::get('/check-email', [CustomerController::class, 'checkEmail'])->name('customer.check_email');
 
 
@@ -130,8 +131,8 @@ Route::middleware('auth')->group(function () {
             Route::post('/stock-orders/create', [AdminController::class, 'createStockOrder'])->name('ingredient.stock-orders.create');
             Route::post('/stock-orders/check-all', [AdminController::class, 'checkAllIngredients'])->name('ingredient.stock-orders.check-all');
             Route::post('/stock-orders/{stockOrder}/complete', [AdminController::class, 'completeStockOrder'])->name('ingredient.stock-orders.complete');
-            Route::put('/ingredient_management/stock-batches/{id}/expire', [AdminController::class, 'markExpired']);
-            Route::put('/ingredient_management/stock-batches/{id}/update', [AdminController::class, 'updateBatch'])->name('ingredient.updateBatch');
+            Route::put('/stock-batches/{id}/expire', [AdminController::class, 'markExpired']);
+            Route::post('/stock-batches/{id}/update', [AdminController::class, 'updateBatch'])->name('ingredient.updateBatch');
             Route::post('/stock-orders/{stockOrder}/cancel', [AdminController::class, 'cancelStockOrder'])->name('ingredient.stock-orders.cancel');
             Route::get('/stock-orders', [AdminController::class, 'getStockOrders'])->name('ingredient.stock-orders');
             Route::get('/low-stock', [AdminController::class, 'getLowStockIngredients'])->name('ingredient.low-stock');

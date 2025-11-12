@@ -763,7 +763,7 @@
             if (!paymentItemsList) return;
 
             let subtotal = 0;
-            let itemCounter = 0; // ✅ This is defined
+            let itemCounter = 0; 
             paymentItemsList.innerHTML = '';
 
             currentReservationData.orders.forEach(order => {

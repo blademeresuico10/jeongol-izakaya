@@ -996,18 +996,12 @@
                         const ingList = data.ingredients[menu.id] || [];
                         const hasIngredients = ingList.length > 0;
 
-                        const isNewWithSuggestions = hasIngredients && menu.created_recently;
-                        const cardClass = isNewWithSuggestions ? 'border-success' : '';
-                        const headerClass = isNewWithSuggestions ? 'bg-success text-white' : 'bg-light';
-
                         html += `
-                    <div class="card mb-3 ${cardClass}">
-                        <div class="card-header ${headerClass}">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
-                                <small class="text-${isNewWithSuggestions ? 'white' : 'muted'}">
-                                    Category: ${menu.category}
-                                </small>
+                                <span class="badge badge-primary">${menu.category_name}</span>
                             </div>
                         </div>
                         <div class="card-body p-0">
@@ -1016,7 +1010,8 @@
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Category</th>
-                                        <th width="150">Quantity</th>
+                                        <th width="120">Quantity</th>
+                                        <th width="100">Stock</th>
                                         <th width="80">Action</th>
                                     </tr>
                                 </thead>
@@ -1026,20 +1021,17 @@
                         if (ingList.length === 0) {
                             html += `
                         <tr>
-                            <td colspan="4" class="text-center text-muted py-3">
+                            <td colspan="5" class="text-center text-muted py-3">
                                 <i class="fas fa-info-circle"></i> Empty
                             </td>
                         </tr>
                     `;
                         } else {
                             ingList.forEach(ing => {
-                                // Check if unit is pieces for input validation
                                 const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(ing.unit.toLowerCase());
                                 const step = isPieces ? '1' : '0.01';
                                 const min = isPieces ? '1' : '0.01';
                                 const oninput = isPieces ? 'this.value = Math.floor(Math.abs(this.value))' : '';
-
-                                // Format display value
                                 const displayQty = isPieces ? Math.floor(ing.quantity) : parseFloat(ing.quantity).toFixed(2);
 
                                 html += `
@@ -1064,7 +1056,11 @@
                                             <span class="input-group-text">${ing.unit}</span>
                                         </div>
                                     </div>
-                                    ${isPieces ? '<small class="text-muted">Whole numbers only</small>' : ''}
+                                </td>
+                                <td class="align-middle">
+                                    <span class="badge ${ing.stock <= 0 ? 'badge-danger' : 'badge-success'}">
+                                        ${ing.stock} ${ing.unit}
+                                    </span>
                                 </td>
                                 <td class="align-middle text-center">
                                     <button type="button" 
@@ -1109,7 +1105,6 @@
             `;
                 });
         });
-
         $('#saveIngredientsBtn').on('click', function () {
             const updates = [];
             let hasError = false;
@@ -1347,8 +1342,8 @@
                                     }
 
                                     options += `<option value="${ing.id}" data-unit="${displayUnit}">
-                                        ${ing.name}
-                                    </option>`;
+                                ${ing.name}
+                            </option>`;
                                 });
                                 options += '</optgroup>';
                             });
@@ -1370,8 +1365,8 @@
                                     }
 
                                     options += `<option value="${ing.id}" data-unit="${displayUnit}">
-                                        ${ing.name} (Stock: ${displayStock} ${displayUnit})
-                                    </option>`;
+                                ${ing.name} (Stock: ${displayStock} ${displayUnit})
+                            </option>`;
                                 });
                                 options += '</optgroup>';
                             });
@@ -1475,11 +1470,11 @@
 
                         const content = document.getElementById('ingredientsContent');
                         content.innerHTML = `
-                            <div class="text-center py-3">
-                                <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
-                                <p class="mt-2">Refreshing...</p>
-                            </div>
-                        `;
+                    <div class="text-center py-3">
+                        <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
+                        <p class="mt-2">Refreshing...</p>
+                    </div>
+                `;
 
                         fetch("{{ route('admin.menu_ingredients') }}")
                             .then(res => res.json())
@@ -1487,72 +1482,90 @@
                                 let html = '';
                                 data.menus.forEach(menu => {
                                     html += `
-                                        <div class="card mb-3">
-                                            <div class="card-header bg-light">
-                                                <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
-                                            </div>
-                                            <div class="card-body p-0">
-                                                <table class="table table-sm table-hover mb-0">
-                                                    <thead class="thead-light">
-                                                        <tr>
-                                                            <th>Ingredient</th>
-                                                            <th width="150">Quantity</th>
-                                                            <th width="80">Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                    `;
+                                <div class="card mb-3">
+                                    <div class="card-header bg-light">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
+                                            <span class="badge badge-primary">${menu.category_name}</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="thead-light">
+                                                <tr>
+                                                    <th>Ingredient</th>
+                                                    <th>Category</th>
+                                                    <th width="120">Quantity</th>
+                                                    <th width="100">Stock</th>
+                                                    <th width="80">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                            `;
 
                                     const ingList = data.ingredients[menu.id] || [];
 
                                     if (ingList.length === 0) {
                                         html += `
-                                            <tr>
-                                                <td colspan="3" class="text-center text-muted py-2">
-                                                    No ingredients added yet
-                                                </td>
-                                            </tr>
-                                        `;
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-2">
+                                            No ingredients added yet
+                                        </td>
+                                    </tr>
+                                `;
                                     } else {
                                         ingList.forEach(ing => {
                                             html += `
-                                                <tr>
-                                                    <td class="align-middle">${ing.ingredient_name}</td>
-                                                    <td>
-                                                        <input type="number" 
-                                                               class="form-control form-control-sm ingredient-qty"
-                                                               data-id="${ing.id}" 
-                                                               value="${ing.quantity}"
-                                                               min="0.01"
-                                                               step="any">
-                                                    </td>
-                                                    <td class="align-middle">
-                                                        <button type="button" 
-                                                                class="btn btn-sm btn-danger removeIngredientBtn" 
-                                                                data-id="${ing.id}"
-                                                                title="Remove">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            `;
+                                        <tr>
+                                            <td class="align-middle">${ing.ingredient_name}</td>
+                                            <td class="align-middle">
+                                                <span class="badge badge-secondary">${ing.category}</span>
+                                            </td>
+                                            <td>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="number" 
+                                                           class="form-control form-control-sm ingredient-qty"
+                                                           data-id="${ing.id}" 
+                                                           value="${ing.quantity}"
+                                                           min="0.01"
+                                                           step="any">
+                                                    <div class="input-group-append">
+                                                        <span class="input-group-text">${ing.unit}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="align-middle">
+                                                <span class="badge ${ing.stock <= 0 ? 'badge-danger' : 'badge-success'}">
+                                                    ${ing.stock} ${ing.unit}
+                                                </span>
+                                            </td>
+                                            <td class="align-middle">
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-danger removeIngredientBtn" 
+                                                        data-id="${ing.id}"
+                                                        title="Remove">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
                                         });
                                     }
 
                                     html += `
-                                                    </tbody>
-                                                </table>
-                                                <div class="card-footer bg-light">
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-success addIngredientBtn" 
-                                                            data-menu-id="${menu.id}"
-                                                            data-menu-name="${menu.menu_item}">
-                                                        <i class="fas fa-plus"></i> Add Ingredient
-                                                    </button>
-                                                </div>
-                                            </div>
+                                            </tbody>
+                                        </table>
+                                        <div class="card-footer bg-light">
+                                            <button type="button" 
+                                                    class="btn btn-sm btn-success addIngredientBtn" 
+                                                    data-menu-id="${menu.id}"
+                                                    data-menu-name="${menu.menu_item}">
+                                                <i class="fas fa-plus"></i> Add Ingredient
+                                            </button>
                                         </div>
-                                    `;
+                                    </div>
+                                </div>
+                            `;
                                 });
                                 content.innerHTML = html;
                             });

@@ -1032,44 +1032,48 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                ${(function () {
+${(function () {
                 if (!Array.isArray(movements) || movements.length === 0) {
                     return `
-                <tr>
-                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">
-                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                        No stock in movements for this period
-                    </td>
-                </tr>`;
+        <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                No stock in movements for this period
+            </td>
+        </tr>`;
                 }
 
                 const stockInOnly = movements.filter(m => m.type === 'stock_in');
 
                 if (stockInOnly.length === 0) {
                     return `
-                <tr>
-                    <td colspan="3" class="px-4 py-8 text-center text-gray-500">
-                        <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                        No stock in movements for this period
-                    </td>
-                </tr>`;
+        <tr>
+            <td colspan="3" class="px-4 py-8 text-center text-gray-500">
+                <i class="fas fa-inbox text-3xl mb-2 block"></i>
+                No stock in movements for this period
+            </td>
+        </tr>`;
                 }
 
                 return stockInOnly.map(row => {
+                    const unitDisplay = row.unit ? row.unit : 'kg'; 
+                    const categoryDisplay = row.category ? row.category : 'Unknown'; 
+
                     return `
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="px-4 py-3 text-sm text-gray-700">${row.date}</td>
-                    <td class="px-4 py-3 text-sm text-gray-700 capitalize">${row.category || 'Unknown'}</td>
-                    <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
-                        ${row.unit === 'pieces'
+        <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-3 text-sm text-gray-700">${row.date}</td>
+            <td class="px-4 py-3 text-sm text-gray-700 capitalize">${categoryDisplay}</td>
+            <td class="px-4 py-3 text-sm text-gray-900 font-bold text-right">
+                ${unitDisplay === 'pieces'
                             ? Math.round(row.quantity).toLocaleString('en-PH')
                             : row.quantity.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                        } ${row.unit}
-                    </td>
-                </tr>`;
+                        } ${unitDisplay}
+            </td>
+        </tr>`;
                 }).join('');
             })()}
-            </tbody>
+</tbody>
+
         </table>
     </div>
 </div>

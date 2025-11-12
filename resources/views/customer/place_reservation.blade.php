@@ -399,27 +399,43 @@
     </h1>
   </header>
 
-  <section class="mt-4">
-    <div class="max-w-fit mx-auto bg-white/90 text-black rounded-lg shadow-xl p-5 flex flex-col items-center gap-3">
-      <h2 class="text-lg font-semibold text-center">Choose Time</h2>
+  <div class="flex justify-center space-x-6">
+    <section class="mt-4 w-full md:w-1/4">
+        <div class="w-full mx-auto bg-white/90 text-gray-800 rounded-xl shadow-2xl p-6 flex flex-col items-center gap-4 border border-gray-200 h-[223px]">
+            <h2 class="text-xl font-bold text-center text-indigo-600">Choose Time & Date</h2>
 
-      <div class="flex items-center gap-2">
-        <label for="date" class="text-black text-[16px] font-semibold">Date:</label>
-        <input type="date" id="date" name="date"
-          class="px-2 py-1 rounded border border-black text-gray-600 text-[12px] focus:outline-none"
-          min="{{ date('Y-m-d') }}">
+            <div class="flex items-center gap-4">
+                <div class="flex flex-col items-start">
+                    <label for="date" class="text-gray-700 text-sm font-semibold mb-1">Date:</label>
+                    <input type="date" id="date" name="date"
+                        class="px-3 py-2 rounded-lg border border-indigo-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150"
+                        min="{{ date('Y-m-d') }}" 
+                        value="{{ date('Y-m-d') }}">
+                </div>
 
-        <label for="time" class="text-black text-[16px] font-semibold">Time:</label>
-        <input type="time" id="time" name="time"
-          class="px-2 py-1 rounded border border-black text-gray-600 text-[12px] focus:outline-none">
-      </div>
+                <div class="flex flex-col items-start">
+                    <label for="time" class="text-gray-700 text-sm font-semibold mb-1">Time:</label>
+                    <input type="time" id="time" name="time"
+                        class="px-3 py-2 rounded-lg border border-indigo-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150">
+                </div>
+            </div>
 
-      <div id="operatingHoursAlert" class="hidden mt-2 p-3 rounded-lg text-sm text-center max-w-md">
-        <p id="operatingHoursMessage"></p>
-      </div>
+            <div id="operatingHoursAlert" class="mt-auto p-3 rounded-lg text-sm text-center w-full bg-blue-100 text-blue-700 border border-blue-300">
+                <p id="operatingHoursMessage">Checking operating hours...</p>
+            </div>
+        </div>
+    </section>
 
+    <section class="mt-4 w-full md:w-1/4">
+    <div class="w-full bg-white/90 text-gray-800 rounded-xl shadow-2xl p-6 border border-gray-200 h-[223px] flex flex-col">
+        <h3 class="text-xl font-bold mb-4 text-center text-red-600 border-b pb-2 border-red-200">Unavailable Time Slots</h3>
+
+        <div id="unavailableTimesList" class="flex-grow overflow-y-auto pr-2">
+            <p class="text-gray-500 text-sm text-center italic">Select a date to view unavailable slots</p>
+        </div>
     </div>
-  </section>
+</section>
+</div>
 
   <div class="table-layout grid grid-cols-2 gap-4">
     @foreach($tables as $table)
@@ -1778,7 +1794,11 @@
 <script>
   let operatingCheckTimeout;
 
-  document.getElementById('date').addEventListener('change', checkOperatingHoursDebounced);
+  document.getElementById('date').addEventListener('change', function() {
+    checkOperatingHoursDebounced();
+    fetchUnavailableSlots();
+  });
+  
   document.getElementById('time').addEventListener('change', checkOperatingHoursDebounced);
 
   function checkOperatingHoursDebounced() {
@@ -1803,21 +1823,91 @@
       });
 
       const data = await response.json();
-
       alert.classList.remove('hidden');
 
       if (autoCheck || !date || !time) {
-        alert.classList.remove('bg-red-100', 'text-red-800', 'bg-green-100', 'text-green-800');
-        alert.classList.add('bg-blue-100', 'text-blue-800');
+        alert.classList.remove('bg-red-100', 'text-red-800', 'border-red-300', 'bg-green-100', 'text-green-800', 'border-green-300');
+        alert.classList.add('bg-blue-100', 'text-blue-700', 'border-blue-300');
         message.innerHTML = `You can only reserve at: ${data.open_time} - ${data.close_time}`;
+      } else {
+        if (data.is_open) {
+          alert.classList.remove('bg-red-100', 'text-red-800', 'border-red-300', 'bg-blue-100', 'text-blue-700', 'border-blue-300');
+          alert.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+          message.innerHTML = `✓ Selected time is available (${data.open_time} - ${data.close_time})`;
+        } else {
+          alert.classList.remove('bg-green-100', 'text-green-800', 'border-green-300', 'bg-blue-100', 'text-blue-700', 'border-blue-300');
+          alert.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+          message.innerHTML = `✗ ${data.message}`;
+        }
       }
     } catch (error) {
-
+      console.error('Error checking operating hours:', error);
+      alert.classList.remove('hidden', 'bg-blue-100', 'text-blue-700', 'bg-green-100', 'text-green-800');
+      alert.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+      message.innerHTML = 'Error checking operating hours. Please try again.';
     }
   }
 
+  async function fetchUnavailableSlots() {
+    const date = document.getElementById('date')?.value;
+    const listElement = document.getElementById('unavailableTimesList');
+
+    if (!date) {
+        listElement.innerHTML = '<p class="text-gray-500 text-sm text-center italic">Select a date to view unavailable slots</p>';
+        return;
+    }
+
+    listElement.innerHTML = '<p class="text-gray-500 text-sm text-center italic">Loading...</p>';
+
+    try {
+        const response = await fetch('{{ route("customer.get_unavailable_slots") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ date })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.error) {
+            listElement.innerHTML = `<p class="text-red-500 text-sm text-center p-3 bg-red-50 rounded-lg border border-red-200">${data.message}</p>`;
+            return;
+        }
+
+        if (data.slots && data.slots.length > 0) {
+            listElement.innerHTML = `
+                <div class="grid grid-cols-2 gap-2">
+                    ${data.slots.map(slot => `
+                        <div class="bg-red-50 p-2 rounded-lg border border-red-200 text-center">
+                            <div class="font-semibold text-red-700 text-xs">${slot.start} - ${slot.end}</div>
+                            <div class="text-xs text-gray-600 mt-0.5">TABLE ${slot.table}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            listElement.innerHTML = '<p class="text-green-600 text-sm text-center p-3 bg-green-50 rounded-lg border border-green-200">No unavailable slots for this date!</p>';
+        }
+    } catch (error) {
+        console.error('Error fetching unavailable slots:', error);
+        listElement.innerHTML = '<p class="text-red-500 text-sm text-center p-3 bg-red-50 rounded-lg italic">Error loading slots. Please try again.</p>';
+    }
+}
+
   document.addEventListener('DOMContentLoaded', () => {
+    const dateInput = document.getElementById('date');
+    if (!dateInput.value) {
+      dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
     checkOperatingHours(true);
+    fetchUnavailableSlots();
   });
 
   function openModal(id) {

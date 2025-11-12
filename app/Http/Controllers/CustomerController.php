@@ -257,6 +257,59 @@ class CustomerController extends Controller
         }
     }
 
+    public function getUnavailableSlots(Request $request)
+    {
+        $date = $request->input('date');
+
+        if (!$date) {
+            return response()->json(['slots' => []]);
+        }
+
+        $selectedDate = Carbon::parse($date)->startOfDay();
+
+        if ($selectedDate->isPast() && !$selectedDate->isToday()) {
+            return response()->json([
+                'error' => true,    
+                'slots' => []
+            ]);
+        }
+
+        $endOfDay = $selectedDate->copy()->endOfDay();
+
+        $reservations = reservation::whereBetween('started_at', [$selectedDate, $endOfDay])
+            ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active'])
+            ->get(['started_at', 'ended_at', 'table_id']);
+
+        $walkins = walkin::whereBetween('started_at', [$selectedDate, $endOfDay])
+            ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active'])
+            ->get(['started_at', 'ended_at', 'table_id']);
+
+        $unavailableSlots = [];
+
+        foreach ($reservations as $reservation) {
+            $unavailableSlots[] = [
+                'type' => 'Reservation',
+                'start' => $reservation->started_at->format('h:i A'),
+                'end' => $reservation->ended_at->format('h:i A'),
+                'table' => $reservation->table_id
+            ];
+        }
+
+        foreach ($walkins as $walkin) {
+            $unavailableSlots[] = [
+                'type' => 'Walk-in',
+                'start' => $walkin->started_at->format('h:i A'),
+                'end' => $walkin->ended_at->format('h:i A'),
+                'table' => $walkin->table_id
+            ];
+        }
+
+        usort($unavailableSlots, function ($a, $b) {
+            return strtotime($a['start']) - strtotime($b['start']);
+        });
+
+        return response()->json(['slots' => $unavailableSlots]);
+    }
 
     public function storeReservation(Request $request)
     {

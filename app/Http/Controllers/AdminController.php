@@ -632,45 +632,52 @@ class AdminController extends Controller
     }
 
     public function menuIngredients()
-    {
-        try {
-            $menus = DB::table('menu')
-                ->whereNull('deleted_at')
-                ->orderBy('created_at', 'desc')
+{
+    try {
+        $menus = DB::table('menu')
+            ->join('menu_categories as mc', 'menu.category_id', '=', 'mc.id')
+            ->whereNull('menu.deleted_at')
+            ->orderBy('menu.created_at', 'desc')
+            ->select(
+                'menu.id',
+                'menu.menu_item',
+                'menu.category_id',
+                'mc.name as category_name'
+            )
+            ->get();
+
+        $ingredients = [];
+        foreach ($menus as $menu) {
+            $ingredients[$menu->id] = DB::table('menu_ingredients as mi')
+                ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
+                ->join('ingredient_categories as ic', 'i.category_id', '=', 'ic.id')
+                ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
+                ->where('mi.menu_id', $menu->id)
+                ->select(
+                    'mi.id',
+                    'mi.quantity',
+                    'i.name as ingredient_name',
+                    'ic.name as category',
+                    'iu.abbreviation as unit',
+                    'i.stocks as stock'
+                )
                 ->get();
-
-            $ingredients = [];
-            foreach ($menus as $menu) {
-                $ingredients[$menu->id] = DB::table('menu_ingredients as mi')
-                    ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
-                    ->join('ingredient_categories as ic', 'i.category_id', '=', 'ic.id')
-                    ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
-                    ->where('mi.menu_id', $menu->id)
-                    ->select(
-                        'mi.id',
-                        'mi.quantity',
-                        'i.name as ingredient_name',
-                        'ic.name as category',
-                        'iu.abbreviation as unit',
-                        'i.stocks as stock'
-                    )
-                    ->get();
-            }
-
-            return response()->json([
-                'success' => true,
-                'menus' => $menus,
-                'ingredients' => $ingredients
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Menu ingredients fetch error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch menu ingredients',
-                'error' => $e->getMessage()
-            ], 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'menus' => $menus,
+            'ingredients' => $ingredients
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Menu ingredients fetch error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch menu ingredients',
+            'error' => $e->getMessage()
+        ], 500);
     }
+}
 
     public function getIngredients($id)
     {
@@ -697,7 +704,6 @@ class AdminController extends Controller
 
     public function attachIngredient(Request $request, $menuId)
     {
-        // Get the ingredient to check its unit
         $ingredient = DB::table('ingredients')
             ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
             ->where('ingredients.id', $request->ingredient_id)
@@ -1445,13 +1451,15 @@ class AdminController extends Controller
 
     public function ingredient_management()
     {
-        $lowStockIngredients = Ingredients::with('stockAlertLevel')
+        $ingredients = ingredients::whereIn('id', ingredientBatch::pluck('ingredient_id'))->get();
+
+        $lowStockIngredients = ingredients::with('stockAlertLevel')
             ->whereHas('stockAlertLevel', function ($query) {
                 $query->whereRaw('ingredients.stocks <= stock_level_alerts.low_stock');
             })
             ->get();
 
-        $allIngredients = Ingredients::with('stockAlertLevel')
+        $allIngredients = ingredients::with('stockAlertLevel')
             ->orderBy('name', 'asc')
             ->get();
 
@@ -1462,7 +1470,8 @@ class AdminController extends Controller
             'lowStockIngredients',
             'allIngredients',
             'categories',
-            'units'
+            'units',
+            'ingredients'
         ));
     }
 
@@ -1577,30 +1586,53 @@ class AdminController extends Controller
 
     public function markExpired($id)
     {
+        DB::beginTransaction();
         try {
             $batch = ingredientBatch::findOrFail($id);
 
-            if ($batch->status === 'expired') {
+            if ($batch->status === 'expired' || $batch->quantity <= 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Batch is already marked as expired.'
+                    'message' => 'Batch is already expired.'
                 ], 400);
             }
 
-            $result = $batch->markAsExpired();
+            $ingredient = $batch->ingredient;
+            $expiredQty = $batch->quantity;
 
-            if ($result) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Batch marked as expired and stock deducted successfully.'
-                ], 200);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Could not mark batch as expired. It may not be past expiration date yet.'
-                ], 400);
-            }
+            expiredIngredients::create([
+                'ingredient_id' => $batch->ingredient_id,
+                'quantity' => $expiredQty,
+                'expired_at' => now(),
+                'ingredient_batch_id' => $batch->id,
+            ]);
+
+            ingredientMovements::create([
+                'ingredient_id' => $batch->ingredient_id,
+                'ingredient_batch_id' => $batch->id,
+                'user_id' => Auth::id() ?? 1,
+                'type' => 'expired',
+                'quantity' => $expiredQty,
+                'stock_before' => $ingredient->stocks,
+                'stock_after' => $ingredient->stocks - $expiredQty,
+                'notes' => 'Manually marked as expired',
+            ]);
+
+            $ingredient->decrement('stocks', $expiredQty);
+
+            $batch->update([
+                'status' => 'expired',
+                'quantity' => 0,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Batch marked as expired successfully.'
+            ], 200);
         } catch (\Exception $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to mark batch as expired: ' . $e->getMessage()
@@ -1688,6 +1720,7 @@ class AdminController extends Controller
             ingredientBatch::processExpiredBatches();
 
             $period = $request->get('period', 'thisweek');
+            $ingredientId = $request->get('ingredient', 'all'); // ✅ Get the selected ingredient
 
             $startDate = $period === 'thisweek'
                 ? now()->startOfWeek()
@@ -1697,13 +1730,13 @@ class AdminController extends Controller
                 ? now()->endOfWeek()
                 : now()->subWeek()->endOfWeek();
 
-            $batches = DB::table('ingredient_batches')
+            $query = DB::table('ingredient_batches')
                 ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
                 ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
                 ->select(
                     'ingredient_batches.id',
-                    'ingredient_batches.batch_code', // ✅ ADDED
-                    'ingredient_batches.status', // ✅ ADDED
+                    'ingredient_batches.batch_code',
+                    'ingredient_batches.status',
                     'ingredients.name as ingredient_name',
                     'ingredient_batches.quantity',
                     'ingredient_batches.expiration_date',
@@ -1713,8 +1746,13 @@ class AdminController extends Controller
                 ->where('ingredient_batches.quantity', '>', 0)
                 ->where('ingredient_batches.status', '!=', 'expired')
                 ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
-                ->whereDate('ingredient_batches.expiration_date', '>', now())
-                ->orderBy('ingredient_batches.arrived_at', 'desc')
+                ->whereDate('ingredient_batches.expiration_date', '>', now());
+
+            if ($ingredientId !== 'all') {
+                $query->where('ingredient_batches.ingredient_id', $ingredientId);
+            }
+
+            $batches = $query->orderBy('ingredient_batches.arrived_at', 'desc')
                 ->paginate(10)
                 ->through(function ($b) {
                     $isPieces = in_array(strtolower($b->unit), ['pcs', 'pieces', 'piece', 'pc']);
@@ -2080,7 +2118,6 @@ class AdminController extends Controller
     public function updateBatch(Request $request, $id)
     {
         $request->validate([
-            'quantity' => 'required|numeric|min:0.01',
             'arrived_at' => 'required|date',
             'expiration_date' => 'required|date'
         ]);
@@ -2088,34 +2125,17 @@ class AdminController extends Controller
         DB::beginTransaction();
         try {
             $batch = ingredientBatch::findOrFail($id);
-            $ingredient = $batch->ingredient;
-
-            $oldQty = $batch->quantity;
-            $newQty = $request->quantity;
-            $diff = $newQty - $oldQty;
 
             $batch->update([
-                'quantity' => $newQty,
                 'arrived_at' => $request->arrived_at,
                 'expiration_date' => $request->expiration_date
-            ]);
-
-            $ingredient->update(['stocks' => $ingredient->stocks + $diff]);
-
-            ingredientMovements::create([
-                'ingredient_id' => $ingredient->id,
-                'user_id' => Auth::id(),
-                'type' => 'adjustment',
-                'quantity' => $diff,
-                'stock_before' => $ingredient->stocks - $diff,
-                'stock_after' => $ingredient->stocks,
             ]);
 
             DB::commit();
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['success' => false], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 
