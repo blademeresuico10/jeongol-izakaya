@@ -97,6 +97,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/menu/{menuId}/suggested-ingredients', [AdminController::class, 'getSuggestedIngredientsApi'])->name('menu.suggested-ingredients');
         Route::post('/store-category', [AdminController::class, 'storeCategory'])->name('storeCategory');
         Route::post('/update-category/{id}', [AdminController::class, 'updateCategory'])->name('updateCategory');
+        Route::post('/refill-config/save', [AdminController::class, 'saveRefillConfig'])->name('refill-config.save');
 
         // Table Management
         Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
@@ -120,7 +121,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/update-stock', [AdminController::class, 'updateStock'])->name('ingredient.updateStock');
             Route::get('/addStockForm', [AdminController::class, 'addStockForm'])->name('ingredient.addStockForm');
             Route::get('/updateStockForm', [AdminController::class, 'updateStockForm'])->name('ingredient.updateStockForm');
-            Route::get('/stock-batches', [AdminController::class, 'getStockBatches'])->name('ingredient.stockBatches');
             Route::get('/expiry-data', [AdminController::class, 'expiryData'])->name('ingredients.expiry_data');
             Route::get('/expired-only', [AdminController::class, 'getExpiredOnly'])->name('ingredients.expired_only');
             Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
@@ -155,6 +155,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/stock-alerts/{id}', [AdminController::class, 'deleteStockAlert'])->name('admin.stock-alerts.delete');
 
         // Operating Hours Management
+        Route::get('/operating-hours/get-default', [AdminController::class, 'getDefaultHours'])->name('operating-hours.get-default');
         Route::post('/operating-hours', [AdminController::class, 'storeOperatingHours'])->name('admin.operating_hours.store');
         Route::put('/operating-hours/{id}', [AdminController::class, 'updateOperatingHours'])->name('admin.operating_hours.update');
         Route::delete('/operating-hours/{id}', [AdminController::class, 'deleteOperatingHours'])->name('admin.operating_hours.delete');

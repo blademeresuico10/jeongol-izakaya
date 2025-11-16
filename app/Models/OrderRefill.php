@@ -32,7 +32,6 @@ class OrderRefill extends Model
         return $this->hasOne(RefillConfiguration::class, 'ingredient_id', 'ingredient_id');
     }
 
-    // Scopes for easier querying
     public function scopePending($query)
     {
         return $query->where('status', 'Pending');

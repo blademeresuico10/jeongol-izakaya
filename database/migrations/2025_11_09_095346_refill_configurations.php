@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('ingredient_id')->constrained('ingredients')->onDelete('cascade');
             $table->decimal('quantity_per_plate', 8, 2);
-
             $table->unique('ingredient_id');
         });
     }
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('refill_configurations');
     }
 };

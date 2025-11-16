@@ -12,6 +12,7 @@ class MenuIngredient extends Model
         'menu_id',
         'ingredient_id',
         'quantity',
+        'unit',
     ];
 
     public function menu()

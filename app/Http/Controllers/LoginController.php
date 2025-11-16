@@ -225,7 +225,6 @@ class LoginController extends Controller
             ]);
         }
 
-        // Verify the code
         if (!Hash::check($request->code, $resetRecord->token)) {
             return response()->json([
                 'success' => false,

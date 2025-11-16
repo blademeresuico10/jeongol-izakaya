@@ -8,6 +8,9 @@
   <title>Jeongol Izakaya</title>
 
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
+<link 
+  rel="stylesheet" 
+  href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
 
   @livewireStyles
@@ -390,51 +393,53 @@
 
 <body>
   <header class="bg-black/60 text-white flex items-center px-4 py-3 shadow-md relative">
-    <a href="{{ route('customer.index') }}" class="flex items-center text-white hover:text-black left-4">
-      <i class="bi bi-arrow-left-circle-fill text-2xl"></i>
-    </a>
+  <a href="{{ route('customer.index') }}" 
+     class="absolute left-4 flex items-center text-white">
+    <i class="bi bi-arrow-left-circle-fill text-3xl"></i>
+  </a>
 
-    <h1 class="mx-auto text-lg sm:text-xl font-semibold text-center">
-      Welcome to <strong>Jeongol Izakaya</strong>
-    </h1>
-  </header>
+  <h1 class="mx-auto text-lg sm:text-xl font-semibold text-center">
+    Welcome to <strong>Jeongol Izakaya</strong>
+  </h1>
+</header>
 
-  <div class="flex justify-center space-x-6">
-    <section class="mt-4 w-full md:w-1/4">
-        <div class="w-full mx-auto bg-white/90 text-gray-800 rounded-xl shadow-2xl p-6 flex flex-col items-center gap-4 border border-gray-200 h-[223px]">
-            <h2 class="text-xl font-bold text-center text-indigo-600">Choose Time & Date</h2>
 
-            <div class="flex items-center gap-4">
-                <div class="flex flex-col items-start">
-                    <label for="date" class="text-gray-700 text-sm font-semibold mb-1">Date:</label>
+  <div class="flex flex-col lg:flex-row justify-center gap-6 px-4 mt-3">
+    <section class="w-full sm:w-96 lg:w-80 xl:w-96">
+        <div class="w-full bg-white/90 text-gray-800 rounded-xl shadow-2xl p-4 sm:p-6 border border-gray-200 h-auto lg:h-[223px] flex flex-col">
+            <h2 class="text-lg sm:text-xl font-bold mb-4 text-center text-indigo-600 border-b pb-2 border-indigo-200">Choose Time & Date</h2>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="flex flex-col">
+                    <label for="date" class="text-gray-700 text-sm font-semibold mb-2">Date:</label>
                     <input type="date" id="date" name="date"
-                        class="px-3 py-2 rounded-lg border border-indigo-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150"
+                        class="w-full px-3 py-2 rounded-lg border border-indigo-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150"
                         min="{{ date('Y-m-d') }}" 
                         value="{{ date('Y-m-d') }}">
                 </div>
 
-                <div class="flex flex-col items-start">
-                    <label for="time" class="text-gray-700 text-sm font-semibold mb-1">Time:</label>
+                <div class="flex flex-col">
+                    <label for="time" class="text-gray-700 text-sm font-semibold mb-2">Time:</label>
                     <input type="time" id="time" name="time"
-                        class="px-3 py-2 rounded-lg border border-indigo-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150">
+                        class="w-full px-3 py-2 rounded-lg border border-indigo-300 text-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-150">
                 </div>
             </div>
 
-            <div id="operatingHoursAlert" class="mt-auto p-3 rounded-lg text-sm text-center w-full bg-blue-100 text-blue-700 border border-blue-300">
+            <div id="operatingHoursAlert" class="mt-auto p-3 rounded-lg text-xs sm:text-sm text-center w-full bg-blue-100 text-blue-700 border border-blue-300">
                 <p id="operatingHoursMessage">Checking operating hours...</p>
             </div>
         </div>
     </section>
 
-    <section class="mt-4 w-full md:w-1/4">
-    <div class="w-full bg-white/90 text-gray-800 rounded-xl shadow-2xl p-6 border border-gray-200 h-[223px] flex flex-col">
-        <h3 class="text-xl font-bold mb-4 text-center text-red-600 border-b pb-2 border-red-200">Unavailable Time Slots</h3>
+    <section class="w-full sm:w-96 lg:w-80 xl:w-96">
+        <div class="w-full bg-white/90 text-gray-800 rounded-xl shadow-2xl p-4 sm:p-6 border border-gray-200 h-auto lg:h-[223px] flex flex-col">
+            <h3 class="text-lg sm:text-xl font-bold mb-4 text-center text-red-600 border-b pb-2 border-red-200">Unavailable Time Slots</h3>
 
-        <div id="unavailableTimesList" class="flex-grow overflow-y-auto pr-2">
-            <p class="text-gray-500 text-sm text-center italic">Select a date to view unavailable slots</p>
+            <div id="unavailableTimesList" class="flex-grow overflow-y-auto pr-2">
+                <p class="text-gray-500 text-sm text-center italic">Select a date to view unavailable slots</p>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
 </div>
 
   <div class="table-layout grid grid-cols-2 gap-4">
@@ -1813,39 +1818,52 @@
     const message = document.getElementById('operatingHoursMessage');
 
     try {
-      const response = await fetch('{{ route("customer.check_operating_hours") }}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify(autoCheck ? {} : { date, time })
-      });
+  const response = await fetch('{{ route("customer.check_operating_hours") }}', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': '{{ csrf_token() }}'
+    },
+    body: JSON.stringify(autoCheck ? {} : { date, time })
+  });
 
-      const data = await response.json();
-      alert.classList.remove('hidden');
+  const data = await response.json();
+  alert.classList.remove('hidden');
 
-      if (autoCheck || !date || !time) {
-        alert.classList.remove('bg-red-100', 'text-red-800', 'border-red-300', 'bg-green-100', 'text-green-800', 'border-green-300');
-        alert.classList.add('bg-blue-100', 'text-blue-700', 'border-blue-300');
-        message.innerHTML = `You can only reserve at: ${data.open_time} - ${data.close_time}`;
-      } else {
-        if (data.is_open) {
-          alert.classList.remove('bg-red-100', 'text-red-800', 'border-red-300', 'bg-blue-100', 'text-blue-700', 'border-blue-300');
-          alert.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
-          message.innerHTML = `✓ Selected time is available (${data.open_time} - ${data.close_time})`;
-        } else {
-          alert.classList.remove('bg-green-100', 'text-green-800', 'border-green-300', 'bg-blue-100', 'text-blue-700', 'border-blue-300');
-          alert.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
-          message.innerHTML = `✗ ${data.message}`;
-        }
-      }
-    } catch (error) {
-      console.error('Error checking operating hours:', error);
-      alert.classList.remove('hidden', 'bg-blue-100', 'text-blue-700', 'bg-green-100', 'text-green-800');
+  if (autoCheck || !date || !time) {
+    // Check if closed
+    if (data.open_time === 'Closed' && data.close_time === 'Closed') {
+      alert.classList.remove('bg-blue-100', 'text-blue-700', 'border-blue-300', 'bg-green-100', 'text-green-800', 'border-green-300');
       alert.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
-      message.innerHTML = 'Error checking operating hours. Please try again.';
+      message.innerHTML = 'Closed!';
+    } else {
+      alert.classList.remove('bg-red-100', 'text-red-800', 'border-red-300', 'bg-green-100', 'text-green-800', 'border-green-300');
+      alert.classList.add('bg-blue-100', 'text-blue-700', 'border-blue-300');
+      message.innerHTML = `You can only reserve at: ${data.open_time} - ${data.close_time}`;
     }
+  } else {
+    if (data.is_open) {
+      alert.classList.remove('bg-red-100', 'text-red-800', 'border-red-300', 'bg-blue-100', 'text-blue-700', 'border-blue-300');
+      alert.classList.add('bg-green-100', 'text-green-800', 'border-green-300');
+      message.innerHTML = `Selected time is available (${data.open_time} - ${data.close_time})`;
+    } else {
+      alert.classList.remove('bg-green-100', 'text-green-800', 'border-green-300', 'bg-blue-100', 'text-blue-700', 'border-blue-300');
+      alert.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+      
+      // Check if the message indicates closure
+      if (data.open_time === 'Closed' && data.close_time === 'Closed') {
+        message.innerHTML = 'Closed!';
+      } else {
+        message.innerHTML = `${data.message}`;
+      }
+    }
+  }
+} catch (error) {
+  console.error('Error checking operating hours:', error);
+  alert.classList.remove('hidden', 'bg-blue-100', 'text-blue-700', 'bg-green-100', 'text-green-800');
+  alert.classList.add('bg-red-100', 'text-red-800', 'border-red-300');
+  message.innerHTML = 'Error checking operating hours. Please try again.';
+}
   }
 
   async function fetchUnavailableSlots() {
@@ -1892,7 +1910,7 @@
                 </div>
             `;
         } else {
-            listElement.innerHTML = '<p class="text-green-600 text-sm text-center p-3 bg-green-50 rounded-lg border border-green-200">No unavailable slots for this date!</p>';
+            listElement.innerHTML = '<p class="text-blue-600 text-sm text-center p-3 bg-blue-50 rounded-lg border border-blue-200">No unavailable time slots!</p>';
         }
     } catch (error) {
         console.error('Error fetching unavailable slots:', error);

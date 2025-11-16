@@ -13,6 +13,7 @@ class RefillConfiguration extends Model
     protected $fillable = [
         'ingredient_id',
         'quantity_per_plate',
+        'unit',
     ];
 
     

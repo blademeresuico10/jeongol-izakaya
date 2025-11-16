@@ -284,7 +284,7 @@
                 <div class="card-header bg-success text-white py-2 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 font-weight-bold">Discount Management</h6>
                     <button class="btn btn-sm btn-light" data-toggle="modal" data-target="#addDiscountModal">
-                        <i class="fas fa-plus"></i> Add Discount
+                        <i class="fas fa-plus"></i> Add
                     </button>
                 </div>
                 <div class="card-body p-2">
@@ -338,9 +338,9 @@
             <!-- STOCK LEVEL MANAGEMENT -->
             <div class="card shadow-sm mb-3">
                 <div class="card-header bg-secondary text-white py-2 d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0 font-weight-bold">Stock Level Management</h6>
+                    <h6 class="mb-0 font-weight-bold">Restock Order Management</h6>
                     <button class="btn btn-sm btn-light" data-toggle="modal" data-target="#addStockAlertModal">
-                        <i class="fas fa-plus"></i> Add Alert
+                        <i class="fas fa-plus"></i> Add 
                     </button>
                 </div>
                 <div class="card-body p-2">
@@ -611,7 +611,7 @@
     let currentMonth = {{ now()->month }};
     let currentYear = {{ now()->year }};
     const overrides = @json($allHours);
-    const defaultHours = @json($allHours->where('is_default', true)->first());
+    let defaultHours = @json($allHours->where('is_default', true)->first());
 
     function renderCalendar() {
         const date = new Date(currentYear, currentMonth - 1, 1);
@@ -622,12 +622,12 @@
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
         let html = `
-    <div class="month-nav">
-        <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
-        <small class="font-weight-bold">${monthNames[currentMonth - 1]} ${currentYear}</small>
-        <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
-    </div>
-    <div class="calendar-grid">`;
+<div class="month-nav">
+    <button onclick="changeMonth(-1)"><i class="fas fa-chevron-left"></i></button>
+    <small class="font-weight-bold">${monthNames[currentMonth - 1]} ${currentYear}</small>
+    <button onclick="changeMonth(1)"><i class="fas fa-chevron-right"></i></button>
+</div>
+<div class="calendar-grid">`;
 
         ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach(d => html += `<div class="calendar-header">${d}</div>`);
 
@@ -644,7 +644,6 @@
             const isPast = cellDate < today;
 
             const hasOverride = overrides[dateStr] !== undefined && overrides[dateStr] !== null;
-
 
             let classes = 'calendar-day';
             if (isToday) classes += ' today';
@@ -674,6 +673,27 @@
             currentYear--;
         }
         renderCalendar();
+    }
+
+    async function fetchDefaultHours() {
+        try {
+            const response = await fetch('{{ route("operating-hours.get-default") }}', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                defaultHours = data;
+                return data;
+            }
+        } catch (error) {
+            console.error('Error fetching default hours:', error);
+        }
+        return null;
     }
 
     function openOperatingHoursModal(dateStr, source = 'calendar') {
@@ -720,8 +740,20 @@
             $('#operatingHoursForm').data('originalIsClosed', originalIsClosed);
         } else {
             $('#recordId').val('');
-            $('#operatingOpenTime').val('11:30');
-            $('#operatingCloseTime').val('20:00');
+
+            // Use default hours if available
+            if (defaultHours && !defaultHours.is_closed) {
+                const formatTime = (time) => {
+                    if (!time) return '';
+                    return time.substring(0, 5);
+                };
+                $('#operatingOpenTime').val(formatTime(defaultHours.open_time));
+                $('#operatingCloseTime').val(formatTime(defaultHours.close_time));
+            } else {
+                $('#operatingOpenTime').val('');
+                $('#operatingCloseTime').val('');
+            }
+
             $('#operatingClosed').prop('checked', false);
 
             $('#operatingHoursForm').attr('action', '/operating-hours');
@@ -775,40 +807,43 @@
         });
     });
 
-    function toggleOperatingTimes(checkbox) {
+    async function toggleOperatingTimes(checkbox) {
         const openTime = document.getElementById('operatingOpenTime');
         const closeTime = document.getElementById('operatingCloseTime');
         const isReadonly = openTime.hasAttribute('readonly');
 
-        if (openTime && closeTime && !isReadonly) {
-            openTime.disabled = checkbox.checked;
-            closeTime.disabled = checkbox.checked;
-            openTime.required = !checkbox.checked;
-            closeTime.required = !checkbox.checked;
-        }
-    }
-
-    function toggleOperatingTimes(checkbox) {
-        const openTime = document.getElementById('operatingOpenTime');
-        const closeTime = document.getElementById('operatingCloseTime');
         if (openTime && closeTime) {
-            openTime.disabled = checkbox.checked;
-            closeTime.disabled = checkbox.checked;
-            openTime.required = !checkbox.checked;
-            closeTime.required = !checkbox.checked;
-        }
-    }
-    function toggleOperatingTimes(checkbox) {
-        const openTime = document.getElementById('operatingOpenTime');
-        const closeTime = document.getElementById('operatingCloseTime');
-        if (openTime && closeTime) {
-            openTime.disabled = checkbox.checked;
-            closeTime.disabled = checkbox.checked;
-            openTime.required = !checkbox.checked;
-            closeTime.required = !checkbox.checked;
-        }
-    }
+            if (checkbox.checked) {
+                openTime.disabled = true;
+                closeTime.disabled = true;
+                openTime.required = false;
+                closeTime.required = false;
+            } else {
+                if (!isReadonly) {
+                    openTime.disabled = false;
+                    closeTime.disabled = false;
+                    openTime.required = true;
+                    closeTime.required = true;
+                }
 
+                const latestDefaultHours = await fetchDefaultHours();
+
+                if (latestDefaultHours && !latestDefaultHours.is_closed) {
+                    const formatTime = (time) => {
+                        if (!time) return '';
+                        return time.substring(0, 5);
+                    };
+                    openTime.value = formatTime(latestDefaultHours.open_time);
+                    closeTime.value = formatTime(latestDefaultHours.close_time);
+                } else {
+                    openTime.value = '';
+                    closeTime.value = '';
+                }
+            }
+
+            checkForChanges();
+        }
+    }
     function handleEditDiscount(btn) {
         document.getElementById('editDiscountPercentage').value = btn.dataset.percentage;
         document.getElementById('editDiscountForm').action = `/discounts/${btn.dataset.id}`;

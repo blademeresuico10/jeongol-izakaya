@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('menu_id')->constrained('menu');
             $table->foreignId('ingredient_id')->constrained('ingredients');
             $table->decimal('quantity', 8, 2);
+            $table->string('unit', 20)->nullable();
             $table->timestamps();
         });
     }

@@ -233,41 +233,42 @@ class KitchenDashboard extends Component
                     throw new \Exception("Refill configuration not found for {$ingredient->name}");
                 }
 
+                // Get quantity per plate and unit from config
                 $quantityPerPlate = $config->quantity_per_plate;
-                $totalQuantity = $quantityPerPlate * $refill->quantity;
+                $configUnit = strtolower($config->unit);
 
-                if ($ingredient->stocks < $totalQuantity) {
+                // Calculate total quantity needed
+                $totalQuantityInConfigUnit = $quantityPerPlate * $refill->quantity;
+
+                // Convert to kilograms
+                if ($configUnit === 'g') {
+                    $totalQuantityInKg = $totalQuantityInConfigUnit / 1000;
+                } else {
+                    $totalQuantityInKg = $totalQuantityInConfigUnit;
+                }
+
+                // Check if enough stock available
+                if ($ingredient->stocks < $totalQuantityInKg) {
                     throw new \Exception(
-                        "Insufficient stock for '{$ingredient->name}'. Required: {$totalQuantity} kg, Available: {$ingredient->stocks} kg"
+                        "Insufficient stock for '{$ingredient->name}'. Required: {$totalQuantityInKg} kg, Available: {$ingredient->stocks} kg"
                     );
                 }
 
-                $stockBefore = $ingredient->stocks;
-                $stockAfter = $stockBefore - $totalQuantity;
+                // Deduct from batches (oldest first, non-expired)
+                $this->deductFromBatches($ingredient->id, $totalQuantityInKg, $refill->order_id, 'refill', [
+                    'refill_id' => $refill->id,
+                    'refill_quantity' => $refill->quantity,
+                    'ingredient_name' => $ingredient->name,
+                    'quantity_per_plate' => $quantityPerPlate,
+                    'unit' => $configUnit
+                ]);
 
+                $stockBefore = $ingredient->stocks;
+                $stockAfter = $stockBefore - $totalQuantityInKg;
+
+                // Update ingredient stock
                 DB::table('ingredients')->where('id', $ingredient->id)
                     ->update(['stocks' => $stockAfter, 'updated_at' => now()]);
-
-                DB::table('ingredient_movements')->insert([
-                    'ingredient_id' => $ingredient->id,
-                    'ingredient_batch_id' => null,
-                    'user_id' => Auth::id(),
-                    'order_id' => $refill->order_id,
-                    'type' => 'used',
-                    'quantity' => $totalQuantity,
-                    'stock_before' => $stockBefore,
-                    'stock_after' => $stockAfter,
-                    'notes' => sprintf(
-                        "Refill #%d: %dx %s - Deducted %.3f kg (%.3f kg per plate)",
-                        $refill->id,
-                        $refill->quantity,
-                        $ingredient->name,
-                        $totalQuantity,
-                        $quantityPerPlate
-                    ),
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
 
                 $refill->update(['status' => 'Ready']);
 
@@ -308,59 +309,60 @@ class KitchenDashboard extends Component
                     if (!$singleOrder->menu) continue;
 
                     $menuItem = $singleOrder->menu;
-                    $menuIngredients = DB::table('menu_ingredients')
-                        ->join('ingredients', 'menu_ingredients.ingredient_id', '=', 'ingredients.id')
-                        ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
-                        ->where('menu_ingredients.menu_id', $menuItem->id)
+
+                    $menuIngredients = DB::table('menu_ingredients as mi')
+                        ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
+                        ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
+                        ->where('mi.menu_id', $menuItem->id)
                         ->select(
-                            'menu_ingredients.*',
-                            'ingredients.id as ingredient_id',
-                            'ingredients.name as ingredient_name',
-                            'ingredients.stocks',
-                            'ingredient_units.abbreviation as unit'
+                            'mi.id as menu_ingredient_id',
+                            'mi.quantity as recipe_quantity',
+                            'mi.unit as recipe_unit',
+                            'i.id as ingredient_id',
+                            'i.name as ingredient_name',
+                            'i.stocks',
+                            'iu.abbreviation as stock_unit'
                         )
                         ->get();
 
                     foreach ($menuIngredients as $menuIngredient) {
-                        // Calculate quantity needed (already stored in kg or pieces)
-                        $quantityNeeded = $menuIngredient->quantity * $singleOrder->quantity;
+                        $recipeQuantity = $menuIngredient->recipe_quantity * $singleOrder->quantity;
+                        $recipeUnit = strtolower($menuIngredient->recipe_unit ?? $menuIngredient->stock_unit);
+                        $stockUnit = strtolower($menuIngredient->stock_unit);
 
-                        // Check stock
-                        if ($menuIngredient->stocks < $quantityNeeded) {
+                        $quantityToDeduct = $this->convertUnit(
+                            $recipeQuantity,
+                            $recipeUnit,
+                            $stockUnit
+                        );
+
+                        if ($menuIngredient->stocks < $quantityToDeduct) {
                             throw new \Exception(
-                                "Insufficient stock for '{$menuIngredient->ingredient_name}'. Required: {$quantityNeeded} {$menuIngredient->unit}, Available: {$menuIngredient->stocks} {$menuIngredient->unit}"
+                                "Insufficient stock for '{$menuIngredient->ingredient_name}'. " .
+                                    "Required: {$quantityToDeduct} {$stockUnit}, " .
+                                    "Available: {$menuIngredient->stocks} {$stockUnit}"
                             );
                         }
 
-                        $stockBefore = $menuIngredient->stocks;
-                        $stockAfter = $stockBefore - $quantityNeeded;
-
-                        DB::table('ingredients')->where('id', $menuIngredient->ingredient_id)
-                            ->update(['stocks' => $stockAfter, 'updated_at' => now()]);
-
-                        DB::table('ingredient_movements')->insert([
-                            'ingredient_id' => $menuIngredient->ingredient_id,
-                            'ingredient_batch_id' => null,
-                            'user_id' => Auth::id(),
-                            'order_id' => $singleOrder->id,
-                            'type' => 'used',
-                            'quantity' => $quantityNeeded,
-                            'stock_before' => $stockBefore,
-                            'stock_after' => $stockAfter,
-                            'notes' => sprintf(
-                                "Order #%d: %dx %s - Deducted %.3f %s of %s (%.3f %s per serving)",
-                                $singleOrder->id,
-                                $singleOrder->quantity,
-                                $menuItem->menu_item,
-                                $quantityNeeded,
-                                $menuIngredient->unit,
-                                $menuIngredient->ingredient_name,
-                                $menuIngredient->quantity,
-                                $menuIngredient->unit
-                            ),
-                            'created_at' => now(),
-                            'updated_at' => now()
+                        // Deduct from batches (oldest first, non-expired)
+                        $this->deductFromBatches($menuIngredient->ingredient_id, $quantityToDeduct, $singleOrder->id, 'order', [
+                            'menu_item' => $menuItem->menu_item,
+                            'order_quantity' => $singleOrder->quantity,
+                            'ingredient_name' => $menuIngredient->ingredient_name,
+                            'recipe_quantity' => $menuIngredient->recipe_quantity,
+                            'recipe_unit' => $recipeUnit
                         ]);
+
+                        $stockBefore = $menuIngredient->stocks;
+                        $stockAfter = $stockBefore - $quantityToDeduct;
+
+                        // Update ingredient stock
+                        DB::table('ingredients')
+                            ->where('id', $menuIngredient->ingredient_id)
+                            ->update([
+                                'stocks' => $stockAfter,
+                                'updated_at' => now()
+                            ]);
                     }
 
                     $singleOrder->update(['status' => 'Ready']);
@@ -375,6 +377,145 @@ class KitchenDashboard extends Component
                 session()->flash('error', 'Failed to process orders: ' . $e->getMessage());
             }
         }
+    }
+
+    /**
+     * Deduct quantity from ingredient batches (FIFO - oldest first)
+     */
+    private function deductFromBatches($ingredientId, $quantityNeeded, $orderId, $type = 'order', $context = [])
+    {
+        // Get available batches (oldest first, non-expired, with quantity > 0)
+        $batches = DB::table('ingredient_batches')
+            ->where('ingredient_id', $ingredientId)
+            ->where('status', '!=', 'expired')
+            ->where('quantity', '>', 0)
+            ->where(function ($query) {
+                $query->whereNull('expiration_date')
+                    ->orWhere('expiration_date', '>=', now());
+            })
+            ->orderBy('arrived_at', 'asc') // FIFO: oldest first
+            ->orderBy('id', 'asc')
+            ->get();
+
+        if ($batches->isEmpty()) {
+            // No batches available, just log a general movement without batch
+            DB::table('ingredient_movements')->insert([
+                'ingredient_id' => $ingredientId,
+                'ingredient_batch_id' => null,
+                'user_id' => Auth::id(),
+                'order_id' => $orderId,
+                'type' => 'used',
+                'quantity' => $quantityNeeded,
+                'stock_before' => 0,
+                'stock_after' => 0,
+                'notes' => $this->generateMovementNotes($type, $context, $quantityNeeded, null),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+            return;
+        }
+
+        $remainingQuantity = $quantityNeeded;
+
+        foreach ($batches as $batch) {
+            if ($remainingQuantity <= 0) break;
+
+            $deductFromThisBatch = min($remainingQuantity, $batch->quantity);
+
+            $batchBefore = $batch->quantity;
+            $batchAfter = $batchBefore - $deductFromThisBatch;
+
+            // Update batch quantity
+            DB::table('ingredient_batches')
+                ->where('id', $batch->id)
+                ->update([
+                    'quantity' => $batchAfter,
+                    'status' => $batchAfter <= 0 ? 'depleted' : $batch->status,
+                    'updated_at' => now()
+                ]);
+
+            // Record movement for this batch
+            DB::table('ingredient_movements')->insert([
+                'ingredient_id' => $ingredientId,
+                'ingredient_batch_id' => $batch->id,
+                'user_id' => Auth::id(),
+                'order_id' => $orderId,
+                'type' => 'used',
+                'quantity' => $deductFromThisBatch,
+                'stock_before' => $batchBefore,
+                'stock_after' => $batchAfter,
+                'notes' => $this->generateMovementNotes($type, $context, $deductFromThisBatch, $batch),
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            $remainingQuantity -= $deductFromThisBatch;
+        }
+    }
+
+    /**
+     * Generate movement notes based on type
+     */
+    private function generateMovementNotes($type, $context, $quantity, $batch = null)
+    {
+        $batchInfo = $batch ? "Batch: {$batch->batch_code}" : "No batch";
+
+        if ($type === 'refill') {
+            return sprintf(
+                "Refill #%d: %dx %s - Deducted %.3f kg (%.2f %s per plate) | %s",
+                $context['refill_id'],
+                $context['refill_quantity'],
+                $context['ingredient_name'],
+                $quantity,
+                $context['quantity_per_plate'],
+                $context['unit'],
+                $batchInfo
+            );
+        } else {
+            return sprintf(
+                "Order #%d: %dx %s - Deducted %.3f kg of %s (Recipe: %.3f %s per serving) | %s",
+                $context['order_id'] ?? 'N/A',
+                $context['order_quantity'],
+                $context['menu_item'],
+                $quantity,
+                $context['ingredient_name'],
+                $context['recipe_quantity'],
+                $context['recipe_unit'],
+                $batchInfo
+            );
+        }
+    }
+
+    private function convertUnit($quantity, $fromUnit, $toUnit)
+    {
+        $fromUnit = strtolower(trim($fromUnit));
+        $toUnit = strtolower(trim($toUnit));
+
+        if ($fromUnit === $toUnit) {
+            return $quantity;
+        }
+
+        $pieceUnits = ['pcs', 'pieces', 'piece', 'pc'];
+        if (in_array($fromUnit, $pieceUnits) && in_array($toUnit, $pieceUnits)) {
+            return $quantity;
+        }
+
+        $weightUnits = ['kg', 'kilogram', 'kilograms', 'g', 'gram', 'grams'];
+        if (in_array($fromUnit, $weightUnits) && in_array($toUnit, $weightUnits)) {
+            $grams = $quantity;
+
+            if (in_array($fromUnit, ['kg', 'kilogram', 'kilograms'])) {
+                $grams = $quantity * 1000;
+            }
+
+            if (in_array($toUnit, ['kg', 'kilogram', 'kilograms'])) {
+                return $grams / 1000;
+            }
+
+            return $grams;
+        }
+
+        return $quantity;
     }
 
 

@@ -267,22 +267,33 @@ class CustomerController extends Controller
 
         $selectedDate = Carbon::parse($date)->startOfDay();
 
+        // Disallow past days entirely
         if ($selectedDate->isPast() && !$selectedDate->isToday()) {
             return response()->json([
-                'error' => true,    
+                'error' => true,
                 'slots' => []
             ]);
         }
 
         $endOfDay = $selectedDate->copy()->endOfDay();
 
-        $reservations = reservation::whereBetween('started_at', [$selectedDate, $endOfDay])
-            ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active'])
-            ->get(['started_at', 'ended_at', 'table_id']);
+        // Get current time (for filtering out past times)
+        $now = Carbon::now();
 
-        $walkins = walkin::whereBetween('started_at', [$selectedDate, $endOfDay])
-            ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active'])
-            ->get(['started_at', 'ended_at', 'table_id']);
+        // For today, only include slots ending after "now"
+        $reservationQuery = reservation::whereBetween('started_at', [$selectedDate, $endOfDay])
+            ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active']);
+
+        $walkinQuery = walkin::whereBetween('started_at', [$selectedDate, $endOfDay])
+            ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active']);
+
+        if ($selectedDate->isToday()) {
+            $reservationQuery->where('ended_at', '>', $now);
+            $walkinQuery->where('ended_at', '>', $now);
+        }
+
+        $reservations = $reservationQuery->get(['started_at', 'ended_at', 'table_id']);
+        $walkins = $walkinQuery->get(['started_at', 'ended_at', 'table_id']);
 
         $unavailableSlots = [];
 
@@ -310,6 +321,7 @@ class CustomerController extends Controller
 
         return response()->json(['slots' => $unavailableSlots]);
     }
+
 
     public function storeReservation(Request $request)
     {

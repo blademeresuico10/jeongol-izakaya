@@ -41,6 +41,11 @@
                             <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#menuIngredientsModal">
                                 Menu Servings
                             </button>
+
+                            <button class="btn btn-sm btn-secondary" data-toggle="modal"
+                                data-target="#quantityPerPlateModal">
+                                Qty.Per Plate
+                            </button>
                         </div>
                     @endif
                 </div>
@@ -356,6 +361,76 @@
                 </div>
             </div>
 
+            <!-- Quantity Per Plate Modal -->
+            <div class="modal fade" id="quantityPerPlateModal" data-backdrop="static" data-keyboard="false"
+                aria-labelledby="quantityPerPlateLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header bg-secondary text-white">
+                            <h5 class="modal-title" id="quantityPerPlateLabel">
+                                <i class="fas fa-fill-drip"></i> Refill Qty. Per Plate
+                            </h5>
+                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body" style="max-height: 500px; overflow-y: auto;">
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered ">
+                                    <thead class="thead-light"
+                                        style="position: sticky; top: 0; z-index: 10; background-color: #f8f9fa;">
+                                        <tr>
+                                            <th>Ingredient</th>
+                                            <th width="150">Refill Qty. Per Plate</th>
+                                            <th width="100">Unit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="quantityPerPlateContent">
+                                        @forelse($ingredients as $ingredient)
+                                            <tr>
+                                                <td>
+                                                    <strong>{{ $ingredient->name }}</strong>
+                                                    @if(isset($ingredient->used_in_menus))
+                                                        <br><small class="text-muted">Used in:
+                                                            {{ $ingredient->used_in_menus }}</small>
+                                                    @endif
+                                                    <input type="hidden" class="ingredient-id"
+                                                        value="{{ $ingredient->id }}">
+                                                </td>
+                                                <td>
+                                                    <input type="number" class="form-control form-control-sm refill-qty"
+                                                        step="0.01" min="0"
+                                                        value="{{ $ingredient->quantity_per_plate ?? 0 }}"
+                                                        placeholder="0.00">
+                                                </td>
+                                                <td>
+                                                    <select class="form-control form-control-sm refill-unit">
+                                                        <option value="g" {{ ($ingredient->unit ?? 'g') == 'g' ? 'selected' : '' }}>g</option>
+                                                        <option value="kg" {{ ($ingredient->unit ?? 'g') == 'kg' ? 'selected' : '' }}>kg</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="3" class="text-center">No ingredients used in any menu</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="modal-footer bg-light">
+                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">
+                                <i class="fas fa-times"></i> Close
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" id="saveQtyPerPlateBtn">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Add Ingredient Modal -->
             <div class="modal fade" id="addIngredientModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
@@ -566,6 +641,7 @@
 </div>
 
 @include('admin.layouts.script')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function debounce(func, wait) {
@@ -994,7 +1070,6 @@
                     let html = '';
                     data.menus.forEach(menu => {
                         const ingList = data.ingredients[menu.id] || [];
-                        const hasIngredients = ingList.length > 0;
 
                         html += `
                     <div class="card mb-3">
@@ -1005,13 +1080,12 @@
                             </div>
                         </div>
                         <div class="card-body p-0">
-                            <table class="table table-sm table-hover mb-0">
+                            <table class="table table-sm  mb-0">
                                 <thead class="thead-light">
                                     <tr>
                                         <th>Ingredient</th>
                                         <th>Category</th>
                                         <th width="120">Quantity</th>
-                                        <th width="100">Stock</th>
                                         <th width="80">Action</th>
                                     </tr>
                                 </thead>
@@ -1028,7 +1102,12 @@
                     `;
                         } else {
                             ingList.forEach(ing => {
-                                const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(ing.unit.toLowerCase());
+                                const currentUnit = ing.stored_unit || ing.base_unit;
+                                const baseUnit = ing.base_unit;
+
+                                const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(currentUnit.toLowerCase());
+                                const isKilogram = ['kg', 'kilogram', 'kilograms'].includes(baseUnit.toLowerCase());
+
                                 const step = isPieces ? '1' : '0.01';
                                 const min = isPieces ? '1' : '0.01';
                                 const oninput = isPieces ? 'this.value = Math.floor(Math.abs(this.value))' : '';
@@ -1043,25 +1122,42 @@
                                     <span class="badge badge-info">${ing.category}</span>
                                 </td>
                                 <td>
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group input-group-sm" style="width: 150px;">
                                         <input type="number" 
                                                class="form-control ingredient-qty"
                                                data-id="${ing.id}" 
+                                               data-base-unit="${baseUnit}"
                                                value="${displayQty}"
                                                min="${min}"
                                                step="${step}"
                                                ${oninput ? `oninput="${oninput}"` : ''}
                                                placeholder="Quantity">
                                         <div class="input-group-append">
-                                            <span class="input-group-text">${ing.unit}</span>
+                        `;
+
+                                if (isKilogram) {
+                                    const selectedKg = (currentUnit && currentUnit.toLowerCase() === 'kg') ? 'selected' : '';
+                                    const selectedG = (currentUnit && currentUnit.toLowerCase() === 'g') ? 'selected' : '';
+
+                                    html += `
+                                            <select class="form-control form-control-sm unit-selector" 
+                                                    data-id="${ing.id}"
+                                                    style="max-width: 60px; border-left: none; margin-left: 5px;">
+                                                <option value="kg" ${selectedKg}>kg</option>
+                                                <option value="g" ${selectedG}>g</option>
+                                            </select>
+                            `;
+                                } else {
+                                    html += `
+                                            <span class="input-group-text">${currentUnit}</span>
+                            `;
+                                }
+
+                                html += `
                                         </div>
                                     </div>
                                 </td>
-                                <td class="align-middle">
-                                    <span class="badge ${ing.stock <= 0 ? 'badge-danger' : 'badge-success'}">
-                                        ${ing.stock} ${ing.unit}
-                                    </span>
-                                </td>
+                               
                                 <td class="align-middle text-center">
                                     <button type="button" 
                                             class="btn btn-sm btn-danger removeIngredientBtn" 
@@ -1094,6 +1190,28 @@
                     });
 
                     content.innerHTML = html;
+
+                    document.querySelectorAll('.unit-selector').forEach(select => {
+                        select.addEventListener('change', function () {
+                            const ingredientId = this.dataset.id;
+                            const qtyInput = document.querySelector(`.ingredient-qty[data-id="${ingredientId}"]`);
+                            const currentValue = parseFloat(qtyInput.value) || 0;
+                            const previousUnit = this.dataset.previousUnit || select.value;
+                            const newUnit = this.value;
+
+                            if (previousUnit !== newUnit) {
+                                if (newUnit === 'g' && previousUnit === 'kg') {
+                                    qtyInput.value = (currentValue * 1000).toFixed(2);
+                                } else if (newUnit === 'kg' && previousUnit === 'g') {
+                                    qtyInput.value = (currentValue / 1000).toFixed(2);
+                                }
+                            }
+
+                            this.dataset.previousUnit = newUnit;
+                        });
+
+                        select.dataset.previousUnit = select.value;
+                    });
                 })
                 .catch(err => {
                     console.error('Error fetching ingredients:', err);
@@ -1116,11 +1234,18 @@
                 if (isNaN(value) || value < min) {
                     hasError = true;
                     input.classList.add('is-invalid');
+
                 } else {
                     input.classList.remove('is-invalid');
+
+                    const ingredientId = input.dataset.id;
+                    const unitSelector = document.querySelector(`.unit-selector[data-id="${ingredientId}"]`);
+                    const selectedUnit = unitSelector ? unitSelector.value : input.dataset.baseUnit;
                     updates.push({
                         id: input.dataset.id,
-                        quantity: value
+                        quantity: value,
+                        unit: selectedUnit
+
                     });
                 }
             });
@@ -1403,6 +1528,8 @@
             $('#unitLabel').text(' (grams)');
         });
 
+
+
         $('#addIngredientForm').on('submit', function (e) {
             e.preventDefault();
 
@@ -1490,7 +1617,7 @@
                                         </div>
                                     </div>
                                     <div class="card-body p-0">
-                                        <table class="table table-sm table-hover mb-0">
+                                        <table class="table table-sm mb-0">
                                             <thead class="thead-light">
                                                 <tr>
                                                     <th>Ingredient</th>
@@ -1604,6 +1731,7 @@
             $('#unitLabel').text('');
         });
     });
+
 
     const style = document.createElement('style');
     style.textContent = `
@@ -1735,5 +1863,178 @@
         }
     });
 
+    $('#quantityPerPlateModal').on('shown.bs.modal', function () {
+        $('#qty_per_plate').focus();
+    });
+
+    $(document).ready(function () {
+        let originalData = {};
+        let hasChanges = false;
+
+        // Store original data when modal opens
+        $('#quantityPerPlateModal').on('shown.bs.modal', function () {
+            storeOriginalData();
+            $('#saveQtyPerPlateBtn').prop('disabled', true);
+            hasChanges = false;
+        });
+
+        function storeOriginalData() {
+            originalData = {};
+            $('#quantityPerPlateContent tr').each(function () {
+                let ingredientId = $(this).find('.ingredient-id').val();
+                if (ingredientId) {
+                    originalData[ingredientId] = {
+                        quantity: $(this).find('.refill-qty').val(),
+                        unit: $(this).find('.refill-unit').val()
+                    };
+                }
+            });
+        }
+
+        function checkForChanges() {
+            hasChanges = false;
+
+            $('#quantityPerPlateContent tr').each(function () {
+                let ingredientId = $(this).find('.ingredient-id').val();
+                if (ingredientId && originalData[ingredientId]) {
+                    let currentQty = $(this).find('.refill-qty').val();
+                    let currentUnit = $(this).find('.refill-unit').val();
+
+                    if (currentQty != originalData[ingredientId].quantity ||
+                        currentUnit != originalData[ingredientId].unit) {
+                        hasChanges = true;
+                        return false; 
+                    }
+                }
+            });
+
+            $('#saveQtyPerPlateBtn').prop('disabled', !hasChanges);
+        }
+
+        // Detect changes on input and select
+        $(document).on('input change', '.refill-qty, .refill-unit', function () {
+            checkForChanges();
+        });
+
+        $('#saveQtyPerPlateBtn').on('click', function () {
+            if (!hasChanges) {
+                Swal.fire({
+                    icon: 'info',
+                    title: 'No changes to save',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#d1ecf1',
+                    color: '#0c5460'
+                });
+                return;
+            }
+
+            let configurations = [];
+
+            $('#quantityPerPlateContent tr').each(function () {
+                let ingredientId = $(this).find('.ingredient-id').val();
+                let quantity = $(this).find('.refill-qty').val();
+                let unit = $(this).find('.refill-unit').val();
+
+                if (ingredientId) {
+                    configurations.push({
+                        ingredient_id: ingredientId,
+                        quantity_per_plate: parseFloat(quantity) || 0,
+                        unit: unit
+                    });
+                }
+            });
+
+            if (configurations.length === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No data to save',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
+                return;
+            }
+
+            let $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Saving...');
+
+            $.ajax({
+                url: '{{ route("refill-config.save") }}',
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    configurations: configurations
+                },
+                success: function (response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Configurations saved successfully',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#d4edda',
+                            color: '#155724'
+                        });
+
+                        // Update original data to reflect saved changes
+                        storeOriginalData();
+                        hasChanges = false;
+
+                        $('#quantityPerPlateModal').modal('hide');
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: response.message || 'Failed to save',
+                            toast: true,
+                            position: 'top',
+                            timer: 3000,
+                            showConfirmButton: false,
+                            background: '#f8d7da',
+                            color: '#721c24'
+                        });
+                        $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+                    }
+                },
+                error: function (xhr) {
+                    console.error('Save error:', xhr);
+
+                    let message = 'Failed to save configurations';
+
+                    if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        let errors = xhr.responseJSON.errors;
+                        message = Object.values(errors).flat().join(', ');
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    }
+
+                    Swal.fire({
+                        icon: 'error',
+                        title: message,
+                        toast: true,
+                        position: 'top',
+                        timer: 3000,
+                        showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
+                    });
+
+                    $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+                },
+                complete: function () {
+                    if (hasChanges) {
+                        $btn.prop('disabled', false).html('<i class="fas fa-save"></i> Save');
+                    }
+                }
+            });
+        });
+    });
 
 </script>

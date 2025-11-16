@@ -30,6 +30,7 @@ use App\Models\StockOrder;
 use App\Models\MenuCategory;
 use App\Models\IngredientCategory;
 use App\Models\IngredientUnit;
+use App\Models\RefillConfiguration;
 
 class AdminController extends Controller
 {
@@ -620,68 +621,114 @@ class AdminController extends Controller
         $showDeleted = $request->has('show_deleted');
 
         if ($showDeleted) {
-            $menu = Menu::onlyTrashed()->get();
+            $menu = menu::onlyTrashed()->get();
         } else {
-            $menu = Menu::all();
+            $menu = menu::all();
         }
 
         $categories = MenuCategory::where('is_active', 1)->get();
         $allCategories = MenuCategory::all();
 
-        return view('admin.menu_management', compact('menu', 'categories', 'allCategories'));
-    }
+        $mainCourseCategory = MenuCategory::where('name', 'Main Course')->first();
 
-    public function menuIngredients()
-{
-    try {
-        $menus = DB::table('menu')
-            ->join('menu_categories as mc', 'menu.category_id', '=', 'mc.id')
-            ->whereNull('menu.deleted_at')
-            ->orderBy('menu.created_at', 'desc')
-            ->select(
-                'menu.id',
-                'menu.menu_item',
-                'menu.category_id',
-                'mc.name as category_name'
-            )
-            ->get();
+        $ingredients = collect();
 
-        $ingredients = [];
-        foreach ($menus as $menu) {
-            $ingredients[$menu->id] = DB::table('menu_ingredients as mi')
+        if ($mainCourseCategory) {
+            $ingredients = DB::table('menu_ingredients as mi')
                 ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
-                ->join('ingredient_categories as ic', 'i.category_id', '=', 'ic.id')
-                ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
-                ->where('mi.menu_id', $menu->id)
+                ->join('menu as m', 'mi.menu_id', '=', 'm.id')
+                ->leftJoin('refill_configurations as rc', 'i.id', '=', 'rc.ingredient_id')
+                ->where('m.category_id', $mainCourseCategory->id)
+                ->whereNull('m.deleted_at')
                 ->select(
-                    'mi.id',
-                    'mi.quantity',
-                    'i.name as ingredient_name',
-                    'ic.name as category',
-                    'iu.abbreviation as unit',
-                    'i.stocks as stock'
+                    'i.id',
+                    'i.name',
+                    'rc.quantity_per_plate',
+                    'rc.unit',
+                    DB::raw('GROUP_CONCAT(DISTINCT m.menu_item SEPARATOR ", ") as used_in_menus')
                 )
+                ->groupBy('i.id', 'i.name', 'rc.quantity_per_plate', 'rc.unit')
+                ->orderBy('i.name')
                 ->get();
         }
 
-        return response()->json([
-            'success' => true,
-            'menus' => $menus,
-            'ingredients' => $ingredients
-        ]);
-    } catch (\Exception $e) {
-        Log::error('Menu ingredients fetch error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch menu ingredients',
-            'error' => $e->getMessage()
-        ], 500);
+        return view('admin.menu_management', compact('menu', 'categories', 'allCategories', 'ingredients'));
     }
-}
+
+    public function menuIngredients()
+    {
+        try {
+            $mainCourseCategory = MenuCategory::where('name', 'Main Course')->first();
+
+            if (!$mainCourseCategory) {
+                return response()->json([
+                    'success' => true,
+                    'menus' => [],
+                    'ingredients' => []
+                ]);
+            }
+
+            $menus = DB::table('menu')
+                ->join('menu_categories as mc', 'menu.category_id', '=', 'mc.id')
+                ->where('menu.category_id', $mainCourseCategory->id)
+                ->whereNull('menu.deleted_at')
+                ->orderBy('menu.created_at', 'desc')
+                ->select(
+                    'menu.id',
+                    'menu.menu_item',
+                    'menu.category_id',
+                    'mc.name as category_name'
+                )
+                ->get();
+
+            $ingredients = [];
+            foreach ($menus as $menu) {
+                $ingredients[$menu->id] = DB::table('menu_ingredients as mi')
+                    ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
+                    ->join('ingredient_categories as ic', 'i.category_id', '=', 'ic.id')
+                    ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
+                    ->where('mi.menu_id', $menu->id)
+                    ->select(
+                        'mi.id',
+                        'mi.quantity',
+                        'mi.unit as stored_unit',
+                        'i.name as ingredient_name',
+                        'ic.name as category',
+                        'iu.abbreviation as base_unit',
+                        'i.stocks as stock'
+                    )
+                    ->get();
+            }
+
+            return response()->json([
+                'success' => true,
+                'menus' => $menus,
+                'ingredients' => $ingredients
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Menu ingredients fetch error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch menu ingredients',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function getIngredients($id)
     {
-        $menu = menu::findOrFail($id);
+        $menu = Menu::findOrFail($id);
+
+        $mainCourseCategory = MenuCategory::where('name', 'Main Course')->first();
+
+        if (!$mainCourseCategory || $menu->category_id !== $mainCourseCategory->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This menu is not a Main Course menu',
+                'menu' => $menu,
+                'ingredients' => []
+            ]);
+        }
 
         $ingredients = DB::table('menu_ingredients')
             ->join('ingredients', 'menu_ingredients.ingredient_id', '=', 'ingredients.id')
@@ -691,12 +738,14 @@ class AdminController extends Controller
                 'menu_ingredients.id',
                 'menu_ingredients.menu_id',
                 'menu_ingredients.quantity',
+                'menu_ingredients.unit as stored_unit',
                 'ingredients.name as ingredient_name',
                 'ingredient_units.abbreviation as unit'
             )
             ->get();
 
         return response()->json([
+            'success' => true,
             'menu' => $menu,
             'ingredients' => $ingredients
         ]);
@@ -719,7 +768,8 @@ class AdminController extends Controller
                 'numeric',
                 $isPieces ? 'integer' : 'min:0.01',
                 $isPieces ? 'min:1' : 'min:0.01'
-            ]
+            ],
+            'unit' => 'nullable|string'
         ], [
             'quantity.integer' => 'Quantity must be a whole number for pieces',
             'quantity.min' => $isPieces ? 'Quantity must be at least 1' : 'Quantity must be greater than 0'
@@ -742,6 +792,7 @@ class AdminController extends Controller
                 'menu_id' => $menuId,
                 'ingredient_id' => $request->ingredient_id,
                 'quantity' => $request->quantity,
+                'unit' => $request->unit,
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -763,7 +814,8 @@ class AdminController extends Controller
         $request->validate([
             'updates' => 'required|array',
             'updates.*.id' => 'required|exists:menu_ingredients,id',
-            'updates.*.quantity' => 'required|numeric|min:0.01'
+            'updates.*.quantity' => 'required|numeric|min:0.01',
+            'updates.*.unit' => 'nullable|string'
         ]);
 
         foreach ($request->updates as $update) {
@@ -771,6 +823,7 @@ class AdminController extends Controller
                 ->where('id', $update['id'])
                 ->update([
                     'quantity' => $update['quantity'],
+                    'unit' => $update['unit'] ?? null,
                     'updated_at' => now()
                 ]);
         }
@@ -812,6 +865,39 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to remove ingredient'
+            ], 500);
+        }
+    }
+
+    // Save refill configurations
+    public function saveRefillConfig(Request $request)
+    {
+        try {
+            $request->validate([
+                'configurations' => 'required|array',
+                'configurations.*.ingredient_id' => 'required|exists:ingredients,id',
+                'configurations.*.quantity_per_plate' => 'required|numeric|min:0',
+                'configurations.*.unit' => 'required|in:g,kg'
+            ]);
+
+            foreach ($request->configurations as $config) {
+                RefillConfiguration::updateOrCreate(
+                    ['ingredient_id' => $config['ingredient_id']],
+                    [
+                        'quantity_per_plate' => $config['quantity_per_plate'],
+                        'unit' => $config['unit']
+                    ]
+                );
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Configurations saved successfully'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to save configurations'
             ], 500);
         }
     }
@@ -1529,6 +1615,7 @@ class AdminController extends Controller
     public function getAvailableIngredients()
     {
         $ingredients = ingredients::with(['stockAlertLevel', 'unit'])
+            ->whereHas('stockAlertLevel')  
             ->whereDoesntHave('stockOrders', function ($query) {
                 $query->where('status', 'pending');
             })
@@ -1659,123 +1746,6 @@ class AdminController extends Controller
         return response()->json([
             'low_stock_ingredients' => $lowStockIngredients
         ]);
-    }
-
-    public function getStocks(Request $request)
-    {
-        try {
-            ingredientBatch::processExpiredBatches();
-
-            $ingredients = DB::table('ingredients')
-                ->join('ingredient_categories', 'ingredients.category_id', '=', 'ingredient_categories.id')
-                ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
-                ->leftJoin('stock_level_alerts', 'ingredients.id', '=', 'stock_level_alerts.ingredient_id')
-                ->select(
-                    'ingredients.id',
-                    'ingredients.name',
-                    'ingredients.stocks',
-                    'ingredient_categories.name as category',
-                    'ingredient_units.abbreviation as unit',
-                    'stock_level_alerts.low_stock',
-                    'stock_level_alerts.critical_stock'
-                )
-                ->orderBy('ingredients.name', 'asc')
-                ->paginate(10);
-
-            $ingredients->getCollection()->transform(function ($ingredient) {
-                $lowStock = $ingredient->low_stock ?? 50;
-                $criticalStock = $ingredient->critical_stock ?? 10;
-
-                if ($ingredient->stocks <= $criticalStock) {
-                    $ingredient->badge_class = 'bg-danger';
-                    $ingredient->badge_text = 'Critical';
-                } elseif ($ingredient->stocks <= $lowStock) {
-                    $ingredient->badge_class = 'bg-warning';
-                    $ingredient->badge_text = 'Low Stock';
-                } else {
-                    $ingredient->badge_class = 'bg-success';
-                    $ingredient->badge_text = 'Good';
-                }
-
-                unset($ingredient->low_stock);
-                unset($ingredient->critical_stock);
-
-                return $ingredient;
-            });
-
-            return response()->json([
-                'ingredients' => $ingredients
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load ingredients: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function getStockBatches(Request $request)
-    {
-        try {
-            ingredientBatch::processExpiredBatches();
-
-            $period = $request->get('period', 'thisweek');
-            $ingredientId = $request->get('ingredient', 'all'); // ✅ Get the selected ingredient
-
-            $startDate = $period === 'thisweek'
-                ? now()->startOfWeek()
-                : now()->subWeek()->startOfWeek();
-
-            $endDate = $period === 'thisweek'
-                ? now()->endOfWeek()
-                : now()->subWeek()->endOfWeek();
-
-            $query = DB::table('ingredient_batches')
-                ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
-                ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
-                ->select(
-                    'ingredient_batches.id',
-                    'ingredient_batches.batch_code',
-                    'ingredient_batches.status',
-                    'ingredients.name as ingredient_name',
-                    'ingredient_batches.quantity',
-                    'ingredient_batches.expiration_date',
-                    'ingredient_units.abbreviation as unit',
-                    'ingredient_batches.arrived_at'
-                )
-                ->where('ingredient_batches.quantity', '>', 0)
-                ->where('ingredient_batches.status', '!=', 'expired')
-                ->whereBetween('ingredient_batches.arrived_at', [$startDate, $endDate])
-                ->whereDate('ingredient_batches.expiration_date', '>', now());
-
-            if ($ingredientId !== 'all') {
-                $query->where('ingredient_batches.ingredient_id', $ingredientId);
-            }
-
-            $batches = $query->orderBy('ingredient_batches.arrived_at', 'desc')
-                ->paginate(10)
-                ->through(function ($b) {
-                    $isPieces = in_array(strtolower($b->unit), ['pcs', 'pieces', 'piece', 'pc']);
-
-                    return [
-                        'id' => $b->id,
-                        'batch_code' => $b->batch_code,
-                        'status' => $b->status,
-                        'ingredient_name' => $b->ingredient_name,
-                        'quantity' => $isPieces ? (int)$b->quantity : (float)$b->quantity,
-                        'unit' => $b->unit,
-                        'arrived_at' => \Carbon\Carbon::parse($b->arrived_at)->format('Y-m-d'),
-                        'expiration_date' => \Carbon\Carbon::parse($b->expiration_date)->format('Y-m-d')
-                    ];
-                });
-
-            return response()->json(['batches' => $batches]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load stock batches: ' . $e->getMessage()
-            ], 500);
-        }
     }
 
     public function getExpiredOnly(Request $request)
@@ -2304,6 +2274,19 @@ class AdminController extends Controller
         }
 
         return view('admin.others', compact('allHours', 'hours', 'todayHours', 'menus', 'discounts', 'stock_level', 'stock_order', 'ingredients', 'ingredients_without_alerts'));
+    }
+
+    public function getDefaultHours()
+    {
+        $defaultHours = DB::table('operating_hours')
+            ->where('is_default', true)
+            ->first();
+
+        if ($defaultHours) {
+            return response()->json($defaultHours);
+        }
+
+        return response()->json(null);
     }
 
 

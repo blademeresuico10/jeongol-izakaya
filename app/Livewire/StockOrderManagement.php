@@ -169,7 +169,7 @@ class StockOrderManagement extends Component
         $ingredient = $order->ingredient;
 
         try {
-            $batchCode = null; 
+            $batchCode = null;
 
             DB::transaction(function () use ($order, $ingredient, &$batchCode) {
                 $stockBefore = $ingredient->stocks;
@@ -177,10 +177,15 @@ class StockOrderManagement extends Component
                 $ingredient->stocks += $this->receivedQuantity;
                 $ingredient->save();
 
-                $batchCode = 'BO-' . str_pad($order->id, 5, '0', STR_PAD_LEFT) . '-' . now()->format('Ymd');
+                $startOfWeek = now()->startOfWeek();
+                $endOfWeek = now()->endOfWeek();
+
+                $weeklyBatchCount = ingredientBatch::whereBetween('created_at', [$startOfWeek, $endOfWeek])->count() + 1;
+
+                $batchCode = 'BO-' . now()->format('Ymd') . '-' . str_pad($weeklyBatchCount, 3, '0', STR_PAD_LEFT);
 
                 $batch = ingredientBatch::create([
-                    'ingredient_id' => $ingredient->id, 
+                    'ingredient_id' => $ingredient->id,
                     'batch_code' => $batchCode,
                     'quantity' => $this->receivedQuantity,
                     'arrived_at' => now(),
