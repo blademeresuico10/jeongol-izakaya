@@ -340,7 +340,7 @@
                 <div class="card-header bg-secondary text-white py-2 d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 font-weight-bold">Restock Order Management</h6>
                     <button class="btn btn-sm btn-light" data-toggle="modal" data-target="#addStockAlertModal">
-                        <i class="fas fa-plus"></i> Add 
+                        <i class="fas fa-plus"></i> Add
                     </button>
                 </div>
                 <div class="card-body p-2">
@@ -452,34 +452,41 @@
                             @csrf
                             <div class="modal-body">
                                 <div class="form-group">
-                                    <label>Select Ingredient</label>
+                                    <label>Select Ingredient <span class="text-danger">*</span></label>
                                     <select class="form-control" id="add-ingredient-id" required>
                                         <option value="">Choose ingredient...</option>
                                         @foreach($ingredients_without_alerts ?? [] as $ingredient)
-                                            <option value="{{ $ingredient->id }}" data-unit="{{ $ingredient->unit }}">
-                                                {{ $ingredient->name }} ({{ $ingredient->stocks }} {{ $ingredient->unit }})
+                                            <option value="{{ $ingredient->id }}"
+                                                data-unit="{{ $ingredient->unit->abbreviation ?? '' }}"
+                                                data-stocks="{{ $ingredient->stocks }}">
+                                                {{ $ingredient->name }} 
                                             </option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label>Low Stock Alert</label>
-                                    <input type="number" class="form-control" id="add-low-stock" step="0.01" required>
+                                    <label>Low Stock Alert <span class="text-danger">*</span></label>
+                                    <input type="number" class="form-control" id="add-low-stock" step="0.01" min="0"
+                                        required>
+                                    <small class="text-muted">Alert when stock falls below this level</small>
                                 </div>
                                 <div class="form-group">
                                     <label>Critical Stock Alert</label>
-                                    <input type="number" class="form-control" id="add-critical-stock" step="0.01">
+                                    <input type="number" class="form-control" id="add-critical-stock" step="0.01"
+                                        min="0">
+                                    <small class="text-muted">Optional: Alert for critical stock level</small>
                                 </div>
                                 <div class="form-group">
-                                    <label>Reorder Quantity</label>
+                                    <label>Reorder Quantity <span class="text-danger">*</span></label>
                                     <input type="number" class="form-control" id="add-reorder-quantity" step="0.01"
-                                        required>
+                                        min="0.01" required>
+                                    <small class="text-muted">Quantity to reorder when stock is low</small>
                                 </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                                 <button type="submit" class="btn btn-secondary">
-                                    <i class="fas fa-plus"></i> Add
+                                    <i class="fas fa-plus"></i> Add Stock Alert
                                 </button>
                             </div>
                         </form>

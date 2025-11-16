@@ -60,7 +60,7 @@
                             </td>
                             <td><strong>{{ $stock->ingredient_name }}</strong></td>
                             <td>
-                                <span class="font-weight-medium text-danger">{{ $formattedQty }}</span>
+                                <span class="font-weight-medium ">{{ $formattedQty }}</span>
                                 <span class="text-muted">{{ $stock->unit }}</span>
                             </td>
                             <td>
