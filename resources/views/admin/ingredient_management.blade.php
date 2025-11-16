@@ -192,38 +192,6 @@
     </div>
 </div>
 
-{{-- Edit Batch Modal --}}
-<div class="modal fade" id="stockBatchModal" tabindex="-1">
-    <div class="modal-dialog modal-sm">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h6 class="modal-title mb-0">Edit Batch</h6>
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-            </div>
-            <form id="editBatchForm">
-                <input type="hidden" id="editBatchId">
-                <input type="hidden" id="originalArrived">
-                <input type="hidden" id="originalExpiry">
-                <div class="modal-body">
-
-                    <div class="form-group">
-                        <label class="small">Arrived Date</label>
-                        <input type="date" id="editBatchArrived" class="form-control form-control-sm" required>
-                    </div>
-
-                    <div class="form-group mb-0">
-                        <label class="small">Expiration Date</label>
-                        <input type="date" id="editBatchExpiry" class="form-control form-control-sm" required>
-                    </div>
-                </div>
-                <div class="modal-footer p-2">
-                    <button type="submit" id="updateBatchBtn" class="btn btn-warning btn-sm" disabled>Update</button>
-                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 {{-- Add Unit of Measure Modal --}}
 <div class="modal fade" id="addUnitOfMeasureModal" tabindex="-1" data-backdrop="static" data-keyboard="false">
@@ -455,16 +423,6 @@
 
         const today = new Date().toISOString().split('T')[0];
         $('input[name="expiration_date"]').attr('min', today);
-
-
-        $('#editBatchArrived, #editBatchExpiry').on('change', function () {
-            const arrivedChanged = $('#editBatchArrived').val() !== $('#originalArrived').val();
-            const expiryChanged = $('#editBatchExpiry').val() !== $('#originalExpiry').val();
-
-            $('#updateBatchBtn').prop('disabled', !(arrivedChanged || expiryChanged));
-        });
-
-
 
 
         $('#addIngredientForm').on('submit', function (e) {

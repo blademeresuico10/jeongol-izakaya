@@ -21,7 +21,7 @@ class StockBatchesManagement extends Component
     // Filters
     public $period = 'thisweek';
     public $ingredientFilter = 'all';
-    
+
     // Edit Modal Properties
     public $editBatchId;
     public $editBatchCode;
@@ -56,7 +56,7 @@ class StockBatchesManagement extends Component
         [$startDate, $endDate] = $this->getDateRange();
 
         $query = $this->buildBatchQuery($startDate, $endDate);
-        
+
         $batches = $query->orderBy('ib.arrived_at', 'desc')->paginate(10);
 
         $batches->getCollection()->transform(function ($batch) {
@@ -75,7 +75,7 @@ class StockBatchesManagement extends Component
                 Carbon::now()->endOfWeek()
             ];
         }
-        
+
         return [
             Carbon::now()->subWeek()->startOfWeek(),
             Carbon::now()->subWeek()->endOfWeek()
@@ -134,7 +134,7 @@ class StockBatchesManagement extends Component
 
         try {
             $batch = ingredientBatch::findOrFail($this->editBatchId);
-            
+
             $batch->update([
                 'arrived_at' => $this->editArrivedAt,
                 'expiration_date' => $this->editExpiryDate,
@@ -142,7 +142,7 @@ class StockBatchesManagement extends Component
 
             $this->closeEditModal();
             session()->flash('success', 'Batch updated successfully!');
-            
+            $this->dispatch('batch-updated');
         } catch (\Exception $e) {
             session()->flash('error', 'Failed to update batch: ' . $e->getMessage());
         }
@@ -151,7 +151,7 @@ class StockBatchesManagement extends Component
     public function expireBatch($id)
     {
         DB::beginTransaction();
-        
+
         try {
             $batch = ingredientBatch::findOrFail($id);
 
@@ -166,7 +166,6 @@ class StockBatchesManagement extends Component
             $stockBefore = $ingredient->stocks;
             $stockAfter = $stockBefore - $expiredQty;
 
-            // Create expired record
             expiredIngredients::create([
                 'ingredient_id' => $batch->ingredient_id,
                 'quantity' => $expiredQty,
@@ -194,7 +193,7 @@ class StockBatchesManagement extends Component
 
             DB::commit();
             session()->flash('success', 'Batch marked as expired successfully!');
-            
+            $this->dispatch('batch-expired');
         } catch (\Exception $e) {
             DB::rollBack();
             session()->flash('error', 'Failed to expire batch: ' . $e->getMessage());

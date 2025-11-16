@@ -10,7 +10,6 @@ use App\Models\feedback;
 use App\Models\transaction;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
-use App\Models\customers;
 use App\Models\reservation;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Auth;
@@ -229,7 +228,7 @@ class AdminController extends Controller
             ->values();
 
         $ingredients = ingredients::select('id', 'name', 'category_id', 'unit_id', 'stocks')
-            ->with(['category', 'unit', 'stockAlertLevel']) // Load relationships
+            ->with(['category', 'unit', 'stockAlertLevel'])
             ->get()
             ->map(function ($ingredient) {
                 $alertLevel = $ingredient->stockAlertLevel;
@@ -869,7 +868,6 @@ class AdminController extends Controller
         }
     }
 
-    // Save refill configurations
     public function saveRefillConfig(Request $request)
     {
         try {
@@ -902,129 +900,6 @@ class AdminController extends Controller
         }
     }
 
-    public function expiryData()
-    {
-        try {
-
-            $allBatches = DB::table('ingredient_batches')->count();
-
-            $sevenDaysFromNow = now()->addDays(7);
-
-            $batches = DB::table('ingredient_batches')
-                ->join('ingredients', 'ingredient_batches.ingredient_id', '=', 'ingredients.id')
-                ->select(
-                    'ingredient_batches.id',
-                    'ingredient_batches.ingredient_id',
-                    'ingredient_batches.quantity',
-                    'ingredient_batches.expiration_date',
-                    'ingredients.name as ingredient_name',
-                    'ingredients.unit'
-                )
-                ->where('ingredient_batches.quantity', '>', 0)
-                ->whereDate('ingredient_batches.expiration_date', '<=', $sevenDaysFromNow)
-                ->orderBy('ingredient_batches.expiration_date', 'asc')
-                ->get();
-
-
-            $processedBatches = $batches->map(function ($batch) {
-                $expiryDate = \Carbon\Carbon::parse($batch->expiration_date);
-                $today = \Carbon\Carbon::today();
-
-
-                if ($expiryDate->isPast()) {
-                    $batch->status = 'expired';
-                    $batch->days_difference = $today->diffInDays($expiryDate);
-                } elseif ($expiryDate->diffInDays($today) <= 3) {
-                    $batch->status = 'expiring_soon';
-                    $batch->days_difference = $expiryDate->diffInDays($today);
-                } else {
-                    $batch->status = 'expiring_this_week';
-                    $batch->days_difference = $expiryDate->diffInDays($today);
-                }
-
-                return $batch;
-            });
-
-            return response()->json(['expiry_data' => $processedBatches]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load expiry data: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function removeBatch(Request $request)
-    {
-        $request->validate([
-            'batch_id' => 'required|exists:ingredient_batches,id'
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $batch = ingredientBatch::with('ingredient')->lockForUpdate()->find($request->batch_id);
-
-            if (!$batch) {
-                return response()->json(['success' => false, 'message' => 'Batch not found'], 404);
-            }
-
-            if ($batch->quantity <= 0) {
-                return response()->json(['success' => false, 'message' => 'Batch already has zero quantity'], 400);
-            }
-
-            $ingredient   = $batch->ingredient;
-            $stockBefore  = $ingredient->stocks;
-            $stockAfter   = max(0, $stockBefore - $batch->quantity);
-
-            expiredIngredients::create([
-                'ingredient_id'   => $ingredient->id,
-                'ingredient_name' => $ingredient->name,
-                'category'        => $ingredient->category,
-                'quantity'        => $batch->quantity,
-                'unit'            => $ingredient->unit,
-                'expiration_date' => $batch->expiration_date,
-                'expired_at'      => now(),
-                'notes'           => 'Batch removed'
-            ]);
-
-            $ingredient->update(['stocks' => $stockAfter]);
-
-            ingredientMovements::create([
-                'ingredient_id' => $ingredient->id,
-                'user_id'       => Auth::id(),
-                'type'          => 'expired',
-                'quantity'      => -$batch->quantity,
-                'stock_before'  => $stockBefore,
-                'stock_after'   => $stockAfter,
-                'notes'         => "Expired on {$batch->expiration_date}"
-            ]);
-
-            $batch->update(['quantity' => 0]);
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Batch marked as expired and quantity set to zero'
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to remove batch: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function getExpiredHistory()
-    {
-        $expired = DB::table('expired_ingredients')
-            ->orderBy('expired_at', 'desc')
-            ->get();
-
-        return response()->json(['expired' => $expired]);
-    }
 
     public function storeMenu(Request $request)
     {
@@ -1176,7 +1051,6 @@ class AdminController extends Controller
             ], 500);
         }
     }
-
 
     public function editMenu($id)
     {
@@ -2009,81 +1883,6 @@ class AdminController extends Controller
     }
 
 
-    public function modifyStockForm()
-    {
-        $ingredients = DB::table('ingredients')
-            ->where('stocks', '>', 0)
-            ->get();
-        return response()->json(['ingredients' => $ingredients]);
-    }
-
-    public function modifyStock(Request $request)
-    {
-        $request->validate([
-            'ingredient_id' => 'required|exists:ingredients,id',
-            'quantity_used' => 'required|numeric|min:0.01',
-            'reason' => 'required|string|max:255'
-        ]);
-
-        DB::beginTransaction();
-        try {
-            $ingredient = DB::table('ingredients')->where('id', $request->ingredient_id)->first();
-
-            if ($ingredient->stocks < $request->quantity_used) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Insufficient stock available. Current stock: ' . $ingredient->stocks
-                ], 400);
-            }
-
-            $batches = DB::table('ingredient_batches')
-                ->where('ingredient_id', $request->ingredient_id)
-                ->where('quantity', '>', 0)
-                ->orderBy('expiration_date')
-                ->orderBy('created_at')
-                ->get();
-
-            $remainingToUse = $request->quantity_used;
-
-            foreach ($batches as $batch) {
-                if ($remainingToUse <= 0) break;
-
-                $useFromBatch = min($remainingToUse, $batch->quantity);
-
-                DB::table('ingredient_batches')
-                    ->where('id', $batch->id)
-                    ->decrement('quantity', $useFromBatch);
-
-                DB::table('ingredient_movements')->insert([
-                    'ingredient_id' => $request->ingredient_id,
-                    'user_id' => Auth::id(),
-                    'ingredient_batch_id' => $batch->id,
-                    'action' => 'Out',
-                    'quantity' => $useFromBatch,
-                    'created_at' => now(),
-                    'updated_at' => now()
-                ]);
-
-                $remainingToUse -= $useFromBatch;
-            }
-
-            DB::table('ingredients')
-                ->where('id', $request->ingredient_id)
-                ->decrement('stocks', $request->quantity_used);
-
-            DB::commit();
-            return response()->json([
-                'success' => true,
-                'message' => 'Stock modified successfully'
-            ]);
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to modify stock: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 
     public function updateBatch(Request $request, $id)
     {
@@ -2109,66 +1908,6 @@ class AdminController extends Controller
         }
     }
 
-    public function deleteBatch(Request $request)
-    {
-        $request->validate([
-            'batch_id' => 'required|exists:ingredient_batches,id',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $batch = ingredientBatch::findOrFail($request->batch_id);
-            $ingredient = $batch->ingredient;
-
-            $ingredient->decrement('stocks', $batch->quantity);
-
-            ingredientMovements::create([
-                'ingredient_id' => $batch->ingredient_id,
-                'ingredient_batch_id' => $batch->id,
-                'user_id' => Auth::id(),
-                'type' => 'stock_out',
-                'quantity' => $batch->quantity,
-                'stock_before' => $ingredient->stocks + $batch->quantity,
-                'stock_after' => $ingredient->stocks,
-            ]);
-
-            $batch->delete();
-
-            DB::commit();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Batch deleted and stock updated successfully',
-            ]);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to delete batch: ' . $e->getMessage(),
-            ], 500);
-        }
-    }
-
-    public function getLowStockAlerts()
-    {
-        try {
-            $lowStock = ingredients::whereColumn('stocks', '<=', 'low_stock')
-                ->orderBy('category')
-                ->orderBy('name')
-                ->get();
-
-            return response()->json([
-                'low_stock_ingredients' => $lowStock
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to load low stock alerts: ' . $e->getMessage()
-            ], 500);
-        }
-    }
     public function printStockRequest($id)
     {
         $ingredient = ingredients::with(['stockAlertLevel', 'stockOrders'])->findOrFail($id);

@@ -123,7 +123,6 @@ Route::middleware('auth')->group(function () {
             Route::get('/updateStockForm', [AdminController::class, 'updateStockForm'])->name('ingredient.updateStockForm');
             Route::get('/expiry-data', [AdminController::class, 'expiryData'])->name('ingredients.expiry_data');
             Route::get('/expired-only', [AdminController::class, 'getExpiredOnly'])->name('ingredients.expired_only');
-            Route::get('/expired-history', [AdminController::class, 'getExpiredHistory'])->name('ingredients.expired_history');
 
 
             // Stock Order Routes

@@ -1,23 +1,4 @@
 <div>
-    {{-- Flash Messages --}}
-    @if (session()->has('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    @endif
-
-    @if (session()->has('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
-        </div>
-    @endif
-
     {{-- Filters --}}
     <ul class="nav nav-pills mb-3 align-items-center" role="tablist">
         <li class="nav-item">
@@ -78,7 +59,7 @@
                             $qtyColorClass = '';
                             $qtyBadge = '';
                             $isLowStock = $batch->original_quantity && $batch->quantity < $batch->original_quantity * 0.3;
-                            
+
                             if ($isLowStock) {
                                 $qtyColorClass = 'text-warning font-weight-bold';
                                 $qtyBadge = '<small class="badge badge-warning ml-2">Low</small>';
@@ -87,8 +68,8 @@
                         <tr>
                             <td>
                                 <code class="text-dark bg-light px-2 py-1 rounded">
-                                    {{ $batch->batch_code ?? 'N/A' }}
-                                </code>
+                                            {{ $batch->batch_code ?? 'N/A' }}
+                                        </code>
                             </td>
                             <td><strong>{{ $batch->ingredient_name }}</strong></td>
                             <td>
@@ -102,7 +83,9 @@
                                 @if ($batch->original_quantity && $batch->quantity < $batch->original_quantity)
                                     <br>
                                     <small class="text-muted">
-                                        Original: {{ $isPieces ? floor($batch->original_quantity) : number_format($batch->original_quantity, 2) }} {{ $batch->unit }}
+                                        Original:
+                                        {{ $isPieces ? floor($batch->original_quantity) : number_format($batch->original_quantity, 2) }}
+                                        {{ $batch->unit }}
                                     </small>
                                 @endif
                             </td>
@@ -122,7 +105,7 @@
                                         class="btn btn-sm btn-primary" style="min-width: 70px;">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <button 
+                                    <button
                                         onclick="confirmExpireBatch({{ $batch->id }}, '{{ $batch->batch_code ?? $batch->ingredient_name }}')"
                                         class="btn btn-sm btn-danger" style="min-width: 80px;">
                                         <i class="fas fa-ban"></i> Expire
@@ -163,7 +146,8 @@
                             </div>
                             <div class="form-group mb-0">
                                 <label class="small">Expiration Date <span class="text-danger">*</span></label>
-                                <input type="date" wire:model="editExpiryDate" class="form-control form-control-sm" required min="{{ date('Y-m-d') }}">
+                                <input type="date" wire:model="editExpiryDate" class="form-control form-control-sm" required
+                                    min="{{ date('Y-m-d') }}">
                                 @error('editExpiryDate')
                                     <span class="text-danger small">{{ $message }}</span>
                                 @enderror
@@ -189,6 +173,7 @@
             display: none !important;
         }
 
+
         .alert {
             animation: slideDown 0.3s ease-out;
         }
@@ -198,6 +183,7 @@
                 opacity: 0;
                 transform: translateY(-10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -209,10 +195,9 @@
         }
     </style>
 
-    {{-- SweetAlert Scripts --}}
     @script
     <script>
-        window.confirmUpdateBatch = function() {
+        window.confirmUpdateBatch = function () {
             const arrivedAt = $wire.editArrivedAt;
             const expiryDate = $wire.editExpiryDate;
             const batchCode = $wire.editBatchCode;
@@ -226,15 +211,15 @@
                 return;
             }
 
-            const arrivedFormatted = new Date(arrivedAt).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
+            const arrivedFormatted = new Date(arrivedAt).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
             });
-            const expiryFormatted = new Date(expiryDate).toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
+            const expiryFormatted = new Date(expiryDate).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
             });
 
             Swal.fire({
@@ -252,7 +237,7 @@
             });
         };
 
-        window.confirmExpireBatch = function(batchId, batchName) {
+        window.confirmExpireBatch = function (batchId, batchName) {
             Swal.fire({
                 title: 'Mark as Expired?',
                 icon: 'warning',
@@ -268,24 +253,25 @@
             });
         };
 
-        // Listen for Livewire events
-        Livewire.on('batch-updated', () => {
-            Swal.fire({
-                icon: 'success',
-                title: 'Batch Updated!',
-                text: 'Batch has been updated successfully',
-                timer: 2000,
-                showConfirmButton: false
+        document.addEventListener('livewire:initialized', () => {
+            Livewire.on('batch-updated', () => {
+                Swal.fire({
+                    position: 'center',
+                    icon: 'success',
+                    title: 'Batch has been updated successfully!',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
             });
-        });
 
-        Livewire.on('batch-expired', () => {
-            Swal.fire({
-                icon: 'success',
-                title: 'Batch Expired!',
-                text: 'Batch has been marked as expired successfully',
-                timer: 2000,
-                showConfirmButton: false
+            Livewire.on('batch-expired', () => {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Batch Expired!',
+                    text: 'Batch has been marked as expired successfully',
+                    timer: 3000,
+                    showConfirmButton: false
+                });
             });
         });
 
