@@ -7,47 +7,38 @@
         opacity: 0.6;
         cursor: not-allowed;
     }
-
     .fa-spinner {
         animation: spin 1s linear infinite;
     }
-
     @keyframes spin {
         from {
             transform: rotate(0deg);
         }
-
         to {
             transform: rotate(360deg);
         }
     }
-
     @keyframes fadeIn {
         from {
             opacity: 0;
             transform: translateY(10px);
         }
-
         to {
             opacity: 1;
             transform: translateY(0);
         }
     }
-
     .tab-content-show {
         animation: fadeIn 0.3s ease-in;
     }
-
     .report-content {
         animation: fadeIn 0.4s ease-in;
     }
-
     .preset-btn.active {
         background-color: #3b82f6;
         color: white;
     }
 </style>
-
 <div id="content-wrapper" class="d-flex flex-column" style="overflow-y: auto; height: 100vh;">
     <div id="content" style="overflow-y: auto; flex: 1; padding-right: 10px;">
         <!-- Header -->
@@ -101,10 +92,8 @@
                     </button>
                 </li>
             </ul>
-
             <!-- Tabs Content -->
             <div id="reportTabsContent">
-
                 <!-- Sales Report Tab -->
                 <div class="tab-pane block" id="sales" role="tabpanel">
                     <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-8 rounded-lg mb-6">
@@ -112,13 +101,11 @@
                             <i class="fas fa-chart-line mr-2"></i>Sales Report
                         </h3>
                     </div>
-
                     <!-- Report Filters -->
                     <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
                         <h5 class="text-lg font-semibold mb-4 text-gray-800">
                             <i class="fas fa-filter mr-2 text-gray-600"></i>Filter by Date Range
                         </h5>
-
                         <div class="mb-4">
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Quick Select</label>
                             <div class="flex flex-wrap gap-2">
@@ -133,7 +120,6 @@
                                     data-preset="this-week" data-report="sales">
                                     This Week
                                 </button>
-
                                 <button
                                     class="preset-btn px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                     data-preset="this-month" data-report="sales">
@@ -142,7 +128,6 @@
 
                             </div>
                         </div>
-
                         <!-- Custom Date Range -->
                         <div>
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Custom Date Range</label>
@@ -156,7 +141,6 @@
                                     id="sales_end">
                             </div>
                         </div>
-
                         <div class="mt-6 flex gap-3 justify-end">
                             <button
                                 class="generate-btn inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 hover:bg-blue-700 hover:shadow-lg active:scale-95"
@@ -172,26 +156,18 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Report Content Area -->
                     <div id="sales-report-content"></div>
                 </div>
-
-                <!-- Transaction Report Tab -->
                 <div class="tab-pane hidden" id="transaction" role="tabpanel">
                     <div class="bg-gradient-to-br from-purple-500 to-pink-500 text-white p-8 rounded-lg mb-6">
                         <h3 class="text-2xl font-semibold mb-2">
                             <i class="fas fa-receipt mr-2"></i>Transaction Report
                         </h3>
-
                     </div>
-
                     <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
                         <h5 class="text-lg font-semibold mb-4 text-gray-800">
                             <i class="fas fa-filter mr-2 text-gray-600"></i>Filter by Date Range
                         </h5>
-
-                        <!-- Quick Presets -->
                         <div class="mb-4">
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Quick Select</label>
                             <div class="flex flex-wrap gap-2">
@@ -200,23 +176,18 @@
                                     data-preset="today" data-report="transaction">
                                     Today
                                 </button>
-
                                 <button
                                     class="preset-btn px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                     data-preset="this-week" data-report="transaction">
                                     This Week
                                 </button>
-
                                 <button
                                     class="preset-btn px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                     data-preset="this-month" data-report="transaction">
                                     This Month
                                 </button>
-
                             </div>
                         </div>
-
-                        <!-- Custom Date Range -->
                         <div>
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Custom Date Range</label>
                             <div class="flex gap-3 items-center">
@@ -229,7 +200,6 @@
                                     id="transaction_end">
                             </div>
                         </div>
-
                         <div class="mt-6 flex gap-3 justify-end">
                             <button
                                 class="generate-btn inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 hover:bg-blue-700 hover:shadow-lg active:scale-95"
@@ -245,26 +215,18 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Report Content Area -->
                     <div id="transaction-report-content"></div>
                 </div>
-
-                <!-- Inventory Report Tab -->
                 <div class="tab-pane hidden" id="inventory" role="tabpanel">
                     <div class="bg-gradient-to-br from-red-500 to-orange-500 text-white p-8 rounded-lg mb-6">
                         <h3 class="text-2xl font-semibold mb-2">
                             <i class="fas fa-box mr-2"></i>Inventory Report
                         </h3>
                     </div>
-
-                    <!-- Report Filters -->
                     <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
-                        <!-- Report Type Selection -->
                         <h5 class="text-lg font-semibold mb-4 text-gray-800">
                             <i class="fas fa-clipboard-list mr-2 text-gray-600"></i>Select Report Type
                         </h5>
-
                         <div class="mb-6">
                             <label class="text-sm font-medium text-gray-600 mb-3 block">Choose Report</label>
                             <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -274,31 +236,26 @@
                                     <i class="fas fa-exchange-alt text-purple-600 mr-2"></i>
                                     Stock In
                                 </button>
-
                                 <button
                                     class="inventory-type-btn px-4 py-3 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors font-medium text-left"
                                     data-type="consumption">
                                     <i class="fas fa-chart-area text-indigo-600 mr-2"></i>
                                     Consumption
                                 </button>
-
                                 <button
                                     class="inventory-type-btn px-4 py-3 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors font-medium text-left"
                                     data-type="expired">
                                     <i class="fas fa-calendar-times text-red-600 mr-2"></i>
                                     Expired Ingredients
                                 </button>
-
                             </div>
                         </div>
-
                         <div id="inventory-date-section">
                             <hr class="my-6 border-gray-200">
 
                             <h5 class="text-lg font-semibold mb-4 text-gray-800">
                                 <i class="fas fa-filter mr-2 text-gray-600"></i>Filter by Date Range
                             </h5>
-
                             <div class="mb-4">
                                 <label class="text-sm font-medium text-gray-600 mb-2 block">Quick Select</label>
                                 <div class="flex flex-wrap gap-2">
@@ -307,7 +264,6 @@
                                         data-preset="today" data-report="inventory">
                                         Today
                                     </button>
-
                                     <button
                                         class="preset-btn px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                         data-preset="this-week" data-report="inventory">
@@ -321,8 +277,6 @@
                                     </button>
                                 </div>
                             </div>
-
-                            <!-- Custom Date Range -->
                             <div>
                                 <label class="text-sm font-medium text-gray-600 mb-2 block">Custom Date Range</label>
                                 <div class="flex gap-3 items-center">
@@ -336,8 +290,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Action Buttons -->
                         <div class="mt-6 flex gap-3 justify-end">
                             <button
                                 class="generate-btn inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 hover:bg-blue-700 hover:shadow-lg active:scale-95"
@@ -353,24 +305,18 @@
                             </button>
                         </div>
                     </div>
-
-                    <!-- Report Content Area -->
                     <div id="inventory-report-content"></div>
                 </div>
-
-                <!-- Menu Performance Tab -->
                 <div class="tab-pane hidden" id="menu" role="tabpanel">
                     <div class="bg-gradient-to-br from-cyan-500 to-blue-500 text-white p-8 rounded-lg mb-6">
                         <h3 class="text-2xl font-semibold mb-2">
                             <i class="fas fa-utensils mr-2"></i>Menu Performance Report
                         </h3>
                     </div>
-
                     <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
                         <h5 class="text-lg font-semibold mb-4 text-gray-800">
                             <i class="fas fa-filter mr-2 text-gray-600"></i>Filter by Date Range
                         </h5>
-
                         <div class="mb-4">
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Quick Select</label>
                             <div class="flex flex-wrap gap-2">
@@ -379,22 +325,18 @@
                                     data-preset="today" data-report="menu">
                                     Today
                                 </button>
-
                                 <button
                                     class="preset-btn px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                     data-preset="this-week" data-report="menu">
                                     This Week
                                 </button>
-
                                 <button
                                     class="preset-btn px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 transition-colors"
                                     data-preset="this-month" data-report="menu">
                                     This Month
                                 </button>
-
                             </div>
                         </div>
-
                         <div>
                             <label class="text-sm font-medium text-gray-600 mb-2 block">Custom Date Range</label>
                             <div class="flex gap-3 items-center">
@@ -407,7 +349,6 @@
                                     id="menu_end">
                             </div>
                         </div>
-
                         <div class="mt-6 flex gap-3 justify-end">
                             <button
                                 class="generate-btn inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-md text-sm font-medium transition-all duration-200 hover:bg-blue-700 hover:shadow-lg active:scale-95"
@@ -423,68 +364,54 @@
                             </button>
                         </div>
                     </div>
-
                     <div id="menu-report-content"></div>
                 </div>
-
             </div>
         </div>
     </div>
 </div>
-
 <script>
     let selectedInventoryType = null;
     const reportTypesWithDateFilter = ['stock-movement', 'consumption', 'expired'];
-
     document.addEventListener('DOMContentLoaded', function () {
         const tabLinks = document.querySelectorAll('.tab-link');
         const tabPanes = document.querySelectorAll('.tab-pane');
-
         tabLinks.forEach(link => {
             link.addEventListener('click', function () {
                 const targetTab = this.getAttribute('data-tab');
-
                 tabLinks.forEach(l => {
                     l.classList.remove('active', 'text-blue-600');
                     l.classList.add('text-gray-500');
                 });
-
                 this.classList.add('active', 'text-blue-600');
                 this.classList.remove('text-gray-500');
-
                 tabPanes.forEach(pane => {
                     pane.classList.add('hidden');
                     pane.classList.remove('block', 'tab-content-show');
                 });
-
                 const targetPane = document.getElementById(targetTab);
                 targetPane.classList.remove('hidden');
                 targetPane.classList.add('block', 'tab-content-show');
             });
         });
-
         const presetButtons = document.querySelectorAll('.preset-btn');
         presetButtons.forEach(btn => {
             btn.addEventListener('click', function () {
                 const preset = this.getAttribute('data-preset');
                 const reportType = this.getAttribute('data-report');
-
                 this.parentElement.querySelectorAll('.preset-btn').forEach(b => {
                     b.classList.remove('active');
                 });
                 this.classList.add('active');
-
                 const dates = getPresetDates(preset);
                 const startInput = document.getElementById(`${reportType}_start`);
                 const endInput = document.getElementById(`${reportType}_end`);
-
                 if (startInput && endInput) {
                     startInput.value = dates.start;
                     endInput.value = dates.end;
                 }
             });
         });
-
         const generateButtons = document.querySelectorAll('.generate-btn');
         generateButtons.forEach(btn => {
             btn.addEventListener('click', function () {
@@ -492,7 +419,6 @@
                 generateReport(reportType, this);
             });
         });
-
         const exportButtons = document.querySelectorAll('.export-btn');
         exportButtons.forEach(btn => {
             btn.addEventListener('click', function () {
@@ -500,14 +426,11 @@
                 exportToPDF(reportType, this);
             });
         });
-
         const inventoryTypeButtons = document.querySelectorAll('.inventory-type-btn');
         const dateSection = document.getElementById('inventory-date-section');
-
         if (dateSection) {
             dateSection.style.display = 'none';
         }
-
         inventoryTypeButtons.forEach(btn => {
             btn.addEventListener('click', function () {
                 inventoryTypeButtons.forEach(b => {
@@ -515,13 +438,10 @@
                     b.classList.remove('border-blue-500', 'bg-blue-50', 'border-2');
                     b.classList.add('border-gray-300', 'border');
                 });
-
                 this.classList.add('active');
                 this.classList.remove('border-gray-300', 'border');
                 this.classList.add('border-blue-500', 'bg-blue-50', 'border-2');
-
                 selectedInventoryType = this.getAttribute('data-type');
-
                 if (reportTypesWithDateFilter.includes(selectedInventoryType)) {
                     dateSection.style.display = 'block';
                 } else {
@@ -530,14 +450,10 @@
             });
         });
     });
-
-
     function getPresetDates(preset) {
         const today = new Date();
         const formatDate = (date) => date.toISOString().split('T')[0];
-
         let start, end;
-
         switch (preset) {
             case 'today':
                 start = end = today;
@@ -568,33 +484,26 @@
             default:
                 start = end = today;
         }
-
         return {
             start: formatDate(start),
             end: formatDate(end)
         };
     }
-
     function generateReport(reportType, button) {
         let startDate, endDate;
-
         if (reportType === 'inventory') {
             if (!selectedInventoryType) {
                 showAlert('error', 'Please select a report type first');
                 return;
             }
-
             const dateSection = document.getElementById('inventory-date-section');
-
             if (dateSection.style.display !== 'none') {
                 startDate = document.getElementById(`${reportType}_start`).value;
                 endDate = document.getElementById(`${reportType}_end`).value;
-
                 if (!startDate || !endDate) {
                     showAlert('error', 'Please select both start and end dates');
                     return;
                 }
-
                 if (new Date(startDate) > new Date(endDate)) {
                     showAlert('error', 'Start date cannot be after end date');
                     return;
@@ -606,22 +515,18 @@
         } else {
             startDate = document.getElementById(`${reportType}_start`).value;
             endDate = document.getElementById(`${reportType}_end`).value;
-
             if (!startDate || !endDate) {
                 showAlert('error', 'Please select both start and end dates');
                 return;
             }
-
             if (new Date(startDate) > new Date(endDate)) {
                 showAlert('error', 'Start date cannot be after end date');
                 return;
             }
         }
-
         const originalHTML = button.innerHTML;
         button.disabled = true;
         button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Generating...';
-
         fetchReportData(reportType, startDate, endDate)
             .then(data => {
                 displayReport(reportType, data, startDate, endDate);
@@ -636,7 +541,6 @@
                 console.error('Error:', error);
             });
     }
-
     async function fetchReportData(reportType, startDate, endDate) {
         const endpoints = {
             'sales': '/reports/sales',
@@ -644,29 +548,23 @@
             'inventory': '/reports/inventory',
             'menu': '/reports/menu'
         };
-
         const endpoint = endpoints[reportType];
-
         if (!endpoint) {
             throw new Error('Invalid report type');
         }
-
         const csrfToken = document.querySelector('meta[name="csrf-token"]');
         if (!csrfToken) {
             console.error('CSRF token not found!');
             throw new Error('CSRF token missing. Please refresh the page.');
         }
-
         try {
             let requestBody = {
                 start_date: startDate,
                 end_date: endDate
             };
-
             if (reportType === 'inventory') {
                 requestBody.report_type = selectedInventoryType;
             }
-
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
@@ -676,9 +574,7 @@
                 },
                 body: JSON.stringify(requestBody)
             });
-
             const responseText = await response.text();
-
             if (!response.ok) {
                 try {
                     const errorData = JSON.parse(responseText);
@@ -687,9 +583,7 @@
                     throw new Error(`Server error: ${response.status} - ${responseText.substring(0, 100)}`);
                 }
             }
-
             const result = JSON.parse(responseText);
-
             if (result.success) {
                 return result.data;
             } else {
@@ -699,19 +593,14 @@
             throw error;
         }
     }
-
     function displayReport(reportType, data, startDate, endDate) {
         const contentDiv = document.getElementById(`${reportType}-report-content`);
         let html = '';
-
         const shouldShowDateRange = reportType === 'inventory' ? reportTypesWithDateFilter.includes(selectedInventoryType) : true;
-
         html += `<div class="report-content bg-white border border-gray-200 rounded-lg p-6 shadow-sm">`;
-
         if (shouldShowDateRange) {
             const formattedStart = new Date(startDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             const formattedEnd = new Date(endDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
             html += `
             <div class="mb-4 pb-4 border-b border-gray-200">
                 <h4 class="text-lg font-semibold text-gray-800">Report Period</h4>
@@ -719,7 +608,6 @@
             </div>
             `;
         }
-
         switch (reportType) {
             case 'sales':
                 html += generateSalesReport(data);
@@ -734,20 +622,16 @@
                 html += generateMenuReport(data);
                 break;
         }
-
         html += '</div>';
         contentDiv.innerHTML = html;
     }
-
     function generateSalesReport(data) {
         const summary = data.summary;
         const paymentMethods = data.payment_methods;
         const dailyBreakdown = data.daily_breakdown;
         const peakDay = data.peak_day;
-
         const growthColor = summary.sales_growth >= 0 ? 'text-green-600' : 'text-red-600';
         const growthIcon = summary.sales_growth >= 0 ? '↑' : '↓';
-
         return `
         <!-- Summary Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -774,7 +658,6 @@
                 </div>
                 <div class="text-2xl font-bold mb-1">₱${summary.net_sales.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</div>
             </div>
-            
             <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
                 <div class="flex justify-between items-start mb-2">
                     <div class="text-sm font-medium opacity-90">Total Orders</div>
@@ -783,10 +666,8 @@
                 <div class="text-2xl font-bold mb-1">${summary.total_orders.toLocaleString()}</div>
             </div>
         </div>
-        
         <!-- Payment Methods & Peak Day -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-           
             <!-- E-wallet Payment Methods -->
             <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
                 <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
@@ -803,7 +684,6 @@
                         </div>
                         <span class="text-lg font-semibold text-gray-900">₱${summary.gcash_total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                     </div>
-                    
                     <div class="flex justify-between items-center border-b border-gray-100 pb-3">
                         <div class="flex items-center">
                             <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
@@ -813,14 +693,12 @@
                         </div>
                         <span class="text-lg font-semibold text-gray-900">₱${summary.maya_total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                     </div>
-                    
                     <div class="flex justify-between items-center pt-2 bg-gray-50 -mx-5 px-5 py-3 rounded-b-lg">
                         <span class="font-semibold text-gray-800">Total E-wallet</span>
                         <span class="text-xl font-bold text-blue-600">₱${summary.ewallet_total.toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>
                     </div>
                 </div>
             </div>
-
             <!-- Peak Day -->
             <div class="bg-gradient-to-br from-yellow-400 to-orange-500 text-white rounded-lg p-5 shadow-md">
                 <h5 class="text-lg font-semibold mb-4 flex items-center">
@@ -850,7 +728,6 @@
                 `}
             </div>
         </div>
-        
         <!-- Daily Breakdown Table -->
         <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
             <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
@@ -902,11 +779,8 @@
         </div>
     `;
     }
-
     function generateTransactionReport(data) {
         const { transaction_logs = [] } = data;
-
-        // Get unique cashiers
         const cashiers = [...new Set(transaction_logs
             .filter(t => t.cashier)
             .map(t => t.cashier.firstname + ' ' + t.cashier.lastname))];
@@ -918,7 +792,6 @@
                 <i class="fas fa-receipt mr-2 text-purple-600"></i>
                 Transaction Logs
             </h5>
-            
             ${cashiers.length > 1 ? `
             <select id="cashier-filter" class="px-4 py-2 border border-gray-300 rounded-lg text-sm" onchange="filterByCashier(this.value)">
                 <option value="all">All Cashiers</option>
@@ -926,7 +799,6 @@
             </select>
             ` : ''}
         </div>
-
         <div class="overflow-x-auto">
             <table class="w-full divide-y divide-gray-200 text-sm">
                 <thead class="bg-gray-50">
@@ -959,7 +831,6 @@
                 </tbody>
             </table>
         </div>
-
         ${transaction_logs.length > 0 ? `
             <div id="summary" class="mt-4 pt-4 border-t border-gray-200">
                 <div class="flex justify-between items-center">
@@ -969,16 +840,10 @@
             </div>
         ` : ''}
     </div>
-
-    
 `;
     }
-
-
-
     function generateInventoryReport(data) {
         const reportType = data.report_type;
-
         switch (reportType) {
             case 'stock-movement':
                 return generateStockMovementReport(data);
@@ -990,11 +855,9 @@
                 return '<div class="text-center py-8 text-gray-500">Please select a report type</div>';
         }
     }
-
     function generateStockMovementReport(data) {
         const summary = data.summary;
         const movements = data.movements;
-
         return `
 <!-- Summary Cards -->
 <div class="grid gap-4 mb-6">
@@ -1012,7 +875,6 @@
         </div>
     </div>
 </div>
-
 <!-- Stock In History -->
 <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
     <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
@@ -1042,7 +904,6 @@ ${(function () {
             </td>
         </tr>`;
                 }
-
                 const stockInOnly = movements.filter(m => m.type === 'stock_in');
 
                 if (stockInOnly.length === 0) {
@@ -1054,7 +915,6 @@ ${(function () {
             </td>
         </tr>`;
                 }
-
                 return stockInOnly.map(row => {
                     const unitDisplay = row.unit ? row.unit : 'kg'; 
                     const categoryDisplay = row.category ? row.category : 'Unknown'; 
@@ -1073,20 +933,15 @@ ${(function () {
                 }).join('');
             })()}
 </tbody>
-
         </table>
     </div>
 </div>
 `;
     }
-
-
-
     function generateExpiredItemsReport(data) {
         const summary = data.summary;
         const expiredItems = data.expired_items;
         const expiringSoon = data.expiring_soon;
-
         return `
 <!-- Summary Cards -->
 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -1098,7 +953,6 @@ ${(function () {
         <div class="text-2xl font-bold mb-1">${summary.expired_count.toLocaleString()}</div>
         <div class="text-xs opacity-75 mt-1">Total ingredients expired</div>
     </div>
-
     <div class="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-5 rounded-lg shadow-md">
         <div class="flex justify-between items-start mb-2">
             <div class="text-sm font-medium opacity-90">Expiring Soon</div>
@@ -1107,7 +961,6 @@ ${(function () {
         <div class="text-2xl font-bold mb-1">${summary.expiring_soon_count.toLocaleString()}</div>
         <div class="text-xs opacity-75 mt-1">Within 7 days</div>
     </div>
-
     <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-5 rounded-lg shadow-md">
         <div class="flex justify-between items-start mb-2">
             <div class="text-sm font-medium opacity-90">Total Waste</div>
@@ -1129,7 +982,6 @@ ${(function () {
         </div>
     </div>
 </div>
-
 <!-- Expiring Soon Alert -->
 ${expiringSoon.length > 0 ? `
 <div class="bg-orange-50 border-l-4 border-orange-500 p-4 mb-6">
@@ -1151,7 +1003,6 @@ ${expiringSoon.length > 0 ? `
     </div>
 </div>
 ` : ''}
-
 <!-- Expired Ingredients by Category -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
     <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
@@ -1179,7 +1030,6 @@ ${expiringSoon.length > 0 ? `
             `}
         </div>
     </div>
-
     <!-- Waste Trend -->
     <div class="bg-gradient-to-br from-red-500 to-pink-600 text-white rounded-lg p-5 shadow-md">
         <h5 class="text-lg font-semibold mb-4 flex items-center">
@@ -1202,7 +1052,6 @@ ${expiringSoon.length > 0 ? `
         </div>
     </div>
 </div>
-
 <!-- Expired Ingredients Table -->
 <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
     <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
@@ -1251,7 +1100,6 @@ ${expiringSoon.length > 0 ? `
 
         return `
 <!-- Summary Cards -->
-
 <!-- Top Consumed Ingredients -->
 <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm mb-6">
     <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
@@ -1279,7 +1127,6 @@ ${expiringSoon.length > 0 ? `
         `).join('')}
     </div>
 </div>
-
 <!-- Consumption Log -->
 <div class="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
     <h5 class="text-lg font-semibold mb-4 text-gray-800 flex items-center">
@@ -1310,7 +1157,6 @@ ${expiringSoon.length > 0 ? `
                     </td>
                 </tr>`;
                 }
-
                 return movements.map(row => {
                     let badgeClass = '';
                     let statusLabel = '';
@@ -1357,7 +1203,6 @@ ${expiringSoon.length > 0 ? `
 </div>
 `;
     }
-
     function generateMenuReport(data) {
         const summary = data.summary;
         const menuItems = data.menu_items;
@@ -1506,7 +1351,6 @@ ${expiringSoon.length > 0 ? `
         if (reportType === 'Sales Report') {
             url = `/reports/sales/pdf?start_date=${startDate}&end_date=${endDate}`;
         } else if (reportType === 'Transaction Report') {
-            // Get selected cashier from the filter dropdown
             const cashierFilter = document.getElementById('cashier-filter');
             const selectedCashier = cashierFilter ? cashierFilter.value : 'all';
 

@@ -1,15 +1,11 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
-
 <div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
-
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">Menu Management</h1>
         </nav>
         <div class="container-fluid">
-
-
             <div class="mb-3">
                 <a href="{{ route('admin.menu_management') }}"
                     class="btn btn-sm {{ !request()->has('show_deleted') ? 'btn-primary' : 'btn-outline-primary' }}">
@@ -20,8 +16,6 @@
                     Deleted Items
                 </a>
             </div>
-
-
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">
@@ -41,7 +35,6 @@
                             <button class="btn btn-sm btn-info" data-toggle="modal" data-target="#menuIngredientsModal">
                                 Menu Servings
                             </button>
-
                             <button class="btn btn-sm btn-secondary" data-toggle="modal"
                                 data-target="#quantityPerPlateModal">
                                 Qty.Per Plate
@@ -49,7 +42,6 @@
                         </div>
                     @endif
                 </div>
-
                 <div class="card-body">
                     <table class="table table-bordered table-sm text-start">
                         <thead class="thead-light">
@@ -121,7 +113,6 @@
                     </table>
                 </div>
             </div>
-
             <div class="modal fade" id="addCategoryModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -156,7 +147,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="updateCategoryModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -181,7 +171,6 @@
                                         @foreach($allCategories as $category)
                                             <option value="{{ $category->id }}" data-status="{{ $category->is_active }}">
                                                 {{ $category->name }}
-
                                             </option>
                                         @endforeach
                                     </select>
@@ -189,7 +178,6 @@
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
-
                                 <div class="form-group">
                                     <label>Status <span class="text-danger">*</span></label>
                                     <select name="is_active" id="is_active" class="form-control" required>
@@ -200,7 +188,6 @@
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
-
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-info">
@@ -212,7 +199,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="addMenuModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -240,7 +226,6 @@
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
-
                                 <div class="form-group">
                                     <label for="category">Category <span class="text-danger">*</span></label>
                                     <select name="category_id" id="category_id" class="form-control" required>
@@ -259,7 +244,6 @@
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
-
                                 <div class="form-group">
                                     <label for="image">Menu Item Image <span class="text-danger">*</span></label>
                                     <input type="file" name="image" id="image" class="form-control-file" required
@@ -272,7 +256,6 @@
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
-
                                 <div class="form-group">
                                     <label for="regular_price">Regular Price <span class="text-danger">*</span></label>
                                     <input type="number" name="regular_price" id="regular_price" class="form-control"
@@ -285,7 +268,6 @@
                                         <small class="text-danger">{{ $message }}</small>
                                     @enderror
                                 </div>
-
                                 <div class="form-group">
                                     <label>Customer Discount Available <span class="text-danger">*</span></label>
                                     <select name="has_customer_discount" id="has_customer_discount" class="form-control"
@@ -296,7 +278,6 @@
                                         </option>
                                     </select>
                                 </div>
-
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-success">
@@ -308,7 +289,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="postMenuCreationModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog modal-dialog-centered" role="document">
                     <div class="modal-content border-success">
@@ -324,7 +304,6 @@
                             <h6 class="font-weight-bold mb-3">
                                 "<span id="newMenuName"></span>" has been added to the menu.
                             </h6>
-
                         </div>
                         <div class="modal-footer justify-content-center">
                             <button type="button" class="btn btn-success" id="configureIngredientsBtn">
@@ -337,7 +316,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="menuIngredientsModal" data-backdrop="static" data-keyboard="false"
                 aria-labelledby="menuIngredientsLabel" aria-hidden="true">
                 <div class="modal-dialog modal-lg" role="document">
@@ -360,7 +338,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Quantity Per Plate Modal -->
             <div class="modal fade" id="quantityPerPlateModal" data-backdrop="static" data-keyboard="false"
                 aria-labelledby="quantityPerPlateLabel" aria-hidden="true">
@@ -430,7 +407,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Add Ingredient Modal -->
             <div class="modal fade" id="addIngredientModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
@@ -468,7 +444,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="deleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -483,7 +458,6 @@
                         <div class="modal-body">
                             <p>Are you sure you want to delete <strong><span id="deleteItemName"></span></strong> from
                                 the list?</p>
-
                         </div>
                         <div class="modal-footer bg-light">
                             <form id="deleteForm" method="POST">
@@ -498,7 +472,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="restoreConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -526,7 +499,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="forceDeleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content border-danger">
@@ -558,7 +530,6 @@
                     </div>
                 </div>
             </div>
-
             @foreach ($menu as $item)
                 @if(!$item->deleted_at)
                     <div class="modal fade" id="editMenuModal{{ $item->id }}" data-backdrop="static" data-keyboard="false"
@@ -587,7 +558,6 @@
                                                     style="display: none;"></small>
                                             </div>
                                         </div>
-
                                         <div class="form-group">
                                             <label>Category <span class="text-danger">*</span></label>
                                             <select name="category_id" id="edit_category{{ $item->id }}" class="form-control"
@@ -655,7 +625,6 @@
             timeout = setTimeout(later, wait);
         };
     }
-
     function checkMenuItemAvailability(menuItem, menuId = null) {
         if (!menuItem || menuItem.trim().length < 3) return;
 

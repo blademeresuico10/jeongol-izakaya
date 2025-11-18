@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -15,75 +14,55 @@
       display: flex;
       flex-direction: column;
     }
-
     body>*:not(footer) {
       flex: 1 0 auto;
     }
-
     footer {
       flex-shrink: 0;
     }
-
     .navbar-hidden {
       transform: translateY(-100%);
     }
-
     .navbar-visible {
       transform: translateY(0);
     }
-
     .menu-card-wrapper {
       transition: transform 0.3s ease;
     }
-
-
     .menu-image {
       transition: transform 0.3s ease, filter 0.3s ease;
     }
-
-
     @media only screen and (min-width: 320px) and (max-width: 374px) {}
-
     @media only screen and (min-width: 375px) and (max-width: 389px) {
       #menuContainer {
         gap: 0.625rem;
       }
     }
-
     @media only screen and (min-width: 390px) and (max-width: 393px) {
       #menuContainer {
         gap: 0.75rem;
       }
     }
-
     @media only screen and (min-width: 414px) and (max-width: 427px) {
       #menuContainer {
         gap: 0.75rem;
       }
     }
-
     @media only screen and (min-width: 428px) and (max-width: 430px) {
       #menuContainer {
         gap: 0.875rem;
       }
     }
-
     @media only screen and (max-height: 430px) and (orientation: portrait) {
-
-
       #menu {
         padding-top: 1rem;
         padding-bottom: 1rem;
       }
     }
-
     @media (min-width: 768px) {}
-
     .menu-detail-card {
       transition: all 0.3s ease;
     }
-
-
     @media (max-width: 360px) {
       #menuContainer {
         gap: 0.5rem;
@@ -91,29 +70,19 @@
     }
   </style>
 </head>
-
 <body class="flex flex-col min-h-screen bg-black text-white">
-
-  <!-- Background -->
   <div class="absolute inset-0">
     <div class="absolute inset-0 bg-black/80"></div>
   </div>
-
   <div class="relative z-10 flex flex-col min-h-screen">
-
-    <!-- Navbar -->
     <nav id="navbar"
       class="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md transition-transform duration-300 navbar-visible">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-
-          <!-- Logo -->
           <div class="flex items-center">
             <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-10 w-10 rounded-full mr-3">
             <span class="text-xl font-bold text-white">Jeongol Izakaya</span>
           </div>
-
-          <!-- Desktop Menu -->
           <div class="hidden md:flex items-center space-x-8">
             <a href="#home" class="text-white transition font-medium">Home</a>
             <a href="#menu" class="text-white  transition font-medium">Menu</a>
@@ -121,15 +90,11 @@
             <button id="navLocation" class="text-white transition font-medium">Location</button>
             <button id="navFeedback" class="text-white transition font-medium">Feedback</button>
           </div>
-
-          <!-- Mobile Menu Button -->
           <button id="mobileMenuBtn" class="md:hidden text-white focus:outline-none">
             <i class="fas fa-bars text-2xl"></i>
           </button>
         </div>
       </div>
-
-      <!-- Mobile Menu -->
       <div id="mobileMenu" class="hidden md:hidden bg-black/95 backdrop-blur-md">
         <div class="px-4 pt-2 pb-4 space-y-3">
           <a href="#home" class="block text-white  transition py-2 font-medium">Home</a>
@@ -142,44 +107,31 @@
         </div>
       </div>
     </nav>
-
-    <!-- Header -->
     <header id="home" class="mt-16">
       <div class="w-full relative bg-cover bg-center text-white"
         style="background-image: url('{{ asset('assets/sg_bg.png') }}'); height: 250px;">
-
         <div class="absolute inset-0 bg-black/50"></div>
-
         <div class="relative z-10 flex flex-col justify-center h-full px-6 max-w-7xl mx-auto">
-
           <h1 class="text-3xl md:text-4xl font-extrabold mb-2">
             Welcome to Jeongol Izakaya
           </h1>
-
           <p class="text-lg md:text-xl text-gray-200 mb-6">
             Authentic Korean BBQ & Japanese Fusion Cuisine
           </p>
-
           <a href="{{ route('customer.place_reservation') }}"
             class="w-fit px-6 py-3 bg-orange-500 rounded-lg font-bold">
             Reserve now!
           </a>
-
         </div>
       </div>
     </header>
-
     <main id="menu" class="flex-1 py-6 sm:py-8 px-3 sm:px-4 ">
       <div class="max-w-7xl mx-auto">
-
         <h2 class="text-lg sm:text-xl md:text-2xl font-bold mb-4 sm:mb-6 text-center">Our Main Course</h2>
-
         <div class="grid grid-cols-3 md:grid-cols-3 gap-2 sm:gap-3 md:gap-6 max-w-4xl mx-auto" id="menuContainer">
-
           @forelse($mainMenuItems as $item)
         <div class="menu-card-wrapper">
         <div class="bg-white/5 backdrop-blur-sm border border-white/20 overflow-hidden rounded-lg">
-
           <div class="relative w-full h-36 xs:h-40 sm:h-48 md:h-56 overflow-hidden">
           <button onclick="toggleDetails('{{ Str::slug($item->menu_item) }}-details')"
             class="w-full h-full focus:outline-none">
@@ -187,12 +139,10 @@
             class="menu-image w-full h-full object-cover">
           </button>
           </div>
-
           <div class="p-2 sm:p-3 md:p-4">
           <h3 class="text-xs sm:text-sm md:text-base font-bold text-center mb-1 sm:mb-2 line-clamp-2">
             {{ $item->menu_item }}
           </h3>
-
           <div id="{{ Str::slug($item->menu_item) }}-details"
             class="max-h-0 overflow-hidden transition-all duration-500 ease-in-out text-xs md:text-sm text-gray-300 text-center">
             <p class="pt-2 border-t border-white/10">
@@ -200,25 +150,19 @@
             </p>
           </div>
           </div>
-
         </div>
         </div>
       @empty
       @endforelse
-
         </div>
-
       </div>
     </main>
-
     <section class="py-16 px-6 bg-gradient-to-b from-black/40 to-black/60 backdrop-blur-sm">
       <div class="max-w-7xl mx-auto">
         <h2 class="text-3xl md:text-4xl font-bold text-center mb-4 text-orange-400">Menu Inclusions</h2>
         <p class="text-center text-gray-300 mb-12 text-lg">Explore our full range of premium Korean BBQ choices</p>
-
         <div
           class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-6 max-w-4xl mx-auto px-4">
-
           <div
             class="menu-detail-card bg-gradient-to-br from-orange-900/30 to-orange-600/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-orange-500/30 hover:border-orange-400/60">
             <div class="flex items-center mb-4">
@@ -249,7 +193,6 @@
                   class="fas fa-chevron-right text-orange-400 mt-1 mr-2 text-xs"></i><span>Beef Special Cut</span></li>
             </ul>
           </div>
-
           <div
             class="menu-detail-card bg-gradient-to-br from-pink-900/30 to-pink-600/20 backdrop-blur-md rounded-2xl p-4 sm:p-6 border border-pink-500/30 hover:border-pink-400/60">
             <div class="flex items-center mb-4">
@@ -424,7 +367,6 @@
         </div>
       </div>
     </section>
-
     <footer class="bg-black/90 text-white w-full fixed bottom-0 left-0">
       <div class="max-w-7xl mx-auto flex flex-row flex-wrap items-center justify-between px-3 py-5 gap-2 text-sm">
 
@@ -451,9 +393,6 @@
         </div>
       </div>
     </footer>
-
-
-
   </div>
 
   <div id="locationModal" class="fixed inset-0 hidden bg-black/70 flex items-center justify-center p-4 z-50">
@@ -493,8 +432,6 @@
     </div>
   </div>
 </body>
-
-
 <script>
   function toggleDetails(id) {
     const allDetails = document.querySelectorAll('[id$="-details"]');
@@ -503,7 +440,6 @@
         div.style.maxHeight = '0px';
       }
     });
-
     const target = document.getElementById(id);
     if (target.style.maxHeight && target.style.maxHeight !== '0px') {
       target.style.maxHeight = '0px';
@@ -511,40 +447,32 @@
       target.style.maxHeight = target.scrollHeight + 'px';
     }
   }
-
   function openModal(id) {
     const modal = document.getElementById(id);
     modal.classList.remove('hidden');
     modal.classList.add('flex');
   }
-
   function closeModal(id) {
     const modal = document.getElementById(id);
     modal.classList.add('hidden');
     modal.classList.remove('flex');
   }
-
   document.getElementById('mobileMenuBtn').addEventListener('click', () => {
     const menu = document.getElementById('mobileMenu');
     const icon = document.querySelector('#mobileMenuBtn i');
     menu.classList.toggle('hidden');
     
   });
-
-  // Location modal handlers
   document.getElementById('navLocation').addEventListener('click', () => openModal('locationModal'));
   document.getElementById('mobileLocation').addEventListener('click', () => {
     openModal('locationModal');
     document.getElementById('mobileMenu').classList.add('hidden');
   });
-
-  // Feedback modal handlers
   document.getElementById('navFeedback').addEventListener('click', () => openModal('feedbackModal'));
   document.getElementById('mobileFeedback').addEventListener('click', () => {
     openModal('feedbackModal');
     document.getElementById('mobileMenu').classList.add('hidden');
   });
-
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
       e.preventDefault();
@@ -555,18 +483,15 @@
       }
     });
   });
-
   let lastScroll = 0;
   window.addEventListener('scroll', () => {
     const navbar = document.getElementById('navbar');
     const currentScroll = window.pageYOffset;
-
     if (currentScroll <= 0) {
       navbar.classList.remove('navbar-hidden');
       navbar.classList.add('navbar-visible');
       return;
     }
-
     if (currentScroll > lastScroll && currentScroll > 100) {
       navbar.classList.remove('navbar-visible');
       navbar.classList.add('navbar-hidden');
@@ -592,5 +517,4 @@
     });
   });
 </script>
-
 </html>

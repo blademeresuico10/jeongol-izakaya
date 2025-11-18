@@ -18,18 +18,10 @@
     }" class="fixed top-4 right-4 p-4 rounded shadow-lg text-white z-50" style="display: none;">
     <span x-text="message"></span>
   </div>
-
-
-
   <div class="border-b border-gray-300 mb-6"></div>
-
   <div class="max-w-full mx-auto px-4">
     <div wire:poll.10s class="w-full">
-
-      <!-- Grid Layout for Orders -->
       <div class="grid grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-4">
-
-        {{-- Pending / Ready Orders --}}
         @forelse($this->pendingOrders as $groupKey => $orderGroup)
         @php
         $tableNumber = $orderGroup->first()->reservation->table->table_number
@@ -38,15 +30,11 @@
         $status = $orderGroup->first()->status ?? 'Pending';
         $statusColor = $status === 'Pending' ? 'bg-red-400' : 'bg-yellow-400';
         @endphp
-
         @if(in_array($status, ['Pending', 'Ready']))
         <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col h-[420px]">
-          <!-- Header -->
           <div class="p-4 {{ $statusColor }} text-white">
           <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
           </div>
-
-          <!-- Order Items -->
           <div class="p-4 space-y-3 flex-1 overflow-y-auto max-h-[280px]">
           @foreach($orderGroup as $order)
         <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
@@ -60,7 +48,6 @@
           </svg>
         </div>
         @endforeach
-
           @if($orderGroup->first()->notes)
         <div class="mt-3 bg-yellow-50 border-l-4 border-yellow-400 rounded px-3 py-2">
           <p class="text-xs font-semibold text-gray-800">
@@ -69,8 +56,6 @@
         </div>
         @endif
           </div>
-
-          <!-- Action Button -->
           <div class="p-4 pt-9">
           @if($status === 'Pending')
         <button wire:click="markAsReady({{ $orderGroup->first()->id }})"
@@ -87,9 +72,6 @@
       @endif
     @empty
     @endforelse
-
-
-        {{-- Pending Refills --}}
         @forelse($this->pendingRefills as $refill)
         @php
         $tableNumber = $refill->order->reservation->table->table_number
@@ -98,16 +80,11 @@
         $status = $refill->status ?? 'Pending';
         $statusColor = $status === 'Pending' ? 'bg-blue-400' : 'bg-blue-600';
         @endphp
-
         @if(in_array($status, ['Pending', 'Ready']))
         <div class="border rounded-lg shadow-md bg-white overflow-hidden flex flex-col">
-
-          <!-- Header -->
           <div class="p-4 {{ $statusColor }} text-white">
           <h3 class="text-xl font-bold">Table {{ $tableNumber }}</h3>
           </div>
-
-          <!-- Refill Item -->
           <div class="p-4 space-y-3 flex-1 overflow-y-auto">
           <div class="flex justify-between items-center bg-gray-50 rounded px-3 py-2">
           <span class="font-medium text-sm text-gray-800">
@@ -120,8 +97,6 @@
           </svg>
           </div>
           </div>
-
-          <!-- Action Button -->
           <div class="p-4">
           @if($status === 'Pending')
         <button wire:click="markAsReady({{ $refill->id }}, 'refill')"
@@ -134,27 +109,18 @@
         </button>
         @endif
           </div>
-
         </div>
       @endif
-
     @empty
     @endforelse
-
-        {{-- Empty State --}}
         @if($this->pendingOrders->isEmpty() && $this->pendingRefills->isEmpty())
       <div class="col-span-full text-center py-12">
         <p class="text-gray-500 text-lg">No orders at the moment</p>
       </div>
     @endif
-
       </div>
-
-
     </div>
   </div>
-
-  <!-- Success Modal -->
   @if (session()->has('success'))
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-data="{ show: true }"
     x-show="show" x-transition>
@@ -165,8 +131,6 @@
     </div>
     </div>
   @endif
-
-  <!-- Error Modal -->
   @if (session()->has('error'))
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-data="{ show: true }"
     x-show="show" x-transition>
@@ -177,5 +141,4 @@
     </div>
     </div>
   @endif
-
 </div>

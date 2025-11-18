@@ -98,7 +98,8 @@
 
                         <div class="text-center mb-6">
                             @if($user->profile_picture)
-                                <img id="currentImage" src="{{ asset('storage/' . $user->profile_picture) }}"
+                                <img id="currentImage"
+                                    src="{{ url('/file-serve/profile_pictures/' . basename($user->profile_picture)) }}"
                                     alt="Profile Picture" class="w-20 h-20 rounded-full object-cover mx-auto">
                             @else
                                 <div id="currentImage"

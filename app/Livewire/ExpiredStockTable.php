@@ -9,22 +9,17 @@ use App\Models\ingredients;
 use App\Models\ingredientBatch;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
-
 class ExpiredStockTable extends Component
 {
     use WithPagination;
-
     protected $paginationTheme = 'bootstrap';
-
     // Filters
     public $period = 'thisweek';
     public $ingredientFilter = 'all';
-
     public function mount()
     {
         $this->period = 'thisweek';
     }
-
     public function updatedPeriod()
     {
         $this->resetPage();
@@ -34,12 +29,10 @@ class ExpiredStockTable extends Component
     {
         $this->resetPage();
     }
-
     public function updatedSearchTerm()
     {
         $this->resetPage();
     }
-
     public function getExpiredStocksProperty()
     {
         [$startDate, $endDate] = $this->getDateRange();
@@ -58,16 +51,11 @@ class ExpiredStockTable extends Component
                 'ei.expired_at'
             )
             ->whereBetween('ei.expired_at', [$startDate, $endDate]);
-
-        // Apply ingredient filter
         if ($this->ingredientFilter !== 'all') {
             $query->where('i.id', $this->ingredientFilter);
         }
-
-
         return $query->orderBy('ei.expired_at', 'desc')->paginate(10);
     }
-
     private function getDateRange()
     {
         $now = Carbon::now();
@@ -78,13 +66,11 @@ class ExpiredStockTable extends Component
                 $now->copy()->endOfWeek()
             ];
         }
-        
         return [
             $now->copy()->startOfMonth(),
             $now->copy()->endOfMonth()
         ];
     }
-
     public function render()
     {
         return view('livewire.expired-stock-table', [

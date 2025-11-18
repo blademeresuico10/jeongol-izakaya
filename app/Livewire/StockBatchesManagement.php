@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Livewire;
-
 use Livewire\Component;
 use Livewire\WithPagination;
 use App\Models\ingredientBatch;
@@ -11,11 +9,9 @@ use App\Models\ingredientMovements;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-
 class StockBatchesManagement extends Component
 {
     use WithPagination;
-
     protected $paginationTheme = 'bootstrap';
 
     // Filters
@@ -33,32 +29,24 @@ class StockBatchesManagement extends Component
         'editArrivedAt' => 'required|date',
         'editExpiryDate' => 'required|date|after:today',
     ];
-
     public function mount()
     {
         $this->period = 'thisweek';
     }
-
     public function updatedPeriod()
     {
         $this->resetPage();
     }
-
     public function updatedIngredientFilter()
     {
         $this->resetPage();
     }
-
     public function getBatchesProperty()
     {
         ingredientBatch::processExpiredBatches();
-
         [$startDate, $endDate] = $this->getDateRange();
-
         $query = $this->buildBatchQuery($startDate, $endDate);
-
         $batches = $query->orderBy('ib.arrived_at', 'desc')->paginate(10);
-
         $batches->getCollection()->transform(function ($batch) {
             $batch->original_quantity = $this->getOriginalQuantity($batch->id) ?? $batch->quantity;
             return $batch;
@@ -66,7 +54,6 @@ class StockBatchesManagement extends Component
 
         return $batches;
     }
-
     private function getDateRange()
     {
         if ($this->period === 'thisweek') {
@@ -75,7 +62,6 @@ class StockBatchesManagement extends Component
                 Carbon::now()->endOfWeek()
             ];
         }
-
         return [
             Carbon::now()->subWeek()->startOfWeek(),
             Carbon::now()->subWeek()->endOfWeek()
@@ -107,10 +93,8 @@ class StockBatchesManagement extends Component
         if ($this->ingredientFilter !== 'all') {
             $query->where('ib.ingredient_id', $this->ingredientFilter);
         }
-
         return $query;
     }
-
     private function getOriginalQuantity($batchId)
     {
         return DB::table('ingredient_movements')
@@ -118,7 +102,6 @@ class StockBatchesManagement extends Component
             ->where('type', 'received')
             ->value('quantity');
     }
-
     public function editBatch($id, $batchCode, $arrivedAt, $expiryDate)
     {
         $this->editBatchId = $id;
@@ -127,7 +110,6 @@ class StockBatchesManagement extends Component
         $this->editExpiryDate = Carbon::parse($expiryDate)->format('Y-m-d');
         $this->showEditModal = true;
     }
-
     public function updateBatch()
     {
         $this->validate();
@@ -147,7 +129,6 @@ class StockBatchesManagement extends Component
             session()->flash('error', 'Failed to update batch: ' . $e->getMessage());
         }
     }
-
     public function expireBatch($id)
     {
         DB::beginTransaction();
@@ -172,7 +153,6 @@ class StockBatchesManagement extends Component
                 'expired_at' => now(),
                 'ingredient_batch_id' => $batch->id,
             ]);
-
             ingredientMovements::create([
                 'ingredient_id' => $batch->ingredient_id,
                 'ingredient_batch_id' => $batch->id,
@@ -183,7 +163,6 @@ class StockBatchesManagement extends Component
                 'stock_after' => $stockAfter,
                 'notes' => 'Manually marked as expired',
             ]);
-
             $ingredient->decrement('stocks', $expiredQty);
 
             $batch->update([
@@ -199,14 +178,12 @@ class StockBatchesManagement extends Component
             session()->flash('error', 'Failed to expire batch: ' . $e->getMessage());
         }
     }
-
     public function closeEditModal()
     {
         $this->showEditModal = false;
         $this->reset(['editBatchId', 'editBatchCode', 'editArrivedAt', 'editExpiryDate']);
         $this->resetValidation();
     }
-
     public function render()
     {
         return view('livewire.stock-batches-management', [

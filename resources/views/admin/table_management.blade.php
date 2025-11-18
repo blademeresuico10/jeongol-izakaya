@@ -41,8 +41,6 @@
                     </div>
                 </div>
             </div>
-
-
             <div class="modal fade" id="addTableModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('storeTable') }}" method="POST">
@@ -76,8 +74,6 @@
                     </form>
                 </div>
             </div>
-
-
             @foreach ($tables as $item)
                 @if(!$item->deleted_at)
                         <div class="modal fade" id="editTableModal{{ $item->id }}" tabindex="-1" data-backdrop="static"
@@ -520,7 +516,6 @@
             color: '#721c24'
         });
     @endif
-
     @if($errors->has('table_number'))
         Swal.fire({
             icon: 'error',
@@ -534,7 +529,6 @@
             color: '#721c24'
         });
     @endif
-
     @if($errors->any() && !$errors->has('table_number'))
         let errorMessages = [];
         @foreach($errors->all() as $error)
@@ -553,32 +547,26 @@
             color: '#856404'
         });
     @endif
-
     $('form[action="{{ route('storeTable') }}"]').on('submit', function (e) {
         const submitButton = $(this).find('button[type="submit"]');
         submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
     });
-
     $('#addTableModal').on('shown.bs.modal', function () {
         $('input[name="capacity"]').focus();
     });
-
     $(document).on('input', 'input[type="number"]', function () {
         if (this.name === 'table_number' || this.name === 'capacity') {
             this.value = this.value.replace(/\D/g, '');
         }
-
         if (this.value && parseInt(this.value) < 1) {
             this.value = 1;
         }
     });
-
     $(document).on('blur', 'input[name="table_number"], input[name="capacity"]', function () {
         if (this.value && !isNaN(this.value)) {
             this.value = Math.max(1, parseInt(this.value) || 1);
         }
     });
-
     $(document).on('blur', 'input[name="capacity"]', function () {
         if (this.value && parseInt(this.value) > 20) {
             Swal.fire({
@@ -594,7 +582,6 @@
             });
         }
     });
-
     $(document).on('blur', 'input[name="table_number"]', function () {
         if (this.value && parseInt(this.value) > 999) {
             Swal.fire({

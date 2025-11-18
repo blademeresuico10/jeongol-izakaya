@@ -11,35 +11,25 @@ use App\Models\walkin;
 use App\Models\RefillConfiguration;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
-
 class KitchenDashboard extends Component
 {
     public $activeTab = 'pending';
-
-
-
     public function refreshDashboard()
     {
         $this->dispatch('$refresh');
     }
-
     public function handleOrderCreated($event)
     {
         $this->dispatch('notify', type: 'info', message: 'New order received!');
     }
-
     public function handleOrderStatusUpdated($event)
     {
         $this->dispatch('notify', type: 'success', message: 'Order status updated!');
     }
-
     public function mount() {}
-
     public function getPendingOrdersProperty()
     {
         $now = now();
-
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
             ->whereIn('status', ['Pending', 'Ready'])
             ->whereNotNull('menu_id')
@@ -62,11 +52,9 @@ class KitchenDashboard extends Component
                 return ($order->reservation_id ?? 'w') . '-' . ($order->walk_in_id ?? 'r');
             });
     }
-
     public function getPendingRefillsProperty()
     {
         $now = now();
-
         return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
             ->whereIn('status', ['Pending', 'Ready'])
             ->whereHas('order', function ($query) use ($now) {
@@ -93,11 +81,9 @@ class KitchenDashboard extends Component
                 return $refill;
             });
     }
-
     public function getReadyOrdersProperty()
     {
         $now = now();
-
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
             ->where('status', 'Ready')
             ->whereNotNull('menu_id')
@@ -120,7 +106,6 @@ class KitchenDashboard extends Component
                 return ($order->reservation_id ?? 'w') . '-' . ($order->walk_in_id ?? 'r');
             });
     }
-
     public function getReadyRefillsProperty()
     {
         $now = now();
@@ -151,11 +136,9 @@ class KitchenDashboard extends Component
                 return $refill;
             });
     }
-
     public function getServedOrdersProperty()
     {
         $now = now();
-
         return orders::with(['menu', 'reservation.table', 'walkin.table'])
             ->whereIn('status', ['Served', 'Ready'])
             ->whereNotNull('menu_id')
@@ -178,11 +161,9 @@ class KitchenDashboard extends Component
                 return ($order->reservation_id ?? 'w') . '-' . ($order->walk_in_id ?? 'r');
             });
     }
-
     public function getServedRefillsProperty()
     {
         $now = now();
-
         return OrderRefill::with(['ingredient', 'order.reservation.table', 'order.walkin.table'])
             ->whereIn('status', ['Served', 'Ready'])
             ->whereHas('order', function ($query) use ($now) {
@@ -232,29 +213,19 @@ class KitchenDashboard extends Component
                 if (!$config) {
                     throw new \Exception("Refill configuration not found for {$ingredient->name}");
                 }
-
-                // Get quantity per plate and unit from config
                 $quantityPerPlate = $config->quantity_per_plate;
                 $configUnit = strtolower($config->unit);
-
-                // Calculate total quantity needed
                 $totalQuantityInConfigUnit = $quantityPerPlate * $refill->quantity;
-
-                // Convert to kilograms
                 if ($configUnit === 'g') {
                     $totalQuantityInKg = $totalQuantityInConfigUnit / 1000;
                 } else {
                     $totalQuantityInKg = $totalQuantityInConfigUnit;
                 }
-
-                // Check if enough stock available
                 if ($ingredient->stocks < $totalQuantityInKg) {
                     throw new \Exception(
                         "Insufficient stock for '{$ingredient->name}'. Required: {$totalQuantityInKg} kg, Available: {$ingredient->stocks} kg"
                     );
                 }
-
-                // Deduct from batches (oldest first, non-expired)
                 $this->deductFromBatches($ingredient->id, $totalQuantityInKg, $refill->order_id, 'refill', [
                     'refill_id' => $refill->id,
                     'refill_quantity' => $refill->quantity,
@@ -262,18 +233,13 @@ class KitchenDashboard extends Component
                     'quantity_per_plate' => $quantityPerPlate,
                     'unit' => $configUnit
                 ]);
-
                 $stockBefore = $ingredient->stocks;
                 $stockAfter = $stockBefore - $totalQuantityInKg;
-
-                // Update ingredient stock
                 DB::table('ingredients')->where('id', $ingredient->id)
                     ->update(['stocks' => $stockAfter, 'updated_at' => now()]);
 
                 $refill->update(['status' => 'Ready']);
-
                 DB::commit();
-
                 $this->dispatch('refillStatusUpdated');
                 session()->flash('success', "Refill is ready for pickup!");
             } catch (\Exception $e) {
@@ -297,19 +263,15 @@ class KitchenDashboard extends Component
                 session()->flash('error', 'Order not found!');
                 return;
             }
-
             if ($orders->isEmpty()) {
                 session()->flash('error', 'No pending orders found!');
                 return;
             }
-
             DB::beginTransaction();
             try {
                 foreach ($orders as $singleOrder) {
                     if (!$singleOrder->menu) continue;
-
                     $menuItem = $singleOrder->menu;
-
                     $menuIngredients = DB::table('menu_ingredients as mi')
                         ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
                         ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
@@ -324,18 +286,15 @@ class KitchenDashboard extends Component
                             'iu.abbreviation as stock_unit'
                         )
                         ->get();
-
                     foreach ($menuIngredients as $menuIngredient) {
                         $recipeQuantity = $menuIngredient->recipe_quantity * $singleOrder->quantity;
                         $recipeUnit = strtolower($menuIngredient->recipe_unit ?? $menuIngredient->stock_unit);
                         $stockUnit = strtolower($menuIngredient->stock_unit);
-
                         $quantityToDeduct = $this->convertUnit(
                             $recipeQuantity,
                             $recipeUnit,
                             $stockUnit
                         );
-
                         if ($menuIngredient->stocks < $quantityToDeduct) {
                             throw new \Exception(
                                 "Insufficient stock for '{$menuIngredient->ingredient_name}'. " .
@@ -343,8 +302,6 @@ class KitchenDashboard extends Component
                                     "Available: {$menuIngredient->stocks} {$stockUnit}"
                             );
                         }
-
-                        // Deduct from batches (oldest first, non-expired)
                         $this->deductFromBatches($menuIngredient->ingredient_id, $quantityToDeduct, $singleOrder->id, 'order', [
                             'menu_item' => $menuItem->menu_item,
                             'order_quantity' => $singleOrder->quantity,
@@ -352,11 +309,8 @@ class KitchenDashboard extends Component
                             'recipe_quantity' => $menuIngredient->recipe_quantity,
                             'recipe_unit' => $recipeUnit
                         ]);
-
                         $stockBefore = $menuIngredient->stocks;
                         $stockAfter = $stockBefore - $quantityToDeduct;
-
-                        // Update ingredient stock
                         DB::table('ingredients')
                             ->where('id', $menuIngredient->ingredient_id)
                             ->update([
@@ -364,12 +318,9 @@ class KitchenDashboard extends Component
                                 'updated_at' => now()
                             ]);
                     }
-
                     $singleOrder->update(['status' => 'Ready']);
                 }
-
                 DB::commit();
-
                 $this->dispatch('orderStatusUpdated');
                 session()->flash('success', $orders->count() . " order(s) ready for pickup!");
             } catch (\Exception $e) {
@@ -378,13 +329,8 @@ class KitchenDashboard extends Component
             }
         }
     }
-
-    /**
-     * Deduct quantity from ingredient batches (FIFO - oldest first)
-     */
     private function deductFromBatches($ingredientId, $quantityNeeded, $orderId, $type = 'order', $context = [])
     {
-        // Get available batches (oldest first, non-expired, with quantity > 0)
         $batches = DB::table('ingredient_batches')
             ->where('ingredient_id', $ingredientId)
             ->where('status', '!=', 'expired')
@@ -393,12 +339,11 @@ class KitchenDashboard extends Component
                 $query->whereNull('expiration_date')
                     ->orWhere('expiration_date', '>=', now());
             })
-            ->orderBy('arrived_at', 'asc') // FIFO: oldest first
+            ->orderBy('arrived_at', 'asc') 
             ->orderBy('id', 'asc')
             ->get();
 
         if ($batches->isEmpty()) {
-            // No batches available, just log a general movement without batch
             DB::table('ingredient_movements')->insert([
                 'ingredient_id' => $ingredientId,
                 'ingredient_batch_id' => null,
@@ -414,9 +359,7 @@ class KitchenDashboard extends Component
             ]);
             return;
         }
-
         $remainingQuantity = $quantityNeeded;
-
         foreach ($batches as $batch) {
             if ($remainingQuantity <= 0) break;
 
@@ -424,8 +367,6 @@ class KitchenDashboard extends Component
 
             $batchBefore = $batch->quantity;
             $batchAfter = $batchBefore - $deductFromThisBatch;
-
-            // Update batch quantity
             DB::table('ingredient_batches')
                 ->where('id', $batch->id)
                 ->update([
@@ -433,8 +374,6 @@ class KitchenDashboard extends Component
                     'status' => $batchAfter <= 0 ? 'depleted' : $batch->status,
                     'updated_at' => now()
                 ]);
-
-            // Record movement for this batch
             DB::table('ingredient_movements')->insert([
                 'ingredient_id' => $ingredientId,
                 'ingredient_batch_id' => $batch->id,
@@ -448,18 +387,12 @@ class KitchenDashboard extends Component
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
-
             $remainingQuantity -= $deductFromThisBatch;
         }
     }
-
-    /**
-     * Generate movement notes based on type
-     */
     private function generateMovementNotes($type, $context, $quantity, $batch = null)
     {
         $batchInfo = $batch ? "Batch: {$batch->batch_code}" : "No batch";
-
         if ($type === 'refill') {
             return sprintf(
                 "Refill #%d: %dx %s - Deducted %.3f kg (%.2f %s per plate) | %s",
@@ -485,40 +418,30 @@ class KitchenDashboard extends Component
             );
         }
     }
-
     private function convertUnit($quantity, $fromUnit, $toUnit)
     {
         $fromUnit = strtolower(trim($fromUnit));
         $toUnit = strtolower(trim($toUnit));
-
         if ($fromUnit === $toUnit) {
             return $quantity;
         }
-
         $pieceUnits = ['pcs', 'pieces', 'piece', 'pc'];
         if (in_array($fromUnit, $pieceUnits) && in_array($toUnit, $pieceUnits)) {
             return $quantity;
         }
-
         $weightUnits = ['kg', 'kilogram', 'kilograms', 'g', 'gram', 'grams'];
         if (in_array($fromUnit, $weightUnits) && in_array($toUnit, $weightUnits)) {
             $grams = $quantity;
-
             if (in_array($fromUnit, ['kg', 'kilogram', 'kilograms'])) {
                 $grams = $quantity * 1000;
             }
-
             if (in_array($toUnit, ['kg', 'kilogram', 'kilograms'])) {
                 return $grams / 1000;
             }
-
             return $grams;
         }
-
         return $quantity;
     }
-
-
     public function render()
     {
         return view('livewire.kitchen-dashboard');

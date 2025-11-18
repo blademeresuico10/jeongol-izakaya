@@ -1,29 +1,22 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\reservation;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\menu;
-use App\Models\Users;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Models\orders;
 use App\Models\reservationPayment;
 use App\Models\walkin;
 use App\Models\table;
 use App\Models\MenuCategory;
-
-
 class ReceptionistController extends Controller
 {
     public function home()
     {
         $currentTime = Carbon::now();
-
         $tables = table::with([
             'reservation' => function ($query) use ($currentTime) {
                 $query->where('status', 'Active')
@@ -37,23 +30,18 @@ class ReceptionistController extends Controller
             },
         ])->get()->map(function ($table) {
             $table->is_occupied = $table->reservation->isNotEmpty() || $table->walkin->isNotEmpty();
-
             $table->reservation_id = $table->reservation->first()->id ?? null;
             $table->reservation_status = $table->reservation->first()->status ?? null;
             $table->reservation_started_at = $table->reservation->first()->started_at ?? null;
             $table->reservation_ended_at = $table->reservation->first()->ended_at ?? null;
-
             $table->walkin_id = $table->walkin->first()->id ?? null;
             $table->walkin_status = $table->walkin->first()->status ?? null;
             $table->walkin_started_at = $table->walkin->first()->started_at ?? null;
             $table->walkin_ended_at = $table->walkin->first()->ended_at ?? null;
-
             return $table;
         });
-
         $reservation = reservation::whereDate('started_at', Carbon::now()->toDateString())->get();
         $walkin = walkin::whereDate('started_at', Carbon::now()->toDateString())->get();
-
         $menuItems = menu::with('category')
             ->where('status', 'Active')
             ->whereNull('deleted_at')
@@ -69,11 +57,8 @@ class ReceptionistController extends Controller
                 $processedItem->category_name = $item->category->name;
                 return $processedItem;
             });
-
         $groupedMenu = $menuItems->groupBy('category_name');
-
         $menuCategories = MenuCategory::where('is_active', 1)->get();
-
         return view('receptionist.home', compact(
             'tables',
             'menuItems',
@@ -83,21 +68,16 @@ class ReceptionistController extends Controller
             'menuCategories'
         ));
     }
-
     public function getOperatingHours(Request $request)
     {
         $date = $request->input('date');
-
         if (!$date) {
             return response()->json(['success' => false, 'message' => 'Date is required']);
         }
-
         $parsedDate = Carbon::parse($date);
-
         $specificHours = DB::table('operating_hours')
             ->where('date', $parsedDate->toDateString())
             ->first();
-
         if ($specificHours) {
             if ($specificHours->is_closed) {
                 return response()->json([
@@ -106,7 +86,6 @@ class ReceptionistController extends Controller
                     'message' => 'Restaurant is closed on this date'
                 ]);
             }
-
             return response()->json([
                 'success' => true,
                 'is_closed' => false,
@@ -114,18 +93,15 @@ class ReceptionistController extends Controller
                 'close_time' => substr($specificHours->close_time, 0, 5) 
             ]);
         }
-
         $defaultHours = DB::table('operating_hours')
             ->where('is_default', true)
             ->first();
-
         if (!$defaultHours) {
             return response()->json([
                 'success' => false,
                 'message' => 'No operating hours configured'
             ]);
         }
-
         if ($defaultHours->is_closed) {
             return response()->json([
                 'success' => true,
@@ -133,7 +109,6 @@ class ReceptionistController extends Controller
                 'message' => 'Restaurant is closed'
             ]);
         }
-
         return response()->json([
             'success' => true,
             'is_closed' => false,
@@ -145,7 +120,6 @@ class ReceptionistController extends Controller
     {
         $data = $request->json()->all();
         $data['orders'] = $request->input('orders');
-
         try {
             $validated = validator($data, [
                 'table_id'           => 'required|exists:tables,id',
@@ -160,16 +134,12 @@ class ReceptionistController extends Controller
                 'orders.*.quantity'  => 'required|integer|min:1',
                 'orders.*.notes'     => 'nullable|string',
             ])->validate();
-
             $userId = Auth::id();
             $reservedDateTime = Carbon::parse($validated['reserved_date'] . ' ' . $validated['arrival_time']);
             $endDateTime = $reservedDateTime->copy()->addHours(2);
-
             if ($reservedDateTime->toDateString() < now()->toDateString()) {
                 return response()->json(['success' => false, 'message' => 'Cannot reserve on a past day.']);
             }
-
-            // Check operating hours
             $specificHours = DB::table('operating_hours')
                 ->where('date', $reservedDateTime->toDateString())
                 ->first();
@@ -181,35 +151,27 @@ class ReceptionistController extends Controller
             if (!$operatingHours) {
                 return response()->json(['success' => false, 'message' => 'Operating hours not configured.']);
             }
-
             if ($operatingHours->is_closed) {
                 return response()->json(['success' => false, 'message' => 'Restaurant is closed on this date.']);
             }
-
             $openTime = Carbon::parse($reservedDateTime->toDateString() . ' ' . $operatingHours->open_time);
             $closeTime = Carbon::parse($reservedDateTime->toDateString() . ' ' . $operatingHours->close_time);
-
-            // Check if reservation time is within operating hours
             if ($reservedDateTime->lt($openTime) || $reservedDateTime->gte($closeTime)) {
                 return response()->json([
                     'success' => false,
                     'message' => "Reservation time must be between {$operatingHours->open_time} and {$operatingHours->close_time}."
                 ]);
             }
-
-            // Check if end time exceeds closing time
             if ($endDateTime->gt($closeTime)) {
                 return response()->json([
                     'success' => false,
                     'message' => "Reservation would extend beyond closing time ({$operatingHours->close_time})."
                 ]);
             }
-
             $customer = DB::table('customers')
                 ->where('name', $validated['customer_name'])
                 ->where('contact_number', $validated['contact_number'] ?? '')
                 ->first();
-
             if (!$customer) {
                 $customerId = DB::table('customers')->insertGetId([
                     'name'           => $validated['customer_name'],
@@ -220,7 +182,6 @@ class ReceptionistController extends Controller
             } else {
                 $customerId = $customer->id;
             }
-
             $reservationConflict = DB::table('reservations')
                 ->where('table_id', $validated['table_id'])
                 ->whereIn('status', ['Active', 'Pending'])
@@ -229,7 +190,6 @@ class ReceptionistController extends Controller
                         ->where('ended_at', '>', $reservedDateTime);
                 })
                 ->exists();
-
             $walkinConflict = DB::table('walk_ins')
                 ->where('table_id', $validated['table_id'])
                 ->where('status', 'Active')
@@ -242,7 +202,6 @@ class ReceptionistController extends Controller
             if ($reservationConflict || $walkinConflict) {
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
-
             $reservation = Reservation::create([
                 'pax'         => $validated['pax'],
                 'started_at'  => $reservedDateTime,
@@ -252,7 +211,6 @@ class ReceptionistController extends Controller
                 'user_id'     => $userId,
                 'status'      => 'Active',
             ]);
-
             reservationPayment::create([
                 'reservation_id'    => $reservation->id,
                 'registered_name'   => null,
@@ -262,11 +220,9 @@ class ReceptionistController extends Controller
                 'payment_proof'     => null,
                 'ewallet_id'        => null,
             ]);
-
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if (!$menu) continue;
-
                 orders::create([
                     'reservation_id' => $reservation->id,
                     'menu_id'        => $menu->id,
@@ -276,7 +232,6 @@ class ReceptionistController extends Controller
                     'status'         => 'Pending',
                 ]);
             }
-
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
             return response()->json([
@@ -286,12 +241,10 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
     public function storeWalkin(Request $request)
     {
         $data = $request->json()->all();
         $data['orders'] = $request->input('orders');
-
         try {
             $validated = validator($data, [
                 'table_id'           => 'required|exists:tables,id',
@@ -304,13 +257,10 @@ class ReceptionistController extends Controller
                 'orders.*.quantity'  => 'required|integer|min:1',
                 'orders.*.notes'     => 'nullable|string',
             ])->validate();
-
             $userId = Auth::id();
-
             $customer = DB::table('customers')
                 ->where('name', $validated['customer_name'])
                 ->first();
-
             if (!$customer) {
                 $customerId = DB::table('customers')->insertGetId([
                     'name' => $validated['customer_name'],
@@ -318,10 +268,8 @@ class ReceptionistController extends Controller
             } else {
                 $customerId = $customer->id;
             }
-
             $arrivalDateTime = Carbon::parse(Carbon::now()->toDateString() . ' ' . $validated['started_at']);
             $endDateTime = $arrivalDateTime->copy()->addHours(2);
-
             $walkinConflict = DB::table('walk_ins')
                 ->where('table_id', $validated['table_id'])
                 ->where('status', 'Active')
@@ -330,7 +278,6 @@ class ReceptionistController extends Controller
                         ->where('ended_at', '>', $arrivalDateTime);
                 })
                 ->exists();
-
             $reservationConflict = DB::table('reservations')
                 ->where('table_id', $validated['table_id'])
                 ->whereIn('status', ['Active', 'Pending'])
@@ -343,7 +290,6 @@ class ReceptionistController extends Controller
             if ($walkinConflict || $reservationConflict) {
                 return response()->json(['success' => false, 'message' => 'Time slot already taken.']);
             }
-
             $walkin = walkin::create([
                 'pax'         => $validated['pax'],
                 'started_at'  => $arrivalDateTime,
@@ -353,11 +299,9 @@ class ReceptionistController extends Controller
                 'user_id'     => $userId,
                 'status'      => 'Active',
             ]);
-
             foreach ($validated['orders'] ?? [] as $order) {
                 $menu = DB::table('menu')->find($order['menu_id']);
                 if (!$menu) continue;
-
                 orders::create([
                     'walk_in_id'     => $walkin->id,
                     'menu_id'        => $menu->id,
@@ -367,7 +311,6 @@ class ReceptionistController extends Controller
                     'status'         => 'Pending',
                 ]);
             }
-
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
             return response()->json([
@@ -377,11 +320,9 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
     public function bookings(Request $request)
     {
         $targetDate = Carbon::today('Asia/Manila')->toDateString();
-
         $reservations = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('orders', 'reservations.id', '=', 'orders.reservation_id')
@@ -403,29 +344,22 @@ class ReceptionistController extends Controller
             ->whereDate('reservations.started_at', $targetDate)
             ->orderByDesc('reservations.started_at')
             ->get();
-
         $completedTransactionReservationIds = DB::table('transactions')
             ->whereIn('reservation_id', $reservations->pluck('reservation_id'))
             ->pluck('reservation_id')
             ->unique();
-
         $servedTransactions = collect($completedTransactionReservationIds);
-
         return view('receptionist.view_bookings', [
             'combined' => $reservations,
             'servedTransactions' => $servedTransactions,
         ]);
     }
-
-
     public function modifyOrders()
     {
         $now = Carbon::now('Asia/Manila');
         $targetDate = $now->toDateString();
         $currentTime = $now->format('H:i:s');
-
         $menuItems = DB::table('menu')->select('menu_item', 'regular_price as price')->get();
-
         $validWalkIns = DB::table('walk_ins')
             ->leftJoin('transactions', 'transactions.walk_in_id', '=', 'walk_ins.id')
             ->whereDate('walk_ins.started_at', $targetDate)
@@ -437,7 +371,6 @@ class ReceptionistController extends Controller
                     ->orWhere('transactions.status', '!=', 'Completed');
             })
             ->pluck('walk_ins.id');
-
         $validReservations = DB::table('reservations')
             ->leftJoin('transactions', 'transactions.reservation_id', '=', 'reservations.id')
             ->whereDate('reservations.started_at', $targetDate)
@@ -449,7 +382,6 @@ class ReceptionistController extends Controller
                     ->orWhere('transactions.status', '!=', 'Completed');
             })
             ->pluck('reservations.id');
-
         $reservationOrders = DB::table('reservations')
             ->join('customers', 'reservations.customer_id', '=', 'customers.id')
             ->leftJoin('orders', function ($join) {
@@ -479,7 +411,6 @@ class ReceptionistController extends Controller
                 'transactions.status as transaction_status'
             )
             ->whereIn('reservations.id', $validReservations);
-
         $walkinOrders = DB::table('walk_ins')
             ->join('customers', 'walk_ins.customer_id', '=', 'customers.id')
             ->leftJoin('orders', function ($join) {
@@ -509,9 +440,7 @@ class ReceptionistController extends Controller
                 'transactions.status as transaction_status'
             )
             ->whereIn('walk_ins.id', $validWalkIns);
-
         $combinedOrders = $reservationOrders->unionAll($walkinOrders)->get();
-
         $groupedOrders = $combinedOrders
             ->groupBy(fn($item) => $item->source . '_' . $item->record_id)
             ->map(function ($orders) {
@@ -524,7 +453,6 @@ class ReceptionistController extends Controller
                 $ordersWithQty = collect($orderData)
                     ->map(fn($o) => "{$o['menu_item']} x {$o['quantity']}")
                     ->implode(', ');
-
                 return (object)[
                     'source' => $orders->first()->source,
                     'record_id' => $orders->first()->record_id,
@@ -541,8 +469,6 @@ class ReceptionistController extends Controller
 
         return view('receptionist.modify_orders', compact('groupedOrders', 'menuItems'));
     }
-
-
     public function updateOrder(Request $request)
     {
         $request->validate([
@@ -552,13 +478,10 @@ class ReceptionistController extends Controller
             'orders' => 'nullable|json',
             'note' => 'nullable|string',
         ]);
-
         DB::beginTransaction();
-
         try {
             $source = $request->source;
             $recordId = $request->record_id;
-
             if ($source === 'reservation') {
                 $record = Reservation::findOrFail($recordId);
                 $foreignKey = 'reservation_id';
@@ -566,42 +489,33 @@ class ReceptionistController extends Controller
                 $record = Walkin::findOrFail($recordId);
                 $foreignKey = 'walk_in_id';
             }
-
             if ($record->pax != $request->pax) {
                 $record->pax = $request->pax;
                 $record->save();
             }
-
             $existingOrders = orders::where($foreignKey, $recordId)
                 ->where(function ($query) {
                     $query->whereNull('status')->orWhere('status', '!=', 'Cancelled');
                 })
                 ->get();
-
             $existingOrdersMap = $existingOrders->keyBy('menu_id');
-
             $newOrders = json_decode($request->orders, true) ?: [];
             $newOrdersMap = collect($newOrders)->keyBy(function ($item) {
                 $menu = menu::where('menu_item', $item['menu_name'])->first();
                 return $menu ? $menu->id : null;
             })->filter(fn($item, $key) => $key !== null);
-
             $currentTime = now();
             $changes = [];
-
             foreach ($newOrdersMap as $menuId => $newOrder) {
                 $menu = menu::find($menuId);
                 if (!$menu) continue;
-
                 $newQuantity = (int) $newOrder['quantity'];
                 $unitPrice = $menu->regular_price;
                 $newPrice = round($unitPrice * $newQuantity, 2);
                 $newNotes = $request->note;
-
                 if ($existingOrdersMap->has($menuId)) {
                     $existingOrder = $existingOrdersMap->get($menuId);
                     $quantityDiff = $newQuantity - $existingOrder->quantity;
-
                     if ($quantityDiff != 0) {
                         $changeType = $quantityDiff > 0 ? 'addition' : 'reduction';
                         $changes[] = [
@@ -611,7 +525,6 @@ class ReceptionistController extends Controller
                             'timestamp' => $currentTime->toISOString()
                         ];
                     }
-
                     $updateData = [];
                     if ($existingOrder->quantity != $newQuantity) {
                         $updateData['quantity'] = $newQuantity;
@@ -624,7 +537,6 @@ class ReceptionistController extends Controller
                         $updateData['updated_at'] = $currentTime;
                         $existingOrder->update($updateData);
                     }
-
                     $existingOrdersMap->forget($menuId);
                 } else {
                     $changes[] = [
@@ -633,7 +545,6 @@ class ReceptionistController extends Controller
                         'quantity' => $newQuantity,
                         'timestamp' => $currentTime->toISOString()
                     ];
-
                     orders::create([
                         $foreignKey  => $recordId,
                         'menu_id'    => $menuId,
@@ -646,7 +557,6 @@ class ReceptionistController extends Controller
                     ]);
                 }
             }
-
             if ($existingOrdersMap->isNotEmpty()) {
                 foreach ($existingOrdersMap as $existingOrder) {
                     $menu = Menu::find($existingOrder->menu_id);
@@ -658,16 +568,13 @@ class ReceptionistController extends Controller
                             'timestamp' => $currentTime->toISOString()
                         ];
                     }
-
                     $existingOrder->update([
                         'status' => 'Cancelled',
                         'updated_at' => $currentTime,
                     ]);
                 }
             }
-
             DB::commit();
-
             return response()->json([
                 'success' => true,
                 'message' => ucfirst($source) . ' updated successfully.',
@@ -682,15 +589,12 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
-
     public function acceptReservation(Request $request, $id)
     {
         return DB::transaction(function () use ($request, $id) {
             $reservation = Reservation::with(['customer', 'table'])->findOrFail($id);
             $reservation->status = 'Active';
             $reservation->save();
-
             if ($reservation->user_id) {
                 $this->createNotification(
                     $reservation->user_id,
@@ -698,13 +602,10 @@ class ReceptionistController extends Controller
                     'The reservation has been accepted and confirmed.'
                 );
             }
-
             Mail::send('emails.reservation_accepted', ['reservation' => $reservation], function ($message) use ($reservation) {
                 $message->to($reservation->customer->email)
                     ->subject('Your Reservation is Confirmed at Jeongol Izakaya');
             });
-
-
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
@@ -713,21 +614,17 @@ class ReceptionistController extends Controller
                     'unread_count' => $this->getUnreadCount(),
                 ]);
             }
-
             return redirect()->back()->with('success', 'Reservation accepted successfully.');
         });
     }
-
     public function cancelReservation(Request $request, $id)
     {
         return DB::transaction(function () use ($request, $id) {
             $reservation = Reservation::with(['customer', 'table', 'payment'])->findOrFail($id);
             $reservation->status = 'Rejected';
             $reservation->save();
-
             orders::where('reservation_id', $reservation->id)
                 ->update(['status' => 'Cancelled', 'updated_at' => now()]);
-
             if ($reservation->user_id) {
                 $this->createNotification(
                     $reservation->user_id,
@@ -735,15 +632,12 @@ class ReceptionistController extends Controller
                     'Your reservation has been cancelled/rejected.'
                 );
             }
-
             if ($reservation->customer && $reservation->customer->email && $reservation->started_at) {
                 Mail::send('emails.reservation_rejected', ['reservation' => $reservation], function ($message) use ($reservation) {
                     $message->to($reservation->customer->email)
                         ->subject('Your Reservation at Jeongol Izakaya Has Been Rejected');
                 });
             }
-
-
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json([
                     'success' => true,
@@ -752,11 +646,9 @@ class ReceptionistController extends Controller
                     'unread_count' => $this->getUnreadCount(),
                 ]);
             }
-
             return redirect()->back()->with('success', 'Reservation cancelled successfully.');
         });
     }
-
     public function getNotifications()
     {
         try {
@@ -785,7 +677,6 @@ class ReceptionistController extends Controller
                 ->orderBy('reservation_notifications.created_at', 'desc')
                 ->limit(50)
                 ->get();
-
             return response()->json([
                 'success' => true,
                 'notifications' => $notifications,
@@ -798,7 +689,6 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
     public function markNotificationAsRead($id)
     {
         try {
@@ -823,7 +713,6 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
     public function markAllNotificationsAsRead()
     {
         try {
@@ -834,7 +723,6 @@ class ReceptionistController extends Controller
                     'is_read' => true,
                     'updated_at' => now()
                 ]);
-
             return response()->json([
                 'success' => true,
                 'message' => "Marked {$updated} notifications as read.",
@@ -847,7 +735,6 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
     public function getUnreadCount()
     {
         try {
@@ -867,7 +754,6 @@ class ReceptionistController extends Controller
             ], 500);
         }
     }
-
     private function createNotification($userId, $reservationId, $message)
     {
         DB::table('reservation_notifications')->insert([

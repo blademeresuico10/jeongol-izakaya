@@ -17,7 +17,6 @@ use App\Models\menu;
 use App\Models\walkin;
 use App\Models\table;
 use Illuminate\Support\Facades\Http;
-
 class CustomerController extends Controller
 {
     public function index()
@@ -31,11 +30,9 @@ class CustomerController extends Controller
 
         return view('customer.index', compact('mainMenuItems'));
     }
-
     public function checkEmail(Request $request)
     {
         $email = trim($request->email);
-
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return response()->json([
                 'exists' => false,
@@ -43,7 +40,6 @@ class CustomerController extends Controller
                 'reason' => 'invalid_format'
             ]);
         }
-
         if (User::where('email', $email)->exists()) {
             return response()->json([
                 'exists' => true,
@@ -51,7 +47,6 @@ class CustomerController extends Controller
                 'reason' => 'duplicate'
             ]);
         }
-
         try {
             $apiKey = env('MAILBOXLAYER_KEY');
             $response = Http::timeout(5)->get('https://apilayer.net/api/check', [
@@ -60,14 +55,12 @@ class CustomerController extends Controller
                 'smtp' => 1,
                 'format' => 1,
             ]);
-
             if ($response->successful()) {
                 $data = $response->json();
 
                 if (isset($data['error'])) {
                     throw new \Exception('API returned error');
                 }
-
                 $isValid = ($data['format_valid'] ?? false) &&
                     ($data['mx_found'] ?? false) &&
                     ($data['smtp_check'] ?? true);
@@ -80,7 +73,6 @@ class CustomerController extends Controller
             }
         } catch (\Exception $e) {
         }
-
         $domain = substr(strrchr($email, "@"), 1);
         $validDomain = checkdnsrr($domain, 'MX');
 
@@ -90,14 +82,12 @@ class CustomerController extends Controller
             'reason' => $validDomain ? 'domain_valid' : 'domain_invalid',
         ]);
     }
-
     public function place_reservation(Request $request)
     {
         $tables = DB::table('tables')->get();
         $reservations = DB::table('reservations')
             ->whereDate('started_at', Carbon::now()->toDateString())
             ->get();
-
         $menuItems = DB::table('menu')
             ->join('menu_categories', 'menu.category_id', '=', 'menu_categories.id')
             ->select('menu.*', 'menu_categories.name as category_name')
@@ -108,13 +98,10 @@ class CustomerController extends Controller
                 $processedItem->price = $item->regular_price;
                 return $processedItem;
             });
-
         $groupedMenu = $menuItems->groupBy('category_name');
-
         $menuCategories = DB::table('menu_categories')
             ->where('is_active', 1)
             ->get();
-
         return view('customer.place_reservation', compact(
             'tables',
             'reservations',
@@ -123,47 +110,38 @@ class CustomerController extends Controller
             'menuCategories'
         ));
     }
-
     public function checkAvailability(Request $request)
     {
         $date = $request->input('date');
         $time = $request->input('time');
-
         if (!$date || !$time) {
             return response()->json(['tables' => []]);
         }
-
         $searchDateTime = \Carbon\Carbon::parse("$date $time");
         $now = \Carbon\Carbon::now();
-
         $tables = table::all();
         $availabilityData = [];
-
         foreach ($tables as $table) {
             $isCurrentlyOccupied = reservation::where('table_id', $table->id)
                 ->where('status', 'Active')
                 ->where('started_at', '<=', $now)
                 ->where('ended_at', '>=', $now)
                 ->exists();
-
             $isActiveReservation = reservation::where('table_id', $table->id)
                 ->where('status', 'Active')
                 ->where('started_at', '<=', $searchDateTime)
                 ->where('ended_at', '>=', $searchDateTime)
                 ->exists();
-
             $isPendingReservation = reservation::where('table_id', $table->id)
                 ->where('status', 'Pending')
                 ->where('started_at', '<=', $searchDateTime)
                 ->where('ended_at', '>=', $searchDateTime)
                 ->exists();
-
             $isBookedWalkin = walkin::where('table_id', $table->id)
                 ->where('status', 'active')
                 ->where('started_at', '<=', $searchDateTime)
                 ->where('ended_at', '>=', $searchDateTime)
                 ->exists();
-
             $availabilityData[] = [
                 'id' => $table->id,
                 'table_number' => $table->table_number,
@@ -174,27 +152,21 @@ class CustomerController extends Controller
                 'is_currently_occupied' => $isCurrentlyOccupied
             ];
         }
-
         return response()->json(['tables' => $availabilityData]);
     }
-
     public function checkOperatingHours(Request $request)
     {
         $date = $request->input('date');
         $time = $request->input('time');
-
         $checkDate = $date ?: Carbon::today()->format('Y-m-d');
-
         $operatingHours = DB::table('operating_hours')
             ->where('date', $checkDate)
             ->first();
-
         if (!$operatingHours) {
             $operatingHours = DB::table('operating_hours')
                 ->where('is_default', true)
                 ->first();
         }
-
         if (!$operatingHours) {
             return response()->json([
                 'is_open' => false,
@@ -203,7 +175,6 @@ class CustomerController extends Controller
                 'close_time' => 'Not Set'
             ]);
         }
-
         if ($operatingHours->is_closed) {
             return response()->json([
                 'is_open' => false,
@@ -212,7 +183,6 @@ class CustomerController extends Controller
                 'close_time' => 'Closed'
             ]);
         }
-
         $openTimeFormatted = Carbon::parse($operatingHours->open_time)->format('g:i A');
         $closeTimeFormatted = Carbon::parse($operatingHours->close_time)->format('g:i A');
 
@@ -264,26 +234,17 @@ class CustomerController extends Controller
         if (!$date) {
             return response()->json(['slots' => []]);
         }
-
         $selectedDate = Carbon::parse($date)->startOfDay();
-
-        // Disallow past days entirely
         if ($selectedDate->isPast() && !$selectedDate->isToday()) {
             return response()->json([
                 'error' => true,
                 'slots' => []
             ]);
         }
-
         $endOfDay = $selectedDate->copy()->endOfDay();
-
-        // Get current time (for filtering out past times)
         $now = Carbon::now();
-
-        // For today, only include slots ending after "now"
         $reservationQuery = reservation::whereBetween('started_at', [$selectedDate, $endOfDay])
             ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active']);
-
         $walkinQuery = walkin::whereBetween('started_at', [$selectedDate, $endOfDay])
             ->whereIn('status', ['pending', 'confirmed', 'seated', 'Active']);
 
@@ -321,8 +282,6 @@ class CustomerController extends Controller
 
         return response()->json(['slots' => $unavailableSlots]);
     }
-
-
     public function storeReservation(Request $request)
     {
         $validator = validator($request->all(), [
@@ -472,8 +431,6 @@ class CustomerController extends Controller
             }
         });
     }
-
-
     private function notifyReceptionists($reservation, $customerName)
     {
         try {
@@ -535,15 +492,11 @@ class CustomerController extends Controller
 
         return response()->json($combined);
     }
-
-
-
     public function storeFeedback(Request $request)
     {
         $validated = $request->validate([
             'message' => 'required|string|max:500',
         ]);
-
         try {
             DB::table('feedback')->insert([
                 'message' => $validated['message'],

@@ -1,13 +1,11 @@
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
-
 <div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">User Management</h1>
         </nav>
         <div class="container-fluid">
-
             <div class="mb-3">
                 <a href="{{ route('admin.users') }}"
                     class="btn btn-sm {{ !request()->has('show_deleted') ? 'btn-primary' : 'btn-outline-primary' }}">
@@ -18,7 +16,6 @@
                     Deleted Users
                 </a>
             </div>
-
             <div class="card mt-2" style="max-width: 100%;">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Users {{ request()->has('show_deleted') ? '(Deleted)' : '' }}</h5>
@@ -111,7 +108,6 @@
                     </table>
                 </div>
             </div>
-
             <div class="modal fade" id="addUserModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <form action="{{ route('storeUser') }}" method="POST" id="addUserForm"
@@ -129,7 +125,6 @@
                                     <input type="file" name="profile_picture" class="form-control" accept="image/*">
                                     <div class="invalid-feedback"></div>
                                 </div>
-
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -156,7 +151,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <div class="row mt-2">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -188,7 +182,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <div class="form-group">
                                     <label class="mt-2">Username <span class="text-danger">*</span></label>
                                     <input type="text" name="username" id="username" class="form-control" required
@@ -198,7 +191,6 @@
                                             style="display: none;"></small>
                                     </div>
                                 </div>
-
                                 <div class="form-group">
                                     <label class="mt-2">Email <span class="text-danger">*</span></label>
                                     <input type="email" name="email" id="email" class="form-control" required>
@@ -207,7 +199,6 @@
                                             style="display: none;"></small>
                                     </div>
                                 </div>
-
                                 <div class="form-group">
                                     <label class="mt-2">Address <span class="text-danger">*</span></label>
                                     <input type="text" name="address" id="address" class="form-control" required
@@ -217,7 +208,6 @@
                                             style="display: none;"></small>
                                     </div>
                                 </div>
-
                                 <div class="row mt-2">
                                     <div class="col-md-6">
                                         <div class="form-group">
@@ -253,14 +243,12 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <div class="mt-3">
                                     <div class="form-check">
                                         <input type="checkbox" name="status" value="1" checked class="form-check-input">
                                         <label class="form-check-label">Active</label>
                                     </div>
                                 </div>
-
                                 <div id="password-warning" class="alert alert-danger mt-2" style="display: none;">
                                     Passwords do not match
                                 </div>
@@ -273,7 +261,6 @@
                     </form>
                 </div>
             </div>
-
             @foreach ($users as $user)
                 @if(!$user->deleted_at)
                     <div class="modal fade" id="editUserModal{{ $user->id }}" data-backdrop="static" data-keyboard="false">
@@ -289,7 +276,6 @@
                                             data-dismiss="modal"><span>&times;</span></button>
                                     </div>
                                     <div class="modal-body">
-
                                         <div class="mb-3 text-center">
                                             @if($user->profile_picture)
                                                 <img src="{{ url('file-serve/' . $user->profile_picture) }}" alt="Profile Picture"
@@ -299,10 +285,8 @@
                                                 <span class="text-muted">No Picture</span>
                                             @endif
                                         </div>
-
                                         <label>Change Profile Picture</label>
                                         <input type="file" name="profile_picture" class="form-control mb-3" accept="image/*">
-
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <label>First Name <span class="text-danger">*</span></label>
@@ -325,7 +309,6 @@
                                                 </div>
                                             </div>
                                         </div>
-
                                         <div class="row mt-2">
                                             <div class="col-md-6">
                                                 <label>Role <span class="text-danger">*</span></label>
@@ -356,7 +339,6 @@
                                                 </div>
                                             </div>
                                         </div>
-
                                         <label class="mt-2">Username <span class="text-danger">*</span></label>
                                         <input type="text" name="username" id="edit_username{{ $user->id }}"
                                             value="{{ $user->username }}" class="form-control" required minlength="3"
@@ -365,7 +347,6 @@
                                             <small id="edit_usernameError{{ $user->id }}" class="text-danger text-sm"
                                                 style="display: none;"></small>
                                         </div>
-
                                         <label class="mt-2">Email <span class="text-danger">*</span></label>
                                         <input type="email" name="email" id="edit_email{{ $user->id }}"
                                             value="{{ $user->email }}" class="form-control" required>
@@ -373,7 +354,6 @@
                                             <small id="edit_emailError{{ $user->id }}" class="text-danger text-sm"
                                                 style="display: none;"></small>
                                         </div>
-
                                         <label class="mt-2">Address <span class="text-danger">*</span></label>
                                         <input type="text" name="address" id="edit_address{{ $user->id }}"
                                             value="{{ $user->address }}" class="form-control" required minlength="5">
@@ -381,7 +361,6 @@
                                             <small id="edit_addressError{{ $user->id }}" class="text-danger text-sm"
                                                 style="display: none;"></small>
                                         </div>
-
                                         <label class="mt-2">Update Password</label>
                                         <div class="input-group">
                                             <input type="password" name="password" id="edit_password{{ $user->id }}"
@@ -398,7 +377,6 @@
                                             <small id="edit_passwordError{{ $user->id }}" class="text-danger text-sm"
                                                 style="display: none;"></small>
                                         </div>
-
                                         <div class="mt-3">
                                             <div class="form-check">
                                                 <input type="checkbox" name="status" value="1" {{ $user->status === 'Active' ? 'checked' : '' }} class="form-check-input">
@@ -416,7 +394,6 @@
                     </div>
                 @endif
             @endforeach
-
             <div class="modal fade" id="deleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -440,7 +417,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="restoreConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content">
@@ -464,7 +440,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal fade" id="forceDeleteConfirmModal" data-backdrop="static" data-keyboard="false">
                 <div class="modal-dialog" role="document">
                     <div class="modal-content border-danger">
@@ -493,17 +468,13 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
-
 @include('admin.layouts.script')
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
     $(document).ready(function () {
-
         window.showDeleteModal = function (id, itemName) {
             try {
                 const deleteItemNameElement = document.getElementById('deleteItemName');
@@ -531,7 +502,6 @@
                 console.error('Error showing delete modal:', error);
             }
         };
-
         window.showRestoreModal = function (id, itemName) {
             try {
                 const restoreItemNameElement = document.getElementById('restoreItemName');
@@ -559,7 +529,6 @@
                 console.error('Error showing restore modal:', error);
             }
         };
-
         window.showForceDeleteModal = function (id, itemName) {
             try {
                 const forceDeleteItemNameElement = document.getElementById('forceDeleteItemName');
@@ -587,11 +556,9 @@
                 console.error('Error showing force delete modal:', error);
             }
         };
-
         function capitalizeFirstLetter(str) {
             return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
         }
-
         function capitalizeWords(str) {
             return str.split(' ').map(word => {
                 if (word.length > 0) {
@@ -600,7 +567,6 @@
                 return word;
             }).join(' ');
         }
-
         function calculatePasswordStrength(password) {
             const checks = {
                 length: password.length >= 8,
@@ -609,9 +575,7 @@
                 numbers: /\d/.test(password),
                 special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
             };
-
             const strength = Object.values(checks).filter(Boolean).length * 20;
-
             let level, color;
             if (strength >= 80) { level = 'Strong'; color = 'success'; }
             else if (strength >= 60) { level = 'Good'; color = 'warning'; }
@@ -620,17 +584,13 @@
 
             return { strength, level, color, checks };
         }
-
         function initializePasswordValidation(passwordInputId, confirmPasswordInputId = null, userId = null) {
             const passwordInput = document.getElementById(passwordInputId);
             if (!passwordInput) return;
-
             const confirmPasswordInput = confirmPasswordInputId ? document.getElementById(confirmPasswordInputId) : null;
             const containerId = `strengthContainer_${passwordInputId}`;
             const isEditMode = passwordInputId.includes('edit_password');
-
             $(`#${containerId}`).remove();
-
             const strengthContainer = $(`
     <div id="${containerId}" class="mt-2" style="display: none;">
         <div class="d-flex align-items-center mb-2">
@@ -645,13 +605,10 @@
         </div>` : ''}
     </div>
 `);
-
             const parentElement = $(passwordInput).closest('.input-group').length
                 ? $(passwordInput).closest('.input-group')
                 : $(passwordInput);
-
             parentElement.after(strengthContainer);
-
             let debouncedPasswordCheck = null;
             if (isEditMode && userId) {
                 debouncedPasswordCheck = debounce(function (password) {
@@ -677,12 +634,9 @@
                     });
                 }, 500);
             }
-
             $(passwordInput).off('input.passwordValidation');
-
             $(passwordInput).on('input.passwordValidation', function () {
                 const password = this.value;
-
                 if (password.length === 0) {
                     $(`#${containerId}`).hide();
                     if (isEditMode) {
@@ -691,31 +645,22 @@
                     $(this).removeClass('is-invalid is-valid');
                     return;
                 }
-
                 const result = calculatePasswordStrength(password);
                 $(`#${containerId}`).show();
-
                 const progressBar = $(`#strengthProgress_${passwordInputId}`);
                 progressBar.css('width', `${result.strength}%`);
-
                 progressBar.removeClass('bg-danger bg-warning bg-info bg-success');
-
                 progressBar.addClass(`bg-${result.color}`);
-
                 const strengthText = $(`#strengthText_${passwordInputId}`);
                 strengthText.text(result.level);
-
                 strengthText.removeClass('badge-danger badge-warning badge-info badge-success badge-secondary');
-
                 strengthText.addClass(`badge-${result.color}`);
-
                 $(this).removeClass('is-invalid is-valid');
                 if (result.strength < 40) {
                     $(this).addClass('is-invalid');
                 } else {
                     $(this).addClass('is-valid');
                 }
-
                 const checksHtml = [
                     ['length', 'At least 8 characters'],
                     ['uppercase', 'Uppercase letter'],
@@ -735,26 +680,20 @@
                 if (isEditMode && result.strength >= 40 && debouncedPasswordCheck) {
                     debouncedPasswordCheck(password);
                 }
-
                 if (confirmPasswordInput && confirmPasswordInput.value) {
                     validatePasswordMatch();
                 }
             });
-
             if (confirmPasswordInput) {
                 $(confirmPasswordInput).off('input.passwordMatch');
-
                 function validatePasswordMatch() {
                     const newPassword = passwordInput.value;
                     const confirmPassword = confirmPasswordInput.value;
-
                     $(confirmPasswordInput).removeClass('is-invalid is-valid');
-
                     if (!confirmPassword) {
                         confirmPasswordInput.setCustomValidity('');
                         return;
                     }
-
                     if (newPassword === confirmPassword) {
                         confirmPasswordInput.setCustomValidity('');
                         $(confirmPasswordInput).addClass('is-valid');
@@ -763,29 +702,24 @@
                         confirmPasswordInput.setCustomValidity('Passwords do not match');
                     }
                 }
-
                 $(confirmPasswordInput).on('input.passwordMatch', validatePasswordMatch);
             }
         }
-
         function initializeUserFormValidation() {
             const firstnameInput = document.getElementById('firstname');
             const firstnameError = document.getElementById('firstnameError');
-
             if (firstnameInput && firstnameError) {
                 $(firstnameInput).off('input.firstname');
                 $(firstnameInput).on('input.firstname', function () {
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
                     this.value = capitalizeWords(this.value);
                     const value = this.value.trim();
-
                     if (!value) {
                         firstnameError.textContent = '';
                         firstnameError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 2) {
                         firstnameError.textContent = 'Minimum 2 characters required';
                         firstnameError.style.display = 'block';
@@ -797,24 +731,20 @@
                     }
                 });
             }
-
             const lastnameInput = document.getElementById('lastname');
             const lastnameError = document.getElementById('lastnameError');
-
             if (lastnameInput && lastnameError) {
                 $(lastnameInput).off('input.lastname');
                 $(lastnameInput).on('input.lastname', function () {
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
                     this.value = capitalizeWords(this.value);
                     const value = this.value.trim();
-
                     if (!value) {
                         lastnameError.textContent = '';
                         lastnameError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 2) {
                         lastnameError.textContent = 'Minimum 2 characters required';
                         lastnameError.style.display = 'block';
@@ -826,15 +756,12 @@
                     }
                 });
             }
-
             const roleInput = document.getElementById('role');
             const roleError = document.getElementById('roleError');
-
             if (roleInput && roleError) {
                 $(roleInput).off('change.role');
                 $(roleInput).on('change.role', function () {
                     const value = this.value;
-
                     if (!value) {
                         roleError.textContent = 'Please select a role';
                         roleError.style.display = 'block';
@@ -846,30 +773,25 @@
                     }
                 });
             }
-
             const contactNumberInput = document.getElementById('contact_number');
             const contactNumberError = document.getElementById('contactNumberError');
-
             if (contactNumberInput && contactNumberError) {
                 $(contactNumberInput).off('input.contact');
                 $(contactNumberInput).on('input.contact', function () {
                     this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11);
                     const value = this.value.trim();
-
                     if (!value) {
                         contactNumberError.textContent = '';
                         contactNumberError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (!value.startsWith('09')) {
                         contactNumberError.textContent = 'Contact number must start with 09';
                         contactNumberError.style.display = 'block';
                         this.classList.add('is-invalid');
                         return;
                     }
-
                     if (value.length < 11) {
                         contactNumberError.textContent = 'Contact number must be 11 digits';
                         contactNumberError.style.display = 'block';
@@ -881,28 +803,22 @@
                     }
                 });
             }
-
             const usernameInput = document.getElementById('username');
             const usernameError = document.getElementById('usernameError');
-
             if (usernameInput && usernameError) {
                 $(usernameInput).off('input.username');
-
                 const debouncedUsernameCheck = debounce(function (value) {
                     checkAvailability('username', value, null, usernameError, usernameInput);
                 }, 500);
-
                 $(usernameInput).on('input.username', function () {
                     this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().replace(/\s/g, '');
                     const value = this.value.trim();
-
                     if (!value) {
                         usernameError.textContent = '';
                         usernameError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 3) {
                         usernameError.textContent = 'Minimum 3 characters required';
                         usernameError.style.display = 'block';
@@ -915,34 +831,27 @@
                     }
                 });
             }
-
             const emailInput = document.getElementById('email');
             const emailError = document.getElementById('emailError');
-
             if (emailInput && emailError) {
                 $(emailInput).off('input.email');
-
                 const debouncedEmailCheck = debounce(function (value) {
                     checkAvailability('email', value, null, emailError, emailInput);
                 }, 500);
-
                 $(emailInput).on('input.email', function () {
                     const value = this.value.trim();
-
                     if (!value) {
                         emailError.textContent = '';
                         emailError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (!value.includes('@')) {
                         emailError.textContent = 'Email must contain @';
                         emailError.style.display = 'block';
                         this.classList.add('is-invalid');
                         return;
                     }
-
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                     if (!emailRegex.test(value)) {
                         emailError.textContent = 'Enter a valid email address';
@@ -956,22 +865,18 @@
                     }
                 });
             }
-
             const addressInput = document.getElementById('address');
             const addressError = document.getElementById('addressError');
-
             if (addressInput && addressError) {
                 $(addressInput).off('input.address');
                 $(addressInput).on('input.address', function () {
                     const value = this.value.trim();
-
                     if (!value) {
                         addressError.textContent = '';
                         addressError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 5) {
                         addressError.textContent = 'Minimum 5 characters required';
                         addressError.style.display = 'block';
@@ -984,10 +889,8 @@
                 });
             }
         }
-
         function checkAvailability(field, value, userId = null, errorElement, inputElement) {
             if (!value || value.length < 3) return;
-
             $.ajax({
                 url: "{{ route('check.user.availability') }}",
                 method: 'POST',
@@ -1012,7 +915,6 @@
                 }
             });
         }
-
         function debounce(func, wait) {
             let timeout;
             return function executedFunction(...args) {
@@ -1024,25 +926,21 @@
                 timeout = setTimeout(later, wait);
             };
         }
-
         function initializeEditUserFormValidation(userId) {
             const firstnameInput = document.getElementById('edit_firstname' + userId);
             const firstnameError = document.getElementById('edit_firstnameError' + userId);
-
             if (firstnameInput && firstnameError) {
                 $(firstnameInput).off('input.firstname');
                 $(firstnameInput).on('input.firstname', function () {
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
                     this.value = capitalizeWords(this.value);
                     const value = this.value.trim();
-
                     if (!value) {
                         firstnameError.textContent = '';
                         firstnameError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 2) {
                         firstnameError.textContent = 'Minimum 2 characters required';
                         firstnameError.style.display = 'block';
@@ -1054,24 +952,20 @@
                     }
                 });
             }
-
             const lastnameInput = document.getElementById('edit_lastname' + userId);
             const lastnameError = document.getElementById('edit_lastnameError' + userId);
-
             if (lastnameInput && lastnameError) {
                 $(lastnameInput).off('input.lastname');
                 $(lastnameInput).on('input.lastname', function () {
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
                     this.value = capitalizeWords(this.value);
                     const value = this.value.trim();
-
                     if (!value) {
                         lastnameError.textContent = '';
                         lastnameError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 2) {
                         lastnameError.textContent = 'Minimum 2 characters required';
                         lastnameError.style.display = 'block';
@@ -1083,15 +977,12 @@
                     }
                 });
             }
-
             const roleInput = document.getElementById('edit_role' + userId);
             const roleError = document.getElementById('edit_roleError' + userId);
-
             if (roleInput && roleError) {
                 $(roleInput).off('change.role');
                 $(roleInput).on('change.role', function () {
                     const value = this.value;
-
                     if (!value) {
                         roleError.textContent = 'Please select a role';
                         roleError.style.display = 'block';
@@ -1103,30 +994,25 @@
                     }
                 });
             }
-
             const contactNumberInput = document.getElementById('edit_contact_number' + userId);
             const contactNumberError = document.getElementById('edit_contactNumberError' + userId);
-
             if (contactNumberInput && contactNumberError) {
                 $(contactNumberInput).off('input.contact');
                 $(contactNumberInput).on('input.contact', function () {
                     this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11);
                     const value = this.value.trim();
-
                     if (!value) {
                         contactNumberError.textContent = '';
                         contactNumberError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (!value.startsWith('09')) {
                         contactNumberError.textContent = 'Contact number must start with 09';
                         contactNumberError.style.display = 'block';
                         this.classList.add('is-invalid');
                         return;
                     }
-
                     if (value.length < 11) {
                         contactNumberError.textContent = 'Contact number must be 11 digits';
                         contactNumberError.style.display = 'block';
@@ -1138,17 +1024,13 @@
                     }
                 });
             }
-
             const usernameInput = document.getElementById('edit_username' + userId);
             const usernameError = document.getElementById('edit_usernameError' + userId);
-
             if (usernameInput && usernameError) {
                 $(usernameInput).off('input.username');
-
                 const debouncedUsernameCheck = debounce(function (value) {
                     checkAvailability('username', value, userId, usernameError, usernameInput);
                 }, 500);
-
                 $(usernameInput).on('input.username', function () {
                     this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().replace(/\s/g, '');
                     const value = this.value.trim();
@@ -1159,7 +1041,6 @@
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 3) {
                         usernameError.textContent = 'Minimum 3 characters required';
                         usernameError.style.display = 'block';
@@ -1172,34 +1053,27 @@
                     }
                 });
             }
-
             const emailInput = document.getElementById('edit_email' + userId);
             const emailError = document.getElementById('edit_emailError' + userId);
-
             if (emailInput && emailError) {
                 $(emailInput).off('input.email');
-
                 const debouncedEmailCheck = debounce(function (value) {
                     checkAvailability('email', value, userId, emailError, emailInput);
                 }, 500);
-
                 $(emailInput).on('input.email', function () {
                     const value = this.value.trim();
-
                     if (!value) {
                         emailError.textContent = '';
                         emailError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (!value.includes('@')) {
                         emailError.textContent = 'Email must contain @';
                         emailError.style.display = 'block';
                         this.classList.add('is-invalid');
                         return;
                     }
-
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                     if (!emailRegex.test(value)) {
                         emailError.textContent = 'Enter a valid email address';
@@ -1213,22 +1087,18 @@
                     }
                 });
             }
-
             const addressInput = document.getElementById('edit_address' + userId);
             const addressError = document.getElementById('edit_addressError' + userId);
-
             if (addressInput && addressError) {
                 $(addressInput).off('input.address');
                 $(addressInput).on('input.address', function () {
                     const value = this.value.trim();
-
                     if (!value) {
                         addressError.textContent = '';
                         addressError.style.display = 'none';
                         this.classList.remove('is-invalid');
                         return;
                     }
-
                     if (value.length < 5) {
                         addressError.textContent = 'Minimum 5 characters required';
                         addressError.style.display = 'block';
@@ -1241,16 +1111,12 @@
                 });
             }
         }
-
-
-
         $('[id^="editUserModal"]').on('shown.bs.modal', function () {
             const modalId = $(this).attr('id');
             const userId = modalId.replace('editUserModal', '');
             initializePasswordValidation(`edit_password${userId}`, null, userId);
             initializeEditUserFormValidation(userId);
         });
-
         $('[id^="editUserModal"]').on('hidden.bs.modal', function () {
             const modalId = $(this).attr('id');
             const userId = modalId.replace('editUserModal', '');
@@ -1258,12 +1124,9 @@
             $(`small[id^="edit_"][id$="Error${userId}"]`).hide().text('');
             $(`[id^="strengthContainer_edit_password${userId}"]`).remove();
         });
-
         $('#addUserForm').on('submit', function (e) {
             e.preventDefault();
-
             const hasInvalidFields = $(this).find('.is-invalid').length > 0;
-
             if (hasInvalidFields) {
                 Swal.fire({
                     icon: 'error',
@@ -1278,12 +1141,9 @@
                 });
                 return false;
             }
-
             const submitButton = $('#submitBtn');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding...');
-
             const formData = new FormData(this);
-
             $.ajax({
                 url: this.action,
                 method: 'POST',
@@ -1343,13 +1203,11 @@
                 }
             });
         });
-
         $('#addUserModal').on('shown.bs.modal', function () {
             initializePasswordValidation('password', 'confirm_password');
             initializeUserFormValidation();
             $('input[name="firstname"]').focus();
         });
-
         $('#addUserModal').on('hidden.bs.modal', function () {
             $('#addUserForm')[0].reset();
             $('#submitBtn').prop('disabled', false).html('Add User');
@@ -1357,7 +1215,6 @@
             $('input, select').removeClass('is-invalid is-valid');
             $('small[id$="Error"]').hide().text('');
         });
-
         @if(session('success'))
             Swal.fire({
                 icon: 'success',
@@ -1370,7 +1227,6 @@
                 color: '#155724'
             });
         @endif
-
         @if(session('error'))
             Swal.fire({
                 icon: 'error',
@@ -1384,7 +1240,6 @@
                 color: '#721c24'
             });
         @endif
-
             @if($errors->any())
                 let errorMessages = [];
                 @foreach($errors->all() as $error)
@@ -1402,21 +1257,17 @@
                     background: '#fff3cd',
                     color: '#856404'
                 });
-
                 $('#addUserModal').modal('show');
             @endif
 
         $('form[action*="updateuser"]').on('submit', function (e) {
             e.preventDefault(); 
-
             const form = $(this);
             const userId = form.attr('id').replace('editUserForm', '');
             const passwordInput = $(`#edit_password${userId}`);
             const passwordValue = passwordInput.val();
-
             const hasInvalidFields = form.find('.is-invalid').length > 0;
             const currentPasswordWarning = $(`#currentPasswordWarning_edit_password${userId}`).is(':visible');
-
             if (hasInvalidFields || currentPasswordWarning) {
                 Swal.fire({
                     icon: 'error',
@@ -1433,11 +1284,9 @@
                 });
                 return false;
             }
-
             if (passwordValue && passwordValue.trim() !== '') {
                 const submitButton = form.find('button[type="submit"]');
                 submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Checking...');
-
                 $.ajax({
                     url: "{{ route('check.current.password') }}",
                     method: 'POST',
@@ -1450,7 +1299,6 @@
                     success: function (response) {
                         if (response.is_current) {
                             submitButton.prop('disabled', false).html('Update User');
-
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Invalid Password',
@@ -1462,7 +1310,6 @@
                                 background: '#f8d7da',
                                 color: '#721c24'
                             });
-
                             $(`#currentPasswordWarning_edit_password${userId}`).show();
                             passwordInput.addClass('is-invalid');
                         } else {
@@ -1487,18 +1334,14 @@
                 });
                 return false;
             }
-
             const submitButton = form.find('button[type="submit"]');
             submitButton.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Updating...');
             form.off('submit').submit();
         });
-
     });
-
     function togglePassword(inputId, button) {
         const input = document.getElementById(inputId);
         const icon = button.querySelector('i');
-
         if (input.type === 'password') {
             input.type = 'text';
             icon.classList.remove('fa-eye');
@@ -1510,71 +1353,57 @@
         }
     }
 </script>
-
 <style>
     .form-control.is-invalid,
     .form-check-input.is-invalid {
         border-color: #dc3545;
         box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
     }
-
     .form-control.is-valid,
     .form-check-input.is-valid {
         border-color: #28a745;
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
     }
-
     .invalid-feedback {
         display: block;
         font-size: 0.875em;
         color: #dc3545;
         margin-top: 0.25rem;
     }
-
     .form-group {
         margin-bottom: 1rem;
     }
-
     .text-danger {
         color: #dc3545 !important;
     }
-
     .fas.fa-spinner.fa-spin {
         animation: fa-spin 1s infinite linear;
     }
-
     @keyframes fa-spin {
         0% {
             transform: rotate(0deg);
         }
-
         100% {
             transform: rotate(360deg);
         }
     }
-
     .modal-header.bg-success {
         background-color: #28a745 !important;
     }
-
     .modal-header.bg-primary {
         background-color: #007bff !important;
     }
-
     .modal-header.bg-danger {
         background-color: #dc3545 !important;
     }
-
     .form-control:focus {
         border-color: #80bdff;
         outline: 0;
         box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
     }
-
     .form-group label .text-danger {
         font-weight: bold;
     }
-
     .input-group {
         position: relative;
     }

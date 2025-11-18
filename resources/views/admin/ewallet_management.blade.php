@@ -1,16 +1,13 @@
 @vite('resources/css/app.css')
 @include('admin.layouts.header')
 @include('admin.layouts.sidebar')
-
 <div id="content-wrapper" class="d-flex flex-column h-screen overflow-y-auto">
     <div id="content">
-
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 shadow">
             <div class="d-sm-flex align-items-center justify-content-between">
                 <h1 class="h3 mb-0 text-gray-800">E-Wallet Management</h1>
             </div>
         </nav>
-
         <div class="flex justify-center gap-6 mt-6">
             <div class="w-2/5 border rounded-lg">
                 <div class="bg-gray-200 flex justify-between items-center text-black px-4 py-2">
@@ -20,7 +17,6 @@
                         Add
                     </button>
                 </div>
-
                 <div class="p-1">
                     <table class="w-full text-sm border border-gray-300">
                         <thead class="bg-gray-100">
@@ -65,7 +61,6 @@
                     </table>
                 </div>
             </div>
-
             <div class="w-2/5 border rounded-lg">
                 <div class="bg-gray-200 flex justify-between items-center text-black px-4 py-2">
                     <h6 class="font-semibold">Maya</h6>
@@ -74,7 +69,6 @@
                         Add
                     </button>
                 </div>
-
                 <div class="p-1">
                     <table class="w-full text-sm border border-gray-300">
                         <thead class="bg-gray-100">
@@ -93,7 +87,6 @@
                                     <td class="border px-2 py-1">
                                         <span
                                             class="px-2 py-1 rounded text-xs 
-                                                                                                                                {{ $maya->is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' }}">
                                             {{ $maya->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
@@ -112,7 +105,6 @@
                                             </form>
                                         @endif
                                     </td>
-
                                 </tr>
                             @endforeach
                         </tbody>
@@ -120,7 +112,6 @@
                 </div>
             </div>
         </div>
-
         <div class="p-4">
             <div class="overflow-y-auto border border-gray-300 rounded-lg" style="max-height: 500px;">
                 <table class="w-full text-sm text-left">
@@ -159,36 +150,29 @@
                 </table>
             </div>
         </div>
-
     </div>
 </div>
-
-
 <div id="addEwalletModal" class="hidden fixed inset-0 flex items-center justify-center z-50">
     <div class="bg-white w-full max-w-md rounded-lg shadow-lg p-6">
         <h2 class="text-lg font-semibold mb-4">Add E-Wallet</h2>
         <form action="{{ route('ewallet.store') }}" method="POST">
             @csrf
-
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700">Payment Method</label>
                 <p id="payment_method_display"
                     class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm bg-gray-100"></p>
                 <input type="hidden" id="payment_method" name="payment_method" required>
             </div>
-
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700">Wallet Registered Name</label>
                 <input type="text" name="wallet_name" required
                     class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
             </div>
-
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700">Wallet Number</label>
                 <input type="text" name="wallet_number" required
                     class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
             </div>
-
             <div class="mb-3">
                 <label class="block text-sm font-medium text-gray-700">Status</label>
                 <select name="is_active" class="mt-1 block w-full border rounded-lg px-3 py-2 text-sm">
@@ -196,7 +180,6 @@
                     <option value="0">Inactive</option>
                 </select>
             </div>
-
             <div class="flex justify-end gap-2 mt-4">
                 <button type="button" onclick="closeModal()"
                     class="px-4 py-2 text-sm bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
@@ -206,12 +189,7 @@
         </form>
     </div>
 </div>
-
-</div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
     function openModal(method) {
         const modal = document.getElementById('addEwalletModal');
@@ -220,11 +198,9 @@
         document.getElementById('payment_method').value = method;
         modal.classList.remove('hidden');
     }
-
     function closeModal() {
         document.getElementById('addEwalletModal').classList.add('hidden');
     }
-
     document.querySelectorAll(".activate-btn").forEach(button => {
         button.addEventListener("click", function () {
             let form = this.closest("form");
@@ -244,7 +220,6 @@
             });
         });
     });
-
     document.querySelectorAll(".deactivate-btn").forEach(button => {
         button.addEventListener("click", function () {
             let form = this.closest("form");
@@ -264,7 +239,6 @@
             });
         });
     });
-
     @if(session('success'))
         Swal.fire({
             icon: 'success',
@@ -275,7 +249,6 @@
             showConfirmButton: false
         });
     @endif
-
     @if(session('error'))
         Swal.fire({
             icon: 'error',
@@ -287,5 +260,4 @@
         });
     @endif
 </script>
-
 @include('admin.layouts.script')

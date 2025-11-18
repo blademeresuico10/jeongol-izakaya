@@ -8,47 +8,38 @@
         height: 100%;
         overflow: hidden;
     }
-
     #wrapper {
         height: 100vh;
     }
-
     #content-wrapper {
         height: 100vh;
         display: flex;
         flex-direction: column;
     }
-
     .topbar {
         position: sticky;
         top: 0;
         z-index: 999;
     }
-
     .container-fluid {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
         padding-bottom: 2rem;
     }
-
     .container-fluid::-webkit-scrollbar {
         width: 8px;
     }
-
     .container-fluid::-webkit-scrollbar-track {
         background: #f1f1f1;
     }
-
     .container-fluid::-webkit-scrollbar-thumb {
         background: #888;
         border-radius: 4px;
     }
-
     .ingredient-item {
         position: relative;
     }
-
     .floating-stock-alert {
         position: absolute;
         top: 50%;
@@ -61,7 +52,6 @@
         z-index: 1000;
         animation: floatIn 0.3s ease-out;
     }
-
     .floating-stock-alert::before {
         content: '';
         position: absolute;
@@ -74,47 +64,38 @@
         border-bottom: 8px solid transparent;
         border-right: 8px solid white;
     }
-
     .floating-stock-alert[data-status="critical"] {
         border-left: 4px solid #dc3545;
     }
-
     .floating-stock-alert[data-status="low"] {
         border-left: 4px solid #ffc107;
     }
-
     @keyframes floatIn {
         from {
             opacity: 0;
             right: -300px;
         }
-
         to {
             opacity: 1;
             right: -280px;
         }
     }
-
     @keyframes floatOut {
         from {
             opacity: 1;
             right: -280px;
         }
-
         to {
             opacity: 0;
             right: -300px;
         }
     }
-
     .close-alert:hover {
         color: #6b7280 !important;
     }
-
     .ingredient-item:hover .floating-stock-alert {
         box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
     }
-
     @media (max-width: 1400px) {
         .floating-stock-alert {
             right: auto;
@@ -122,20 +103,17 @@
             top: -80px;
             transform: translateX(-50%);
         }
-
         .floating-stock-alert::before {
             left: 50%;
             top: auto;
             bottom: -8px;
             transform: translateX(-50%) rotate(90deg);
         }
-
         @keyframes floatIn {
             from {
                 opacity: 0;
                 top: -100px;
             }
-
             to {
                 opacity: 1;
                 top: -80px;
@@ -148,7 +126,6 @@
         <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
             <h1 class="h3 mb-0 text-gray-800">Dashboard</h1>
         </nav>
-
         <div class="container-fluid px-4">
             <div class="row g-4 mb-4">
                 <!-- Sales Card -->
@@ -177,7 +154,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Orders Card -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100">
@@ -203,7 +179,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100 hover-lift">
                         <div class="card-body">
@@ -230,7 +205,6 @@
                         </div>
                     </div>
                 </div>
-
                 <!-- Reservations Card -->
                 <div class="col-xl-3 col-md-6">
                     <div class="card border-0 shadow-sm h-100 hover-lift">
@@ -259,7 +233,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="row g-4 mb-4">
                 <div class="col-xl-8">
                     <div class="card border-0 shadow-sm h-100">
@@ -274,7 +247,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="col-xl-4">
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-header bg-white border-0 py-3">
@@ -283,12 +255,10 @@
                                 <h5 class="card-title mb-0 fw-bold">Flagship Items</h5>
                             </div>
                         </div>
-
                         <div class="card-body overflow-auto" style="max-height: 400px;">
                             @forelse ($flagshipItems as $index => $item)
                                 <div class="d-flex align-items-center justify-content-between mb-2 p-2 rounded border"
                                     style="transition: 0.2s; border-color: #f0f0f0;">
-
                                     <div class="d-flex align-items-center">
                                         <img src="{{ asset('storage/jeongol_menu/' . $item->image) }}" class="rounded me-2"
                                             style="width: 50px; height: 50px; object-fit: cover;">
@@ -296,7 +266,6 @@
                                             <div class="fw-bold text-dark">{{ $item->menu_item }}</div>
                                         </div>
                                     </div>
-
                                     <div class="rounded-circle bg-warning text-white fw-bold d-flex align-items-center justify-content-center"
                                         style="width: 30px; height: 30px;">
                                         {{ $item->total_quantity }}
@@ -309,11 +278,9 @@
                                 </div>
                             @endforelse
                         </div>
-
                     </div>
                 </div>
             </div>
-
             <div class="row g-4 mb-4">
                 <div class="col-xl-8 col-lg-12">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
@@ -368,7 +335,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="col-xl-4 col-lg-12">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-header bg-white border-0 py-3">
@@ -381,7 +347,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="card-body" style="max-height: 500px; overflow-y: auto;">
                             @if($recentActivities->isNotEmpty())
                                 <div class="d-flex flex-column gap-2">
@@ -417,7 +382,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
@@ -429,29 +393,23 @@
         const ordersTrend = @json($ordersTrend ?? []);
         const customersTrend = @json($customersTrend ?? []);
         const reservationsTrend = @json($reservationsTrend ?? []);
-
         function prepare7DaysData(trendData) {
             const labels = [];
             const values = [];
-
             for (let i = 6; i >= 0; i--) {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
                 const dateStr = date.toISOString().split('T')[0];
                 const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
                 labels.push(label);
                 values.push(trendData[dateStr] || 0);
             }
-
             return { labels, values };
         }
-
         const salesData = prepare7DaysData(salesTrend);
         const ordersData = prepare7DaysData(ordersTrend);
         const customersData = prepare7DaysData(customersTrend);
         const reservationsData = prepare7DaysData(reservationsTrend);
-
         const miniChartConfig = {
             type: 'line',
             options: {
@@ -496,7 +454,6 @@
                 }
             }
         };
-
         new Chart(document.getElementById('salesChart'), {
             ...miniChartConfig,
             data: {
@@ -530,7 +487,6 @@
                 }
             }
         });
-
         new Chart(document.getElementById('ordersChartMini'), {
             ...miniChartConfig,
             data: {
@@ -564,7 +520,6 @@
                 }
             }
         });
-
         new Chart(document.getElementById('customersChart'), {
             ...miniChartConfig,
             data: {
@@ -598,7 +553,6 @@
                 }
             }
         });
-
         new Chart(document.getElementById('reservationsChartMini'), {
             ...miniChartConfig,
             data: {
@@ -632,7 +586,6 @@
                 }
             }
         });
-
         const months = ['January', 'February', 'March', 'April', 'May', 'June',
             'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -701,21 +654,16 @@
             }
         });
     });
-
     let shownAlerts = new Set();
-
     document.addEventListener('DOMContentLoaded', function () {
         const ingredients = document.querySelectorAll('.ingredient-item');
-
         ingredients.forEach((item, index) => {
             const status = item.getAttribute('data-ingredient-status');
             const alertElement = item.querySelector('.floating-stock-alert');
-
             if ((status === 'critical' || status === 'low') && alertElement) {
                 setTimeout(() => {
                     alertElement.style.display = 'block';
                     alertElement.setAttribute('data-status', status);
-
                     setTimeout(() => {
                         closeAlertWithAnimation(alertElement);
                     }, 8000);
@@ -723,12 +671,10 @@
             }
         });
     });
-
     function closeAlert(button) {
         const alert = button.closest('.floating-stock-alert');
         closeAlertWithAnimation(alert);
     }
-
     function closeAlertWithAnimation(alert) {
         alert.style.animation = 'floatOut 0.3s ease-in';
         setTimeout(() => {
@@ -737,5 +683,4 @@
         }, 300);
     }
 </script>
-
 @include('admin.layouts.script')

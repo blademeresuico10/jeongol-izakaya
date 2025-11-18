@@ -8,33 +8,25 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="shortcut icon" type="x-icon" href="{{ asset('logo/jeongol_logo.jpg') }}">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-
-
   @include('receptionist.components.css')
   @vite('resources/css/app.css')
-
   <style>
     #selectedOrdersContainer::-webkit-scrollbar {
       width: 6px;
     }
-
     #selectedOrdersContainer::-webkit-scrollbar-track {
       background: transparent;
     }
-
     #selectedOrdersContainer::-webkit-scrollbar-thumb {
       background: #cbd5e0;
       border-radius: 10px;
     }
-
     #selectedOrdersContainer::-webkit-scrollbar-thumb:hover {
       background: #a0aec0;
     }
-
     #selectedOrdersContainer>div {
       animation: slideInOrder 0.3s ease-out;
     }
-
     @keyframes slideInOrder {
       from {
         opacity: 0;
@@ -46,54 +38,43 @@
         transform: translateX(0);
       }
     }
-
     .order-item-card {
       transition: all 0.2s ease;
     }
-
     .order-item-card:hover {
       transform: translateX(-2px);
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
-
     @keyframes slideIn {
       from {
         opacity: 0;
         transform: translateX(20px);
       }
-
       to {
         opacity: 1;
         transform: translateX(0);
       }
     }
-
     ul::-webkit-scrollbar {
       width: 6px;
     }
-
     ul::-webkit-scrollbar-thumb {
       background-color: #a0aec0;
       border-radius: 4px;
     }
-
     ul::-webkit-scrollbar-thumb:hover {
       background-color: #718096;
     }
-
     ul {
       scrollbar-width: thin;
       scrollbar-color: #a0aec0 transparent;
     }
-
     [x-cloak] {
       display: none;
     }
-
     .spinner {
       animation: spin 0.6s linear infinite;
     }
-
     @keyframes spin {
       to {
         transform: rotate(360deg);
@@ -101,15 +82,12 @@
     }
   </style>
 </head>
-
 <body>
   <div class="relative">
-
     <div class="mt-2 border-b border-gray-200 flex items-center justify-between px-7">
       <div class="logo flex items-center ml-5">
         <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo" class="h-13 w-20" />
       </div>
-
       <div class="relative">
         <button id="userBtn" class="relative flex items-center gap-2 p-4 hover:bg-gray-100 z-50">
           <div class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
@@ -119,26 +97,22 @@
             class="absolute top-1 right-1 items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full hidden">
           </span>
         </button>
-
         <div id="userMenu" class="hidden absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
           <div class="px-4 py-3 border-b">
             <p class="text-sm font-medium">{{ Auth::user()->firstname }} {{ Auth::user()->lastname }}</p>
             <p class="text-xs text-gray-500">{{ Auth::user()->role }}</p>
           </div>
-
           <a href="javascript:void(0)" id="notifBtn" class="block px-4 py-2 hover:bg-gray-100 relative">
             Notifications
             <span id="notifBadgeLink"
               class="absolute top-1 right-1 hidden items-center justify-center px-2 py-1 text-xs font-bold text-white bg-red-600 rounded-full">
             </span>
           </a>
-
           <form method="POST" action="{{ route('logout') }}">
             @csrf
             <button type="submit" class="w-full text-left px-4 py-2 hover:bg-gray-100">Logout</button>
           </form>
         </div>
-
         <div id="notifModal"
           class="hidden fixed inset-0 flex items-start justify-end z-50 bg-black bg-opacity-20 p-4 overflow-auto">
           <div class="w-full max-w-md bg-white rounded-lg shadow-xl">
@@ -152,13 +126,11 @@
                 </button>
               </div>
             </div>
-
             <div class="max-h-[calc(100vh-200px)] overflow-y-auto">
               <ul id="notifList" class="divide-y divide-gray-100"></ul>
             </div>
           </div>
         </div>
-
         <div id="paymentModal"
           class="hidden fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 p-4">
           <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-auto relative">
@@ -195,39 +167,28 @@
         </div>
       </div>
     </div>
-
     @if(session('success'))
     <div x-data="{ show: true }" x-show="show" x-transition x-init="setTimeout(() => show = false, 3000)"
       class="fixed top-5 right-5 bg-green-500 text-white px-4 py-2 rounded-lg shadow-md max-w-sm text-center z-[1000]">
       {{ session('success') }}
     </div>
   @endif
-
     <div id="fly-animation-container" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;">
     </div>
-
     <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">@csrf</form>
-
     <livewire:table-layout />
-
     <div class="bottom-buttons">
       <a class="view-button" href="{{ route('receptionist.bookings') }}">Today's Reservation</a>
       <a class="view-button" href="{{ route('receptionist.modify_orders') }}">View Orders</a>
     </div>
-
-    <!-- Table Modal -->
     <div id="tableModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-
         <div class="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
           <h2 class="text-lg font-bold text-gray-800">Customer Info and Menu</h2>
           <button id="closeModal"
             class="text-gray-400 hover:text-gray-600 text-2xl font-light leading-none">&times;</button>
         </div>
-
         <div class="flex-1 overflow-y-auto px-4 py-3">
-
-          <!-- Customer Name -->
           <div class="mb-3">
             <label class="block text-sm font-semibold text-gray-700 mb-1">Customer</label>
             <input type="text" id="customerName" placeholder="Customer's name" required minlength="3"
@@ -235,8 +196,6 @@
               onkeypress="return /[a-zA-Z\s\-'\.]/i.test(event.key)" />
             <small id="customerNameError" class="text-red-600 text-sm hidden"></small>
           </div>
-
-          <!-- Contact Number -->
           <div class="mb-3" id="contactinput">
             <label class="block text-sm font-semibold text-gray-700 mb-1">Contact Number</label>
             <input type="text" id="contactNumber" required maxlength="11" placeholder="09xxxxxxxxx"
@@ -244,8 +203,6 @@
               onkeypress="return /[0-9]/i.test(event.key)" />
             <small id="contactNumberError" class="text-red-600 text-sm hidden"></small>
           </div>
-
-          <!-- Pax and Reservation Info -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             <div>
               <label class="block text-sm font-semibold text-gray-700 mb-1">Pax</label>
@@ -266,9 +223,7 @@
               </p>
             </div>
           </div>
-
           <hr class="my-4 border-gray-300">
-
           <!-- Menu Categories Section -->
           <div class="space-y-6">
             @foreach($menuCategories as $category)
@@ -278,9 +233,7 @@
           @endif
       @endforeach
           </div>
-
           <hr class="my-4 border-gray-300">
-
           <!-- Advance Payment -->
           <div class="mb-3 mt-3">
             <label class="block text-sm font-semibold text-gray-700 mb-1">Advance Payment</label>
@@ -288,7 +241,6 @@
               class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full text-sm"
               type="number" id="advance_payment" readonly>
           </div>
-
           <!-- View Orders Button -->
           <div class="flex justify-center mb-2 mt-4">
             <button type="button" id="viewOrdersBtn"
@@ -297,7 +249,6 @@
               <span>View Orders</span>
             </button>
           </div>
-
           <!-- Orders Notes -->
           <div class="mb-3">
             <label class="block text-sm font-semibold text-gray-700 mb-1">Orders Notes</label>
@@ -305,9 +256,7 @@
               class="border border-gray-400 focus:border-gray-700 focus:ring-1 focus:ring-gray-700 p-2 rounded w-full resize-none text-sm"
               id="customerNotes" rows="3" placeholder="Add notes"></textarea>
           </div>
-
         </div>
-
         <div class="flex-shrink-0 bg-gray-50 border-t border-gray-200 px-4 py-3">
           <div class="flex justify-end">
             <button
@@ -315,20 +264,15 @@
               id="submitBtn" type="button">Submit</button>
           </div>
         </div>
-
       </div>
     </div>
-
     <div id="default-modal"
       class="fixed inset-y-0 right-0 z-50 transform translate-x-full transition-transform duration-300 ease-in-out"
       style="width: 480px;">
-
       <div id="modalBackdrop"
         class="fixed inset-0 bg-black bg-opacity-50 -z-10 opacity-0 transition-opacity duration-300 pointer-events-none">
       </div>
-
       <div class="h-full bg-white shadow-2xl flex flex-col">
-
         <div class="flex-shrink-0 bg-gradient-to-r from-red-700 to-red-800 px-6 py-5">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -348,7 +292,6 @@
           </div>
         </div>
         <div class="flex-1 overflow-y-auto bg-gray-50">
-
           <div id="emptyState" class="flex flex-col items-center justify-center h-full px-6 py-12">
             <div class="bg-gray-100 rounded-full p-8 mb-6">
               <svg class="w-20 h-20 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,11 +301,9 @@
             </div>
             <p class="text-xl font-semibold text-gray-600 mb-2">No orders yet</p>
           </div>
-
           <div id="selectedOrdersContainer" class="p-4 space-y-3">
           </div>
         </div>
-
         <div id="orderTotal" class="flex-shrink-0 bg-white border-t-2 border-gray-200 p-4 hidden">
           <div class="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 space-y-3">
             <div class="flex items-center justify-between text-gray-700">
@@ -376,7 +317,6 @@
             </div>
           </div>
         </div>
-
         <div class="flex-shrink-0 p-4 bg-white border-t border-gray-200">
           <div class="grid grid-cols-2 gap-3">
             <button id="clearOrdersBtn" type="button"
@@ -391,11 +331,8 @@
             </button>
           </div>
         </div>
-
       </div>
     </div>
-
-    <!-- Success Modal -->
     <div id="successModal"
       class="hidden fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
       <div class="bg-white rounded-lg shadow-lg p-6 mx-4 max-w-sm w-full text-center">
@@ -411,10 +348,7 @@
       </div>
     </div>
   </div>
-
 </body>
-
-
 <script>
   class ReceptionistDashboard {
     constructor() {
@@ -423,11 +357,9 @@
       this.selectedOrders = {};
       this.reservationId = null;
       this.selectedPaymentMethod = null;
-
       this.elements = {};
       this.init();
     }
-
     init() {
       document.addEventListener('DOMContentLoaded', () => {
         this.initializeElements();
@@ -436,7 +368,6 @@
         this.initializeModalValidation();
       });
     }
-
     initializeElements() {
       this.elements = {
         userBtn: document.getElementById('userBtn'),
@@ -472,7 +403,6 @@
         tableLinks: document.querySelectorAll('.table-link')
       };
     }
-
     initializeEventListeners() {
       this.setupUserMenuEvents();
       this.setupNotificationEvents();
@@ -480,19 +410,16 @@
       this.setupFormEvents();
       this.setupTableEvents();
     }
-
     setupUserMenuEvents() {
       if (this.elements.userBtn && this.elements.userMenu) {
         this.elements.userBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           this.elements.userMenu.classList.toggle('hidden');
         });
-
         this.elements.userMenu.addEventListener('click', (e) => e.stopPropagation());
         document.addEventListener('click', () => this.elements.userMenu.classList.add('hidden'));
       }
     }
-
     setupNotificationEvents() {
       if (this.elements.notifBtn && this.elements.notifModal) {
         this.elements.notifBtn.addEventListener('click', (e) => {
@@ -500,54 +427,45 @@
           this.elements.notifModal.classList.remove('hidden');
         });
       }
-
       if (this.elements.notifClose) {
         this.elements.notifClose.addEventListener('click', () => {
           this.elements.notifModal.classList.add('hidden');
         });
       }
-
       if (this.elements.notifModal) {
         this.elements.notifModal.addEventListener('click', () => {
           this.elements.notifModal.classList.add('hidden');
         });
-
         const notifContent = this.elements.notifModal.querySelector('div');
         if (notifContent) {
           notifContent.addEventListener('click', (e) => e.stopPropagation());
         }
       }
     }
-
     setupModalEvents() {
       if (this.elements.closeModal) {
         this.elements.closeModal.onclick = () => {
           this.elements.tableModal.style.display = 'none';
         };
       }
-
       const closePaymentBtn = document.getElementById('closePaymentBtn');
       if (closePaymentBtn) {
         closePaymentBtn.addEventListener('click', () => {
           this.elements.paymentModal.classList.add('hidden');
         });
       }
-
       const successOkBtn = document.getElementById('successOkBtn');
       if (successOkBtn) {
         successOkBtn.addEventListener('click', () => this.closeSuccessModal());
       }
-
       if (this.elements.successModal) {
         this.elements.successModal.addEventListener('click', (e) => {
           if (e.target === e.currentTarget) this.closeSuccessModal();
         });
       }
-
       if (this.elements.viewOrdersBtn && this.elements.defaultModal) {
         const backdrop = document.getElementById('modalBackdrop');
         const closeOrdersPanel = document.getElementById('closeOrdersPanel');
-
         this.elements.viewOrdersBtn.addEventListener('click', () => {
           this.elements.defaultModal.classList.remove('translate-x-full');
           if (backdrop) {
@@ -556,13 +474,11 @@
           }
           document.body.style.overflow = 'hidden';
         });
-
         if (closeOrdersPanel) {
           closeOrdersPanel.addEventListener('click', () => {
             this.closeOrdersPanel();
           });
         }
-
         const confirmButtons = this.elements.defaultModal.querySelectorAll('[data-modal-hide="default-modal"]');
         confirmButtons.forEach(btn => {
           btn.addEventListener('click', () => {
@@ -570,74 +486,59 @@
           });
         });
       }
-
     }
-
     closeOrdersPanel() {
       if (this.elements.defaultModal) {
         this.elements.defaultModal.classList.add('translate-x-full');
       }
-
       const backdrop = document.getElementById('modalBackdrop');
       if (backdrop) {
         backdrop.classList.add('pointer-events-none', 'opacity-0');
         backdrop.classList.remove('opacity-100');
       }
-
       document.body.style.overflow = '';
     }
-
     setupFormEvents() {
       if (this.elements.acceptForm) {
         this.elements.acceptForm.addEventListener('submit', (e) => {
           this.handleAcceptReservation(e);
         });
       }
-
       if (this.elements.submitBtn) {
         this.elements.submitBtn.addEventListener('click', () => {
           this.handleSubmitReservation();
         });
       }
-
       if (this.elements.cancelReservationBtn) {
         this.elements.cancelReservationBtn.addEventListener('click', () => {
           this.handleCancelReservation();
         });
       }
-
       if (this.elements.clearOrdersBtn) {
         this.elements.clearOrdersBtn.addEventListener('click', () => {
           this.clearOrders();
         });
       }
-
       if (this.elements.arrivalTimeInput) {
         this.elements.arrivalTimeInput.addEventListener('input', () => {
           this.updateTimeFrameDisplay();
         });
       }
     }
-
     setupTableEvents() {
       const tableCapacities = {
         @foreach($tables as $table)
         {{ $table->id }}: {{ $table->capacity }},
       @endforeach
     };
-
     this.elements.tableLinks.forEach(link => {
           link.addEventListener('click', (e) => {
             e.preventDefault();
-
             const tableId = parseInt(link.getAttribute('data-table-id'));
             const capacity = tableCapacities[tableId];
-
             this.selectedTableCapacity = capacity;
             this.selectedTableId = tableId;
-
             this.handleTableClick(link);
-
             const paxInput = document.getElementById('numberOfPax');
             if (paxInput && capacity) {
               paxInput.max = capacity;
@@ -645,11 +546,9 @@
               paxInput.placeholder = `Max ${capacity} people`;
               paxInput.value = '';
               paxInput.readOnly = false;
-
               paxInput.addEventListener('input', function () {
                 const maxCapacity = parseInt(this.max);
                 const currentValue = parseInt(this.value);
-
                 if (currentValue > maxCapacity) {
                   this.value = maxCapacity;
                   const toast = document.createElement('div');
@@ -677,7 +576,6 @@
             }
           });
         });
-
   setTimeout(() => {
     document.querySelectorAll('.make-walkin-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -686,7 +584,6 @@
         this.walkIn(tableId);
       });
     });
-
     document.querySelectorAll('.make-reservation-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -696,12 +593,10 @@
     });
   }, 0);
   }
-
   initializeNotifications() {
     this.fetchNotifications();
     setInterval(() => this.fetchNotifications(), 3000);
   }
-
   fetchNotifications() {
     fetch('/receptionist/notifications')
       .then(res => res.json())
@@ -716,7 +611,6 @@
       })
       .catch(err => console.error('Notification fetch error:', err));
   }
-
   updateNotificationBadges(count) {
     [this.elements.badgeProfile, this.elements.badgeLink].forEach(badge => {
       if (badge) {
@@ -725,28 +619,18 @@
       }
     });
   }
-
   renderNotifications(notifications) {
     if (!this.elements.notifList) return;
-
-
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
     const filteredNotifications = notifications.filter(notification => {
-
       if (notification.reservation_status !== "Pending") return false;
-
-
       const notifDate = new Date(notification.created_at || notification.date);
       const notifDay = new Date(notifDate.getFullYear(), notifDate.getMonth(), notifDate.getDate());
-
-
       return notifDay.getTime() >= yesterday.getTime() && notifDay.getTime() <= today.getTime();
     });
-
     if (!filteredNotifications.length) {
       this.elements.notifList.innerHTML = `
             <li class="p-8 text-center">
@@ -759,29 +643,22 @@
         `;
       return;
     }
-
     this.elements.notifList.innerHTML = '';
-
-
     filteredNotifications.sort((a, b) => {
       return new Date(b.created_at || b.date) - new Date(a.created_at || a.date);
     });
-
     filteredNotifications.forEach(notification => {
       this.renderNotificationItem(notification);
     });
   }
-
   renderNotificationItem(notification) {
     const li = document.createElement('li');
     li.className = 'p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-150';
     li.dataset.reservationId = notification.reservation_id;
     li.dataset.notification = JSON.stringify(notification);
     li.onclick = () => this.openNotificationModalDirect(notification);
-
     let badgeClass = "bg-gray-100 text-gray-700";
     let badgeText = notification.reservation_status;
-
     if (notification.reservation_status === "Active") {
       badgeClass = "bg-green-100 text-green-700";
       badgeText = "Accepted"
@@ -790,39 +667,31 @@
     } else if (notification.reservation_status === "Pending") {
       badgeClass = "bg-yellow-100 text-yellow-700";
     }
-
     const formatReservationTime = (startDateTime, endDateTime) => {
       if (!startDateTime || !endDateTime) return 'N/A';
-
       const startDate = new Date(startDateTime);
       const endDate = new Date(endDateTime);
-
       const dateStr = startDate.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
       });
-
       const startTime = startDate.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
       }).toLowerCase();
-
       const endTime = endDate.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
         hour12: true
       }).toLowerCase();
-
       return { dateStr, timeRange: `${startTime} - ${endTime}` };
     };
-
     const { dateStr, timeRange } = formatReservationTime(
       notification.started_at,
       notification.ended_at
     );
-
     li.innerHTML = `
         <div class="flex items-start gap-3">
             <!-- Status Indicator -->
@@ -863,18 +732,14 @@
             </div>
         </div>
     `;
-
     this.elements.notifList.appendChild(li);
   }
-
   openNotificationModalDirect(notification) {
     this.reservationId = notification.reservation_id;
     this.elements.paymentModal.classList.remove('hidden');
     this.elements.acceptForm.action = `/receptionist/accept-reservation/${notification.reservation_id}`;
-
     this.updatePaymentModalFromNotification(notification);
   }
-
   updatePaymentModalFromNotification(notification) {
     const paymentProof = document.getElementById('paymentProof');
     if (paymentProof) {
@@ -899,16 +764,12 @@
       actionButtons.style.display = shouldHideButtons ? "none" : "flex";
     }
   }
-
-
   openNotificationModal(id) {
     this.reservationId = id;
     this.elements.paymentModal.classList.remove('hidden');
     this.elements.acceptForm.action = `/receptionist/accept-reservation/${id}`;
-
     this.fetchPaymentDetails(id);
   }
-
   fetchPaymentDetails(id) {
     fetch(`/receptionist/payments/${id}`)
       .then(response => {
@@ -925,7 +786,6 @@
         alert('Failed to load payment details: ' + error.message);
       });
   }
-
   updatePaymentModal(data) {
     const paymentProof = document.getElementById('paymentProof');
     if (paymentProof) {
@@ -950,33 +810,26 @@
       actionButtons.style.display = shouldHideButtons ? "none" : "flex";
     }
   }
-
   updateElementText(elementId, text) {
     const element = document.getElementById(elementId);
     if (element) {
       element.textContent = text;
     }
   }
-
-
   handleAcceptReservation(e) {
     e.preventDefault();
     const btn = this.elements.acceptForm.querySelector('button[type="submit"]');
     const spinner = btn.querySelector('.spinner');
     const btnText = btn.querySelector('.btn-text');
-
     if (!btn || !this.reservationId) {
       alert('Error: Missing button or reservation ID');
       return;
     }
-
     spinner.classList.remove('hidden');
     btnText.textContent = 'Processing...';
     btn.disabled = true;
     this.elements.cancelReservationBtn.disabled = true;
-
     const formAction = `/receptionist/accept-reservation/${this.reservationId}`;
-
     fetch(formAction, {
       method: 'POST',
       headers: {
@@ -1012,22 +865,18 @@
         btnText.textContent = 'Accept';
       });
   }
-
   handleCancelReservation() {
     const cancelBtn = this.elements.cancelReservationBtn;
     const spinner = cancelBtn.querySelector('.spinner');
     const btnText = cancelBtn.querySelector('.btn-text');
-
     if (!cancelBtn || !this.reservationId) {
       alert('Error: Missing button or reservation ID');
       return;
     }
-
     spinner.classList.remove('hidden');
     btnText.textContent = 'Processing...';
     cancelBtn.disabled = true;
     this.elements.acceptForm.querySelector('button[type="submit"]').disabled = true;
-
     fetch(`/receptionist/cancel-reservation/${this.reservationId}`, {
       method: 'POST',
       headers: {
@@ -1063,34 +912,26 @@
         btnText.textContent = 'Reject';
       });
   }
-
   showReservationSuccessModal(message) {
     const modal = this.elements.successModal;
     const title = document.getElementById('successTitle');
-
     if (title) {
       title.textContent = message;
     }
-
     if (modal) {
       modal.classList.remove('hidden');
     }
   }
-
   showReservationErrorModal(message) {
     const errorModal = document.getElementById('errorModal') || this.createErrorModal();
     const errorMessage = document.getElementById('errorMessage');
-
     if (errorMessage) {
       errorMessage.textContent = message;
     }
-
     if (errorModal) {
       errorModal.classList.remove('hidden');
     }
   }
-
-
   createErrorModal() {
     const modal = document.createElement('div');
     modal.id = 'errorModal';
@@ -1107,7 +948,6 @@
     document.body.appendChild(modal);
     return modal;
   }
-
   updateNotificationStatus(reservationId, status) {
     const li = this.elements.notifList.querySelector(`[data-reservation-id="${reservationId}"]`);
     if (li) {
@@ -1121,7 +961,6 @@
       }
     }
   }
-
   initializeModalValidation() {
     const customerNameInput = document.getElementById('customerName');
     const customerNameError = document.getElementById('customerNameError');
@@ -1129,16 +968,13 @@
     if (customerNameInput && customerNameError) {
       customerNameInput.addEventListener('input', () => {
         customerNameInput.value = customerNameInput.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
-
         const value = customerNameInput.value.trim();
-
         if (!value) {
           customerNameError.textContent = '';
           customerNameError.classList.add('hidden');
           customerNameInput.classList.remove('input-error');
           return;
         }
-
         if (value.length < 3) {
           customerNameError.textContent = 'Minimum 3 characters required';
           customerNameError.classList.remove('hidden');
@@ -1150,30 +986,24 @@
         }
       });
     }
-
     const contactNumberInput = document.getElementById('contactNumber');
     const contactNumberError = document.getElementById('contactNumberError');
-
     if (contactNumberInput && contactNumberError) {
       contactNumberInput.addEventListener('input', () => {
         contactNumberInput.value = contactNumberInput.value.replace(/[^0-9]/g, '');
-
         const value = contactNumberInput.value.trim();
-
         if (!value) {
           contactNumberError.textContent = '';
           contactNumberError.classList.add('hidden');
           contactNumberInput.classList.remove('input-error');
           return;
         }
-
         if (!value.startsWith('09')) {
           contactNumberError.textContent = 'Contact number must start with 09';
           contactNumberError.classList.remove('hidden');
           contactNumberInput.classList.add('input-error');
           return;
         }
-
         if (value.length < 11) {
           contactNumberError.textContent = 'Contact number must be 11 digits';
           contactNumberError.classList.remove('hidden');
@@ -1186,35 +1016,28 @@
       });
     }
   }
-
   handleTableClick(link) {
     document.querySelectorAll('.inline-options').forEach(opt => opt.style.display = 'none');
     const options = link.querySelector('.inline-options');
     if (options) options.style.display = 'block';
   }
-
   makeReservation(tableId) {
     this.selectedTableId = tableId;
     this.isPlacingOrder = false;
     this.elements.tableModal.style.display = 'flex';
-
     this.setupReservationForm();
     this.resetForm();
     this.updateTimeFrameDisplay();
   }
-
   walkIn(tableId) {
     this.selectedTableId = tableId;
     this.isPlacingOrder = true;
     this.elements.tableModal.style.display = 'flex';
-
     this.setupOrderForm();
     this.resetForm();
   }
-
   setupOrderForm() {
     const now = new Date();
-
     this.elements.reservedDate.value = now.toISOString().substring(0, 10);
     this.elements.reservedDate.disabled = true;
     const hours = now.getHours().toString().padStart(2, '0');
@@ -1225,8 +1048,6 @@
     this.elements.contactInput.style.display = 'none';
     this.elements.advancePayment.parentElement.style.display = 'none';
   }
-
-
   setupReservationForm() {
     const now = new Date();
     this.elements.reservationInfoGroup.style.display = '';
@@ -1234,35 +1055,27 @@
     this.elements.arrivalTimeInput.disabled = false;
     this.elements.advancePayment.parentElement.style.display = '';
     this.elements.contactInput.style.display = '';
-
     const today = now.getFullYear() + '-' +
       String(now.getMonth() + 1).padStart(2, '0') + '-' +
       String(now.getDate()).padStart(2, '0');
     this.elements.reservedDate.value = today;
     this.elements.reservedDate.min = today;
-
     const twoHoursLater = new Date(now.getTime() + (2 * 60 * 60 * 1000));
     const hours = twoHoursLater.getHours().toString().padStart(2, '0');
     const minutes = twoHoursLater.getMinutes().toString().padStart(2, '0');
     this.elements.arrivalTimeInput.value = `${hours}:${minutes}`;
-
     const validateReservationTime = () => {
       const selectedDate = this.elements.reservedDate.value;
       const selectedTime = this.elements.arrivalTimeInput.value;
-
       if (!selectedDate || !selectedTime) return;
-
       const selectedDateTime = new Date(`${selectedDate}T${selectedTime}`);
       const currentTime = new Date();
       const minAllowedTime = new Date(currentTime.getTime() + (2 * 60 * 60 * 1000));
-
       if (selectedDateTime < minAllowedTime) {
         this.showToast('Reservation must be at least 2 hours from now', 'error');
-
         const resetHours = minAllowedTime.getHours().toString().padStart(2, '0');
         const resetMinutes = minAllowedTime.getMinutes().toString().padStart(2, '0');
         this.elements.arrivalTimeInput.value = `${resetHours}:${resetMinutes}`;
-
         if (minAllowedTime.getDate() !== currentTime.getDate()) {
           const newDate = minAllowedTime.getFullYear() + '-' +
             String(minAllowedTime.getMonth() + 1).padStart(2, '0') + '-' +
@@ -1271,28 +1084,22 @@
         }
       }
     };
-
     this.elements.reservedDate.removeEventListener('change', this.validateReservationTime);
     this.elements.arrivalTimeInput.removeEventListener('change', this.validateReservationTime);
-
     this.validateReservationTime = validateReservationTime;
-
     this.elements.reservedDate.addEventListener('change', validateReservationTime);
     this.elements.arrivalTimeInput.addEventListener('change', validateReservationTime);
     this.elements.arrivalTimeInput.addEventListener('blur', validateReservationTime);
   }
-
   selectMenuItem(element) {
     const id = element.dataset.id;
     const name = element.dataset.name;
     const price = parseFloat(element.dataset.price);
     const category = element.dataset.category;
     const image = element.dataset.image;
-
     const imgElement = element.querySelector('img');
     const imgSrc = imgElement ? imgElement.src : '';
     const imageFilename = imgSrc ? imgSrc.split('/').pop() : '';
-
     if (this.selectedOrders[id]) {
       this.selectedOrders[id].quantity += 1;
     } else {
@@ -1305,38 +1112,31 @@
       };
       element.classList.add("selected");
     }
-
     const img = element.querySelector('img');
     if (img) this.animateFlyToCart(img, '#viewOrdersBtn');
     this.renderOrderSummary();
   }
-
   updateQuantity(input) {
     const id = input.dataset.id;
     const newQuantity = parseInt(input.value);
-
     if (this.selectedOrders[id] && newQuantity > 0) {
       this.selectedOrders[id].quantity = newQuantity;
       this.renderOrderSummary();
     }
   }
-
   clearOrders() {
     Object.keys(this.selectedOrders).forEach(key => {
       delete this.selectedOrders[key];
     });
-
     document.querySelectorAll('.menu-card').forEach(card => {
       card.classList.remove('selected');
       const qtyInput = card.querySelector('input[type="number"]');
       if (qtyInput) qtyInput.value = 1;
     });
-
     this.elements.selectedOrdersContainer.innerHTML = '';
     this.elements.advancePayment.value = '';
     this.renderOrderSummary();
   }
-
   renderOrderSummary() {
     const container = this.elements.selectedOrdersContainer;
     const emptyState = document.getElementById('emptyState');
@@ -1344,30 +1144,23 @@
     const totalItemsCount = document.getElementById('totalItemsCount');
     const totalQuantityEl = document.getElementById('totalQuantity');
     const grandTotalEl = document.getElementById('grandTotal');
-
     container.innerHTML = '';
-
     let total = 0;
     let totalQuantity = 0;
     const hasItems = Object.keys(this.selectedOrders).length > 0;
-
     if (hasItems) {
       if (emptyState) emptyState.classList.add('hidden');
       if (orderTotal) orderTotal.classList.remove('hidden');
-
       Object.entries(this.selectedOrders).forEach(([id, item]) => {
         total += item.price * item.quantity;
         totalQuantity += item.quantity;
-
         const getImagePath = () => {
           if (item.image && item.image !== 'default.jpg') {
             return `/storage/jeongol_menu/${item.image}`;
           }
           return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NEg0NEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPHBhdGggZD0iTTI4IDI4SDM2VjM2SDI4VjI4WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
         };
-
         const defaultImage = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAyMEg0NEg0NEgyMFYyMFoiIGZpbGw9IiNEMUQ1REIiLz4KPHBhdGggZD0iTTI4IDI4SDM2VjM2SDI4VjI4WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
-
         const orderItem = document.createElement('div');
         orderItem.innerHTML = `
         <div class="order-item-card bg-white rounded-xl p-4 border border-gray-200">
@@ -1378,11 +1171,9 @@
                    class="w-20 h-20 object-cover rounded-lg border-2 border-gray-100"
                    onerror="this.src='${defaultImage}'">
             </div>
-            
             <div class="flex-1 min-w-0">
               <h4 class="font-bold text-gray-900 text-base mb-1 truncate">${item.name}</h4>
               <p class="text-sm text-gray-500 mb-2">₱${item.price.toFixed(2)} each</p>
-              
               <div class="flex items-center gap-2">
                 <label class="text-xs text-gray-600 font-medium">Qty:</label>
                 <input type="number" 
@@ -1395,7 +1186,6 @@
                        onkeypress="return event.charCode >= 48 && event.charCode <= 57">
               </div>
             </div>
-            
             <div class="flex flex-col items-end gap-2">
               <button type="button" 
                       onclick="dashboard.removeOrderItem('${id}')" 
@@ -1430,35 +1220,28 @@
         totalItemsCount.textContent = '0 items';
       }
     }
-
     if (!this.isPlacingOrder && this.elements.advancePayment) {
       const halfTotal = (total / 2).toFixed(2);
       this.elements.advancePayment.value = halfTotal;
     }
-
     if (this.elements.totalQuantity) {
       this.elements.totalQuantity.textContent = totalQuantity;
     }
   }
-
   removeOrderItem(id) {
     if (this.selectedOrders[id]) {
       delete this.selectedOrders[id];
     }
-
     const menuCard = document.querySelector(`.menu-card[data-id="${id}"]`);
     if (menuCard) {
       menuCard.classList.remove('selected');
-
       const qtyInput = menuCard.querySelector('input[type="number"]');
       if (qtyInput) {
         qtyInput.value = 1;
       }
     }
-
     this.renderOrderSummary();
   }
-
   resetForm() {
     const fieldsToReset = [
       this.elements.customerName,
@@ -1467,90 +1250,70 @@
       this.elements.customerNotes,
       this.elements.advancePayment
     ];
-
     this.clearOrders();
   }
-
       async handleSubmitReservation() {
     if (this.elements.submitBtn.disabled) return;
-
     const name = this.elements.customerName.value.trim();
     const contact = this.elements.contactNumber.value.trim();
     const paxInput = document.getElementById('numberOfPax');
     const dateInput = document.getElementById('reserved_date');
     const timeInput = document.getElementById('arrivalTimeInput');
-
     const paxCount = parseInt(paxInput?.value) || 0;
     const date = dateInput?.value;
     const time = timeInput?.value;
-
     const emptyFields = [];
     if (!name) emptyFields.push(this.elements.customerName);
     if (!this.isPlacingOrder && !contact) emptyFields.push(this.elements.contactNumber);
     if (!paxCount) emptyFields.push(paxInput);
     if (!date) emptyFields.push(dateInput);
     if (!time) emptyFields.push(timeInput);
-
     if (emptyFields.length > 0) {
       emptyFields.forEach(f => f.classList.add('border-red-500'));
       this.showErrorToast('Please fill in all required fields.');
       return;
     }
-
-    // Fetch operating hours for the selected date
     try {
-      // Changed from /api/operating-hours to /receptionist/api/operating-hours
       const hoursResponse = await fetch(`/receptionist/api/operating-hours?date=${date}`);
-
       if (!hoursResponse.ok) {
         this.showErrorToast('Unable to verify operating hours.');
         return;
       }
-
       const hoursData = await hoursResponse.json();
-
       if (!hoursData.success) {
         this.showErrorToast(hoursData.message || 'Unable to verify operating hours.');
         return;
       }
-
       if (hoursData.is_closed) {
         this.showErrorToast('The restaurant is closed on this date.');
         dateInput.classList.add('border-red-500');
         return;
       }
-
       const selectedTime = time; 
       const openTime = hoursData.open_time;
       const closeTime = hoursData.close_time;
-
       if (selectedTime < openTime || selectedTime >= closeTime) { 
         this.showErrorToast(`Operating hours are ${openTime} to ${closeTime}. Please choose a time within these hours.`);
         timeInput.classList.add('border-red-500');
         return;
       }
-
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const endHours = hours + 2;
       const endTime = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-
       if (endTime > closeTime) {
         this.showErrorToast(`Your reservation would extend beyond closing time (${closeTime}).`);
         timeInput.classList.add('border-red-5 00');
         return;
       }
-
     } catch (error) {
       console.error('Error fetching operating hours:', error);
       this.showErrorToast('Unable to verify operating hours. Please try again.');
       return;
     }
-
     if (!this.isPlacingOrder) {
       const selectedDateTime = new Date(`${date}T${time}`);
       const currentTime = new Date();
       const minAllowedTime = new Date(currentTime.getTime() + (2 * 60 * 60 * 1000));
-
       if (selectedDateTime < minAllowedTime) {
         this.showErrorToast('Reservation must be at least 2 hours from now.');
         dateInput.classList.add('border-red-500');
@@ -1558,31 +1321,24 @@
         return;
       }
     }
-
     const orders = Object.values(this.selectedOrders || {});
-
     const hasMain = orders.some(item => {
       const category = (item.category || '').toLowerCase();
       return category === 'main course' || category === 'main';
     });
-
     if (!hasMain) {
       this.showErrorToast('You must order at least one main menu item.');
       return;
     }
-
     const mainMenuOrders = orders.filter(item => {
       const category = (item.category || '').toLowerCase();
       return category === 'main course' || category === 'main';
     });
-
     this.elements.submitBtn.disabled = true;
     this.elements.submitBtn.textContent = "Submitting...";
-
     const data = this.prepareSubmissionData();
     this.submitOrder(data);
   }
-
   showErrorToast(message) {
     const toast = document.createElement('div');
     toast.textContent = message;
@@ -1598,14 +1354,11 @@
       font-size: 14px;
       max-width: 300px;
     `;
-
     document.body.appendChild(toast);
-
     setTimeout(() => {
       document.body.removeChild(toast);
     }, 3000);
   }
-
   prepareSubmissionData() {
     const baseData = {
       customer_name: this.elements.customerName.value.trim(),
@@ -1619,7 +1372,6 @@
         notes: this.elements.customerNotes.value.trim()
       }))
     };
-
     if (this.isPlacingOrder) {
       baseData.started_at = this.elements.arrivalTimeInput.value;
     } else {
@@ -1627,15 +1379,12 @@
       baseData.arrival_time = this.elements.arrivalTimeInput.value;
       baseData.advance_payment = this.elements.advancePayment.value.trim() || 0;
     }
-
     return baseData;
   }
-
   submitOrder(data) {
     const storeUrl = this.isPlacingOrder
       ? '/receptionist/store-walkin'
       : '/receptionist/store-reservation';
-
     fetch(storeUrl, {
       method: 'POST',
       headers: {
@@ -1670,60 +1419,47 @@
         this.elements.submitBtn.textContent = "Submit";
       });
   }
-
   updateTimeFrameDisplay() {
     const timeFrameDisplay = this.elements.timeFrameDisplay;
     if (!timeFrameDisplay || !this.elements.arrivalTimeInput.value) {
       if (timeFrameDisplay) timeFrameDisplay.textContent = '';
       return;
     }
-
     const [hours, minutes] = this.elements.arrivalTimeInput.value.split(':').map(Number);
     const start = new Date();
     start.setHours(hours, minutes, 0, 0);
-
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-
     const options = { hour: 'numeric', minute: '2-digit', hour12: true };
     const startStr = start.toLocaleTimeString('en-US', options);
     const endStr = end.toLocaleTimeString('en-US', options);
-
     timeFrameDisplay.textContent = `${startStr} - ${endStr}`;
   }
-
   showSuccessModal(type) {
     const modal = this.elements.successModal;
     const title = document.getElementById('successTitle');
-
     if (title) {
       title.textContent = type === 'order' ? 'Order Placed!' : 'Reservation Created!';
     }
-
     if (modal) {
       modal.classList.remove('hidden');
     }
   }
-
   closeSuccessModal() {
     if (this.elements.successModal) {
       this.elements.successModal.classList.add('hidden');
     }
-
     if (this.elements.tableModal) {
       this.elements.tableModal.style.display = 'none';
     }
   }
-
   showErrorModal(message) {
     let errorModal = document.getElementById('errorModal');
     if (!errorModal) {
       errorModal = this.createErrorModal();
     }
-
     document.getElementById('errorMessage').textContent = message;
     errorModal.classList.remove('hidden');
   }
-
   createErrorModal() {
     const errorModal = document.createElement('div');
     errorModal.id = 'errorModal';
@@ -1753,19 +1489,15 @@
 
     return errorModal;
   }
-
   animateFlyToCart(imageEl, targetSelector) {
     const imgRect = imageEl.getBoundingClientRect();
     const targetEl = document.querySelector(targetSelector);
-
     if (!targetEl) {
       console.warn(`Target element ${targetSelector} not found`);
       return;
     }
-
     const targetRect = targetEl.getBoundingClientRect();
     const flyingImg = imageEl.cloneNode(true);
-
     Object.assign(flyingImg.style, {
       position: 'fixed',
       left: `${imgRect.left}px`,
@@ -1778,7 +1510,6 @@
       pointerEvents: 'none',
       borderRadius: '10px'
     });
-
     const container = document.getElementById('fly-animation-container');
     if (container) {
       container.appendChild(flyingImg);
@@ -1801,7 +1532,6 @@
     });
   }
 }
-
   const dashboard = new ReceptionistDashboard();
 
   window.selectMenuItem = function (element) {
@@ -1823,9 +1553,6 @@
   window.openNotifModal = function (id) {
     dashboard.openNotificationModal(id);
   };
-
   window.dashboard = dashboard;
 </script>
-
-
 </html>

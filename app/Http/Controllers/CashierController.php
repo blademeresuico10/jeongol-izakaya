@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Http\Controllers;
-
 use App\Models\customers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,48 +12,38 @@ use Illuminate\Support\Facades\Log;
 use App\Models\orders;
 use App\Models\menu;
 use App\Models\MenuCategory;
-
 class CashierController extends Controller
 {
     public function home()
     {
         $now = Carbon::now();
-
         $tables = DB::table('tables')->get();
-
         $menuItems = menu::with(['category', 'menuDiscount'])
             ->where('status', 'Active')
             ->whereNull('deleted_at')
             ->get();
-
         $menuCategories = MenuCategory::where('is_active', true)->get();
-
         $mainCategory = $menuCategories->first(function ($cat) {
             return stripos($cat->name, 'main') !== false ||
                 stripos($cat->name, 'Main Course') !== false;
         });
-
         if (!$mainCategory) {
             Log::warning('Main category not found in menu_categories table');
         }
-
         $reservations = reservation::with('table')
             ->where('status', 'Active')
             ->where('started_at', '<=', $now)
             ->where('ended_at', '>', $now)
             ->whereDoesntHave('transactions')
             ->get();
-
         $walkin = walkin::with('table')
             ->where('status', 'Active')
             ->where('started_at', '<=', $now)
             ->where('ended_at', '>', $now)
             ->whereDoesntHave('transactions')
             ->get();
-
         $reservationIds = $reservations->pluck('id')->toArray();
         $walkinIds = $walkin->pluck('id')->toArray();
-
         $orders = orders::with('menu')
             ->where(function ($query) use ($reservationIds, $walkinIds) {
                 if (!empty($reservationIds)) {
@@ -69,9 +57,7 @@ class CashierController extends Controller
             ->groupBy(function ($order) {
                 return $order->reservation_id ?? ('walkin_' . $order->walk_in_id);
             });
-
         $occupiedTables = [];
-
         foreach ($tables as $table) {
             $res = $reservations->firstWhere('table_id', $table->id);
             $session = $walkin->firstWhere('table_id', $table->id);
@@ -110,7 +96,6 @@ class CashierController extends Controller
                 $table->current_orders = [];
             }
         }
-
         $menuDiscounts = DB::table('menu_discounts')->get()->groupBy('menu_id');
         $menuData = [];
 
@@ -221,7 +206,6 @@ class CashierController extends Controller
                 ], 404);
             }
         }
-
         $orders = DB::table('orders')
             ->join('menu', 'orders.menu_id', '=', 'menu.id')
             ->where(function ($query) use ($id, $reservation) {
@@ -270,10 +254,8 @@ class CashierController extends Controller
             'orders'           => $orders
         ]);
     }
-
     public function getUnpaidOrders()
     {
-        // Get walk-in orders without transactions
         $walkinOrders = orders::whereNotNull('walk_in_id')
             ->whereHas('walkIn', function ($query) {
                 $query->where('status', 'Active')
@@ -281,8 +263,6 @@ class CashierController extends Controller
             })
             ->with(['walkIn.customer', 'walkIn.table', 'menu'])
             ->get();
-
-        // Get reservation orders without transactions
         $reservationOrders = orders::whereNotNull('reservation_id')
             ->whereHas('reservation', function ($query) {
                 $query->where('status', 'Active')
@@ -290,30 +270,23 @@ class CashierController extends Controller
             })
             ->with(['reservation.customer', 'reservation.table', 'menu'])
             ->get();
-
-        // Combine both collections
         $allUnpaidOrders = $walkinOrders->concat($reservationOrders);
-
         return $allUnpaidOrders;
     }
-
     private function calculateDiscountedPrice($menuId, $regularPrice, $customerType)
     {
         if ($customerType === 'regular' || $customerType === 'none') {
             return $regularPrice;
         }
-
         $discountTypeMap = [
             'student' => 'Student',
             'govt_employee' => 'Government Employee',
             'pwd_senior' => ['Senior Citizen', 'PWD']
         ];
-
         $discountType = $discountTypeMap[$customerType] ?? null;
         if (!$discountType) {
             return $regularPrice;
         }
-
         if (is_array($discountType)) {
             $discount = DB::table('menu_discounts')
                 ->where('menu_id', $menuId)
@@ -325,7 +298,6 @@ class CashierController extends Controller
                 ->where('discount_type', $discountType)
                 ->first();
         }
-
         if ($discount) {
             $discountedPrice = $regularPrice * (1 - ($discount->discount_percentage / 100));
 
@@ -335,13 +307,10 @@ class CashierController extends Controller
             } else {
                 $discountedPrice = floor($discountedPrice);
             }
-
             return $discountedPrice;
         }
-
         return $regularPrice;
     }
-
     public function processPayment(Request $request)
     {
         try {
@@ -371,7 +340,6 @@ class CashierController extends Controller
                 'errors' => $e->errors()
             ], 422);
         }
-
         try {
             DB::beginTransaction();
 
@@ -389,14 +357,11 @@ class CashierController extends Controller
                     throw new Exception('Reservation not found');
                 }
             }
-
             $uniqueCustomers = [];
             $customerMap = [];
-
             if (!empty($request->customer_data)) {
                 foreach ($request->customer_data as $customerInfo) {
                     $customerKey = trim($customerInfo['id_number']) . '|' . ($customerInfo['id_type'] ?? '');
-
                     if (!isset($uniqueCustomers[$customerKey])) {
                         $customer = customers::create([
                             'name' => trim($customerInfo['name']),
@@ -405,14 +370,12 @@ class CashierController extends Controller
                         ]);
                         $uniqueCustomers[$customerKey] = $customer;
                     }
-
                     $customerMap[$customerInfo['item_index']] = [
                         'customer'      => $uniqueCustomers[$customerKey],
                         'customer_type' => $customerInfo['customer_type'] ?? 'regular'
                     ];
                 }
             }
-
             $mainCustomer = $record->customer;
             if (!$mainCustomer) {
                 $mainCustomer = customers::create([
@@ -421,7 +384,6 @@ class CashierController extends Controller
                 ]);
                 $record->update(['customer_id' => $mainCustomer->id]);
             }
-
             $ordersTotal         = 0;
             $totalDiscountAmount = 0;
             $processedOrders     = [];
@@ -469,7 +431,6 @@ class CashierController extends Controller
                     $itemIndex++;
                 }
             }
-
             $advancePayment = 0;
             if (!$isWalkIn) {
                 $advancePayment = floatval($request->advance_payment ?? 0);
@@ -570,8 +531,6 @@ class CashierController extends Controller
             ], 500);
         }
     }
-
-
     public function checkCustomer(Request $request)
     {
         try {
@@ -585,14 +544,11 @@ class CashierController extends Controller
                     'error' => 'Missing parameters'
                 ], 400);
             }
-
-            // Check if customer exists with same ID number and type
             $customer = customers::where('id_number', $idNumber)
                 ->where('id_type', $idType)
                 ->first();
 
             if (!$customer) {
-                // Check if this ID number with this specific ID type has used discount today
                 $hasUsedDiscountToday = DB::table('transactions')
                     ->join('transaction_details', 'transactions.id', '=', 'transaction_details.transaction_id')
                     ->join('customers', 'transaction_details.customer_id', '=', 'customers.id')
@@ -644,7 +600,6 @@ class CashierController extends Controller
             ], 500);
         }
     }
-
     public function getTransactionReceipt($transactionId)
     {
         try {

@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,7 +9,6 @@
     <title>Cashier</title>
     @livewireStyles
     @vite('resources/css/app.css')
-
     <style>
         .menu-image-container {
             width: 100%;
@@ -19,7 +17,6 @@
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
         }
-
         .menu-cards-container {
             display: flex;
             flex-wrap: wrap;
@@ -29,11 +26,9 @@
             max-width: 100%;
             overflow-x: hidden;
         }
-
         #toast {
             transition: opacity 0.3s ease-in-out;
         }
-
         @media print {
             body * {
                 visibility: hidden;
@@ -81,7 +76,6 @@
                 text-align: right !important;
             }
         }
-
         .table-link {
             transition: transform 0.2s ease-in-out;
         }
@@ -195,9 +189,7 @@
                         class="w-14 h-14 rounded-full bg-gray-300 flex items-center justify-center font-bold text-black">
                         {{ strtoupper(substr(Auth::user()->firstname, 0, 1)) }}
                     </div>
-
                 </button>
-
                 <div id="userMenu"
                     class="hidden absolute top-full right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50">
                     <div class="px-4 py-3 border-b">
@@ -211,7 +203,6 @@
                     </form>
                 </div>
             </div>
-
             <div id="receiptModal"
                 class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
                 <div class="relative max-w-4xl w-full p-4">
@@ -221,11 +212,8 @@
                         class="w-full h-auto max-h-[90vh] object-contain rounded-lg shadow-lg">
                 </div>
             </div>
-
         </div>
         <livewire:cashier-table-layout />
-
-
         <div id="payment-modal" tabindex="-1" aria-hidden="true"
             class="fixed top-0 left-0 right-0 z-50 hidden w-full p-4 overflow-x-hidden overflow-y-auto h-full bg-black bg-opacity-50 flex justify-center items-center">
             <div class="relative w-full max-w-3xl">
@@ -241,7 +229,6 @@
                             </svg>
                         </button>
                     </div>
-
                     <div class="flex-1 px-6 py-5 space-y-6">
                         <div class="border rounded-lg p-4 bg-gray-50">
                             <h4 class="text-lg font-semibold mb-3">Customer Information</h4>
@@ -258,7 +245,6 @@
                                 </div>
                             </div>
                         </div>
-
                         <div class="border rounded-lg p-4">
                             <h4 class="text-lg font-semibold mb-3">Apply Discounts</h4>
                             <div class="flex justify-between font-semibold border-b pb-2 text-sm">
@@ -269,15 +255,12 @@
                             </div>
                             <div id="paymentItemsList" class="space-y-1 text-sm mt-2"></div>
                         </div>
-
                         <div class="border rounded-lg p-4 bg-gray-50">
                             <h4 class="text-lg font-semibold mb-3">Payment Summary</h4>
                             <div class="space-y-2" id="paymentSummaryContent">
                             </div>
-
                             <div class="mt-6 pt-4 border-t border-gray-300">
                                 <h5 class="text-md font-semibold mb-3">Cash Payment</h5>
-
                                 <div class="bg-blue-50 p-3 rounded-lg mb-4 space-y-2">
                                     <div class="flex justify-between text-sm text-blue-800">
                                         <span>Subtotal:</span>
@@ -293,7 +276,6 @@
                                         <span id="summary_amount_due">₱0.00</span>
                                     </div>
                                 </div>
-
                                 <div class="mb-4">
                                     <label for="cashReceived" class="block text-sm font-medium text-gray-700 mb-2">
                                         Cash Received <span class="text-red-500">*</span>
@@ -315,7 +297,6 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="flex justify-end gap-4 px-6 py-4 border-t border-gray-200">
                         <button onclick="window.app.showPrintModal()" type="button"
                             class="px-6 py-2.5 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-sm">
@@ -330,19 +311,16 @@
                 </div>
             </div>
         </div>
-
         <div id="printBillModal"
             class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
             <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Print Bill</h3>
                 </div>
-
                 <div class="px-6 py-4">
                     <p class="text-gray-700 mb-4">
                         Print bill for <strong id="printModalCustomerName">Walk-in Customer</strong>?
                     </p>
-
                     <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 max-h-64 overflow-y-auto">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">Order Summary</h4>
                         <div id="printModalOrderItems" class="space-y-2">
@@ -355,7 +333,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
                     <button onclick="window.app.closePrintModal()" type="button"
                         class="px-4 py-2 text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg font-medium text-sm">
@@ -368,20 +345,17 @@
                 </div>
             </div>
         </div>
-
         <div id="processPaymentModal"
             class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
             <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4">
                 <div class="px-6 py-4 border-b border-gray-200">
                     <h3 class="text-lg font-semibold text-gray-900">Confirm Payment</h3>
                 </div>
-
                 <div class="px-6 py-4 max-h-96 overflow-y-auto">
                     <div class="mb-4">
                         <p class="text-sm text-gray-600">Customer</p>
                         <p class="font-semibold text-gray-900" id="confirmModalCustomerName">Walk-in Customer</p>
                     </div>
-
                     <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 mb-4">
                         <h4 class="text-sm font-semibold text-gray-700 mb-3">Order Summary</h4>
                         <div id="confirmModalOrderItems" class="space-y-2 mb-3">
@@ -441,7 +415,6 @@
                 </div>
             </div>
         </div>
-
         <div id="toast"
             class="fixed top-5 right-5 z-50 hidden opacity-0 px-4 py-3 rounded-lg shadow-md bg-red-600 text-white text-sm font-medium transition-opacity duration-300 ease-in-out">
             <span id="toast-message">Something went wrong</span>
@@ -449,8 +422,6 @@
     </div>
     @livewireScripts
 </body>
-
-
 <script>
     window.menuPriceData = @json($menuData);
     window.menuPricesMap = {};
@@ -470,7 +441,6 @@
             }
         });
     }
-
     class CashierApp {
         constructor() {
             this.elements = {};
@@ -478,11 +448,8 @@
             this.currentModalType = null;
             this.currentReservationId = null;
             this.tempCustomerData = {};
-
             this.init();
-
         }
-
         init() {
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => {
@@ -496,7 +463,6 @@
                 this.setupTableClickEvents();
             }
         }
-
         initializeElements() {
             this.elements = {
                 userBtn: document.getElementById('userBtn'),
@@ -515,14 +481,12 @@
                 printBill: document.getElementById('printBill'),
             };
         }
-
         initializeEventListeners() {
             this.setupUserMenuEvents();
             this.setupModalEvents();
             this.setupPaymentEvents();
             this.initializeImagePopup();
         }
-
         setupUserMenuEvents() {
             if (this.elements.userBtn && this.elements.userMenu) {
                 this.elements.userBtn.addEventListener('click', (e) => {
@@ -534,9 +498,6 @@
                 document.addEventListener('click', () => this.elements.userMenu.classList.add('hidden'));
             }
         }
-
-
-
         setupModalEvents() {
             if (this.elements.notificationPaymentModal) {
                 this.elements.notificationPaymentModal.addEventListener('click', (e) => {
@@ -545,7 +506,6 @@
                     }
                 });
             }
-
             if (this.elements.tablePaymentModal) {
                 this.elements.tablePaymentModal.addEventListener('click', (e) => {
                     if (e.target === e.currentTarget) {
@@ -554,27 +514,23 @@
                 });
             }
         }
-
         setupPaymentEvents() {
             if (this.elements.notificationCloseBtn) {
                 this.elements.notificationCloseBtn.addEventListener('click', () => {
                     this.closeNotificationModal();
                 });
             }
-
             if (this.elements.cancelReservationBtn) {
                 this.elements.cancelReservationBtn.addEventListener('click', () => {
                     this.closeNotificationModal();
                 });
             }
-
             document.addEventListener('click', (e) => {
                 if (e.target && (e.target.id === 'paymentButton' || e.target.classList.contains('payment-submit-btn'))) {
                     e.preventDefault();
                     this.submitPayment(e);
                 }
             });
-
             const paymentBtn = document.getElementById('paymentButton');
             if (paymentBtn) {
                 paymentBtn.addEventListener('click', (event) => {
@@ -583,7 +539,6 @@
                 });
             }
         }
-
         setupTableClickEvents() {
             const tableLinks = document.querySelectorAll('.table-link');
 
@@ -603,7 +558,6 @@
                 });
             });
         }
-
         openTablePaymentModal(reservationId, tableNumber) {
             this.currentModalType = 'table';
             this.currentReservationId = reservationId;
@@ -689,9 +643,7 @@
             if (paxInput) {
                 paxInput.value = reservationData.pax || 'N/A';
             }
-
             const paymentItemsList = document.getElementById('paymentItemsList');
-
             if (reservationData.orders && reservationData.orders.length > 0) {
                 this.currentReservationData = reservationData;
                 this.processPayment(reservationData);
@@ -701,8 +653,6 @@
                 }
                 this.updatePaymentSummaryBreakdown();
             }
-
-            // Setup cash input
             this.setupCashReceivedInput();
         }
 
@@ -728,8 +678,6 @@
                 overlay.addEventListener("click", () => overlay.remove());
             });
         }
-
-
         updatePaymentModal(data) {
             const paymentProof = document.getElementById('paymentProof');
             this.updateElementText('tableNumber', data.table_id || 'N/A');
@@ -746,39 +694,29 @@
                 }
             }
         }
-
         updateElementText(elementId, text) {
             const element = document.getElementById(elementId);
             if (element) {
                 element.textContent = text;
             }
         }
-
         processPayment(currentReservationData) {
             if (!currentReservationData?.orders) return;
-
             const paymentItemsList = document.getElementById("paymentItemsList");
             const paymentTotal = document.getElementById("payment_total");
-
             if (!paymentItemsList) return;
-
             let subtotal = 0;
             let itemCounter = 0; 
             paymentItemsList.innerHTML = '';
-
             currentReservationData.orders.forEach(order => {
                 const itemName = order.order_name;
                 const menuItemData = window.menuPricesMap?.[itemName] || {};
-
                 const qty = parseInt(order.quantity) || 1;
                 const price = parseFloat(order.regular_price || 0);
-
                 for (let i = 0; i < qty; i++) {
                     subtotal += price;
-
                     const orderLine = document.createElement("div");
                     const isMainMenuItem = this.isMainCategoryItemWithDiscount(itemName, menuItemData);
-
                     if (isMainMenuItem) {
                         orderLine.className = "flex justify-between items-center py-2 border-b border-gray-100";
                         orderLine.innerHTML = `
@@ -988,8 +926,6 @@
 
             return options;
         }
-
-
         calculateSingleItemDiscount(selectElement) {
             const itemPrice = parseFloat(selectElement.dataset.itemPrice);
             const discountType = selectElement.value;
@@ -1011,16 +947,13 @@
                 default:
                     discountPercent = 0;
             }
-
             let discountedPrice = itemPrice * (1 - (discountPercent / 100));
-
             const decimalPart = discountedPrice - Math.floor(discountedPrice);
             if (decimalPart >= 0.5) {
                 discountedPrice = Math.ceil(discountedPrice);
             } else {
                 discountedPrice = Math.floor(discountedPrice);
             }
-
             const discountAmount = itemPrice - discountedPrice;
             selectElement.dataset.discountAmount = discountAmount.toFixed(2);
 
@@ -1032,7 +965,6 @@
                 }
             }
         }
-
         updateTotalAfterDiscounts() {
             const itemTotals = document.querySelectorAll('.item-total');
 
@@ -1044,7 +976,6 @@
             document.getElementById('payment_total').textContent = '₱' + newTotal.toFixed(2);
             this.updatePaymentSummaryBreakdown();
         }
-
         updatePaymentSummaryBreakdown() {
             const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
 
@@ -1069,7 +1000,6 @@
             const itemGroups = {};
             const mainMenuEntries = [];
             let itemCounter = 0;
-
             const discountSelectMap = {};
             document.querySelectorAll('.discount-type-select').forEach(select => {
                 const itemIndex = parseInt(select.getAttribute('data-item-index'));
@@ -1085,7 +1015,6 @@
                     itemTotalMap[itemIndex] = parseFloat(total.textContent.replace('₱', ''));
                 }
             });
-
             this.currentReservationData.orders.forEach((order, orderIndex) => {
                 const itemName = order.order_name;
                 const price = parseFloat(order.regular_price || 0);
@@ -1221,9 +1150,6 @@
                 }
             }
         }
-
-
-
         setupDiscountBreakdownSection() {
             this.updatePaymentSummaryBreakdown();
         }
@@ -1310,7 +1236,6 @@
         </div>
     </div>
     `;
-
             const existingModal = document.getElementById('customerInfoModal');
             if (existingModal) {
                 existingModal.remove();
@@ -1325,7 +1250,6 @@
             const form = document.getElementById('customerInfoForm');
             const cancelBtn = document.getElementById('cancelCustomerInfo');
 
-            // Add close button functionality
             if (cancelBtn) {
                 cancelBtn.addEventListener('click', () => {
                     if (modal) modal.remove();
@@ -1357,7 +1281,6 @@
                         return false;
                     }
 
-                    // Check if ID is already used in current transaction for same discount type
                     const currentDiscountType = form.querySelector('input[name="customer_type"]')?.value;
                     const currentItemIndex = form.querySelector('input[name="item_index"]')?.value;
                     const currentItemName = form.querySelector('input[name="item_name"]')?.value;
@@ -1491,8 +1414,6 @@
                 this.showToast('Cannot save empty ID number', 'error');
                 return false;
             }
-
-
             const key = `${customerData.item_name}_${customerData.item_index}`;
             this.tempCustomerData[key] = {
                 id_number: customerData.id_number.trim(),
@@ -1940,7 +1861,6 @@
                 return;
             }
 
-            // Build items as table rows
             let itemsHTML = '';
             summaryItems.forEach(item => {
                 const itemNameElement = item.querySelector('.flex-1.pr-2');
@@ -2195,19 +2115,12 @@
 
             this.populateProcessPaymentModal();
         }
-
-        // Add this method to your app object
         populateProcessPaymentModal() {
             const data = this.pendingPaymentData;
             const customerName = document.getElementById('payment_customer_name')?.value || 'Walk-in Customer';
-
-            // Set customer name
             document.getElementById('confirmModalCustomerName').textContent = customerName;
-
-            // Populate order items
             const orderItemsContainer = document.getElementById('confirmModalOrderItems');
             orderItemsContainer.innerHTML = '';
-
             const paymentSummaryDiv = document.querySelector('.border.rounded-lg.p-4.bg-gray-50 .space-y-2');
             const summaryItems = paymentSummaryDiv.querySelectorAll('.flex.justify-between.items-center.text-sm.py-2');
 
@@ -2228,19 +2141,13 @@
                     orderItemsContainer.appendChild(itemDiv);
                 }
             });
-
-            // Set amounts
             document.getElementById('confirmModalSubtotal').textContent = `₱${data.subtotal.toFixed(2)}`;
-
-            // Show/hide advance payment
             if (data.advancePayment > 0) {
                 document.getElementById('confirmModalAdvancePayment').classList.remove('hidden');
                 document.getElementById('confirmModalAdvanceAmount').textContent = `₱${data.advancePayment.toFixed(2)}`;
             } else {
                 document.getElementById('confirmModalAdvancePayment').classList.add('hidden');
             }
-
-            // Calculate and show discount if any
             let discountAmount = 0;
             document.querySelectorAll('.discount-type-select').forEach(select => {
                 const discountValue = parseFloat(select.dataset.discountAmount || 0);
@@ -2257,8 +2164,6 @@
             document.getElementById('confirmModalTotal').textContent = `₱${data.finalTotal.toFixed(2)}`;
             document.getElementById('confirmModalCashReceived').textContent = `₱${data.cashReceived.toFixed(2)}`;
             document.getElementById('confirmModalChange').textContent = `₱${data.change.toFixed(2)}`;
-
-            // Show discounted customers if any
             if (data.hasActiveDiscounts && data.discountedItems.length > 0) {
                 const customersListContainer = document.getElementById('confirmModalCustomersList');
                 customersListContainer.innerHTML = '';
@@ -2284,12 +2189,8 @@
             } else {
                 document.getElementById('confirmModalDiscountedCustomers').classList.add('hidden');
             }
-
-            // Show modal
             document.getElementById('processPaymentModal').classList.remove('hidden');
         }
-
-        // Add these methods to your app object
 
         closeProcessPaymentModal() {
             document.getElementById('processPaymentModal').classList.add('hidden');
@@ -2303,8 +2204,6 @@
             }
 
             const data = this.pendingPaymentData;
-
-            // Collect all customer data
             const allCustomerData = [];
             if (data.hasActiveDiscounts) {
                 data.discountedItems.forEach(item => {
@@ -2323,11 +2222,7 @@
                     }
                 });
             }
-
-            // Close modal
             this.closeProcessPaymentModal();
-
-            // Process payment
             this.processFinalPayment(
                 data.finalTotal,
                 data.subtotal,
@@ -2339,8 +2234,6 @@
             );
         }
 
-
-
         showToast(message, type = 'info') {
             if (typeof window.showToast === 'function') {
                 window.showToast(message, type);
@@ -2348,7 +2241,6 @@
             }
 
             const toastContainer = document.getElementById('toast-container') || this.createToastContainer();
-
             const toast = document.createElement('div');
             toast.className = `toast toast-${type} fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transform
             translate-x-full transition-transform duration-300`;
@@ -2359,7 +2251,6 @@
                 warning: 'bg-yellow-500 text-black',
                 info: 'bg-blue-500 text-white'
             };
-
             toast.className += ` ${colors[type] || colors.info}`;
             toast.textContent = message;
 
@@ -2390,7 +2281,6 @@
         toggleActionButtons(paymentStatus) {
         }
     }
-
     const app = new CashierApp();
     window.app = app;
 
@@ -2399,7 +2289,6 @@
             window.app.closeTablePaymentModal();
         }
     }
-
     function submitPayment(event) {
         if (!event && typeof window.event !== 'undefined') {
             event = window.event;
@@ -2409,11 +2298,6 @@
             window.app.submitPayment(event);
         }
     }
-
 </script>
-
-<!-- -->
-<!-- --><!-- -->
-<!-- -->
 
 </html>

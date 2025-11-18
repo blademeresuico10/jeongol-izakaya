@@ -1,32 +1,25 @@
 <style>
     @keyframes heartbeat {
-
         0%,
         100% {
             transform: scale(1);
         }
-
         25% {
             transform: scale(1.1);
         }
-
         50% {
             transform: scale(1);
         }
-
         75% {
             transform: scale(1.05);
         }
     }
-
     .animate-heartbeat {
         animation: heartbeat 1.5s ease-in-out infinite;
     }
 </style>
 <div wire:poll.10s="loadTables">
-
     <div class="max-w-7xl mx-auto px-4 py-6" x-data="waitStaffData()">
-
         <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
             <h2 class="text-2xl font-bold mb-6 text-gray-800">Select Table</h2>
             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
@@ -38,7 +31,6 @@
                                     }" :disabled="!table.hasActiveSession"
                         class="relative p-6 rounded-xl font-bold text-lg transition-all">
                         <span x-text="'Table ' + table.number"></span>
-
                         <template x-if="table.hasReadyItems">
                             <span
                                 class="absolute -top-1 -right-1 text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md border border-green-200 animate-heartbeat whitespace-nowrap">
@@ -49,7 +41,6 @@
                 </template>
             </div>
         </div>
-
         <div x-show="activeTable" x-transition class="grid grid-cols-2 gap-4 mb-6">
             <button @click="showMenu = true"
                 class="bg-green-600 text-white p-6 rounded-xl font-bold text-lg flex items-center justify-center gap-3">
@@ -61,13 +52,11 @@
                 Refill
             </button>
         </div>
-
         <div x-show="activeTable" x-transition class="bg-white rounded-xl shadow-lg p-6">
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">
                     Table <span x-text="activeTable ? getTableNumber(activeTable) : ''"></span> Orders
                 </h2>
-                <!-- Serve All Ready Button -->
                 <template x-if="hasReadyItemsInCurrentTable()">
                     <button @click="serveAllReady()"
                         class="px-6 py-3 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white rounded-lg font-semibold transition-colors flex items-center gap-2">
@@ -78,7 +67,6 @@
                     </button>
                 </template>
             </div>
-
             <template x-if="currentOrders.length === 0 && currentRefills.length === 0">
                 <div class="text-center py-16">
                     <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
@@ -90,11 +78,8 @@
                     <h3 class="text-xl font-bold text-gray-600 mb-2">No Orders Yet</h3>
                 </div>
             </template>
-
-            <!-- Orders & Refills List -->
             <template x-if="currentOrders.length > 0 || currentRefills.length > 0">
                 <div class="border-2 rounded-xl overflow-hidden">
-                    <!-- Regular Orders -->
                     <template x-for="(order, index) in currentOrders" :key="'order-' + order.id">
                         <div class="flex items-center justify-between p-5 border-l-4" :class="{
                                 'border-green-500 bg-green-50': order.status === 'Ready',
@@ -108,15 +93,12 @@
                                     <span class="font-bold text-lg text-gray-800"
                                         :class="{'line-through text-gray-400': order.status === 'Cancelled'}"
                                         x-text="order.item"></span>
-
                                     <template x-if="!order.isUnlimited">
                                         <span
                                             class="text-base font-semibold text-gray-600 bg-white px-3 py-1 rounded-lg">
                                             x<span x-text="order.quantity"></span>
                                         </span>
                                     </template>
-
-                                    <!-- Status Badge -->
                                     <span class="text-xs font-semibold px-3 py-1 rounded-full" :class="{
                                         'bg-green-100 text-green-700': order.status === 'Ready',
                                         'bg-blue-100 text-blue-700': order.status === 'Served',
@@ -125,9 +107,7 @@
                                     }" x-text="order.status"></span>
                                 </div>
                             </div>
-
                             <div class="flex items-center gap-2 ml-4">
-                                <!-- Remove Button for Pending Orders -->
                                 <template x-if="order.status === 'Pending'">
                                     <button @click="removeItem(order.id, 'order')"
                                         class="p-3 text-red-600 bg-red-100 hover:bg-red-200 active:bg-red-300 rounded-xl transition-colors touch-manipulation"
@@ -141,8 +121,6 @@
                             </div>
                         </div>
                     </template>
-
-                    <!-- Refills -->
                     <template x-for="(refill, index) in currentRefills" :key="'refill-' + refill.id">
                         <div class="flex items-center justify-between p-5 border-l-4 active:bg-gray-100 transition-colors touch-manipulation"
                             :class="{
@@ -154,23 +132,16 @@
                             }">
                             <div class="flex-1">
                                 <div class="flex items-center gap-3 mb-2">
-                                    <!-- Refill Badge -->
                                     <span class="text-xs font-bold px-2 py-1 rounded-full bg-purple-600 text-white">
                                         REFILL
                                     </span>
-
-                                    <!-- Ingredient Name -->
                                     <span class="font-bold text-lg text-gray-800"
                                         :class="{'line-through text-gray-400': refill.status === 'Cancelled'}"
                                         x-text="refill.ingredient_name"></span>
-
-                                    <!-- Quantity -->
                                     <span class="text-base font-semibold text-gray-600 bg-white px-3 py-1 rounded-lg">
                                         x<span x-text="refill.quantity"></span> plate(s)
                                     </span>
                                 </div>
-
-                                <!-- Status Badge -->
                                 <div class="flex items-center gap-2 mt-2">
                                     <span class="text-xs font-semibold px-3 py-1 rounded-full" :class="{
                                         'bg-green-100 text-green-700': refill.status === 'Ready',
@@ -180,7 +151,6 @@
                                     }" x-text="refill.status"></span>
                                 </div>
                             </div>
-
                             <div class="flex items-center gap-2 ml-4">
                                 <template x-if="refill.status === 'Pending'">
                                     <button @click="removeItem(refill.id, 'refill')"
@@ -198,15 +168,11 @@
                 </div>
             </template>
         </div>
-
-        <!-- Menu Modal -->
         <div x-show="showMenu" x-cloak @click.self="showMenu = false"
             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50"
             style="display: none;">
             <div @click.away="showMenu = false"
                 class="bg-white rounded-xl w-full h-full sm:h-auto sm:max-w-6xl sm:max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
-
-                <!-- Header -->
                 <div class="bg-white border-b p-4 sm:p-5 flex items-center justify-between shrink-0">
                     <h2 class="text-lg sm:text-xl font-bold text-gray-900">Add Order</h2>
                     <button @click="showMenu = false"
@@ -217,11 +183,7 @@
                         </svg>
                     </button>
                 </div>
-
-                <!-- Content Grid -->
                 <div class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x">
-
-                    <!-- Left Side: Menu Items -->
                     <div class="overflow-y-auto p-4 sm:p-6">
                         <h3
                             class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 sticky top-0 bg-white pb-2 z-10">
@@ -259,13 +221,9 @@
                             </div>
                         @endforelse
                     </div>
-
-                    <!-- Right Side: Order Summary -->
                     <div class="bg-gray-50 p-4 sm:p-6 flex flex-col min-h-0">
                         <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4 shrink-0">Order
                             Summary</h3>
-
-                        <!-- Order Items List - Scrollable -->
                         <div class="flex-1 overflow-y-auto mb-4 space-y-2 min-h-0">
                             <template x-if="orderCart.length === 0">
                                 <div class="flex flex-col items-center justify-center text-gray-300 py-12">
@@ -277,12 +235,10 @@
                                     <p class="text-xs mt-1">Add items from the menu</p>
                                 </div>
                             </template>
-
                             <template x-for="(item, index) in orderCart" :key="index">
                                 <div class="bg-white rounded-lg p-3 border border-gray-200">
                                     <div class="flex items-center justify-between gap-3">
                                         <h4 class="flex-1 font-medium text-sm text-gray-900" x-text="item.name"></h4>
-
                                         <div class="flex items-center gap-2">
                                             <button @click="decreaseQuantity(index)"
                                                 class="w-7 h-7 flex items-center justify-center hover:bg-gray-100 rounded text-gray-600">
@@ -303,7 +259,6 @@
                                                 </svg>
                                             </button>
                                         </div>
-
                                         <button @click="removeFromCart(index)"
                                             class="text-gray-400 hover:text-red-500 p-1">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,16 +270,12 @@
                                 </div>
                             </template>
                         </div>
-
-                        <!-- Notes -->
                         <div class="mb-4 shrink-0">
                             <label class="block text-xs font-semibold text-gray-700 mb-2">Notes (Optional)</label>
                             <textarea x-model="orderNotes" placeholder="Add special instructions..."
                                 class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm text-gray-900 placeholder-gray-400"
                                 rows="2"></textarea>
                         </div>
-
-                        <!-- Submit Button -->
                         <button @click="submitOrder()" :disabled="orderCart.length === 0"
                             :class="orderCart.length === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow'"
                             class="w-full py-3.5 font-semibold text-base rounded-lg transition-all touch-manipulation shrink-0">
@@ -334,16 +285,11 @@
                 </div>
             </div>
         </div>
-
-        <!-- Refill Modal -->
         <div x-show="showRefillModal" x-cloak @click.self="closeRefillModal()"
             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             style="display: none;">
-
             <div @click.away="closeRefillModal()"
                 class="bg-white rounded-2xl max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-2xl">
-
-                <!-- Header -->
                 <div class="sticky top-0 bg-white border-b-2 p-6 flex items-center justify-between z-10 rounded-t-2xl">
                     <h2 class="text-2xl font-bold text-gray-800">Select Refill Items</h2>
                     <button @click="closeRefillModal()"
@@ -351,10 +297,7 @@
                         ×
                     </button>
                 </div>
-
-                <!-- Content -->
                 <div class="p-6">
-                    <!-- No Unlimited Package -->
                     <template x-if="!hasUnlimitedPackage">
                         <div class="text-center py-12">
                             <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor"
@@ -365,35 +308,27 @@
                             <p class="text-gray-500 text-lg">This table doesn't have an unlimited package.</p>
                         </div>
                     </template>
-
-                    <!-- With Unlimited Package -->
                     <template x-if="hasUnlimitedPackage">
                         <div>
                             <template x-for="category in getRefillCategories()" :key="category">
                                 <div class="mb-6">
                                     <h3 class="text-lg font-bold text-gray-700 mb-3 pb-2 border-b" x-text="category">
                                     </h3>
-
                                     <div class="space-y-3">
                                         <template x-for="item in getRefillsByCategory(category)" :key="item.id">
                                             <div
                                                 class="flex items-center justify-between border rounded-xl p-3 bg-white hover:bg-gray-50 transition">
-
-                                                <!-- Left side: Checkbox + name -->
                                                 <div class="flex items-center gap-3 flex-1">
                                                     <input type="checkbox"
                                                         @change="toggleRefillItem(item.id, $event.target.checked)"
                                                         class="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500" />
                                                     <span class="font-semibold text-gray-800" x-text="item.name"></span>
                                                 </div>
-
-                                                <!-- Right side: Quantity controls -->
                                                 <template x-if="selectedRefills[item.id]">
                                                     <div class="flex items-center gap-2">
                                                         <button type="button"
                                                             @click="updateRefillPlates(item.id, Math.max(selectedRefills[item.id].plates - 1, 1))"
                                                             class="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 font-bold">−</button>
-
                                                         <input type="text"
                                                             x-model.number="selectedRefills[item.id].plates"
                                                             @input="if (!/^\d*$/.test($event.target.value)) $event.target.value = selectedRefills[item.id].plates"
@@ -401,7 +336,6 @@
                                                             @paste.prevent
                                                             class="w-12 text-center border rounded-lg px-2 py-1 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                                                             style="appearance: textfield; -moz-appearance: textfield; -webkit-appearance: none;" />
-
                                                         <button type="button"
                                                             @click="updateRefillPlates(item.id, selectedRefills[item.id].plates + 1)"
                                                             class="w-8 h-8 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 font-bold">+</button>
@@ -412,8 +346,6 @@
                                     </div>
                                 </div>
                             </template>
-
-                            <!-- Submit -->
                             <div class="sticky bottom-0 bg-white pt-4 border-t-2 mt-6">
                                 <button @click="submitRefills()" :disabled="Object.keys(selectedRefills).length === 0"
                                     :class="Object.keys(selectedRefills).length > 0 ? 
@@ -428,9 +360,6 @@
                 </div>
             </div>
         </div>
-
-
-        <!-- Serve Confirmation Modal -->
         <div x-show="showServeModal" x-cloak @click.self="showServeModal = false"
             class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
             style="display: none;">
@@ -441,14 +370,10 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
                     </div>
-
                     <h3 class="text-xl font-bold text-gray-900 text-center mb-2">
                         Serve Items
                     </h3>
-
                     <p class="text-gray-600 text-center mb-6" x-text="serveModalMessage"></p>
-
-                    <!-- Items List -->
                     <div class="max-h-60 overflow-y-auto mb-6 border rounded-lg">
                         <template x-for="item in itemsToServe" :key="item.id">
                             <div class="flex items-center justify-between p-3 border-b last:border-b-0 bg-gray-50">
@@ -459,7 +384,6 @@
                             </div>
                         </template>
                     </div>
-
                     <div class="flex gap-3">
                         <button @click="showServeModal = false"
                             class="flex-1 px-4 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition-colors">
@@ -473,7 +397,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -495,7 +418,6 @@
             selectedRefills: {},
             orderCart: [],
             orderNotes: '',
-
             init() {
                 setInterval(async () => {
                     if (this.activeTable) {
