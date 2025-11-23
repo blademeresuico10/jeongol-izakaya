@@ -616,52 +616,49 @@ class AdminController extends Controller
     public function menu_management(Request $request)
     {
         $showDeleted = $request->has('show_deleted');
+
         if ($showDeleted) {
-            $menu = menu::onlyTrashed()->get();
+            $menu = menu::onlyTrashed()->with('category')->get();
         } else {
-            $menu = menu::all();
+            $menu = menu::with('category')->get();
         }
+
         $categories = MenuCategory::where('is_active', 1)->get();
         $allCategories = MenuCategory::all();
-        $mainCourseCategory = MenuCategory::where('name', 'Main Course')->first();
-        $ingredients = collect();
-        if ($mainCourseCategory) {
-            $ingredients = DB::table('menu_ingredients as mi')
-                ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
-                ->join('menu as m', 'mi.menu_id', '=', 'm.id')
-                ->leftJoin('refill_configurations as rc', 'i.id', '=', 'rc.ingredient_id')
-                ->where('m.category_id', $mainCourseCategory->id)
-                ->whereNull('m.deleted_at')
-                ->select(
-                    'i.id',
-                    'i.name',
-                    'rc.quantity_per_plate',
-                    'rc.unit',
-                    DB::raw('GROUP_CONCAT(DISTINCT m.menu_item SEPARATOR ", ") as used_in_menus')
-                )
-                ->groupBy('i.id', 'i.name', 'rc.quantity_per_plate', 'rc.unit')
-                ->orderBy('i.name')
-                ->get();
-        }
+
+        $ingredients = DB::table('menu_ingredients as mi')
+    ->join('ingredients as i', 'mi.ingredient_id', '=', 'i.id')
+    ->join('ingredient_units as u', 'i.unit_id', '=', 'u.id') // join to get unit
+    ->join('menu as m', 'mi.menu_id', '=', 'm.id')
+    ->join('menu_categories as mc', 'm.category_id', '=', 'mc.id')
+    ->leftJoin('refill_configurations as rc', 'i.id', '=', 'rc.ingredient_id')
+    ->whereNull('m.deleted_at')
+    ->where('mc.name', 'Main Course')
+    ->select(
+        'i.id',
+        'i.name',
+        'rc.quantity_per_plate',
+        DB::raw('u.abbreviation as unit'), // get the actual unit abbreviation
+        DB::raw('GROUP_CONCAT(DISTINCT m.menu_item SEPARATOR ", ") as used_in_menus')
+    )
+    ->groupBy('i.id', 'i.name', 'rc.quantity_per_plate', 'unit')
+    ->orderBy('i.name')
+    ->get();
+
+
+
+
         return view('admin.menu_management', compact('menu', 'categories', 'allCategories', 'ingredients'));
     }
+
     public function menuIngredients()
     {
         try {
-            $mainCourseCategory = MenuCategory::where('name', 'Main Course')->first();
-
-            if (!$mainCourseCategory) {
-                return response()->json([
-                    'success' => true,
-                    'menus' => [],
-                    'ingredients' => []
-                ]);
-            }
             $menus = DB::table('menu')
                 ->join('menu_categories as mc', 'menu.category_id', '=', 'mc.id')
-                ->where('menu.category_id', $mainCourseCategory->id)
                 ->whereNull('menu.deleted_at')
-                ->orderBy('menu.created_at', 'desc')
+                ->orderBy('mc.name')
+                ->orderBy('menu.menu_item')
                 ->select(
                     'menu.id',
                     'menu.menu_item',
@@ -669,6 +666,7 @@ class AdminController extends Controller
                     'mc.name as category_name'
                 )
                 ->get();
+
             $ingredients = [];
             foreach ($menus as $menu) {
                 $ingredients[$menu->id] = DB::table('menu_ingredients as mi')
@@ -687,6 +685,7 @@ class AdminController extends Controller
                     )
                     ->get();
             }
+
             return response()->json([
                 'success' => true,
                 'menus' => $menus,
@@ -703,18 +702,8 @@ class AdminController extends Controller
     }
     public function getIngredients($id)
     {
-        $menu = Menu::findOrFail($id);
+        $menu = menu::with('category')->findOrFail($id);
 
-        $mainCourseCategory = MenuCategory::where('name', 'Main Course')->first();
-
-        if (!$mainCourseCategory || $menu->category_id !== $mainCourseCategory->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This menu is not a Main Course menu',
-                'menu' => $menu,
-                'ingredients' => []
-            ]);
-        }
         $ingredients = DB::table('menu_ingredients')
             ->join('ingredients', 'menu_ingredients.ingredient_id', '=', 'ingredients.id')
             ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
@@ -728,6 +717,7 @@ class AdminController extends Controller
                 'ingredient_units.abbreviation as unit'
             )
             ->get();
+
         return response()->json([
             'success' => true,
             'menu' => $menu,
@@ -809,23 +799,35 @@ class AdminController extends Controller
     }
     public function getAllIngredients()
     {
-        $ingredients = DB::table('ingredients')
-            ->join('ingredient_categories', 'ingredients.category_id', '=', 'ingredient_categories.id')
-            ->join('ingredient_units', 'ingredients.unit_id', '=', 'ingredient_units.id')
-            ->select(
-                'ingredients.id',
-                'ingredients.name',
-                'ingredient_categories.name as category',
-                'ingredient_units.abbreviation as unit',
-                'ingredients.stocks'
-            )
-            ->orderBy('ingredient_categories.name')
-            ->orderBy('ingredients.name')
-            ->get();
+        try {
+            $ingredients = DB::table('ingredients as i')
+                ->join('ingredient_categories as ic', 'i.category_id', '=', 'ic.id')
+                ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
+                ->select(
+                    'i.id',
+                    'i.name',
+                    'ic.name as category',
+                    'iu.abbreviation as unit',
+                    'i.stocks'
+                )
+                ->orderBy('ic.name')
+                ->orderBy('i.name')
+                ->get();
 
-        return response()->json([
-            'ingredients' => $ingredients
-        ]);
+
+            return response()->json([
+                'success' => true,
+                'ingredients' => $ingredients
+            ]);
+        } catch (\Exception $e) {
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load ingredients',
+                'error' => $e->getMessage(),
+                'ingredients' => []
+            ], 500);
+        }
     }
     public function removeMenuIngredient($id)
     {
@@ -878,7 +880,7 @@ class AdminController extends Controller
             $request->validate(
                 [
                     'menu_item' => 'required|string|max:255|unique:menu,menu_item,NULL,id,deleted_at,NULL',
-                    'category' => 'required|in:main,add_ons',
+                    'category_id' => 'required|exists:menu_categories,id', // Changed from 'category'
                     'regular_price' => 'required|numeric|min:0',
                     'has_customer_discount' => 'required|boolean',
                     'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -887,8 +889,8 @@ class AdminController extends Controller
                     'menu_item.required' => 'Menu item name is required.',
                     'menu_item.unique' => 'The menu already exists.',
                     'menu_item.max' => 'Menu item name cannot exceed 255 characters.',
-                    'category.required' => 'Category is required.',
-                    'category.in' => 'Category must be either Main or Add-ons.',
+                    'category_id.required' => 'Category is required.', // Changed
+                    'category_id.exists' => 'Selected category is invalid.', // Changed
                     'regular_price.required' => 'Regular price is required.',
                     'regular_price.numeric' => 'Regular price must be a valid number.',
                     'regular_price.min' => 'Regular price cannot be negative.',
@@ -899,20 +901,23 @@ class AdminController extends Controller
                     'image.max' => 'Image size cannot exceed 2MB.',
                 ]
             );
+
             $imageName = null;
             if ($request->hasFile('image')) {
                 $image = $request->file('image');
                 $imageName = time() . '_' . $image->getClientOriginalName();
                 $image->move(public_path('storage/jeongol_menu'), $imageName);
             }
-            $menu = Menu::create([
+
+            $menu = menu::create([
                 'menu_item' => $request->menu_item,
-                'category' => $request->category,
+                'category_id' => $request->category_id,
                 'regular_price' => $request->regular_price,
                 'has_customer_discount' => (bool) $request->has_customer_discount,
                 'status' => 'Active',
                 'image' => $imageName,
             ]);
+
             return redirect()->route('admin.menu_management')
                 ->with('success', 'Menu item added successfully!')
                 ->with('new_menu_name', $menu->menu_item);
@@ -968,20 +973,20 @@ class AdminController extends Controller
     public function getExistingIngredients($menuId)
     {
         try {
-            $ingredientIds = DB::table('menu_ingredients')
+            $existingIngredients = DB::table('menu_ingredients')
                 ->where('menu_id', $menuId)
                 ->pluck('ingredient_id')
                 ->toArray();
 
             return response()->json([
                 'success' => true,
-                'ingredient_ids' => $ingredientIds
+                'ingredient_ids' => $existingIngredients
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to fetch existing ingredients',
-                'error' => $e->getMessage()
+                'message' => 'Failed to get existing ingredients',
+                'ingredient_ids' => []
             ], 500);
         }
     }

@@ -382,10 +382,16 @@
                                                 </td>
                                                 <td>
                                                     <select class="form-control form-control-sm refill-unit">
-                                                        <option value="g" {{ ($ingredient->unit ?? 'g') == 'g' ? 'selected' : '' }}>g</option>
-                                                        <option value="kg" {{ ($ingredient->unit ?? 'g') == 'kg' ? 'selected' : '' }}>kg</option>
+                                                        @if($ingredient->unit == 'kg')
+                                                            <option value="kg">kg</option>
+                                                            <option value="g" selected>g</option>
+                                                        @else
+                                                            <option value="{{ $ingredient->unit }}" selected>
+                                                                {{ $ingredient->unit }}</option>
+                                                        @endif
                                                     </select>
                                                 </td>
+
                                             </tr>
                                         @empty
                                             <tr>
@@ -422,21 +428,23 @@
                         <form id="addIngredientForm">
                             <div class="modal-body">
                                 <div class="form-group">
-                                    <label class="font-weight-bold">Ingredient</label>
+                                    <label class="font-weight-bold">Ingredient <span
+                                            class="text-danger">*</span></label>
                                     <select id="ingredientSelect" class="form-control" required>
                                         <option value="">Select an ingredient</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
-                                    <label class="font-weight-bold">Quantity<span id="unitLabel"
-                                            class="text-muted"></span></label>
+                                    <label class="font-weight-bold">
+                                        Quantity <span class="text-danger">*</span><span id="unitLabel"></span>
+                                    </label>
                                     <input type="number" id="ingredientQty" class="form-control"
-                                        placeholder="Enter quantity" required>
+                                        placeholder="Enter quantity" step="0.01" min="0.01" required>
                                 </div>
                             </div>
                             <div class="modal-footer">
                                 <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-save"></i> Add
+                                    <i class="fas fa-save"></i> Add Ingredient
                                 </button>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
                             </div>
@@ -1386,17 +1394,28 @@
             currentMenuId = $(this).data('menu-id');
             const menuName = $(this).data('menu-name');
 
+            console.log('=== Add Ingredient Clicked ===');
+            console.log('Menu ID:', currentMenuId);
+            console.log('Menu Name:', menuName);
+
             $('#menuNameLabel').text(menuName);
             $('#ingredientQty').val('');
+            $('#unitLabel').html('');
 
             fetch("{{ route('ingredients.list') }}")
-                .then(res => res.json())
+                .then(res => {
+                    console.log('Ingredients response status:', res.status);
+                    return res.json();
+                })
                 .then(data => {
+                    console.log('Ingredients data received:', data);
+
                     if (!data.ingredients || data.ingredients.length === 0) {
+                        console.warn('No ingredients available');
                         Swal.fire({
                             icon: 'info',
                             title: 'No Ingredients',
-                            text: 'No ingredients available',
+                            text: 'No ingredients available in the system',
                             toast: true,
                             position: 'top',
                             timer: 3000,
@@ -1405,65 +1424,92 @@
                         return;
                     }
 
-                    const grouped = data.ingredients.reduce((acc, ing) => {
-                        if (!acc[ing.category]) acc[ing.category] = [];
-                        acc[ing.category].push(ing);
-                        return acc;
-                    }, {});
+                    const grouped = {};
+                    data.ingredients.forEach(ing => {
+                        const cat = ing.category ? ing.category.toLowerCase() : 'other';
+                        if (!grouped[cat]) {
+                            grouped[cat] = [];
+                        }
+                        grouped[cat].push(ing);
+                    });
+
+                    console.log('Grouped ingredients:', grouped);
 
                     fetch(`{{ url('menu') }}/${currentMenuId}/existing-ingredients`)
-                        .then(res => res.json())
+                        .then(res => {
+                            console.log('Existing ingredients response status:', res.status);
+                            return res.json();
+                        })
                         .then(existingData => {
+                            console.log('Existing ingredients data:', existingData);
+
                             const existingIds = existingData.ingredient_ids || [];
+                            console.log('Existing ingredient IDs:', existingIds);
 
                             let options = '<option value="">Select an ingredient</option>';
+                            let hasOptions = false;
 
-                            const categoryOrder = ['meat', 'vegetables', 'soupbase', 'beverage'];
-                            categoryOrder.forEach(category => {
-                                if (!grouped[category]) return;
+                            const sortedCategories = Object.keys(grouped).sort();
 
-                                const available = grouped[category].filter(ing => !existingIds.includes(ing.id));
-                                if (available.length === 0) return;
+                            sortedCategories.forEach(category => {
+                                const available = grouped[category].filter(ing => {
+                                    return !existingIds.includes(ing.id);
+                                });
 
-                                options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
+                                if (available.length === 0) {
+                                    console.log(`No available ingredients in category: ${category}`);
+                                    return;
+                                }
+
+                                hasOptions = true;
+                                const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+                                options += `<optgroup label="${categoryName}">`;
+
                                 available.forEach(ing => {
-                                    let displayStock = ing.stocks;
-                                    let displayUnit = ing.unit;
-
-                                    if (ing.unit === 'kg') {
-                                        displayStock = ing.stocks * 1000;
-                                        displayUnit = 'grams';
-                                    }
-
-                                    options += `<option value="${ing.id}" data-unit="${displayUnit}">
+                                    options += `<option value="${ing.id}" data-unit="${ing.unit}" data-stocks="${ing.stocks}">
                                 ${ing.name}
                             </option>`;
                                 });
+
                                 options += '</optgroup>';
                             });
+
+                            console.log('Has options:', hasOptions);
+                            console.log('Final options HTML length:', options.length);
+
+                            if (!hasOptions) {
+                                Swal.fire({
+                                    icon: 'info',
+                                    title: 'All Ingredients Added',
+                                    text: 'All available ingredients have already been added to this menu',
+                                    toast: true,
+                                    position: 'top',
+                                    timer: 3000,
+                                    showConfirmButton: false,
+                                });
+                                return;
+                            }
 
                             $('#ingredientSelect').html(options);
                             $('#addIngredientModal').modal('show');
                         })
-                        .catch(() => {
+                        .catch(err => {
+                            console.error('Error fetching existing ingredients:', err);
+
                             let options = '<option value="">Select an ingredient</option>';
-                            Object.keys(grouped).forEach(category => {
-                                options += `<optgroup label="${category.charAt(0).toUpperCase() + category.slice(1)}">`;
+
+                            Object.keys(grouped).sort().forEach(category => {
+                                const categoryName = category.charAt(0).toUpperCase() + category.slice(1);
+                                options += `<optgroup label="${categoryName}">`;
+
                                 grouped[category].forEach(ing => {
-                                    let displayStock = ing.stocks;
-                                    let displayUnit = ing.unit;
-
-                                    if (ing.unit === 'kg') {
-                                        displayStock = ing.stocks * 1000;
-                                        displayUnit = 'grams';
-                                    }
-
-                                    options += `<option value="${ing.id}" data-unit="${displayUnit}">
-                                ${ing.name} (Stock: ${displayStock} ${displayUnit})
+                                    options += `<option value="${ing.id}"">
+                                ${ing.name})
                             </option>`;
                                 });
                                 options += '</optgroup>';
                             });
+
                             $('#ingredientSelect').html(options);
                             $('#addIngredientModal').modal('show');
                         });
@@ -1473,11 +1519,13 @@
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Failed to load ingredients',
+                        text: 'Failed to load ingredients. Please try again.',
                         toast: true,
                         position: 'top',
                         timer: 3000,
                         showConfirmButton: false,
+                        background: '#f8d7da',
+                        color: '#721c24'
                     });
                 });
         });
@@ -1485,30 +1533,83 @@
         $(document).on('change', '#ingredientSelect', function () {
             const selected = $(this).find('option:selected');
             const unit = selected.data('unit');
+            const ingredientQtyInput = $('#ingredientQty');
+            const unitLabel = $('#unitLabel');
 
-            let defaultQty = 1;
-            if (unit === 'grams') {
-                defaultQty = 50;
-            } else if (unit === 'pieces') {
-                defaultQty = 10;
+            if (!unit) {
+                ingredientQtyInput.val('');
+                unitLabel.text('');
+                ingredientQtyInput.attr('step', '0.01');
+                ingredientQtyInput.attr('min', '0.01');
+                return;
             }
 
-            $('#ingredientQty').val(defaultQty);
-            $('#unitLabel').text(' (grams)');
+            const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(unit.toLowerCase());
+
+            const isKilogram = ['kg', 'kilogram', 'kilograms'].includes(unit.toLowerCase());
+
+            if (isPieces) {
+                ingredientQtyInput.val(1);
+                ingredientQtyInput.attr('step', '1');
+                ingredientQtyInput.attr('min', '1');
+                ingredientQtyInput.attr('oninput', 'this.value = Math.floor(Math.abs(this.value))');
+                unitLabel.html(` <span class="text-muted">(${unit})</span>`);
+            } else if (isKilogram) {
+                ingredientQtyInput.val(0.1);
+                ingredientQtyInput.attr('step', '0.01');
+                ingredientQtyInput.attr('min', '0.01');
+                ingredientQtyInput.removeAttr('oninput');
+
+                unitLabel.html(`
+            <select id="ingredientUnitSelect" class="form-control form-control-sm d-inline-block ml-2" style="width: auto;">
+                <option value="kg">kg</option>
+                <option value="g">g</option>
+            </select>
+        `);
+            } else {
+                ingredientQtyInput.val(0.1);
+                ingredientQtyInput.attr('step', '0.01');
+                ingredientQtyInput.attr('min', '0.01');
+                ingredientQtyInput.removeAttr('oninput');
+                unitLabel.html(` <span class="text-muted">(${unit})</span>`);
+            }
         });
 
+        $(document).on('change', '#ingredientUnitSelect', function () {
+            const ingredientQtyInput = $('#ingredientQty');
+            const currentQty = parseFloat(ingredientQtyInput.val()) || 0;
+            const newUnit = $(this).val();
+            const previousUnit = $(this).data('previous-unit') || 'kg';
 
+            if (newUnit !== previousUnit) {
+                if (newUnit === 'g' && previousUnit === 'kg') {
+                    ingredientQtyInput.val((currentQty * 1000).toFixed(2));
+                } else if (newUnit === 'kg' && previousUnit === 'g') {
+                    ingredientQtyInput.val((currentQty / 1000).toFixed(2));
+                }
+            }
+
+            $(this).data('previous-unit', newUnit);
+        });
 
         $('#addIngredientForm').on('submit', function (e) {
             e.preventDefault();
 
             const ingredientId = $('#ingredientSelect').val();
-            const quantity = $('#ingredientQty').val();
+            const quantity = parseFloat($('#ingredientQty').val());
+            const selectedOption = $('#ingredientSelect option:selected');
+            const baseUnit = selectedOption.data('unit');
+
+            let unit = baseUnit;
+            const unitSelector = $('#ingredientUnitSelect');
+            if (unitSelector.length) {
+                unit = unitSelector.val();
+            }
 
             if (!ingredientId) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'Missing Selection',
+                    title: 'Missing Information',
                     text: 'Please select an ingredient',
                     toast: true,
                     position: 'top',
@@ -1520,7 +1621,7 @@
                 return;
             }
 
-            if (!quantity || parseFloat(quantity) <= 0) {
+            if (!quantity || quantity <= 0) {
                 Swal.fire({
                     icon: 'warning',
                     title: 'Invalid Quantity',
@@ -1535,7 +1636,23 @@
                 return;
             }
 
-            fetch(`/menu/${currentMenuId}/add-ingredient`, {
+            const isPieces = ['pcs', 'pieces', 'piece', 'pc'].includes(unit.toLowerCase());
+            if (isPieces && !Number.isInteger(quantity)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Quantity',
+                    text: 'Quantity must be a whole number for pieces',
+                    toast: true,
+                    position: 'top',
+                    timer: 3000,
+                    showConfirmButton: false,
+                    background: '#fff3cd',
+                    color: '#856404'
+                });
+                return;
+            }
+
+            fetch(`{{ url('menu') }}/${currentMenuId}/add-ingredient`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1543,19 +1660,19 @@
                 },
                 body: JSON.stringify({
                     ingredient_id: ingredientId,
-                    quantity: parseFloat(quantity)
+                    quantity: quantity,
+                    unit: unit
                 })
             })
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        $('#addIngredientForm')[0].reset();
-                        $('#unitLabel').text('');
                         $('#addIngredientModal').modal('hide');
 
                         Swal.fire({
                             icon: 'success',
-                            title: 'Ingredient added successfully',
+                            title: 'Success',
+                            text: data.message || 'Ingredient added successfully',
                             toast: true,
                             position: 'top',
                             timer: 3000,
@@ -1564,107 +1681,10 @@
                             color: '#155724'
                         });
 
-                        const content = document.getElementById('ingredientsContent');
-                        content.innerHTML = `
-                    <div class="text-center py-3">
-                        <i class="fas fa-spinner fa-spin fa-2x text-info"></i>
-                        <p class="mt-2">Refreshing...</p>
-                    </div>
-                `;
-
-                        fetch("{{ route('admin.menu_ingredients') }}")
-                            .then(res => res.json())
-                            .then(data => {
-                                let html = '';
-                                data.menus.forEach(menu => {
-                                    html += `
-                                <div class="card mb-3">
-                                    <div class="card-header bg-light">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <h6 class="mb-0 font-weight-bold">${menu.menu_item}</h6>
-                                            <span class="badge badge-primary">${menu.category_name}</span>
-                                        </div>
-                                    </div>
-                                    <div class="card-body p-0">
-                                        <table class="table table-sm mb-0">
-                                            <thead class="thead-light">
-                                                <tr>
-                                                    <th>Ingredient</th>
-                                                    <th>Category</th>
-                                                    <th width="120">Quantity</th>
-                                                    <th width="100">Stock</th>
-                                                    <th width="80">Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                            `;
-
-                                    const ingList = data.ingredients[menu.id] || [];
-
-                                    if (ingList.length === 0) {
-                                        html += `
-                                    <tr>
-                                        <td colspan="5" class="text-center text-muted py-2">
-                                            No ingredients added yet
-                                        </td>
-                                    </tr>
-                                `;
-                                    } else {
-                                        ingList.forEach(ing => {
-                                            html += `
-                                        <tr>
-                                            <td class="align-middle">${ing.ingredient_name}</td>
-                                            <td class="align-middle">
-                                                <span class="badge badge-secondary">${ing.category}</span>
-                                            </td>
-                                            <td>
-                                                <div class="input-group input-group-sm">
-                                                    <input type="number" 
-                                                           class="form-control form-control-sm ingredient-qty"
-                                                           data-id="${ing.id}" 
-                                                           value="${ing.quantity}"
-                                                           min="0.01"
-                                                           step="any">
-                                                    <div class="input-group-append">
-                                                        <span class="input-group-text">${ing.unit}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="align-middle">
-                                                <span class="badge ${ing.stock <= 0 ? 'badge-danger' : 'badge-success'}">
-                                                    ${ing.stock} ${ing.unit}
-                                                </span>
-                                            </td>
-                                            <td class="align-middle">
-                                                <button type="button" 
-                                                        class="btn btn-sm btn-danger removeIngredientBtn" 
-                                                        data-id="${ing.id}"
-                                                        title="Remove">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `;
-                                        });
-                                    }
-
-                                    html += `
-                                            </tbody>
-                                        </table>
-                                        <div class="card-footer bg-light">
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-success addIngredientBtn" 
-                                                    data-menu-id="${menu.id}"
-                                                    data-menu-name="${menu.menu_item}">
-                                                <i class="fas fa-plus"></i> Add Ingredient
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                                });
-                                content.innerHTML = html;
-                            });
+                        $('#menuIngredientsModal').modal('hide');
+                        setTimeout(() => {
+                            $('#menuIngredientsModal').modal('show');
+                        }, 500);
                     } else {
                         Swal.fire({
                             icon: 'error',
@@ -1840,7 +1860,6 @@
         let originalData = {};
         let hasChanges = false;
 
-        // Store original data when modal opens
         $('#quantityPerPlateModal').on('shown.bs.modal', function () {
             storeOriginalData();
             $('#saveQtyPerPlateBtn').prop('disabled', true);
@@ -1872,7 +1891,7 @@
                     if (currentQty != originalData[ingredientId].quantity ||
                         currentUnit != originalData[ingredientId].unit) {
                         hasChanges = true;
-                        return false; 
+                        return false;
                     }
                 }
             });
@@ -1880,7 +1899,6 @@
             $('#saveQtyPerPlateBtn').prop('disabled', !hasChanges);
         }
 
-        // Detect changes on input and select
         $(document).on('input change', '.refill-qty, .refill-unit', function () {
             checkForChanges();
         });
@@ -1953,7 +1971,6 @@
                             color: '#155724'
                         });
 
-                        // Update original data to reflect saved changes
                         storeOriginalData();
                         hasChanges = false;
 

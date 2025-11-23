@@ -90,18 +90,22 @@ Route::middleware('auth')->group(function () {
         Route::post('/check-menu-availability', [AdminController::class, 'checkMenuAvailability'])->name('check.menu.availability');
         Route::patch('/restoremenu/{id}', [AdminController::class, 'restoreMenu'])->name('admin.restoreMenu');
         Route::delete('/forcedeletemenu/{id}', [AdminController::class, 'forceDeleteMenu'])->name('admin.forceDeleteMenu');
-        Route::get('/menu_ingredients', [AdminController::class, 'menuIngredients'])->name('admin.menu_ingredients');
+
+        Route::get('/menu-ingredients', [AdminController::class, 'menuIngredients'])->name('admin.menu_ingredients'); // Changed underscore to dash
         Route::post('/menu_ingredients/update', [AdminController::class, 'updateMenuIngredients'])->name('admin.menu_ingredients.update');
+        Route::delete('/menu_ingredients/{id}', [AdminController::class, 'removeMenuIngredient'])->name('menu_ingredients.remove');
+
         Route::get('/menu/{id}/ingredients', [AdminController::class, 'getIngredients'])->name('menu.ingredients');
         Route::post('/menu/{menu}/add-ingredient', [AdminController::class, 'attachIngredient'])->name('menu.attachIngredient');
-        Route::get('/ingredients/list', [AdminController::class, 'getAllIngredients'])->name('ingredients.list');
-        Route::delete('/menu_ingredients/{id}', [AdminController::class, 'removeMenuIngredient'])->name('menu_ingredients.remove');
         Route::get('/menu/{menuId}/existing-ingredients', [AdminController::class, 'getExistingIngredients'])->name('menu.existing-ingredients');
         Route::get('/menu/{menuId}/suggested-ingredients', [AdminController::class, 'getSuggestedIngredientsApi'])->name('menu.suggested-ingredients');
+
+        Route::get('/ingredients/list', [AdminController::class, 'getAllIngredients'])->name('ingredients.list');
         Route::post('/store-category', [AdminController::class, 'storeCategory'])->name('storeCategory');
         Route::post('/update-category/{id}', [AdminController::class, 'updateCategory'])->name('updateCategory');
         Route::post('/refill-config/save', [AdminController::class, 'saveRefillConfig'])->name('refill-config.save');
-
+       
+       
         // Table Management
         Route::get('/table_management', [AdminController::class, 'table_management'])->name('admin.table_management');
         Route::post('/addtable', [AdminController::class, 'addtable'])->name('admin.addtable');

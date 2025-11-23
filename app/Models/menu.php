@@ -36,4 +36,14 @@ class menu extends Model
     {
         return $this->hasOne(MenuDiscount::class, 'menu_id', 'id');
     }
+
+    public function ingredients()
+    {
+        return $this->hasMany(MenuIngredient::class, 'menu_id');
+    }
+
+    public function menuIngredients()
+    {
+        return $this->hasMany(MenuIngredient::class, 'menu_id');
+    }
 }
