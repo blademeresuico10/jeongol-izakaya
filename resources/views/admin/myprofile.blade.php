@@ -82,85 +82,115 @@
 
         <div id="editModal" class="fixed inset-0 z-50 overflow-y-auto hidden">
             <div class="flex items-center justify-center min-h-screen px-4">
-                <div class="fixed inset-0 bg-gray-200 opacity-75"></div>
+                <div class="fixed inset-0 bg-black opacity-50"></div>
 
-                <div class="bg-white rounded-lg p-6 max-w-md w-full relative z-10">
+                <div class="bg-white rounded-lg max-w-md w-full relative z-10 shadow-xl">
                     <form id="profileForm" action="{{ route('admin.updateprofile', $user->id) }}" method="POST"
                         enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
 
-                        <div class="flex justify-between items-center mb-6">
-                            <h5 class="text-lg font-semibold">Edit Profile</h5>
+                        <!-- Header -->
+                        <div class="flex justify-between items-center px-6 py-4 border-b">
+                            <h5 class="text-xl font-semibold text-gray-800">Edit Profile</h5>
                             <button type="button" onclick="closeModal()"
-                                class="text-gray-500 hover:text-gray-700 text-xl">&times;</button>
+                                class="text-gray-400 hover:text-gray-600 text-2xl font-light">&times;</button>
                         </div>
 
-                        <div class="text-center mb-6">
-                            @if($user->profile_picture)
-                                <img id="currentImage"
-                                    src="{{ url('/file-serve/profile_pictures/' . basename($user->profile_picture)) }}"
-                                    alt="Profile Picture" class="w-20 h-20 rounded-full object-cover mx-auto">
-                            @else
-                                <div id="currentImage"
-                                    class="w-20 h-20 rounded-full bg-gray-400 flex items-center justify-center mx-auto">
-                                    <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                                            clip-rule="evenodd"></path>
-                                    </svg>
+                        <!-- Body -->
+                        <div class="px-6 py-6 max-h-[70vh] overflow-y-auto">
+                            <!-- Profile Picture Section -->
+                            <div class="text-center mb-6">
+                                <div class="relative inline-block">
+                                    @if($user->profile_picture)
+                                        <img id="currentImage"
+                                            src="{{ url('/file-serve/profile_pictures/' . basename($user->profile_picture)) }}"
+                                            alt="Profile Picture"
+                                            class="w-24 h-24 rounded-full object-cover mx-auto border-4 border-gray-100">
+                                    @else
+                                        <div id="currentImage"
+                                            class="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center mx-auto border-4 border-gray-100">
+                                            <svg class="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd"
+                                                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                                                    clip-rule="evenodd"></path>
+                                            </svg>
+                                        </div>
+                                    @endif
+                                    <label for="profilePic"
+                                        class="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white rounded-full p-2 cursor-pointer shadow-lg transition">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z">
+                                            </path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        </svg>
+                                    </label>
                                 </div>
-                            @endif
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Change Profile Picture</label>
-                            <input type="file" id="profilePic" name="profile_picture"
-                                class="w-full px-3 py-2 border rounded text-sm" accept="image/*">
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                                <input type="text" id="firstName" name="firstname" value="{{ $user->firstname }}"
-                                    class="w-full px-3 py-2 border rounded text-sm">
+                                <p class="text-sm text-gray-500 mt-3">Change Profile Picture</p>
+                                <input type="file" id="profilePic" name="profile_picture" class="hidden"
+                                    accept="image/*">
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                                <input type="text" id="lastName" name="lastname" value="{{ $user->lastname }}"
-                                    class="w-full px-3 py-2 border rounded text-sm">
+
+                            <!-- Form Fields -->
+                            <div class="space-y-4">
+                                <!-- First Name & Last Name -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                                        <input type="text" id="firstName" name="firstname"
+                                            value="{{ $user->firstname }}"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                                        <input type="text" id="lastName" name="lastname" value="{{ $user->lastname }}"
+                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                                    </div>
+                                </div>
+
+                                <!-- Username -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                                    <input type="text" id="username" name="username" value="{{ $user->username }}"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                                </div>
+
+                                <!-- Contact Number -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Contact Number</label>
+                                    <input type="text" id="contactNumber" name="contact_number"
+                                        value="{{ $user->contact_number }}"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                                </div>
+
+                                <!-- Email -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                                    <input type="email" id="email" name="email" value="{{ $user->email }}"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                                    <small id="emailError" class="text-xs text-red-500 mt-1 block"
+                                        style="display: none;"></small>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                                    <input type="text" name="address" id="address" value="{{ $user->address }}"
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition">
+                                </div>
                             </div>
                         </div>
 
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                            <input type="text" id="username" name="username" value="{{ $user->username }}"
-                                class="w-full px-3 py-2 border rounded text-sm">
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Contact Number</label>
-                            <input type="text" id="contactNumber" name="contact_number"
-                                value="{{ $user->contact_number }}" class="w-full px-3 py-2 border rounded text-sm">
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" id="email" name="email" value="{{ $user->email }}"
-                                class="w-full px-3 py-2 border rounded text-sm">
-                        </div>
-
-                        <div class="mb-6">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                            <input type="text" name="address" id="address" value="{{ $user->address }}"
-                                class="w-full px-3 py-2 border rounded text-sm">
-                        </div>
-
-                        <div class="flex justify-end space-x-3 pt-4 border-t">
+                        <div class="flex justify-end items-center space-x-3 px-6 py-4 border-t bg-gray-50 rounded-b-lg">
                             <button type="button" onclick="closeModal()"
-                                class="px-4 py-2 border rounded text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
+                                class="px-5 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100 transition">
+                                Cancel
+                            </button>
                             <button type="submit" id="saveBtn"
-                                class="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">Update
-                                Profile</button>
+                                class="px-5 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition shadow-sm">
+                                Update Profile
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -258,7 +288,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-
         function initSessionMessages() {
             @if(session('success'))
                 showToast('success', {!! json_encode(session('success')) !!});
@@ -275,7 +304,7 @@
                     @endforeach
                     showToast('warning', 'Validation Errors', errorMessages.join('<br>'));
                 @endif
-}
+    }
 
         function showToast(icon, title, text = null) {
             const config = {
@@ -297,12 +326,182 @@
             });
         }
 
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function checkEmailAvailability(email, userId, errorElement, inputElement) {
+            fetch("{{ route('check.user.availability') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({
+                    field: 'email',
+                    value: email,
+                    user_id: userId
+                })
+            })
+                .then(res => res.json())
+                .then(response => {
+                    if (!response.available) {
+                        errorElement.textContent = 'This email is already taken';
+                        errorElement.style.display = 'block';
+                        errorElement.style.color = '#dc3545';
+                        inputElement.classList.add('border-red-500');
+                        inputElement.classList.remove('border-green-500', 'border-gray-300');
+                    } else {
+                        errorElement.textContent = '';
+                        errorElement.style.display = 'none';
+                        inputElement.classList.remove('border-red-500');
+                        inputElement.classList.add('border-green-500');
+                    }
+                })
+                .catch(() => {
+                    errorElement.textContent = 'Could not verify email availability';
+                    errorElement.style.display = 'block';
+                    errorElement.style.color = '#ffc107';
+                    inputElement.classList.remove('border-red-500', 'border-green-500');
+                });
+        }
+
+        function initializeEmailValidation() {
+            const emailInput = document.getElementById('email');
+            const userId = {{ $user->id }};
+
+            // Create error element if it doesn't exist
+            let emailError = document.getElementById('emailError');
+            if (!emailError) {
+                emailError = document.createElement('small');
+                emailError.id = 'emailError';
+                emailError.className = 'text-xs mt-1 block';
+                emailError.style.display = 'none';
+                emailInput.parentNode.appendChild(emailError);
+            }
+
+            const debouncedEmailCheck = debounce(function (value) {
+                if (!value || value.length < 5) return;
+
+                // Show loading state
+                emailError.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying email...';
+                emailError.style.display = 'block';
+                emailError.style.color = '#6c757d';
+                emailInput.classList.remove('border-red-500', 'border-green-500');
+
+                // Step 1: Validate email format and deliverability
+                fetch("{{ route('check.email.validation') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                    },
+                    body: JSON.stringify({ email: value })
+                })
+                    .then(res => res.json())
+                    .then(response => {
+                        if (!response.valid) {
+                            // Email is invalid
+                            let message = 'Invalid email address';
+                            if (response.reason === 'invalid_format') {
+                                message = 'Invalid email format';
+                            } else if (response.reason === 'smtp_failed') {
+                                message = 'Email address does not exist';
+                            } else if (response.reason === 'domain_invalid') {
+                                message = 'Invalid email domain';
+                            }
+
+                            emailError.textContent = message;
+                            emailError.style.display = 'block';
+                            emailError.style.color = '#dc3545';
+                            emailInput.classList.add('border-red-500');
+                            emailInput.classList.remove('border-green-500', 'border-gray-300');
+                        } else {
+                            // Step 2: If email format is valid, check availability
+                            checkEmailAvailability(value, userId, emailError, emailInput);
+                        }
+                    })
+                    .catch(() => {
+                        emailError.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not verify email existence, checking availability...';
+                        emailError.style.display = 'block';
+                        emailError.style.color = '#ffc107';
+
+                        // Fall back to availability check if API fails
+                        setTimeout(() => {
+                            checkEmailAvailability(value, userId, emailError, emailInput);
+                        }, 500);
+                    });
+            }, 800);
+
+            emailInput.addEventListener('input', function () {
+                const value = this.value.trim();
+
+                if (!value) {
+                    emailError.textContent = '';
+                    emailError.style.display = 'none';
+                    this.classList.remove('border-red-500', 'border-green-500');
+                    this.classList.add('border-gray-300');
+                    return;
+                }
+
+                // Basic client-side validation first
+                if (!value.includes('@')) {
+                    emailError.textContent = 'Email must contain @';
+                    emailError.style.display = 'block';
+                    emailError.style.color = '#dc3545';
+                    this.classList.add('border-red-500');
+                    this.classList.remove('border-green-500', 'border-gray-300');
+                    return;
+                }
+
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    emailError.textContent = 'Enter a valid email format';
+                    emailError.style.display = 'block';
+                    emailError.style.color = '#dc3545';
+                    this.classList.add('border-red-500');
+                    this.classList.remove('border-green-500', 'border-gray-300');
+                } else {
+                    // Format is valid, trigger API validation
+                    emailError.textContent = '';
+                    emailError.style.display = 'none';
+                    this.classList.remove('border-red-500');
+
+                    debouncedEmailCheck(value);
+                }
+            });
+        }
+
         function openModal() {
             document.getElementById('editModal').classList.remove('hidden');
+            // Initialize email validation when modal opens
+            setTimeout(initializeEmailValidation, 100);
         }
 
         function closeModal() {
             document.getElementById('editModal').classList.add('hidden');
+
+            // Clean up validation states
+            const emailInput = document.getElementById('email');
+            const emailError = document.getElementById('emailError');
+
+            if (emailInput) {
+                emailInput.classList.remove('border-red-500', 'border-green-500');
+                emailInput.classList.add('border-gray-300');
+            }
+
+            if (emailError) {
+                emailError.textContent = '';
+                emailError.style.display = 'none';
+            }
         }
 
         document.getElementById('profilePic').addEventListener('change', function (e) {
@@ -328,6 +527,16 @@
 
         document.getElementById('profileForm').addEventListener('submit', function (e) {
             e.preventDefault();
+
+            // Check if email has validation errors
+            const emailInput = document.getElementById('email');
+            const hasEmailError = emailInput.classList.contains('border-red-500');
+
+            if (hasEmailError) {
+                showToast('error', 'Please fix the email validation error before submitting');
+                return;
+            }
+
             const saveBtn = document.getElementById('saveBtn');
             const formData = new FormData(this);
 
@@ -382,7 +591,6 @@
             }
         }
 
-
         function openPasswordModal() {
             document.getElementById('changePasswordModal').classList.remove('hidden');
             setTimeout(initializePasswordValidation, 100);
@@ -413,7 +621,7 @@
             eye.innerHTML = isPassword
                 ? `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"></path>`
                 : `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
+       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>`;
         }
 
         function calculatePasswordStrength(password) {
@@ -444,14 +652,14 @@
             strengthContainer.id = 'strengthContainer';
             strengthContainer.className = 'mt-2';
             strengthContainer.innerHTML = `
-        <div class="flex items-center space-x-2 mb-2">
-            <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div id="strengthProgress" class="h-full transition-all duration-300 ease-in-out bg-red-500" style="width: 0%"></div>
-            </div>
-            <span id="strengthText" class="text-xs font-medium text-gray-500">Weak</span>
+    <div class="flex items-center space-x-2 mb-2">
+        <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div id="strengthProgress" class="h-full transition-all duration-300 ease-in-out bg-red-500" style="width: 0%"></div>
         </div>
-        <div id="strengthChecks" class="text-xs text-gray-600 space-y-1"></div>
-    `;
+        <span id="strengthText" class="text-xs font-medium text-gray-500">Weak</span>
+    </div>
+    <div id="strengthChecks" class="text-xs text-gray-600 space-y-1"></div>
+`;
 
             newPasswordInput.parentNode.insertBefore(strengthContainer, newPasswordInput.nextSibling);
 
@@ -483,13 +691,13 @@
                     ['numbers', 'Number'],
                     ['special', 'Special character']
                 ].map(([key, label]) => `
-            <div class="flex items-center space-x-1">
-                <span class="${result.checks[key] ? 'text-green-600' : 'text-red-500'}">
-                    ${result.checks[key] ? '✓' : '✗'}
-                </span>
-                <span>${label}</span>
-            </div>
-        `).join('');
+        <div class="flex items-center space-x-1">
+            <span class="${result.checks[key] ? 'text-green-600' : 'text-red-500'}">
+                ${result.checks[key] ? '✓' : '✗'}
+            </span>
+            <span>${label}</span>
+        </div>
+    `).join('');
 
                 if (confirmPasswordInput.value) validatePasswordMatch();
             });

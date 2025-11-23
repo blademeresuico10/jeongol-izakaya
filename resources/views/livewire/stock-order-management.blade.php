@@ -1,4 +1,4 @@
-<div wire:poll.10s>
+<div wire:poll.20s>
     @if (session()->has('success'))
         <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
             {{ session('success') }}
@@ -305,7 +305,7 @@
                                     </label>
                                     <input type="number" id="receivedQuantityInput"
                                         class="form-control @error('receivedQuantity') is-invalid @enderror"
-                                        wire:model="receivedQuantity"
+                                        wire:model.live="receivedQuantity"
                                         min="{{ in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']) ? '1' : '0.01' }}"
                                         step="{{ in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']) ? '1' : '0.01' }}"
                                         @if(in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']))
@@ -316,10 +316,28 @@
                                             <i class="fas fa-exclamation-circle"></i> {{ $message }}
                                         </div>
                                     @enderror
-                                    @if(in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']))
-                                    @endif
                                 </div>
                             </div>
+
+                            <!-- Show remaining quantity alert if there's a difference -->
+                            @if($receivedQuantity > 0 && $receivedQuantity < $orderedQuantity)
+                                @php
+                                    $remaining = $orderedQuantity - $receivedQuantity;
+                                @endphp
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-info-circle"></i>
+                                    <strong>Note:</strong> Remaining quantity of 
+                                    <strong>
+                                        @if(in_array(strtolower($unit), ['pcs', 'pieces', 'piece', 'pc']))
+                                            {{ number_format($remaining, 0) }}
+                                        @else
+                                            {{ number_format($remaining, 2) }}
+                                        @endif
+                                        {{ $unit }}
+                                    </strong>
+                                    will be created as a new pending order.
+                                </div>
+                            @endif
 
                             <div class="mb-3">
                                 <label class="font-weight-bold">
@@ -365,7 +383,8 @@
             Swal.fire({
                 position: 'center',
                 icon: 'success',
-                title: 'New Stock Added!',
+                title: 'Stock Received Successfully!',
+                text: 'The stock has been added to inventory.',
                 showConfirmButton: false,
                 timer: 3000
             });
@@ -390,17 +409,27 @@
     }
 
     function confirmReceiveStock() {
-        const receivedQty = document.getElementById('receivedQuantityInput').value;
+        const receivedQty = parseFloat(document.getElementById('receivedQuantityInput').value);
+        const orderedQty = parseFloat(@this.orderedQuantity);
         const expirationDate = document.getElementById('expirationDateInput').value;
+        const unit = @this.unit;
 
         if (!receivedQty || !expirationDate) {
             @this.call('confirmReceive');
             return;
         }
 
+        let messageText = 'Confirm receiving this stock?';
+        
+        if (receivedQty < orderedQty) {
+            const remaining = orderedQty - receivedQty;
+            messageText = `You are receiving ${receivedQty} ${unit} out of ${orderedQty} ${unit}. A new order will be created for the remaining ${remaining} ${unit}.`;
+        }
+
         Swal.fire({
             title: 'Confirm Received Stock?',
-            icon: 'question',
+            text: messageText,
+            icon: receivedQty < orderedQty ? 'warning' : 'question',
             showCancelButton: true,
             confirmButtonColor: '#28a745',
             cancelButtonColor: '#6c757d',

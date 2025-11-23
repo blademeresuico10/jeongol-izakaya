@@ -48,6 +48,7 @@ class StockBatchesManagement extends Component
         $query = $this->buildBatchQuery($startDate, $endDate);
         $batches = $query->orderBy('ib.arrived_at', 'desc')->paginate(10);
         $batches->getCollection()->transform(function ($batch) {
+            // Get the original received quantity from stock_in movement
             $batch->original_quantity = $this->getOriginalQuantity($batch->id) ?? $batch->quantity;
             return $batch;
         });
@@ -74,6 +75,10 @@ class StockBatchesManagement extends Component
             ->join('ingredients as i', 'ib.ingredient_id', '=', 'i.id')
             ->join('ingredient_units as iu', 'i.unit_id', '=', 'iu.id')
             ->leftJoin('stock_level_alerts as sla', 'i.id', '=', 'sla.ingredient_id')
+            ->leftJoin('ingredient_movements as im', function($join) {
+                $join->on('ib.id', '=', 'im.ingredient_batch_id')
+                     ->where('im.type', '=', 'stock_in');
+            })
             ->select(
                 'ib.id',
                 'ib.batch_code',
@@ -84,7 +89,7 @@ class StockBatchesManagement extends Component
                 'ib.expiration_date',
                 'iu.abbreviation as unit',
                 'ib.arrived_at',
-                'sla.reorder_quantity'
+                DB::raw('CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(im.notes, "Ordered: ", -1), " ", 1) AS DECIMAL(10,2)) as request_quantity')
             )
             ->whereNotIn('ib.status', ['expired', 'depleted'])
             ->where('ib.quantity', '>', 0)
@@ -95,13 +100,18 @@ class StockBatchesManagement extends Component
         }
         return $query;
     }
+    
+    /**
+     * Get the original received quantity from the batch's stock_in movement
+     */
     private function getOriginalQuantity($batchId)
     {
         return DB::table('ingredient_movements')
             ->where('ingredient_batch_id', $batchId)
-            ->where('type', 'received')
+            ->where('type', 'stock_in')
             ->value('quantity');
     }
+    
     public function editBatch($id, $batchCode, $arrivedAt, $expiryDate)
     {
         $this->editBatchId = $id;

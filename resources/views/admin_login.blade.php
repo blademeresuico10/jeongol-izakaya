@@ -267,6 +267,7 @@
 <body>
 
     <div class="login-container">
+        <!-- Admin Login Form (with logo) -->
         <div class="login-box" id="loginForm">
             <img src="{{ asset('logo/jeongol_logo.jpg') }}" alt="Jeongol Logo">
             <h2 class="login-title">Admin Login</h2>

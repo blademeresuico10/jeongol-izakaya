@@ -62,6 +62,9 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:Admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'home'])->name('admin.home');
 
+        Route::post('/check-email-validation', [AdminController::class, 'checkEmailValidation'])
+            ->name('check.email.validation');
+
         // Profile
         Route::get('/myprofile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::put('/updateprofile/{id}', [AdminController::class, 'updateProfile'])->name('admin.updateprofile');

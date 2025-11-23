@@ -1,5 +1,4 @@
-<div>
-    {{-- Filters --}}
+<div wire:poll.20s>
     <ul class="nav nav-pills mb-3 align-items-center" role="tablist">
         <li class="nav-item">
             <button wire:click="$set('period', 'thisweek')" type="button"
@@ -23,7 +22,6 @@
         </li>
     </ul>
 
-    {{-- Batches Table --}}
     @if ($batches->isEmpty())
         <div class="text-center py-5 text-muted">
             <i class="fas fa-box-open fa-3x mb-3"></i>
@@ -47,10 +45,16 @@
                     @foreach ($batches as $batch)
                         @php
                             $isPieces = in_array(strtolower($batch->unit), ['pcs', 'pieces', 'piece', 'pc']);
-                            $formattedQty = $isPieces ? floor($batch->quantity) : number_format($batch->quantity, 2);
-                            $formattedReorder = $batch->reorder_quantity
-                                ? ($isPieces ? floor($batch->reorder_quantity) : number_format($batch->reorder_quantity, 2))
-                                : 0;
+                            
+                            $formattedCurrentQty = $isPieces ? floor($batch->quantity) : number_format($batch->quantity, 2);
+                            
+                            $formattedReceivedQty = $batch->original_quantity
+                                ? ($isPieces ? floor($batch->original_quantity) : number_format($batch->original_quantity, 2))
+                                : $formattedCurrentQty;
+                            
+                            $formattedRequestQty = $batch->request_quantity
+                                ? ($isPieces ? floor($batch->request_quantity) : number_format($batch->request_quantity, 2))
+                                : 'N/A';
 
                             $expirationDate = \Carbon\Carbon::parse($batch->expiration_date);
                             $today = \Carbon\Carbon::now()->startOfDay();
@@ -68,27 +72,31 @@
                         <tr>
                             <td>
                                 <code class="text-dark bg-light px-2 py-1 rounded">
-                                            {{ $batch->batch_code ?? 'N/A' }}
-                                        </code>
+                                    {{ $batch->batch_code ?? 'N/A' }}
+                                </code>
                             </td>
                             <td><strong>{{ $batch->ingredient_name }}</strong></td>
+                            
                             <td>
-                                <span class="font-weight-medium">{{ $formattedReorder }}</span>
-                                <span class="text-muted">{{ $batch->unit }}</span>
+                                <span class="font-weight-medium">{{ $formattedRequestQty }}</span>
+                                @if($formattedRequestQty !== 'N/A')
+                                    <span class="text-muted">{{ $batch->unit }}</span>
+                                @endif
                             </td>
+                            
                             <td>
-                                <span class="font-weight-medium {!! $qtyColorClass !!}">{{ $formattedQty }}</span>
+                                <span class="font-weight-medium">{{ $formattedReceivedQty }}</span>
                                 <span class="text-muted">{{ $batch->unit }}</span>
-                                {!! $qtyBadge !!}
+                                
                                 @if ($batch->original_quantity && $batch->quantity < $batch->original_quantity)
                                     <br>
                                     <small class="text-muted">
-                                        Original:
-                                        {{ $isPieces ? floor($batch->original_quantity) : number_format($batch->original_quantity, 2) }}
-                                        {{ $batch->unit }}
+                                        Current: {{ $formattedCurrentQty }} {{ $batch->unit }}
+                                        {!! $qtyBadge !!}
                                     </small>
                                 @endif
                             </td>
+                            
                             <td>{{ \Carbon\Carbon::parse($batch->arrived_at)->format('M d, Y') }}</td>
                             <td>
                                 <div>{{ $expirationDate->format('M d, Y') }}</div>

@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Http\Controllers;
+
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -28,6 +30,8 @@ use App\Models\MenuCategory;
 use App\Models\IngredientCategory;
 use App\Models\IngredientUnit;
 use App\Models\RefillConfiguration;
+use Illuminate\Support\Facades\Http;
+
 class AdminController extends Controller
 {
     public function home()
@@ -259,6 +263,66 @@ class AdminController extends Controller
             'ingredients'
         ));
     }
+
+    public function checkEmailValidation(Request $request)
+    {
+        $email = trim($request->email);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json([
+                'valid' => false,
+                'reason' => 'invalid_format',
+                'message' => 'Invalid email format'
+            ]);
+        }
+
+        try {
+            $apiKey = env('MAILBOXLAYER_KEY');
+
+            if ($apiKey) {
+                $response = Http::timeout(5)
+                    ->retry(2, 100)
+                    ->get('https://apilayer.net/api/check', [
+                        'access_key' => $apiKey,
+                        'email' => $email,
+                        'smtp' => 1,
+                        'format' => 1,
+                    ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+
+                    if (isset($data['error'])) {
+                        Log::warning('Mailboxlayer API error', ['error' => $data['error']]);
+                        throw new \Exception('API returned error');
+                    }
+
+                    $isValid = ($data['format_valid'] ?? false) &&
+                        ($data['mx_found'] ?? false) &&
+                        ($data['smtp_check'] ?? true);
+
+                    return response()->json([
+                        'valid' => $isValid,
+                        'reason' => $isValid ? 'verified' : 'smtp_failed',
+                        'api_used' => true,
+                        'message' => $isValid ? 'Email verified' : 'Email does not exist'
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            Log::info('Email validation API fallback', ['email' => $email]);
+        }
+
+        $domain = substr(strrchr($email, "@"), 1);
+        $validDomain = checkdnsrr($domain, 'MX');
+
+        return response()->json([
+            'valid' => $validDomain,
+            'reason' => $validDomain ? 'domain_valid' : 'domain_invalid',
+            'api_used' => false,
+            'message' => $validDomain ? 'Domain is valid' : 'Invalid domain'
+        ]);
+    }
     public function profile()
     {
         $user = Auth::user();
@@ -267,11 +331,13 @@ class AdminController extends Controller
     public function updateProfile(Request $request, $id)
     {
         try {
+            $user = User::findOrFail($id);
+
             $request->validate([
                 'firstname' => 'required|string|max:255',
                 'lastname' => 'required|string|max:255',
                 'contact_number' => 'required|string|max:20',
-                'email' => 'required|email|unique:users,email,' . $id,
+                'email' => 'nullable|email|unique:users,email,' . $id,
                 'address' => 'required|string|max:255',
                 'username' => 'required|string|unique:users,username,' . $id,
                 'password' => 'nullable|string|min:6',
@@ -287,35 +353,50 @@ class AdminController extends Controller
             }
             throw $e;
         }
+
         try {
-            $user = User::findOrFail($id);
+            $oldEmail = $user->email;
+
             $user->firstname = $request->firstname;
             $user->lastname = $request->lastname;
             $user->contact_number = $request->contact_number;
             $user->address = $request->address;
-            $user->email = $request->email;
             $user->username = $request->username;
+
+            if ($request->filled('email') && $oldEmail !== $request->email) {
+                DB::table('password_reset_tokens')->where('email', $oldEmail)->delete();
+
+                $user->email = $request->email;
+            }
+
             if ($request->hasFile('profile_picture')) {
                 if ($user->profile_picture && Storage::disk('public')->exists($user->profile_picture)) {
                     Storage::disk('public')->delete($user->profile_picture);
                 }
                 $user->profile_picture = $request->file('profile_picture')->store('profile_pictures', 'public');
             }
+
             if ($request->filled('password')) {
                 $user->password = Hash::make($request->password);
             }
+
             $user->save();
+
             if ($request->ajax()) {
                 return response()->json(['success' => true, 'message' => 'Profile updated successfully']);
             }
+
             return redirect()->route('admin.profile')->with('success', 'Profile updated successfully!');
         } catch (\Exception $e) {
+            Log::error('Profile update error: ' . $e->getMessage());
+
             if ($request->ajax()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'An error occurred while updating profile'
                 ], 500);
             }
+
             return redirect()->back()->with('error', 'Failed to update profile');
         }
     }
@@ -1287,7 +1368,7 @@ class AdminController extends Controller
     public function getAvailableIngredients()
     {
         $ingredients = ingredients::with(['stockAlertLevel', 'unit'])
-            ->whereHas('stockAlertLevel')  
+            ->whereHas('stockAlertLevel')
             ->whereDoesntHave('stockOrders', function ($query) {
                 $query->where('status', 'pending');
             })

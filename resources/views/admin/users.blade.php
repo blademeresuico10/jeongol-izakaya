@@ -567,6 +567,7 @@
                 return word;
             }).join(' ');
         }
+
         function calculatePasswordStrength(password) {
             const checks = {
                 length: password.length >= 8,
@@ -583,6 +584,78 @@
             else { level = 'Weak'; color = 'danger'; }
 
             return { strength, level, color, checks };
+        }
+        function checkAvailability(field, value, userId = null, errorElement, inputElement) {
+            if (!value || value.length < 3) return;
+
+            if (errorElement.textContent === '' || !errorElement.textContent.includes('already taken')) {
+                errorElement.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Checking ${field}...`;
+                errorElement.style.display = 'block';
+                errorElement.style.color = '#6c757d';
+            }
+
+            $.ajax({
+                url: "{{ route('check.user.availability') }}",
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    field: field,
+                    value: value,
+                    user_id: userId
+                },
+                success: function (response) {
+                    if (!response.available) {
+                        errorElement.textContent = `This ${field} is already taken`;
+                        errorElement.style.display = 'block';
+                        errorElement.style.color = '#dc3545';
+                        inputElement.classList.add('is-invalid');
+                        inputElement.classList.remove('is-valid');
+                    } else {
+                        errorElement.textContent = '';
+                        errorElement.style.display = 'none';
+                        inputElement.classList.remove('is-invalid');
+                        inputElement.classList.add('is-valid');
+                    }
+                },
+                error: function () {
+                    errorElement.textContent = `Could not verify ${field} availability`;
+                    errorElement.style.display = 'block';
+                    errorElement.style.color = '#ffc107';
+                    inputElement.classList.remove('is-invalid', 'is-valid');
+                }
+            });
+        }
+        function checkEmailAvailability(email, userId, errorElement, inputElement) {
+            $.ajax({
+                url: "{{ route('check.user.availability') }}",
+                method: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    field: 'email',
+                    value: email,
+                    user_id: userId
+                },
+                success: function (response) {
+                    if (!response.available) {
+                        errorElement.textContent = 'This email is already taken';
+                        errorElement.style.display = 'block';
+                        errorElement.style.color = '#dc3545';
+                        inputElement.classList.add('is-invalid');
+                        inputElement.classList.remove('is-valid');
+                    } else {
+                        errorElement.textContent = '';
+                        errorElement.style.display = 'none';
+                        inputElement.classList.remove('is-invalid');
+                        inputElement.classList.add('is-valid');
+                    }
+                },
+                error: function () {
+                    errorElement.textContent = 'Could not verify email availability';
+                    errorElement.style.display = 'block';
+                    errorElement.style.color = '#ffc107';
+                    inputElement.classList.remove('is-invalid', 'is-valid');
+                }
+            });
         }
         function initializePasswordValidation(passwordInputId, confirmPasswordInputId = null, userId = null) {
             const passwordInput = document.getElementById(passwordInputId);
@@ -831,40 +904,95 @@
                     }
                 });
             }
+
             const emailInput = document.getElementById('email');
             const emailError = document.getElementById('emailError');
             if (emailInput && emailError) {
                 $(emailInput).off('input.email');
+
                 const debouncedEmailCheck = debounce(function (value) {
-                    checkAvailability('email', value, null, emailError, emailInput);
-                }, 500);
+                    if (!value || value.length < 5) return;
+
+                    emailError.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying email...';
+                    emailError.style.display = 'block';
+                    emailError.style.color = '#6c757d';
+                    emailInput.classList.remove('is-invalid', 'is-valid');
+
+                    $.ajax({
+                        url: "{{ route('check.email.validation') }}",
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            email: value
+                        },
+                        success: function (response) {
+                            if (!response.valid) {
+                                let message = 'Invalid email address';
+                                if (response.reason === 'invalid_format') {
+                                    message = 'Invalid email format';
+                                } else if (response.reason === 'smtp_failed') {
+                                    message = 'Email address does not exist';
+                                } else if (response.reason === 'domain_invalid') {
+                                    message = 'Invalid email domain';
+                                }
+
+                                emailError.textContent = message;
+                                emailError.style.display = 'block';
+                                emailError.style.color = '#dc3545';
+                                emailInput.classList.add('is-invalid');
+                                emailInput.classList.remove('is-valid');
+                            } else {
+                                checkEmailAvailability(value, null, emailError, emailInput);
+                            }
+                        },
+                        error: function () {
+                            emailError.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not verify email existence, checking availability...';
+                            emailError.style.display = 'block';
+                            emailError.style.color = '#ffc107';
+
+                            setTimeout(() => {
+                                checkEmailAvailability(value, null, emailError, emailInput);
+                            }, 500);
+                        }
+                    });
+                }, 800);
+
                 $(emailInput).on('input.email', function () {
                     const value = this.value.trim();
+
                     if (!value) {
                         emailError.textContent = '';
                         emailError.style.display = 'none';
-                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-invalid', 'is-valid');
                         return;
                     }
+
                     if (!value.includes('@')) {
                         emailError.textContent = 'Email must contain @';
                         emailError.style.display = 'block';
+                        emailError.style.color = '#dc3545';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                         return;
                     }
+
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                     if (!emailRegex.test(value)) {
-                        emailError.textContent = 'Enter a valid email address';
+                        emailError.textContent = 'Enter a valid email format';
                         emailError.style.display = 'block';
+                        emailError.style.color = '#dc3545';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
                         emailError.textContent = '';
                         emailError.style.display = 'none';
                         this.classList.remove('is-invalid');
+
                         debouncedEmailCheck(value);
                     }
                 });
             }
+
             const addressInput = document.getElementById('address');
             const addressError = document.getElementById('addressError');
             if (addressInput && addressError) {
@@ -927,6 +1055,7 @@
             };
         }
         function initializeEditUserFormValidation(userId) {
+            // First Name
             const firstnameInput = document.getElementById('edit_firstname' + userId);
             const firstnameError = document.getElementById('edit_firstnameError' + userId);
             if (firstnameInput && firstnameError) {
@@ -935,23 +1064,29 @@
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
                     this.value = capitalizeWords(this.value);
                     const value = this.value.trim();
+
                     if (!value) {
                         firstnameError.textContent = '';
                         firstnameError.style.display = 'none';
-                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-invalid', 'is-valid');
                         return;
                     }
+
                     if (value.length < 2) {
                         firstnameError.textContent = 'Minimum 2 characters required';
                         firstnameError.style.display = 'block';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
                         firstnameError.textContent = '';
                         firstnameError.style.display = 'none';
                         this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
                     }
                 });
             }
+
+            // Last Name
             const lastnameInput = document.getElementById('edit_lastname' + userId);
             const lastnameError = document.getElementById('edit_lastnameError' + userId);
             if (lastnameInput && lastnameError) {
@@ -960,40 +1095,51 @@
                     this.value = this.value.replace(/[^a-zA-Z\s\-'\.]/g, '');
                     this.value = capitalizeWords(this.value);
                     const value = this.value.trim();
+
                     if (!value) {
                         lastnameError.textContent = '';
                         lastnameError.style.display = 'none';
-                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-invalid', 'is-valid');
                         return;
                     }
+
                     if (value.length < 2) {
                         lastnameError.textContent = 'Minimum 2 characters required';
                         lastnameError.style.display = 'block';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
                         lastnameError.textContent = '';
                         lastnameError.style.display = 'none';
                         this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
                     }
                 });
             }
+
+            // Role
             const roleInput = document.getElementById('edit_role' + userId);
             const roleError = document.getElementById('edit_roleError' + userId);
             if (roleInput && roleError) {
                 $(roleInput).off('change.role');
                 $(roleInput).on('change.role', function () {
                     const value = this.value;
+
                     if (!value) {
                         roleError.textContent = 'Please select a role';
                         roleError.style.display = 'block';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
                         roleError.textContent = '';
                         roleError.style.display = 'none';
                         this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
                     }
                 });
             }
+
+            // Contact Number
             const contactNumberInput = document.getElementById('edit_contact_number' + userId);
             const contactNumberError = document.getElementById('edit_contactNumberError' + userId);
             if (contactNumberInput && contactNumberError) {
@@ -1001,50 +1147,62 @@
                 $(contactNumberInput).on('input.contact', function () {
                     this.value = this.value.replace(/[^0-9]/g, '').substring(0, 11);
                     const value = this.value.trim();
+
                     if (!value) {
                         contactNumberError.textContent = '';
                         contactNumberError.style.display = 'none';
-                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-invalid', 'is-valid');
                         return;
                     }
+
                     if (!value.startsWith('09')) {
                         contactNumberError.textContent = 'Contact number must start with 09';
                         contactNumberError.style.display = 'block';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                         return;
                     }
+
                     if (value.length < 11) {
                         contactNumberError.textContent = 'Contact number must be 11 digits';
                         contactNumberError.style.display = 'block';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
                         contactNumberError.textContent = '';
                         contactNumberError.style.display = 'none';
                         this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
                     }
                 });
             }
+
+            // Username
             const usernameInput = document.getElementById('edit_username' + userId);
             const usernameError = document.getElementById('edit_usernameError' + userId);
             if (usernameInput && usernameError) {
                 $(usernameInput).off('input.username');
+
                 const debouncedUsernameCheck = debounce(function (value) {
                     checkAvailability('username', value, userId, usernameError, usernameInput);
                 }, 500);
+
                 $(usernameInput).on('input.username', function () {
-                    this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase().replace(/\s/g, '');
+                    this.value = this.value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
                     const value = this.value.trim();
 
                     if (!value) {
                         usernameError.textContent = '';
                         usernameError.style.display = 'none';
-                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-invalid', 'is-valid');
                         return;
                     }
+
                     if (value.length < 3) {
                         usernameError.textContent = 'Minimum 3 characters required';
                         usernameError.style.display = 'block';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
                         usernameError.textContent = '';
                         usernameError.style.display = 'none';
@@ -1053,60 +1211,126 @@
                     }
                 });
             }
+
+            // Email with API validation
             const emailInput = document.getElementById('edit_email' + userId);
             const emailError = document.getElementById('edit_emailError' + userId);
             if (emailInput && emailError) {
                 $(emailInput).off('input.email');
+
                 const debouncedEmailCheck = debounce(function (value) {
-                    checkAvailability('email', value, userId, emailError, emailInput);
-                }, 500);
+                    if (!value || value.length < 5) return;
+
+                    // Show loading state
+                    emailError.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verifying email...';
+                    emailError.style.display = 'block';
+                    emailError.style.color = '#6c757d';
+                    emailInput.classList.remove('is-invalid', 'is-valid');
+
+                    // Step 1: Validate email format and deliverability
+                    $.ajax({
+                        url: "{{ route('check.email.validation') }}",
+                        method: 'POST',
+                        data: {
+                            _token: '{{ csrf_token() }}',
+                            email: value
+                        },
+                        success: function (response) {
+                            if (!response.valid) {
+                                // Email is invalid
+                                let message = 'Invalid email address';
+                                if (response.reason === 'invalid_format') {
+                                    message = 'Invalid email format';
+                                } else if (response.reason === 'smtp_failed') {
+                                    message = 'Email address does not exist';
+                                } else if (response.reason === 'domain_invalid') {
+                                    message = 'Invalid email domain';
+                                }
+
+                                emailError.textContent = message;
+                                emailError.style.display = 'block';
+                                emailError.style.color = '#dc3545';
+                                emailInput.classList.add('is-invalid');
+                                emailInput.classList.remove('is-valid');
+                            } else {
+                                checkEmailAvailability(value, userId, emailError, emailInput);
+                            }
+                        },
+                        error: function () {
+                            emailError.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Could not verify email existence, checking availability...';
+                            emailError.style.display = 'block';
+                            emailError.style.color = '#ffc107';
+
+                            setTimeout(() => {
+                                checkEmailAvailability(value, userId, emailError, emailInput);
+                            }, 500);
+                        }
+                    });
+                }, 800);
+
                 $(emailInput).on('input.email', function () {
                     const value = this.value.trim();
+
                     if (!value) {
                         emailError.textContent = '';
                         emailError.style.display = 'none';
-                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-invalid', 'is-valid');
                         return;
                     }
+
+                    // Basic client-side validation first
                     if (!value.includes('@')) {
                         emailError.textContent = 'Email must contain @';
                         emailError.style.display = 'block';
+                        emailError.style.color = '#dc3545';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                         return;
                     }
+
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                     if (!emailRegex.test(value)) {
-                        emailError.textContent = 'Enter a valid email address';
+                        emailError.textContent = 'Enter a valid email format';
                         emailError.style.display = 'block';
+                        emailError.style.color = '#dc3545';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
+                        // Format is valid, trigger API validation
                         emailError.textContent = '';
                         emailError.style.display = 'none';
                         this.classList.remove('is-invalid');
+
                         debouncedEmailCheck(value);
                     }
                 });
             }
+
+            // Address
             const addressInput = document.getElementById('edit_address' + userId);
             const addressError = document.getElementById('edit_addressError' + userId);
             if (addressInput && addressError) {
                 $(addressInput).off('input.address');
                 $(addressInput).on('input.address', function () {
                     const value = this.value.trim();
+
                     if (!value) {
                         addressError.textContent = '';
                         addressError.style.display = 'none';
-                        this.classList.remove('is-invalid');
+                        this.classList.remove('is-invalid', 'is-valid');
                         return;
                     }
+
                     if (value.length < 5) {
                         addressError.textContent = 'Minimum 5 characters required';
                         addressError.style.display = 'block';
                         this.classList.add('is-invalid');
+                        this.classList.remove('is-valid');
                     } else {
                         addressError.textContent = '';
                         addressError.style.display = 'none';
                         this.classList.remove('is-invalid');
+                        this.classList.add('is-valid');
                     }
                 });
             }
@@ -1261,7 +1485,7 @@
             @endif
 
         $('form[action*="updateuser"]').on('submit', function (e) {
-            e.preventDefault(); 
+            e.preventDefault();
             const form = $(this);
             const userId = form.attr('id').replace('editUserForm', '');
             const passwordInput = $(`#edit_password${userId}`);
@@ -1359,51 +1583,64 @@
         border-color: #dc3545;
         box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
     }
+
     .form-control.is-valid,
     .form-check-input.is-valid {
         border-color: #28a745;
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
     }
+
     .invalid-feedback {
         display: block;
         font-size: 0.875em;
         color: #dc3545;
         margin-top: 0.25rem;
     }
+
     .form-group {
         margin-bottom: 1rem;
     }
+
     .text-danger {
         color: #dc3545 !important;
     }
+
     .fas.fa-spinner.fa-spin {
         animation: fa-spin 1s infinite linear;
     }
+
     @keyframes fa-spin {
         0% {
             transform: rotate(0deg);
         }
+
         100% {
             transform: rotate(360deg);
         }
     }
+
     .modal-header.bg-success {
         background-color: #28a745 !important;
     }
+
     .modal-header.bg-primary {
         background-color: #007bff !important;
     }
+
     .modal-header.bg-danger {
         background-color: #dc3545 !important;
     }
+
     .form-control:focus {
         border-color: #80bdff;
         outline: 0;
         box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
     }
+
     .form-group label .text-danger {
         font-weight: bold;
     }
+
     .input-group {
         position: relative;
     }

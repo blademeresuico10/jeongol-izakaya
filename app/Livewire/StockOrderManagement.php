@@ -170,20 +170,22 @@ class StockOrderManagement extends Component
 
         try {
             $batchCode = null;
+            $remainingQuantity = $this->orderedQuantity - $this->receivedQuantity;
 
-            DB::transaction(function () use ($order, $ingredient, &$batchCode) {
+            DB::transaction(function () use ($order, $ingredient, $remainingQuantity, &$batchCode) {
                 $stockBefore = $ingredient->stocks;
 
+                // Update ingredient stock
                 $ingredient->stocks += $this->receivedQuantity;
                 $ingredient->save();
 
+                // Generate batch code
                 $startOfWeek = now()->startOfWeek();
                 $endOfWeek = now()->endOfWeek();
-
                 $weeklyBatchCount = ingredientBatch::whereBetween('created_at', [$startOfWeek, $endOfWeek])->count() + 1;
-
                 $batchCode = 'BO-' . now()->format('Ymd') . '-' . str_pad($weeklyBatchCount, 3, '0', STR_PAD_LEFT);
 
+                // Create batch
                 $batch = ingredientBatch::create([
                     'ingredient_id' => $ingredient->id,
                     'batch_code' => $batchCode,
@@ -193,9 +195,11 @@ class StockOrderManagement extends Component
                     'status' => 'active'
                 ]);
 
+                // Mark current order as completed
                 $order->status = 'completed';
                 $order->save();
 
+                // Create movement record
                 ingredientMovements::create([
                     'ingredient_id' => $ingredient->id,
                     'ingredient_batch_id' => $batch->id,
@@ -206,11 +210,25 @@ class StockOrderManagement extends Component
                     'stock_after' => $ingredient->stocks,
                     'notes' => "Stock order #{$order->id} completed. Batch: {$batchCode}. Ordered: {$this->orderedQuantity} {$this->unit}, Received: {$this->receivedQuantity} {$this->unit}"
                 ]);
+
+                // If there's remaining quantity, create a new order
+                if ($remainingQuantity > 0) {
+                    StockOrder::create([
+                        'ingredient_id' => $ingredient->id,
+                        'alert_id' => $order->alert_id,
+                        'quantity' => $remainingQuantity,
+                        'status' => 'pending',
+                    ]);
+                }
             });
 
-            $difference = $this->orderedQuantity - $this->receivedQuantity;
-
             $this->closeReceiveModal();
+            
+            if ($remainingQuantity > 0) {
+                session()->flash('success', "Stock received! New order created for remaining {$remainingQuantity} {$this->unit}");
+            } else {
+                session()->flash('success', "Stock received successfully! Order completed.");
+            }
 
             $this->dispatch('stock-received-success');
         } catch (\Exception $e) {

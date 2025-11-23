@@ -1,4 +1,4 @@
-<div>
+<div wire:poll.20s>
     <div class="table-responsive">
         <table class="table table-bordered">
             <thead class="thead-light">
